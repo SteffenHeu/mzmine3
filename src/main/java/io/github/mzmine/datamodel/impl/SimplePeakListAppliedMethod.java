@@ -18,6 +18,8 @@
 
 package io.github.mzmine.datamodel.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 import io.github.mzmine.datamodel.PeakList.PeakListAppliedMethod;
@@ -26,27 +28,33 @@ import io.github.mzmine.parameters.ParameterSet;
 public class SimplePeakListAppliedMethod implements PeakListAppliedMethod {
 
   private String description;
-  private String parameters;
+  private ParameterSet parameters;
+  private String strParameters;
+  private List<String> summary;
 
-  public SimplePeakListAppliedMethod(String description, ParameterSet parameters) {
-    this.description = description;
-    if (parameters != null) {
-      this.parameters = parameters.toString();
-    } else {
-      this.parameters = "";
-    }
-  }
+  public SimplePeakListAppliedMethod(String description, @Nonnull ParameterSet parameters) {
+    assert parameters != null;
 
-  public SimplePeakListAppliedMethod(String description, String parameters) {
     this.description = description;
     this.parameters = parameters;
+    summary = new ArrayList<>();
+  }
+
+  public SimplePeakListAppliedMethod(String description, @Nonnull String parameters) {
+    assert parameters != null;
+
+    this.description = description;
+    this.strParameters = parameters;
+
+    summary = new ArrayList<>();
   }
 
   public SimplePeakListAppliedMethod(String description) {
     this.description = description;
   }
 
-  public @Nonnull String getDescription() {
+  public @Nonnull
+  String getDescription() {
     return description;
   }
 
@@ -54,8 +62,18 @@ public class SimplePeakListAppliedMethod implements PeakListAppliedMethod {
     return description;
   }
 
-  public @Nonnull String getParameters() {
-    return parameters;
+  public @Nonnull
+  String getParameters() {
+    return parameters.toString();
   }
 
+  /**
+   * Adds a new line to the summary part of the processing report.
+   *
+   * @param newLine
+   */
+  @Override
+  public void appendLine(String newLine) {
+    summary.add(newLine);
+  }
 }

@@ -1,97 +1,58 @@
-/*
- * Copyright 2006-2020 The MZmine Development Team
- *
- * This file is part of MZmine.
- *
- * MZmine is free software; you can redistribute it and/or modify it under the terms of the GNU
- * General Public License as published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
- *
- * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
- */
-
 package io.github.mzmine.gui.mainwindow.tabs.processingreport;
 
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.data.ModularFeatureList;
-import io.github.mzmine.gui.mainwindow.MZmineTab;
+import io.github.mzmine.datamodel.PeakList.PeakListAppliedMethod;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineModule;
-import io.github.mzmine.modules.MZmineProcessingModule;
 import io.github.mzmine.modules.MZmineRunnableModule;
-import io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
-import java.util.Collection;
 import java.util.logging.Logger;
-import javafx.scene.control.Tab;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Font;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class TextAreaProcessingReportTab extends MZmineTab {
+public class TextAreaProcessingReportPane extends BorderPane {
 
-  public static final Logger logger = Logger.getLogger(TextAreaProcessingReportTab.class.getName());
+  public static final Logger logger = Logger.getLogger(ProcessingReportTab.class.getName());
+
+  protected static final String REPORT_FONT_NAME = "Courier New";
+  protected static final int REPORT_FONT_SIZE = 11;
+
+  protected static final int TITLE_FONT_SIZE = 12;
 
   private final TextArea textArea;
   private final Font font;
 
-  public TextAreaProcessingReportTab(String title) {
-    super(title, false, false);
-    setClosable(true);
+  private TextAreaProcessingReportPane() {
+    super();
+
+    getStylesheets().addAll(MZmineCore.getDesktop().getMainWindow().getScene().getStylesheets());
 
     textArea = new TextArea();
     textArea.setEditable(false);
-    setContent(textArea);
-
-    font = new Font("Courier New", 11);
+    font = new Font(REPORT_FONT_NAME, REPORT_FONT_SIZE);
     textArea.setFont(font);
+    setCenter(textArea);
   }
 
-  @Override
-  public Collection<? extends RawDataFile> getRawDataFiles() {
-    return null;
-  }
-
-  @Override
-  public Collection<? extends ModularFeatureList> getFeatureLists() {
-    return null;
-  }
-
-  @Override
-  public Collection<? extends ModularFeatureList> getAlignedFeatureLists() {
-    return null;
-  }
-
-  @Override
-  public void onRawDataFileSelectionChanged(Collection<? extends RawDataFile> rawDataFiles) {
-
-  }
-
-  @Override
-  public void onFeatureListSelectionChanged(Collection<? extends ModularFeatureList> featureLists) {
-
-  }
-
-  @Override
-  public void onAlignedFeatureListSelectionChanged(
-      Collection<? extends ModularFeatureList> featurelists) {
-
-  }
-
-  public TextAreaProcessingReportTab(String title, Class<? extends MZmineModule> moduleClass,
+  public TextAreaProcessingReportPane(Class<? extends MZmineModule> moduleClass,
       ParameterSet parameters) {
-    this(title);
+    this();
     assert parameters != null;
 
     MZmineModule inst = MZmineCore.getModuleInstance(moduleClass);
+    Label title = new Label(inst.getName());
+    title.setFont(new Font(TITLE_FONT_SIZE));
+    setTop(title);
+    appendParameters(parameters);
+  }
+
+  public TextAreaProcessingReportPane(PeakListAppliedMethod plam) {
+    this();
+//TODO
   }
 
   private void appendModuleInfo(@Nullable MZmineModule module) {
