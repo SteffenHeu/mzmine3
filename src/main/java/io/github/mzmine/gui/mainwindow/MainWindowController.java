@@ -219,7 +219,7 @@ public class MainWindowController {
     rawDataTree.getSelectionModel().getSelectedItems().addListener(
         (ListChangeListener<RawDataFile>) c -> {
           c.next();
-          for (Tab tab : getMainTabPane().getTabs()) {
+          for (Tab tab : MZmineCore.getDesktop().getAllTabs()) {
             if (tab instanceof MZmineTab && tab.isSelected() && ((MZmineTab) tab)
                 .isUpdateOnSelection()) {
               ((MZmineTab) tab).onRawDataFileSelectionChanged(c.getList());
@@ -227,7 +227,7 @@ public class MainWindowController {
           }
         });
 
-
+    // update if tab selection in main window changes
     getMainTabPane().getSelectionModel().selectedItemProperty().addListener((obs, old, val) -> {
       if (val instanceof MZmineTab && ((MZmineTab) val).getRawDataFiles() != null) {
         if (!((MZmineTab) val).getRawDataFiles()
@@ -317,11 +317,10 @@ public class MainWindowController {
      */
 
     RawDataOverviewPane rop = new RawDataOverviewPane(true, true);
-    rop.setClosable(false);
+//    rop.setClosable(false); // as the default tab, this should not be removed
+    rop.setWindowChangeAllowed(false);
     addTab(rop);
 
-    ProcessingReportTab reportTab = new ProcessingReportTab("Processing report");
-    addTab(reportTab);
   }
 
   public ListView<RawDataFile> getRawDataTree() {
@@ -503,11 +502,18 @@ public class MainWindowController {
     }).start();
   }
 
-  public TabPane getMainTabPane() {
+  private TabPane getMainTabPane() {
     return mainTabPane;
   }
 
-  public boolean addTab(Tab tab) {
+  /**
+   * @return Current tabs wrapped in {@link FXCollections#unmodifiableObservableList}
+   */
+  public ObservableList<Tab> getTabs() {
+    return FXCollections.unmodifiableObservableList(getMainTabPane().getTabs());
+  }
+
+  public void addTab(Tab tab) {
     if (tab instanceof MZmineTab) {
       ((MZmineTab) tab).updateOnSelectionProperty().addListener(((obs, old, val) -> {
         if (val.booleanValue()) {
@@ -523,7 +529,8 @@ public class MainWindowController {
       // TODO: add same for feature lists
     }
 
-    return getMainTabPane().getTabs().add(tab);
+    getMainTabPane().getTabs().add(tab);
+    getMainTabPane().getSelectionModel().select(tab);
   }
 
   @FXML
