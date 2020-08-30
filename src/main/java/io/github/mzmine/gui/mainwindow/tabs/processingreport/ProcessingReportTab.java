@@ -21,18 +21,9 @@ package io.github.mzmine.gui.mainwindow.tabs.processingreport;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.data.ModularFeatureList;
 import io.github.mzmine.gui.mainwindow.MZmineTab;
-import io.github.mzmine.main.MZmineCore;
-import io.github.mzmine.modules.MZmineModule;
-import io.github.mzmine.modules.MZmineRunnableModule;
-import io.github.mzmine.parameters.Parameter;
-import io.github.mzmine.parameters.ParameterSet;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.logging.Logger;
-import javafx.scene.control.TextArea;
-import javafx.scene.text.Font;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Not meant to be instantiated. Use {@link TextAreaProcessingReportPane} or other implementations.
@@ -79,7 +70,7 @@ public abstract class ProcessingReportTab extends MZmineTab {
 
   @Override
   public void onAlignedFeatureListSelectionChanged(
-      Collection<? extends ModularFeatureList> featurelists) {
+      Collection<? extends ModularFeatureList> featureLists) {
 
   }
 }

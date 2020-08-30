@@ -18,7 +18,6 @@
 
 package io.github.mzmine.gui.mainwindow;
 
-import com.google.errorprone.annotations.ForOverride;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.data.ModularFeatureList;
 import io.github.mzmine.gui.MZmineGUI;
@@ -104,7 +103,7 @@ public abstract class MZmineTab extends Tab {
       Collection<? extends ModularFeatureList> featureLists);
 
   public abstract void onAlignedFeatureListSelectionChanged(
-      Collection<? extends ModularFeatureList> featurelists);
+      Collection<? extends ModularFeatureList> featureLists);
 
   public boolean isUpdateOnSelection() {
     return cbUpdateOnSelection.isSelected();
