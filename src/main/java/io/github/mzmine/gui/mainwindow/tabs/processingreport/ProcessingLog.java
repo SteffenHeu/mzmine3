@@ -5,6 +5,7 @@ import io.github.mzmine.datamodel.RawDataFile;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 import javafx.collections.ModifiableObservableListBase;
 import javax.annotation.Nonnull;
@@ -19,6 +20,7 @@ public class ProcessingLog extends ModifiableObservableListBase<ProcessingStepRe
 
   public static final Logger logger = Logger.getLogger(ProcessingLog.class.getName());
 
+  @Nonnull
   private final List<ProcessingStepReport> delegate;
 
   public ProcessingLog() {
@@ -123,6 +125,27 @@ public class ProcessingLog extends ModifiableObservableListBase<ProcessingStepRe
 
   @Override
   public ProcessingStepReport remove(int index) {
-    return super.remove(index);
+    throw new UnsupportedOperationException(
+        "Removing elements is not supported. This is an audit log.");
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof ProcessingLog)) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    ProcessingLog that = (ProcessingLog) o;
+    return delegate.equals(that.delegate);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(super.hashCode(), delegate);
   }
 }
