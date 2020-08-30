@@ -50,16 +50,12 @@ public class TextAreaProcessingReportPane extends BorderPane {
     appendParameters(parameters);
   }
 
-  public TextAreaProcessingReportPane(PeakListAppliedMethod plam) {
-    this();
-//TODO
-  }
-
   private void appendModuleInfo(@Nullable MZmineModule module) {
     if (module == null) {
       appendLine("Module: invalid");
       appendLine("no description");
       appendLine("Module category: not found");
+      appendLine("Please contact the developer of the applied module.");
       return;
     }
 

@@ -1,5 +1,6 @@
 package io.github.mzmine.gui.mainwindow.tabs.processingreport;
 
+import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.MZmineProcessingModule;
 import io.github.mzmine.parameters.ParameterSet;
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ import java.util.List;
 public class ProcessingReport {
 
   protected final ParameterSet parameterSet;
-  protected final MZmineProcessingModule module;
+  protected final MZmineModule module;
 
   protected List<String> summary;
 
@@ -27,7 +28,7 @@ public class ProcessingReport {
     return parameterSet;
   }
 
-  public MZmineProcessingModule getModule() {
+  public MZmineModule getModule() {
     return module;
   }
 
