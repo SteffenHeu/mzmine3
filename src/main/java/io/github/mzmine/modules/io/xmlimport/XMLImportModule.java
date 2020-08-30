@@ -56,7 +56,7 @@ public class XMLImportModule implements MZmineProcessingModule {
 
   @Override
   public @Nonnull MZmineModuleCategory getModuleCategory() {
-    return MZmineModuleCategory.PEAKLISTIMPORT;
+    return MZmineModuleCategory.FEATURELISTIMPORT;
   }
 
   @Override

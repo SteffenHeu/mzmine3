@@ -100,7 +100,7 @@ public class SortPeakListsModule implements MZmineProcessingModule {
 
   @Override
   public @Nonnull MZmineModuleCategory getModuleCategory() {
-    return MZmineModuleCategory.PEAKLIST;
+    return MZmineModuleCategory.FEATURELIST;
   }
 
   @Override

@@ -65,7 +65,7 @@ public class GroupMS2Module implements MZmineProcessingModule {
 
   @Override
   public @Nonnull MZmineModuleCategory getModuleCategory() {
-    return MZmineModuleCategory.PEAKLISTFILTERING;
+    return MZmineModuleCategory.FEATURELISTFILTERING;
   }
 
   @Override

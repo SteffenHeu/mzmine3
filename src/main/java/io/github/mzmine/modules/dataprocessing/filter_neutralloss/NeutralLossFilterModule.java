@@ -41,7 +41,7 @@ public class NeutralLossFilterModule implements MZmineProcessingModule {
   }
 
   public @Nonnull MZmineModuleCategory getModuleCategory() {
-    return MZmineModuleCategory.PEAKLISTFILTERING;
+    return MZmineModuleCategory.FEATURELISTFILTERING;
   }
 
   @Override

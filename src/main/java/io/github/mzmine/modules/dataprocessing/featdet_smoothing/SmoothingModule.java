@@ -74,7 +74,7 @@ public class SmoothingModule implements MZmineProcessingModule {
 
   @Override
   public @Nonnull MZmineModuleCategory getModuleCategory() {
-    return MZmineModuleCategory.PEAKLISTPICKING;
+    return MZmineModuleCategory.FEATURELISTPICKING;
   }
 
   @Override

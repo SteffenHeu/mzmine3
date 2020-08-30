@@ -27,15 +27,15 @@ public enum MZmineModuleCategory {
   PEAKPICKING("Peak picking"), //
   GAPFILLING("Gap filling"), //
   ISOTOPES("Isotopes"), //
-  PEAKLIST("Feature list methods"), //
-  PEAKLISTPICKING("Feature list processing"), //
+  FEATURELIST("Feature list methods"), //
+  FEATURELISTPICKING("Feature list processing"), //
   SPECTRALDECONVOLUTION("Spectral deconvolution"), //
-  PEAKLISTFILTERING("Feature list filtering"), //
+  FEATURELISTFILTERING("Feature list filtering"), //
   ALIGNMENT("Alignment"), //
   NORMALIZATION("Normalization"), //
   IDENTIFICATION("Identification"), //
-  PEAKLISTEXPORT("Feature list export"), //
-  PEAKLISTIMPORT("Feature list import"), //
+  FEATURELISTEXPORT("Feature list export"), //
+  FEATURELISTIMPORT("Feature list import"), //
   VISUALIZATIONRAWDATA("Visualization"), //
   VISUALIZATIONPEAKLIST("Visualization feature list"), //
   DATAANALYSIS("Data analysis"), //
