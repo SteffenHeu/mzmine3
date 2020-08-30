@@ -18,6 +18,8 @@
 
 package io.github.mzmine.parameters;
 
+import io.github.mzmine.util.xml.Loadable;
+import io.github.mzmine.util.xml.Savable;
 import java.util.Collection;
 import org.w3c.dom.Element;
 import io.github.mzmine.util.ExitCode;
@@ -28,15 +30,15 @@ import io.github.mzmine.util.ExitCode;
  *
  * @param <T>
  */
-public interface ParameterSet extends ParameterContainer {
+public interface ParameterSet extends ParameterContainer, Loadable, Savable {
 
   public Parameter<?>[] getParameters();
 
   public <T extends Parameter<?>> T getParameter(T parameter);
 
-  public void loadValuesFromXML(Element element);
+  public void loadValueFromXML(Element element);
 
-  public void saveValuesToXML(Element element);
+  public void saveValueToXML(Element element);
 
   public boolean checkParameterValues(Collection<String> errorMessages);
 

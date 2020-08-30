@@ -97,7 +97,7 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
           final ParameterSet parameterSet =
               MZmineCore.getConfiguration().getModuleParameters(module.getClass());
           final ParameterSet methodParams = parameterSet.cloneParameterSet();
-          methodParams.loadValuesFromXML(stepElement);
+          methodParams.loadValueFromXML(stepElement);
           queue.add(new MZmineProcessingStepImpl<MZmineProcessingModule>(
               (MZmineProcessingModule) module, methodParams));
           break;
@@ -128,7 +128,7 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
       // Save parameters.
       final ParameterSet parameters = step.getParameterSet();
       if (parameters != null) {
-        parameters.saveValuesToXML(stepElement);
+        parameters.saveValueToXML(stepElement);
       }
     }
   }

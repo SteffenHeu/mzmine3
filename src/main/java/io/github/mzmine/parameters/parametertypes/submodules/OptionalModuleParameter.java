@@ -117,7 +117,7 @@ public class OptionalModuleParameter<T extends ParameterSet>
 
   @Override
   public void loadValueFromXML(Element xmlElement) {
-    embeddedParameters.loadValuesFromXML(xmlElement);
+    embeddedParameters.loadValueFromXML(xmlElement);
     String selectedAttr = xmlElement.getAttribute("selected");
     this.value = Boolean.valueOf(selectedAttr);
   }
@@ -126,7 +126,7 @@ public class OptionalModuleParameter<T extends ParameterSet>
   public void saveValueToXML(Element xmlElement) {
     if (value != null)
       xmlElement.setAttribute("selected", value.toString());
-    embeddedParameters.saveValuesToXML(xmlElement);
+    embeddedParameters.saveValueToXML(xmlElement);
   }
 
   @Override

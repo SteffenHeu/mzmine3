@@ -161,7 +161,7 @@ public class ModuleComboParameter<ModuleType extends MZmineModule>
           ParameterSet moduleParameters = modulesWithParams[j].getParameterSet();
           if (moduleParameters == null)
             continue;
-          moduleParameters.loadValuesFromXML((Element) items.item(i));
+          moduleParameters.loadValueFromXML((Element) items.item(i));
         }
       }
     }
@@ -182,8 +182,9 @@ public class ModuleComboParameter<ModuleType extends MZmineModule>
       Element newElement = parentDocument.createElement("module");
       newElement.setAttribute("name", item.getModule().getName());
       ParameterSet moduleParameters = item.getParameterSet();
-      if (moduleParameters != null)
-        moduleParameters.saveValuesToXML(newElement);
+      if (moduleParameters != null) {
+        moduleParameters.saveValueToXML(newElement);
+      }
       xmlElement.appendChild(newElement);
     }
   }

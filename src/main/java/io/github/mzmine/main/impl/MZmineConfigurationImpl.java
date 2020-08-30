@@ -201,10 +201,11 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
         // this has to be read first because following parameters may
         // already contain encrypted data
         // that needs this key for encryption
-        if (file.equals(MZmineConfiguration.CONFIG_FILE))
-          new SimpleParameterSet(new Parameter[] {globalEncrypter})
-              .loadValuesFromXML(preferencesElement);
-        preferences.loadValuesFromXML(preferencesElement);
+        if (file.equals(MZmineConfiguration.CONFIG_FILE)) {
+          new SimpleParameterSet(new Parameter[]{globalEncrypter})
+              .loadValueFromXML(preferencesElement);
+        }
+        preferences.loadValueFromXML(preferencesElement);
       }
 
       logger.finest("Loading last projects");
@@ -228,7 +229,7 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
               (Class<? extends MZmineModule>) Class.forName(moduleClassName);
 
           ParameterSet moduleParameters = getModuleParameters(moduleClass);
-          moduleParameters.loadValuesFromXML(moduleElement);
+          moduleParameters.loadValueFromXML(moduleElement);
         } catch (Exception e) {
           logger.log(Level.WARNING, "Failed to load configuration for module " + moduleClassName,
               e);
@@ -257,7 +258,7 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
       Element prefElement = configuration.createElement("preferences");
       configRoot.appendChild(prefElement);
       preferences.setSkipSensitiveParameters(skipSensitive);
-      preferences.saveValuesToXML(prefElement);
+      preferences.saveValueToXML(prefElement);
 
       Element lastFilesElement = configuration.createElement("lastprojects");
       configRoot.appendChild(lastFilesElement);
@@ -280,14 +281,14 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
 
         ParameterSet moduleParameters = getModuleParameters(module.getClass());
         moduleParameters.setSkipSensitiveParameters(skipSensitive);
-        moduleParameters.saveValuesToXML(paramElement);
+        moduleParameters.saveValueToXML(paramElement);
       }
 
       // save encryption key to local config only
       // ATTENTION: this should to be written after all other configs
       final SimpleParameterSet encSet = new SimpleParameterSet(new Parameter[] {globalEncrypter});
       encSet.setSkipSensitiveParameters(skipSensitive);
-      encSet.saveValuesToXML(prefElement);
+      encSet.saveValueToXML(prefElement);
 
       TransformerFactory transfac = TransformerFactory.newInstance();
       Transformer transformer = transfac.newTransformer();

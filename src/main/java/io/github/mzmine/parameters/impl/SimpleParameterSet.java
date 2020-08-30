@@ -70,7 +70,7 @@ public class SimpleParameterSet implements ParameterSet {
   }
 
   @Override
-  public void loadValuesFromXML(Element xmlElement) {
+  public void loadValueFromXML(Element xmlElement) {
     NodeList list = xmlElement.getElementsByTagName(parameterElement);
     for (int i = 0; i < list.getLength(); i++) {
       Element nextElement = (Element) list.item(i);
@@ -89,11 +89,12 @@ public class SimpleParameterSet implements ParameterSet {
   }
 
   @Override
-  public void saveValuesToXML(Element xmlElement) {
+  public void saveValueToXML(Element xmlElement) {
     Document parentDocument = xmlElement.getOwnerDocument();
     for (Parameter<?> param : parameters) {
-      if (skipSensitiveParameters && param.isSensitive())
+      if (skipSensitiveParameters && param.isSensitive()) {
         continue;
+      }
       Element paramElement = parentDocument.createElement(parameterElement);
       paramElement.setAttribute(nameAttribute, param.getName());
       xmlElement.appendChild(paramElement);

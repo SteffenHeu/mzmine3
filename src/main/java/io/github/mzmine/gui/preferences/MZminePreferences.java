@@ -25,7 +25,6 @@ import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
-import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.ParameterSetParameter;
 import io.github.mzmine.parameters.parametertypes.WindowSettingsParameter;
 import io.github.mzmine.parameters.parametertypes.colorpalette.ColorPaletteParameter;
@@ -33,8 +32,6 @@ import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileSelectionType;
 import io.github.mzmine.parameters.parametertypes.submodules.OptionalModuleParameter;
 import io.github.mzmine.util.ExitCode;
-import io.github.mzmine.util.color.Vision;
-import javafx.collections.FXCollections;
 
 public class MZminePreferences extends SimpleParameterSet {
 
@@ -106,8 +103,8 @@ public class MZminePreferences extends SimpleParameterSet {
   }
 
   @Override
-  public void loadValuesFromXML(Element xmlElement) {
-    super.loadValuesFromXML(xmlElement);
+  public void loadValueFromXML(Element xmlElement) {
+    super.loadValueFromXML(xmlElement);
     updateSystemProxySettings();
   }
 

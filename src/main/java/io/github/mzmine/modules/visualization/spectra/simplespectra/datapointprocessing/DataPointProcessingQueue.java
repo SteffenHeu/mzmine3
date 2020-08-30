@@ -84,7 +84,7 @@ public class DataPointProcessingQueue
           ParameterSet parameterSet = MZmineCore.getConfiguration()
               .getModuleParameters(module.getClass()).cloneParameterSet();
 
-          parameterSet.loadValuesFromXML(stepElement);
+          parameterSet.loadValueFromXML(stepElement);
           queue.add(new MZmineProcessingStepImpl<DataPointProcessingModule>(
               (DataPointProcessingModule) module, parameterSet));
           // add to treeView
@@ -124,7 +124,7 @@ public class DataPointProcessingQueue
       // Save parameters.
       final ParameterSet parameters = step.getParameterSet();
       if (parameters != null) {
-        parameters.saveValuesToXML(stepElement);
+        parameters.saveValueToXML(stepElement);
       }
     }
   }

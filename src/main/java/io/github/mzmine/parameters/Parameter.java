@@ -18,6 +18,8 @@
 
 package io.github.mzmine.parameters;
 
+import io.github.mzmine.util.xml.Loadable;
+import io.github.mzmine.util.xml.Savable;
 import org.w3c.dom.Element;
 
 import java.util.Collection;
