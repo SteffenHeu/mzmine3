@@ -20,6 +20,7 @@ package io.github.mzmine.main;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -82,12 +83,13 @@ public interface MZmineConfiguration {
    * @return
    */
 //  public Vision getColorVision();
-  
   public SimpleColorPalette getDefaultColorPalette();
-  
+
   public ChartThemeParameters getDefaultChartThemeParameters();
-  
+
   public EStandardChartTheme getDefaultChartTheme();
 
   public StringCrypter getEncrypter();
+
+  public DateFormat getDateFormat();
 }

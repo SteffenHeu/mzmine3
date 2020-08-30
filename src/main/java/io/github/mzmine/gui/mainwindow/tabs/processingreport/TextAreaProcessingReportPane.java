@@ -14,6 +14,12 @@ import javafx.scene.text.Font;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+
+/**
+ * Meant to visualise a single step of processing applied to a {@link
+ * io.github.mzmine.datamodel.data.ModularFeatureList} or {@link io.github.mzmine.datamodel.RawDataFile}.
+ * Add multiple panes to a {@link ProcessingReportTab}.
+ */
 public class TextAreaProcessingReportPane extends BorderPane {
 
   public static final Logger logger = Logger.getLogger(ProcessingReportTab.class.getName());

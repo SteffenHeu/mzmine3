@@ -27,6 +27,7 @@ import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.logging.Logger;
 import javafx.scene.control.TextArea;
 import javafx.scene.text.Font;
@@ -34,9 +35,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
+ * Not meant to be instantiated. Use {@link TextAreaProcessingReportPane} or other implementations.
+ *
  * @author SteffenHeu https://github.com/SteffenHeu / steffen.heuckeroth@uni-muenster.de
  */
-public class ProcessingReportTab extends MZmineTab {
+public abstract class ProcessingReportTab extends MZmineTab {
 
   public ProcessingReportTab(String title, boolean showBinding, boolean defaultBindingState) {
     super(title, showBinding, defaultBindingState);
@@ -46,19 +49,22 @@ public class ProcessingReportTab extends MZmineTab {
     super(title);
   }
 
+  @Nonnull
   @Override
   public Collection<? extends RawDataFile> getRawDataFiles() {
-    return null;
+    return Collections.emptyList();
   }
 
+  @Nonnull
   @Override
   public Collection<? extends ModularFeatureList> getFeatureLists() {
-    return null;
+    return Collections.emptyList();
   }
 
+  @Nonnull
   @Override
   public Collection<? extends ModularFeatureList> getAlignedFeatureLists() {
-    return null;
+    return Collections.emptyList();
   }
 
   @Override

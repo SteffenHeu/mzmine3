@@ -23,7 +23,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.text.DateFormat;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -70,13 +72,16 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
   private final MZminePreferences preferences;
 
   // list of last used projects
-  private final @Nonnull FileNameListSilentParameter lastProjects;
+  private final @Nonnull
+  FileNameListSilentParameter lastProjects;
 
   private final EncryptionKeyParameter globalEncrypter;
 
   private final Map<Class<? extends MZmineModule>, ParameterSet> moduleParameters;
 
   private final EStandardChartTheme standardChartTheme;
+
+  private final DateFormat defaultDateFormat = new SimpleDateFormat("yyyy/mm/dd HH:mm:ss");
 
   public MZmineConfigurationImpl() {
     moduleParameters = new Hashtable<Class<? extends MZmineModule>, ParameterSet>();
@@ -364,6 +369,10 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
     scp.applyToChartTheme(standardChartTheme);
 
     return standardChartTheme;
+  }
+
+  public DateFormat getDateFormat() {
+    return defaultDateFormat;
   }
 
 }
