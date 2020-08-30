@@ -37,7 +37,6 @@ public interface PeakList {
     @Nonnull
     public String getParameters();
 
-    public void appendLine(String newLine);
   }
 
   /**
