@@ -9,6 +9,12 @@ import java.util.logging.Logger;
 import javafx.collections.ModifiableObservableListBase;
 import javax.annotation.Nonnull;
 
+
+/**
+ * A log of all processing modules run in this project. Implements {@link
+ * ModifiableObservableListBase}, so listeners can be added. Does not support {@link List#add(int,
+ * Object)}, set or remove operations to keep integrity of the log.
+ */
 public class ProcessingLog extends ModifiableObservableListBase<ProcessingStepReport> {
 
   public static final Logger logger = Logger.getLogger(ProcessingLog.class.getName());
