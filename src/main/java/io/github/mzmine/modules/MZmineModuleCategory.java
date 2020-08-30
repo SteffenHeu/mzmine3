@@ -37,7 +37,7 @@ public enum MZmineModuleCategory {
   FEATURELISTEXPORT("Feature list export"), //
   FEATURELISTIMPORT("Feature list import"), //
   VISUALIZATIONRAWDATA("Visualization"), //
-  VISUALIZATIONPEAKLIST("Visualization feature list"), //
+  VISUALIZATIONFEATURELIST("Visualization feature list"), //
   DATAANALYSIS("Data analysis"), //
   HELPSYSTEM("Help"), //
   TOOLS("Tools"); //
