@@ -39,6 +39,7 @@ import io.github.mzmine.util.R.REngineType;
 import io.github.mzmine.util.R.RSessionWrapper;
 import io.github.mzmine.util.R.RSessionWrapperException;
 import io.github.mzmine.util.color.SimpleColorPalette;
+import io.github.mzmine.util.components.FeatureXICComponent;
 import io.github.mzmine.util.javafx.FxColorUtil;
 import io.github.mzmine.util.maths.CenterFunction;
 import io.github.mzmine.util.maths.CenterMeasure;
@@ -53,7 +54,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.GridPane;
+import javafx.util.Callback;
 
 public class FeatureResolverSetupDialog extends ParameterSetupDialogWithPreview {
 
@@ -61,6 +65,7 @@ public class FeatureResolverSetupDialog extends ParameterSetupDialogWithPreview 
   protected final UnitFormat uf;
   protected final NumberFormat rtFormat;
   protected final NumberFormat intensityFormat;
+  protected final NumberFormat mzFormat;
   protected ComboBox<ModularFeatureList> flistBox;
   protected ComboBox<ModularFeature> fBox;
   protected ColoredXYShapeRenderer shapeRenderer = new ColoredXYShapeRenderer();
@@ -71,6 +76,7 @@ public class FeatureResolverSetupDialog extends ParameterSetupDialogWithPreview 
     uf = MZmineCore.getConfiguration().getUnitFormat();
     rtFormat = MZmineCore.getConfiguration().getRTFormat();
     intensityFormat = MZmineCore.getConfiguration().getIntensityFormat();
+    mzFormat = MZmineCore.getConfiguration().getMZFormat();
 
     previewChart = new SimpleXYChart<>(uf.format("Retention time", "min"),
         uf.format("Intensity", "cps"));
@@ -94,6 +100,39 @@ public class FeatureResolverSetupDialog extends ParameterSetupDialogWithPreview 
         }));
     fBox.getSelectionModel().selectedItemProperty()
         .addListener(((observable, oldValue, newValue) -> onSelectedFeatureChanged(newValue)));
+    fBox.setButtonCell(new ListCell<ModularFeature>() {
+      @Override
+      protected void updateItem(ModularFeature item, boolean empty) {
+        super.updateItem(item, empty);
+        if (item == null || empty) {
+          return;
+        }
+        FeatureXICComponent preview = new FeatureXICComponent(item, 150, 17);
+        setGraphic(preview);
+        setText("m/z " + mzFormat.format(item.getMZ()) + " @" + rtFormat.format(item.getRT())
+            + " min");
+      }
+    });
+
+    fBox.setCellFactory(new Callback<>() {
+      @Override
+      public ListCell<ModularFeature> call(ListView<ModularFeature> param) {
+        return new ListCell<>() {
+          @Override
+          protected void updateItem(ModularFeature item, boolean empty) {
+            super.updateItem(item, empty);
+            if (item == null || empty) {
+              return;
+            }
+            /*FeatureXICComponent preview = new FeatureXICComponent(item, 150,
+                (int) this.getHeight());
+            setGraphic(preview);*/
+            setText("m/z " + mzFormat.format(item.getMZ()) + " @" + rtFormat.format(item.getRT())
+                + " min");
+          }
+        };
+      }
+    });
 
     GridPane pnControls = new GridPane();
     pnControls.add(new Label("Feature list"), 0, 0);
