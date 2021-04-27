@@ -23,10 +23,9 @@ import com.alanmrace.jimzmlparser.mzml.CVParam;
 import com.alanmrace.jimzmlparser.mzml.ScanSettings;
 import com.alanmrace.jimzmlparser.mzml.ScanSettingsList;
 import io.github.mzmine.modules.io.import_bruker_tdf.datamodel.sql.TDFMaldiFrameInfoTable;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
+import io.github.mzmine.modules.io.import_bruker_tdf.datamodel.sql.TDFMetaDataTable;
+import io.github.mzmine.modules.io.import_bruker_tdf.datamodel.sql.TDFMetaDataTable.Keys;
+import java.util.logging.Logger;
 
 /*
  * <scanSettingsList count="1"> <scanSettings id="scansettings1"> <cvParam cvRef="IMS"
@@ -45,6 +44,8 @@ import java.util.stream.Collectors;
  */
 
 public class ImagingParameters {
+
+  private static final Logger logger = Logger.getLogger(ImagingParameters.class.getName());
 
   private double minMZ, maxMZ;
   /**
@@ -66,18 +67,22 @@ public class ImagingParameters {
   private ScanDirection scanDirection;
 
 
-  public ImagingParameters(TDFMaldiFrameInfoTable maldiFrameInfoTable) {
-    Map<Integer, Long> count = maldiFrameInfoTable.getyIndexPosColumn().stream().collect(Collectors
-        .groupingBy(Long::intValue, Collectors.counting()));
-    Entry<Integer, Long> mostFrequent = count.entrySet().stream().max(
-        Comparator.comparingLong(Entry::getValue)).get();
-    maxNumberOfPixelX = mostFrequent.getValue().intValue();
-
-    count = maldiFrameInfoTable.getxIndexPosColumn().stream().collect(Collectors
-        .groupingBy(Long::intValue, Collectors.counting()));
-    mostFrequent = count.entrySet().stream().max(
-        Comparator.comparingLong(Entry::getValue)).get();
-    maxNumberOfPixelY = mostFrequent.getValue().intValue();
+  public ImagingParameters(TDFMetaDataTable metaDataTable,
+      TDFMaldiFrameInfoTable maldiFrameInfoTable) {
+    try {
+      maxNumberOfPixelX =
+          Integer.parseInt(metaDataTable.getValueForKey(Keys.ImagingAreaMaxXIndexPos)) - Integer
+              .parseInt(metaDataTable.getValueForKey(Keys.ImagingAreaMinXIndexPos)) + 1;
+      maxNumberOfPixelY =
+          Integer.parseInt(metaDataTable.getValueForKey(Keys.ImagingAreaMaxYIndexPos)) - Integer
+              .parseInt(metaDataTable.getValueForKey(Keys.ImagingAreaMinYIndexPos)) + 1;
+    } catch (NumberFormatException e) {
+      logger.info(() -> "Number format exception during tdf maldi import.");
+      maxNumberOfPixelX = (int) (maldiFrameInfoTable.getxIndexPosColumn().stream().max(Long::compare).get()
+                - maldiFrameInfoTable.getxIndexPosColumn().stream().min(Long::compare).get());
+      maxNumberOfPixelY = (int) (maldiFrameInfoTable.getyIndexPosColumn().stream().max(Long::compare).get()
+          - maldiFrameInfoTable.getyIndexPosColumn().stream().min(Long::compare).get());
+    }
     maxNumberOfPixelZ = 1;
     spectraPerPixel = 1;
 

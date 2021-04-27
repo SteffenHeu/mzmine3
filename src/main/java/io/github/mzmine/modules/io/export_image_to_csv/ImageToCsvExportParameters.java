@@ -16,10 +16,22 @@
  *  USA
  */
 
-package io.github.mzmine.datamodel;
+package io.github.mzmine.modules.io.export_image_to_csv;
 
-public interface MergedMsMsSpectrum extends MergedMassSpectrum {
+import io.github.mzmine.parameters.Parameter;
+import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.StringParameter;
+import io.github.mzmine.parameters.parametertypes.filenames.DirectoryParameter;
 
-  float getCollisionEnergy();
+public class ImageToCsvExportParameters extends SimpleParameterSet {
 
+  public static final DirectoryParameter dir = new DirectoryParameter("Export directory",
+      "The directory to save the files in.");
+
+  public static final StringParameter delimiter = new StringParameter("Delimiter",
+      "The delimiter.", ",");
+
+  public ImageToCsvExportParameters() {
+    super(new Parameter[]{dir, delimiter});
+  }
 }
