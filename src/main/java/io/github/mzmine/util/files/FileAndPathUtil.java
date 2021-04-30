@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Random;
 import javafx.stage.FileChooser.ExtensionFilter;
 import org.apache.commons.io.FilenameUtils;
 
@@ -448,10 +447,6 @@ public class FileAndPathUtil {
       i++;
       uniqueFile = new File(
           noExtension.getAbsolutePath() + "(" + i + ")." + extension);
-      if(i > 50) {
-        Random r = new Random(System.currentTimeMillis());
-        i = r.nextInt();
-      }
     }
     return uniqueFile;
   }

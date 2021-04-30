@@ -39,6 +39,7 @@ import io.github.mzmine.datamodel.impl.BuildingMobilityScan;
 import io.github.mzmine.datamodel.impl.SimpleFrame;
 import io.github.mzmine.datamodel.impl.SimpleMergedMassSpectrum;
 import io.github.mzmine.datamodel.impl.SimpleMergedMsMsSpectrum;
+import io.github.mzmine.datamodel.impl.masslist.ScanPointerMassList;
 import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.DataPointSorter;
@@ -366,8 +367,11 @@ public class SpectraMerging {
     final double merged[][] = calculatedMergedMzsAndIntensities(scans, tolerance,
         MergingType.SUMMED, DEFAULT_CENTER_FUNCTION, 10d);
 
-    return new SimpleMergedMassSpectrum(storage, merged[0], merged[1], 1, scans, MergingType.SUMMED,
+    var scan = new SimpleMergedMassSpectrum(storage, merged[0], merged[1], 1, scans, MergingType.SUMMED,
         DEFAULT_CENTER_FUNCTION);
+    scan.addMassList(new ScanPointerMassList(scan));
+
+    return scan;
   }
 
   public static Frame getMergedFrame(@Nonnull final Collection<Frame> frames,
