@@ -365,7 +365,7 @@ public class SpectraMerging {
         }).toList();
 
     final double merged[][] = calculatedMergedMzsAndIntensities(scans, tolerance,
-        MergingType.SUMMED, DEFAULT_CENTER_FUNCTION, 10d);
+        MergingType.SUMMED, DEFAULT_CENTER_FUNCTION, 0d);
 
     var scan = new SimpleMergedMassSpectrum(storage, merged[0], merged[1], 1, scans, MergingType.SUMMED,
         DEFAULT_CENTER_FUNCTION);

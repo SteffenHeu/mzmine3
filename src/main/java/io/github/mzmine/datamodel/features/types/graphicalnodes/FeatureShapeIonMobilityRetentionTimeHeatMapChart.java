@@ -25,7 +25,7 @@ import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.types.modifiers.GraphicalColumType;
 import io.github.mzmine.gui.chartbasics.simplechart.SimpleXYZScatterPlot;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.ColoredXYZDataset;
-import io.github.mzmine.gui.chartbasics.simplechart.datasets.FastColoredXYZDataset;
+import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.series.IonMobilogramTimeSeriesToRtMobilityHeatmapProvider;
 import io.github.mzmine.gui.preferences.UnitFormat;
 import io.github.mzmine.main.MZmineCore;
@@ -48,8 +48,8 @@ public class FeatureShapeIonMobilityRetentionTimeHeatMapChart extends StackPane 
       AtomicDouble progress) {
 
     SimpleXYZScatterPlot<IonMobilogramTimeSeriesToRtMobilityHeatmapProvider> chart = new SimpleXYZScatterPlot<>();
-    ColoredXYZDataset dataset = new FastColoredXYZDataset(
-        new IonMobilogramTimeSeriesToRtMobilityHeatmapProvider(f));
+    ColoredXYZDataset dataset = new ColoredXYZDataset(
+        new IonMobilogramTimeSeriesToRtMobilityHeatmapProvider(f), RunOption.THIS_THREAD);
     MobilityType mt = ((IMSRawDataFile) f.getRawDataFile()).getMobilityType();
     UnitFormat unitFormat = MZmineCore.getConfiguration().getUnitFormat();
     chart.setRangeAxisLabel(mt.getAxisLabel());
@@ -71,9 +71,9 @@ public class FeatureShapeIonMobilityRetentionTimeHeatMapChart extends StackPane 
     // todo: save min/max values of dataset in dataset iself so jfreechart does not have to loop
     //  over all data points (also means the renderers have to support it)
     chart.getXYPlot().getDomainAxis()
-        .setRange(RangeUtils.googleToJFree(dataset.getDomainValueRange()), false, true);
+        .setRange(RangeUtils.guavaToJFree(dataset.getDomainValueRange()), false, true);
     chart.getXYPlot().getRangeAxis()
-        .setRange(RangeUtils.googleToJFree(dataset.getRangeValueRange()), false, true);
+        .setRange(RangeUtils.guavaToJFree(dataset.getRangeValueRange()), false, true);
     BufferedImage img = chart.getChart()
         .createBufferedImage(GraphicalColumType.LARGE_GRAPHICAL_CELL_WIDTH,
             GraphicalColumType.DEFAULT_GRAPHICAL_CELL_HEIGHT);

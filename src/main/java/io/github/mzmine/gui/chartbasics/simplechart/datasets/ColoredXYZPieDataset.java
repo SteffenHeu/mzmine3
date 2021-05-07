@@ -21,10 +21,8 @@ package io.github.mzmine.gui.chartbasics.simplechart.datasets;
 import com.google.common.collect.Range;
 import io.github.mzmine.gui.chartbasics.chartutils.XYBlockPixelSizeRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.PieXYZDataProvider;
-import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import java.awt.Color;
-import javafx.application.Platform;
 import javax.annotation.Nonnull;
 import org.jfree.chart.renderer.xy.AbstractXYItemRenderer;
 import org.jfree.data.xy.XYZDataset;
@@ -38,23 +36,23 @@ import org.jfree.data.xy.XYZDataset;
 public class ColoredXYZPieDataset<T> extends ColoredXYDataset implements XYZDataset {
 
   private final PieXYZDataProvider<T> pieDataProvider;
+  private final RunOption runOption;
   protected AbstractXYItemRenderer renderer;
   protected double[] summedZValues;
   protected T[] sliceIdentifiers;
   private Range<Double> zRange;
 
   public ColoredXYZPieDataset(@Nonnull PieXYZDataProvider<T> dataProvider) {
-    this(dataProvider, true);
+    this(dataProvider, RunOption.NEW_THREAD);
   }
 
   public ColoredXYZPieDataset(@Nonnull PieXYZDataProvider<T> dataProvider,
-      final boolean autocompute) {
-    super(dataProvider, false);
+      @Nonnull final RunOption runOption) {
+    super(dataProvider, RunOption.DO_NOT_RUN);
+    this.runOption = runOption;
     this.pieDataProvider = dataProvider;
     renderer = new XYBlockPixelSizeRenderer();
-    if(autocompute) {
-      MZmineCore.getTaskController().addTask(this);
-    }
+    handleRunOption(runOption);
   }
 
   public PieXYZDataProvider<T> getPieDataProvider() {
@@ -148,35 +146,30 @@ public class ColoredXYZPieDataset<T> extends ColoredXYDataset implements XYZData
       minZ = Math.min(zValue, minZ);
       maxZ = Math.max(zValue, maxZ);
 
-      for(int j = 0; j < sliceIdentifiers.length; j++) {
+      for (int j = 0; j < sliceIdentifiers.length; j++) {
         summedZValues[i] += getZValue(j, i);
       }
     }
 
-    domainRange = Range.closed(minDomain, maxDomain);
-    rangeRange = Range.closed(minRange, maxRange);
-    zRange = Range.closed(minZ, maxZ);
+    domainRange = computedItemCount > 0 ? Range.closed(minDomain, maxDomain) : Range.closed(0d, 1d);
+    rangeRange = computedItemCount > 0 ? Range.closed(minRange, maxRange) : Range.closed(0d, 1d);
+    zRange = computedItemCount > 0 ? Range.closed(minZ, maxZ) : Range.closed(0d, 1d);
 
     computed = true;
-    status.set(TaskStatus.FINISHED);
-
-    if(!(this instanceof FastColoredXYZPieDataset)) { // no need to notify then, dataset will be up to date
-      if (Platform.isFxApplicationThread()) {
-        fireDatasetChanged();
-      } else {
-        Platform.runLater(this::fireDatasetChanged);
-      }
-    }
+    onCalculationsFinished();
   }
 
   public Range<Double> getZValueRange() {
     return zRange;
   }
 
-  // Makes protected method public // TODO: possible alternatives?
   @Override
   protected void fireDatasetChanged() {
     super.fireDatasetChanged();
   }
 
+  @Override
+  protected RunOption getRunOption() {
+    return runOption;
+  }
 }

@@ -32,7 +32,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.IntToDoubleFunction;
-import javafx.application.Platform;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.jfree.chart.renderer.PaintScale;
@@ -48,6 +47,7 @@ import org.jfree.data.xy.XYZDataset;
 public class ColoredXYZDataset extends ColoredXYDataset implements XYZDataset, PaintScaleProvider {
 
   private final XYZValueProvider xyzValueProvider;
+  private final RunOption runOption;
   protected PaintScale paintScale;
   protected Double boxWidth;
   protected Double boxHeight;
@@ -60,14 +60,20 @@ public class ColoredXYZDataset extends ColoredXYDataset implements XYZDataset, P
   }
 
   public ColoredXYZDataset(@Nonnull PlotXYZDataProvider dataProvider,
-      final boolean useAlphaInPaintscale) {
-    this(dataProvider, useAlphaInPaintscale, true);
+      @Nonnull final RunOption runOption) {
+    this(dataProvider, true, runOption);
   }
 
+  public ColoredXYZDataset(@Nonnull PlotXYZDataProvider dataProvider,
+      final boolean useAlphaInPaintscale) {
+    this(dataProvider, useAlphaInPaintscale, RunOption.NEW_THREAD);
+  }
 
   ColoredXYZDataset(@Nonnull PlotXYZDataProvider dataProvider,
-      final boolean useAlphaInPaintscale, boolean autocompute) {
-    super(dataProvider, false);
+      final boolean useAlphaInPaintscale, @Nonnull final RunOption runOption) {
+    // do not run from super constructor! we need to do some other stuff first
+    super(dataProvider, RunOption.DO_NOT_RUN);
+    this.runOption = runOption;
 
     if (dataProvider instanceof PieXYZDataProvider) {
       throw new IllegalArgumentException(
@@ -78,9 +84,7 @@ public class ColoredXYZDataset extends ColoredXYDataset implements XYZDataset, P
     this.useAlphaInPaintscale = useAlphaInPaintscale;
     renderer = new XYBlockPixelSizeRenderer();
     paintScale = null;
-    if (autocompute) {
-      MZmineCore.getTaskController().addTask(this);
-    }
+    handleRunOption(runOption);
   }
 
   public boolean isUseAlphaInPaintscale() {
@@ -122,10 +126,6 @@ public class ColoredXYZDataset extends ColoredXYDataset implements XYZDataset, P
   public PaintScale getPaintScale() {
     return paintScale;
   }
-
-//  public void setPaintScale(PaintScale paintScale) {
-//    this.paintScale = paintScale;
-//  }
 
   public Double getBoxWidth() {
     return boxWidth;
@@ -194,11 +194,6 @@ public class ColoredXYZDataset extends ColoredXYDataset implements XYZDataset, P
       max = 1;
     }
     Range<Double> zValueRange = Range.closed(min, max);
-    /*var paintScale =
-        new io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScale(
-            defaultPaintScaleColorStyle, defaultPaintScaleBoundStyle, zValueRange, Color.WHITE);
-    PaintScaleFactory psf = new PaintScaleFactory();
-    paintScale = psf.createColorsForPaintScale(paintScale, true);*/
 
     paintScale = MZmineCore.getConfiguration().getDefaultPaintScalePalette().toPaintScale(
         PaintScaleTransform.LINEAR, zValueRange);
@@ -237,9 +232,9 @@ public class ColoredXYZDataset extends ColoredXYDataset implements XYZDataset, P
       maxZ = Math.max(zValue, maxZ);
     }
 
-    domainRange = Range.closed(minDomain, maxDomain);
-    rangeRange = Range.closed(minRange, maxRange);
-    zRange = Range.closed(minZ, maxZ);
+    domainRange = computedItemCount > 0 ? Range.closed(minDomain, maxDomain) : Range.closed(0d, 1d);
+    rangeRange = computedItemCount > 0 ? Range.closed(minRange, maxRange) : Range.closed(0d, 1d);
+    zRange = computedItemCount > 0 ? Range.closed(minZ, maxZ) : Range.closed(0d, 1d);
 
     boxHeight = xyzValueProvider.getBoxHeight();
     boxWidth = xyzValueProvider.getBoxWidth();
@@ -256,16 +251,7 @@ public class ColoredXYZDataset extends ColoredXYDataset implements XYZDataset, P
     paintScale = (paintScale != null) ? paintScale
         : createDefaultPaintScale(zRange.lowerEndpoint(), zRange.upperEndpoint());
 
-    computed = true;
-    status.set(TaskStatus.FINISHED);
-
-    if (!(this instanceof FastColoredXYZDataset)) { // no need to notify then, dataset will be up to date
-      if (Platform.isFxApplicationThread()) {
-        fireDatasetChanged();
-      } else {
-        Platform.runLater(this::fireDatasetChanged);
-      }
-    }
+    onCalculationsFinished();
   }
 
   // Makes protected method public // TODO: possible alternatives?
@@ -274,4 +260,8 @@ public class ColoredXYZDataset extends ColoredXYDataset implements XYZDataset, P
     super.fireDatasetChanged();
   }
 
+  @Override
+  protected RunOption getRunOption() {
+    return runOption;
+  }
 }
