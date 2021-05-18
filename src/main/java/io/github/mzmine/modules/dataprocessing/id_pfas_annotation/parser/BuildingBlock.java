@@ -1,0 +1,204 @@
+package io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.logging.Logger;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class BuildingBlock {
+
+  private static final Logger logger = Logger.getLogger(BuildingBlock.class.getName());
+
+  private final String name;
+  private final String generalFormula;
+  private final BlockClass blockClass;
+  private final String smiles;
+
+  @Override
+  public String toString() {
+    StringBuilder b = new StringBuilder();
+    b = b.append(blockClass).append(", ").append(name).append(", ").append(generalFormula);
+    for (int i = 0; i < neutralLossFormulasNeg.size(); i++) {
+      b = b.append(", NL(-) ").append(i).append(": [").append(neutralLossFormulasNeg.get(i));
+      b = b.append(", ").append(neutralLossMassesNeg.get(i)).append(", ")
+          .append(neutralLossReqNeg.get(i)).append("]");
+    }
+    for (int i = 0; i < fragmentFormulasNeg.size(); i++) {
+      b = b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasNeg.get(i));
+      b = b.append(", ").append(fragmentMassesNeg.get(i)).append(", ").append(fragmentReqNeg.get(i))
+          .append("]");
+    }
+    for (int i = 0; i < neutralLossFormulasPos.size(); i++) {
+      b = b.append(", NL(+) ").append(i).append(": [").append(neutralLossFormulasPos.get(i));
+      b = b.append(", ").append(neutralLossMassesPos.get(i)).append(", ")
+          .append(neutralLossReqPos.get(i)).append("]");
+    }
+    for (int i = 0; i < fragmentFormulasPos.size(); i++) {
+      b = b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasPos.get(i));
+      b = b.append(", ").append(fragmentMassesPos.get(i)).append(", ").append(fragmentReqPos.get(i))
+          .append("]");
+    }
+    return b.toString();
+  }
+
+  private final List<String> requires = new ArrayList<>();
+  private final List<String> neutralLossFormulasPos = new ArrayList<>();
+  private final List<Double> neutralLossMassesPos = new ArrayList<>();
+  private final List<String> neutralLossReqPos = new ArrayList<>();
+  private final List<String> fragmentFormulasPos = new ArrayList<>();
+  private final List<Double> fragmentMassesPos = new ArrayList<>();
+  private final List<String> fragmentReqPos = new ArrayList<>();
+
+  private final List<String> neutralLossFormulasNeg = new ArrayList<>();
+  private final List<Double> neutralLossMassesNeg = new ArrayList<>();
+  private final List<String> neutralLossReqNeg = new ArrayList<>();
+  private final List<String> fragmentFormulasNeg = new ArrayList<>();
+  private final List<Double> fragmentMassesNeg = new ArrayList<>();
+  private final List<String> fragmentReqNeg = new ArrayList<>();
+
+  public BuildingBlock(@Nonnull final String name, @Nonnull final String generalFormula,
+      @Nonnull final BlockClass blockClass, @Nullable final String smiles) {
+    this.name = name;
+    this.generalFormula = generalFormula;
+    this.blockClass = blockClass;
+    this.smiles = smiles;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public String getGeneralFormula() {
+    return generalFormula;
+  }
+
+  public BlockClass getBlockClass() {
+    return blockClass;
+  }
+
+  public void addRequires(String req) {
+    requires.add(req);
+  }
+
+  public List<String> getRequires() {
+    return Collections.unmodifiableList(requires);
+  }
+
+  public List<String> getNeutralLossFormulasPos() {
+    return Collections.unmodifiableList(neutralLossFormulasPos);
+  }
+
+  public List<Double> getNeutralLossMassesPos() {
+    return Collections.unmodifiableList(neutralLossMassesPos);
+  }
+
+  public List<String> getFragmentFormulasPos() {
+    return Collections.unmodifiableList(fragmentFormulasPos);
+  }
+
+  public List<Double> getFragmentMassesPos() {
+    return Collections.unmodifiableList(fragmentMassesPos);
+  }
+
+  public List<String> getNeutralLossFormulasNeg() {
+    return Collections.unmodifiableList(neutralLossFormulasNeg);
+  }
+
+  public List<Double> getNeutralLossMassesNeg() {
+    return Collections.unmodifiableList(neutralLossMassesNeg);
+  }
+
+  public List<String> getFragmentFormulasNeg() {
+    return Collections.unmodifiableList(fragmentFormulasNeg);
+  }
+
+  public List<Double> getFragmentMassesNeg() {
+    return Collections.unmodifiableList(fragmentMassesNeg);
+  }
+
+  public boolean addNegativeFragment(@Nullable final String str, @Nullable final Double exactMass,
+      @Nullable final String req) {
+    if (str != null && fragmentFormulasNeg.contains(str)) {
+      logger.warning(
+          () -> blockClass.name() + " already contains a negative fragment with formula " + str);
+      return false;
+    }
+
+    if (exactMass != null && fragmentMassesNeg.stream()
+        .anyMatch(d -> Double.compare(d, exactMass) == 0)) {
+      logger.warning(
+          () -> blockClass.name() + " already contains a negative fragment with mass " + exactMass);
+    }
+
+    fragmentFormulasNeg.add(str);
+    fragmentMassesNeg.add(exactMass);
+    fragmentReqNeg.add(req);
+    return true;
+  }
+
+  public boolean addNegativeNeutralLoss(@Nullable final String str,
+      @Nullable final Double exactMass, @Nullable final String req) {
+    if (str != null && neutralLossFormulasNeg.contains(str)) {
+      logger.warning(
+          () -> blockClass.name() + " already contains a negative neutral loss with formula "
+              + str);
+      return false;
+    }
+
+    if (exactMass != null && neutralLossMassesNeg.stream()
+        .anyMatch(d -> Double.compare(d, exactMass) == 0)) {
+      logger.warning(
+          () -> blockClass.name() + " already contains a negative neutral loss with mass "
+              + exactMass);
+    }
+
+    neutralLossFormulasNeg.add(str);
+    neutralLossMassesNeg.add(exactMass);
+    neutralLossReqNeg.add(req);
+    return true;
+  }
+
+  public boolean addPositiveFragment(@Nullable final String str, @Nullable final Double exactMass,
+      @Nullable final String req) {
+    if (str != null && fragmentFormulasPos.contains(str)) {
+      logger.warning(
+          () -> blockClass.name() + " already contains a positive fragment with formula " + str);
+      return false;
+    }
+
+    if (exactMass != null && fragmentMassesPos.stream()
+        .anyMatch(d -> Double.compare(d, exactMass) == 0)) {
+      logger.warning(
+          () -> blockClass.name() + " already contains a positive fragment with mass " + exactMass);
+    }
+
+    fragmentFormulasPos.add(str);
+    fragmentMassesPos.add(exactMass);
+    fragmentReqPos.add(req);
+    return true;
+  }
+
+  public boolean addPositiveNeutralLoss(@Nullable final String str,
+      @Nullable final Double exactMass, @Nullable final String req) {
+    if (str != null && neutralLossFormulasPos.contains(str)) {
+      logger.warning(
+          () -> blockClass.name() + " already contains a positive neutral loss with formula "
+              + str);
+      return false;
+    }
+
+    if (exactMass != null && neutralLossMassesPos.stream()
+        .anyMatch(d -> Double.compare(d, exactMass) == 0)) {
+      logger.warning(
+          () -> blockClass.name() + " already contains a positive neutral loss with mass "
+              + exactMass);
+    }
+
+    neutralLossFormulasPos.add(str);
+    neutralLossMassesPos.add(exactMass);
+    neutralLossReqPos.add(req);
+    return true;
+  }
+}
