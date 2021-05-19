@@ -38,16 +38,21 @@ public class PfasLibraryBuilder {
     for (final BuildingBlock block : blocks) {
       final List<BuildingBlock> blockList = blockMap
           .computeIfAbsent(block.getBlockClass(), b -> new ArrayList<>());
-      blockList.add(block);
+      if(isValid(block)) {
+        blockList.add(block);
+      }
     }
   }
 
   public void buildLibrary() {
-    if (blocks.isEmpty()) {
+    if (blockMap.isEmpty()) {
       return;
     }
 
+    for(final BlockClass blockClass : BlockClass.values()) {
+      List<BuildingBlock> blocks = blockMap.get(blockClass);
 
+    }
   }
 
   @Nonnull
@@ -126,4 +131,6 @@ public class PfasLibraryBuilder {
     }
     return false;
   }
+
+
 }

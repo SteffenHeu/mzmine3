@@ -18,6 +18,9 @@
 
 package io.github.mzmine.util;
 
+import io.github.mzmine.datamodel.IonizationType;
+import io.github.mzmine.datamodel.identities.MolecularFormulaIdentity;
+import io.github.mzmine.datamodel.identities.iontype.IonType;
 import java.io.IOException;
 import java.util.Comparator;
 import java.util.Hashtable;
@@ -36,9 +39,6 @@ import org.openscience.cdk.interfaces.IIsotope;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
-import io.github.mzmine.datamodel.IonizationType;
-import io.github.mzmine.datamodel.identities.MolecularFormulaIdentity;
-import io.github.mzmine.datamodel.identities.iontype.IonType;
 
 public class FormulaUtils {
 
