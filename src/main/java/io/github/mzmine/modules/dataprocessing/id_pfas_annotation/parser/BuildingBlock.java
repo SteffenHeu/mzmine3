@@ -79,7 +79,9 @@ public class BuildingBlock {
   }
 
   public void addRequires(String req) {
-    requires.add(req);
+    if (!req.isEmpty()) {
+      requires.add(req);
+    }
   }
 
   public List<String> getRequires() {

@@ -102,7 +102,7 @@ public class PfasLibraryParser {
 
         final BuildingBlock block = new BuildingBlock(name, form, c, smiles);
 
-        if (req.split(innerSep).length != 0) {
+        if (req.length() != 0 && req.split(innerSep).length != 0) {
           Arrays.stream(req.split(innerSep)).forEach(block::addRequires);
         }
 
@@ -180,9 +180,7 @@ public class PfasLibraryParser {
         logger.warning("Invalid column indices given");
         return false;
       }
-
     }
-
     return true;
   }
 

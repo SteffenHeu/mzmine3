@@ -37,6 +37,7 @@ import org.openscience.cdk.config.Isotopes;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IIsotope;
 import org.openscience.cdk.interfaces.IMolecularFormula;
+import org.openscience.cdk.silent.MolecularFormula;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
@@ -202,6 +203,17 @@ public class FormulaUtils {
     return mz;
   }
 
+  public static double calculateMzRatio(@Nonnull final IMolecularFormula formula) {
+    if(formula.getCharge() == null || formula.getCharge() == 0) {
+      throw new IllegalArgumentException("Formula is not charged");
+    }
+
+    double mass = MolecularFormulaManipulator.getMass(formula, MolecularFormulaManipulator.MonoIsotopic);
+    mass -= formula.getCharge() * electronMass;
+
+    return Math.abs(mass / formula.getCharge());
+  }
+
   public static double calculateExactMass(String formula) {
     return calculateExactMass(formula, 0);
   }
@@ -270,7 +282,7 @@ public class FormulaUtils {
    * @return true / false
    */
   public static boolean checkMolecularFormula(String formula) {
-    if (formula.matches(".*[äöüÄÖÜß°§$%&/()=?ß²³´`+*~'#;:<>|]")) { // check
+    if (formula.matches(".*[äöüÄÖÜß°§$%&/=?ß²³´`+*~'#;:<>|]")) { // check
                                                                    // for
                                                                    // this
                                                                    // first
@@ -458,5 +470,14 @@ public class FormulaUtils {
     }
 
     return size;
+  }
+
+  public static IMolecularFormula cloneFormula(IMolecularFormula source) {
+    IMolecularFormula formula = new MolecularFormula();
+
+    for(IIsotope iso : source.isotopes()) {
+      formula.addIsotope(iso, source.getIsotopeCount(iso));
+    }
+    return formula;
   }
 }
