@@ -13,9 +13,7 @@ import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IMolecularFormula;
-import org.openscience.cdk.silent.SilentChemObjectBuilder;
 import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
 public class PfasParserTest {
@@ -36,10 +34,6 @@ public class PfasParserTest {
     URL path = this.getClass().getClassLoader().getResource("files/pfos-pfoa-database.CSV");
     File file = new File(path.getFile());
     Assertions.assertEquals(true, parser.read(file));
-
-    for (var entry : parser.getEntries()) {
-      logger.info(PfasLibraryBuilder.isValid(entry) + " " + entry.toString());
-    }
 
     PfasLibraryBuilder pfasLibraryBuilder = new PfasLibraryBuilder(parser.getEntries(),
         Range.closed(7, 8), Range.singleton(1), Range.singleton(1));
@@ -67,15 +61,6 @@ public class PfasParserTest {
 
   @Test
   public void testFormulaUtils() {
-    IChemObjectBuilder builder = SilentChemObjectBuilder.getInstance();
-    IMolecularFormula pfoa = MolecularFormulaManipulator
-        .getMajorIsotopeMolecularFormula("C8HF15O2", builder);
-    StringBuilder sb = new StringBuilder().append("Neutral: ")
-        .append(MolecularFormulaManipulator.getString(pfoa)).append(" ").append(
-            MolecularFormulaManipulator.getMass(pfoa, MolecularFormulaManipulator.MostAbundant));
-
-    MolecularFormulaManipulator.adjustProtonation(pfoa, -1);
-    final double mz = FormulaUtils.calculateMzRatio(pfoa);
 
   }
 }

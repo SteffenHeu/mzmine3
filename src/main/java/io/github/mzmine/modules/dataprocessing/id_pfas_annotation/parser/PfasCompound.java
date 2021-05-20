@@ -18,9 +18,13 @@
 
 package io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser;
 
+import io.github.mzmine.datamodel.MassSpectrum;
+import io.github.mzmine.datamodel.PolarityType;
+import io.github.mzmine.util.FormulaUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import javax.annotation.Nullable;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
@@ -83,11 +87,6 @@ public class PfasCompound {
 
   public IMolecularFormula getFormula() {
     return formula;
-  }
-
-  public double getExactMass() {
-//    return FormulaUtils.
-    return 0d;
   }
 
   public BuildingBlock getBackbone() {
@@ -163,5 +162,33 @@ public class PfasCompound {
   private String getSubstituentFormula(BuildingBlock substituent) {
     String f = substituent.getGeneralFormula();
     return f;
+  }
+
+  /**
+   * @param polarityType The polarity type.
+   * @return A computed fragment spectrum. Null if no fragment spectrum can be generated for the
+   * given polarity type.
+   */
+  @Nullable
+  public MassSpectrum getFragmentSpectrum(PolarityType polarityType) {
+    assert polarityType != PolarityType.UNKNOWN;
+    assert polarityType != PolarityType.NEUTRAL;
+
+    IMolecularFormula chargedFormula;
+    if (formula.getCharge() == null || formula.getCharge() == 0) {
+      chargedFormula = FormulaUtils.cloneFormula(formula);
+      MolecularFormulaManipulator.adjustProtonation(chargedFormula, polarityType.getSign());
+    } else if (formula.getCharge() == 1 && polarityType == PolarityType.POSITIVE) {
+      chargedFormula = formula;
+    } else if (formula.getCharge() == -1 && polarityType == PolarityType.NEGATIVE) {
+      chargedFormula = formula;
+    } else {
+      return null;
+    }
+
+    final double precursorMz = FormulaUtils.calculateMzRatio(chargedFormula);
+
+    getSubstituent().stream().mapToDouble(block -> block.getFra)
+    return null;
   }
 }
