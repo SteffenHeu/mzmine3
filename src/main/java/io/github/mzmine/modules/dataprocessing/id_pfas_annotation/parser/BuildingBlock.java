@@ -1,5 +1,6 @@
 package io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser;
 
+import io.github.mzmine.datamodel.PolarityType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -79,7 +80,9 @@ public class BuildingBlock {
   }
 
   public void addRequires(String req) {
-    requires.add(req);
+    if (!req.isEmpty()) {
+      requires.add(req);
+    }
   }
 
   public List<String> getRequires() {
@@ -200,5 +203,13 @@ public class BuildingBlock {
     neutralLossMassesPos.add(exactMass);
     neutralLossReqPos.add(req);
     return true;
+  }
+
+  public List<Double> getFragmentMasses(PolarityType polarityType) {
+    return polarityType == PolarityType.POSITIVE ? getFragmentMassesPos() : getFragmentMassesNeg();
+  }
+
+  public List<Double> getNeutralLossMasses(PolarityType polarityType) {
+    return polarityType == PolarityType.POSITIVE ? getNeutralLossMassesPos() : getNeutralLossMassesNeg();
   }
 }

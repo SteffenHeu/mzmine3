@@ -22,6 +22,7 @@ import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
+import io.github.mzmine.util.FormulaUtils;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -78,7 +79,7 @@ public class PfasLibraryParser {
           logger.warning(() -> "Illegal number of columns in line " + reader.getLinesRead() + ".");
           continue;
         }
-        if(line[CLASS].length() == 0) {
+        if (line[CLASS].length() == 0) {
           continue;
         }
 
@@ -102,7 +103,7 @@ public class PfasLibraryParser {
 
         final BuildingBlock block = new BuildingBlock(name, form, c, smiles);
 
-        if (req.split(innerSep).length != 0) {
+        if (req.length() != 0 && req.split(innerSep).length != 0) {
           Arrays.stream(req.split(innerSep)).forEach(block::addRequires);
         }
 
@@ -149,20 +150,28 @@ public class PfasLibraryParser {
       return false;
     }
 
-    if(formulas.length == 1 && formulas[0].isEmpty() && masses[0].isEmpty() && reqs[0].isEmpty()) {
+    if (formulas.length == 1 && formulas[0].isEmpty() && masses[0].isEmpty() && reqs[0].isEmpty()) {
       // nothing to do
       return true;
     }
 
     for (int i = 0; i < formulas.length; i++) {
       final String formula = formulas[i].isEmpty() ? null : formulas[i];
-      final Double mass = masses[i].isEmpty() ? null : Double.parseDouble(masses[i]);
+      Double mass = masses[i].isEmpty() ? null : Double.parseDouble(masses[i]);
       final String req = reqs[i].isEmpty() ? null : reqs[i];
 
       if (formula == null && mass == null && req != null) {
         logger.warning(
             "Line " + linesRead + ": Formula AND massIndex " + i + " for columns " + formIndex
                 + ", " + massIndex + " is empty although a reqIndex is given.");
+      }
+
+      if (block.getBlockClass() != BlockClass.BACKBONE && mass == null && formula != null) {
+        if (formula.contains("+") || formula.contains("-")) {
+          mass = FormulaUtils.calculateMzRatio(formula);
+        } else {
+          mass = FormulaUtils.calculateExactMass(formula);
+        }
       }
 
       if (formIndex == NL_FORMULA_NEG && massIndex == NL_MASS_NEG && reqIndex == NL_REQ_NEG) {
@@ -180,9 +189,7 @@ public class PfasLibraryParser {
         logger.warning("Invalid column indices given");
         return false;
       }
-
     }
-
     return true;
   }
 
