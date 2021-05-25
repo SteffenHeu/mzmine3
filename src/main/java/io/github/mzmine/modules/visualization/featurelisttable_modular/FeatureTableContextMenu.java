@@ -20,6 +20,14 @@
 package io.github.mzmine.modules.visualization.featurelisttable_modular;
 
 import com.google.common.collect.Range;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.swing.SwingUtilities;
 import io.github.mzmine.datamodel.FeatureIdentity;
 import io.github.mzmine.datamodel.Frame;
 import io.github.mzmine.datamodel.IMSRawDataFile;
@@ -29,8 +37,10 @@ import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.types.DataType;
+import io.github.mzmine.datamodel.features.types.LipidAnnotationType;
 import io.github.mzmine.datamodel.features.types.ImageType;
 import io.github.mzmine.datamodel.features.types.fx.ColumnType;
+import io.github.mzmine.datamodel.features.types.graphicalnodes.LipidSpectrumChart;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.featdet_manual.XICManualPickerModule;
 import io.github.mzmine.modules.dataprocessing.id_formulaprediction.FormulaPredictionModule;
@@ -49,6 +59,7 @@ import io.github.mzmine.modules.visualization.ims_featurevisualizer.IMSFeatureVi
 import io.github.mzmine.modules.visualization.ims_mobilitymzplot.IMSMobilityMzPlotModule;
 import io.github.mzmine.modules.visualization.intensityplot.IntensityPlotModule;
 import io.github.mzmine.modules.visualization.rawdataoverviewims.IMSRawDataOverviewModule;
+import io.github.mzmine.modules.visualization.spectra.matchedlipid.MatchedLipidSpectrumTab;
 import io.github.mzmine.modules.visualization.spectra.multimsms.MultiMsMsTab;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.MultiSpectraVisualizerTab;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerModule;
@@ -62,11 +73,6 @@ import io.github.mzmine.util.SortingProperty;
 import io.github.mzmine.util.components.ConditionalMenuItem;
 import io.github.mzmine.util.scans.SpectraMerging;
 import io.github.mzmine.util.spectraldb.entry.SpectralDBFeatureIdentity;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ButtonType;
@@ -347,6 +353,15 @@ public class FeatureTableContextMenu extends ContextMenu {
     showAllMSMSItem.setOnAction(
         e -> MultiSpectraVisualizerTab.addNewMultiSpectraVisualizerTab(selectedRows.get(0)));
 
+    final MenuItem showMatchedLipidItem =
+        new ConditionalMenuItem("Matched Lipid signals", () -> !selectedRows.isEmpty()
+            && selectedRows.get(0).get(LipidAnnotationType.class) != null);
+    showMatchedLipidItem.setOnAction(e -> {
+      MatchedLipidSpectrumTab matchedLipidSpectrumTab = new MatchedLipidSpectrumTab(
+          "Matched Lipid Signals", new LipidSpectrumChart(selectedRows.get(0), null));
+      MZmineCore.getDesktop().addTab(matchedLipidSpectrumTab);
+    });
+
     final MenuItem showIsotopePatternItem = new ConditionalMenuItem("Isotope pattern",
         () -> selectedFeature != null && selectedFeature.getIsotopePattern() != null);
     showIsotopePatternItem.setOnAction(e -> SpectraVisualizerModule
@@ -367,8 +382,7 @@ public class FeatureTableContextMenu extends ContextMenu {
             showInMobilityMzVisualizerItem,
             new SeparatorMenuItem(),
             showSpectrumItem, showBestMobilityScanItem, extractSumSpectrumFromMobScans,
-            showMSMSItem, showMSMSMirrorItem,
-            showAllMSMSItem,
+            showMSMSItem, showMSMSMirrorItem, showAllMSMSItem, showMatchedLipidItem,
             new SeparatorMenuItem(), showIsotopePatternItem, showSpectralDBResults,
             new SeparatorMenuItem(), showPeakRowSummaryItem);
   }
