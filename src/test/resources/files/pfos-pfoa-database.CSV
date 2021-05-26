@@ -1,5 +1,5 @@
 Class,Name,Requires,General Formula,Smiles,Neutral loss formula (-),Neutral loss mass (-),Neutral loss req (-),Fragment formula (-),Fragment mass (-),Fragment req (-),Neutral loss formula (+),Neutral loss mass (+),Neutral loss req (+),Fragment formula (+),Fragment mass (+),Fragment req (+)
-Backbone,Perfluoroalkyl,,F(CF2)nR,,CF2,49.99680644,,F(CF2)n-,,,CF2,49.99680644,,F(CF2)n+,,
+Backbone,Perfluoroalkyl,,F(CF2)nR,,,,,F(CF2)n-,,,,,,F(CF2)n+,,
 Substituent,Hydrogen,,H,,,,,,,,,,,,,
 Functional group,Carbonyls,,XCOOZ,,CO2,43.98982924,Hydrogen,,,,,,,,,
 Functional group,Sulfonic acid,,XSO3Z,,SO3,,Hydrogen,SO3-,,,,,,,,

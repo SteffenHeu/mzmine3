@@ -1,7 +1,11 @@
 package util;
 
 import com.google.common.collect.Range;
+import io.github.mzmine.datamodel.PolarityType;
+import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.BlockClass;
+import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.BuildingBlock;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasCompound;
+import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasFragment;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryBuilder;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryParser;
 import io.github.mzmine.util.FormulaUtils;
@@ -57,10 +61,33 @@ public class PfasParserTest {
     final PfasCompound pfos = library.get(3);
     Assertions.assertEquals("C8HF17O3S", MolecularFormulaManipulator.getString(pfos.getFormula()));
 //    Assertions.assertEquals();
+
+    List<PfasFragment> fragments = pfoa.getObservedIons(PolarityType.NEGATIVE);
+    for (PfasFragment fragment : fragments) {
+      logger.info(fragment.toString());
+    }
   }
 
   @Test
   public void testFormulaUtils() {
+
+  }
+
+  @Test
+  public void testFragmentSpectrum() {
+    final BuildingBlock backbone = new BuildingBlock("Perfluoroalkyl", "F(CF2)nR",
+        BlockClass.BACKBONE, null);
+    backbone.addNegativeFragment("F(CF2)n-", null, null);
+
+    final BuildingBlock substituent = new BuildingBlock("Hydrogen", "H", BlockClass.SUBSTITUENT,
+        null);
+
+    final BuildingBlock functionalGroup = new BuildingBlock("Carbonyl", "XCOOZ",
+        BlockClass.FUNCTIONAL_GROUP, null);
+    functionalGroup.addNegativeNeutralLoss("CO2", null, null);
+
+    PfasCompound pfoa = new PfasCompound(backbone, null, functionalGroup, List.of(substituent), 7, -1, -1);
+
 
   }
 }
