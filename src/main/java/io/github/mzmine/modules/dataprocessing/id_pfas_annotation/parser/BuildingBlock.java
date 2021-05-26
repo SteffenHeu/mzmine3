@@ -121,6 +121,22 @@ public class BuildingBlock {
     return Collections.unmodifiableList(fragmentMassesNeg);
   }
 
+  public List<String> getNeutralLossReqPos() {
+    return neutralLossReqPos;
+  }
+
+  public List<String> getFragmentReqPos() {
+    return fragmentReqPos;
+  }
+
+  public List<String> getNeutralLossReqNeg() {
+    return neutralLossReqNeg;
+  }
+
+  public List<String> getFragmentReqNeg() {
+    return fragmentReqNeg;
+  }
+
   public boolean addNegativeFragment(@Nullable final String str, @Nullable final Double exactMass,
       @Nullable final String req) {
     if (str != null && fragmentFormulasNeg.contains(str)) {
@@ -210,6 +226,25 @@ public class BuildingBlock {
   }
 
   public List<Double> getNeutralLossMasses(PolarityType polarityType) {
-    return polarityType == PolarityType.POSITIVE ? getNeutralLossMassesPos() : getNeutralLossMassesNeg();
+    return polarityType == PolarityType.POSITIVE ? getNeutralLossMassesPos()
+        : getNeutralLossMassesNeg();
+  }
+
+  public List<String> getNeutralLossFormulas(PolarityType polarityType) {
+    return polarityType == PolarityType.POSITIVE ? getNeutralLossFormulasPos()
+        : getNeutralLossFormulasNeg();
+  }
+
+  public List<String> getFragmentFormulas(PolarityType polarityType) {
+    return polarityType == PolarityType.POSITIVE ? getFragmentFormulasPos()
+        : getFragmentFormulasNeg();
+  }
+
+  public List<String> getNeutralLossReqs(PolarityType polarityType) {
+    return polarityType == PolarityType.POSITIVE ? getNeutralLossReqPos() : getNeutralLossReqNeg();
+  }
+
+  public List<String> getFragmentReqs(PolarityType polarityType) {
+    return polarityType == PolarityType.POSITIVE ? getFragmentReqPos() : getFragmentReqNeg();
   }
 }

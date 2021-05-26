@@ -37,6 +37,7 @@ public class PfasCompound {
   private final BuildingBlock backboneLinker;
   private final BuildingBlock functionalGroup;
   private final Collection<BuildingBlock> substituent;
+  private final List<BuildingBlock> blocks = new ArrayList<>();
 
   private final int n, m, k;
 
@@ -51,7 +52,6 @@ public class PfasCompound {
     this.m = m;
     this.k = k;
 
-    final List<BuildingBlock> blocks = new ArrayList<>();
     blocks.add(backbone);
     blocks.add(backboneLinker);
     blocks.add(functionalGroup);
@@ -188,7 +188,25 @@ public class PfasCompound {
 
     final double precursorMz = FormulaUtils.calculateMzRatio(chargedFormula);
 
-    getSubstituent().stream().mapToDouble(block -> block.getFra)
+    getSubstituent().stream().mapToDouble(block -> block.get)
     return null;
+  }
+
+  public List<PfasFragment> getFragments(final PolarityType polarityType) {
+    final List<PfasFragment> fragments = new ArrayList<>();
+    for(int i = 0; i < blocks.size(); i++) {
+      final BuildingBlock block = blocks.get(i);
+      List<Double> masses = block.getFragmentMasses(polarityType);
+      List<String> formulas = block.getFragmentFormulas(polarityType);
+      List<String> reqs = block.getFragmentReqs(polarityType);
+      for(int j = 0; j < reqs.size(); j++) {
+        if(reqs.get(j) == null) {
+          continue;
+        }
+
+        fragments.add(new PfasFragment(masses.get(j), formulas.get(j)));
+        
+      }
+    }
   }
 }
