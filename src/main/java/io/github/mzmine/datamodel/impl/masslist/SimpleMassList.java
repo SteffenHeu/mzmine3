@@ -25,13 +25,14 @@ import io.github.mzmine.datamodel.impl.SimpleDataPoint;
 import io.github.mzmine.util.DataPointUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * This class represent detected masses (ions) in one mass spectrum
  */
 public class SimpleMassList extends AbstractStorableSpectrum implements MassList {
 
-  public SimpleMassList(@Nonnull MemoryMapStorage storage, @Nonnull double[] mzValues,
+  public SimpleMassList(@Nullable MemoryMapStorage storage, @Nonnull double[] mzValues,
       @Nonnull double[] intensityValues) {
     super(storage, mzValues, intensityValues);
   }

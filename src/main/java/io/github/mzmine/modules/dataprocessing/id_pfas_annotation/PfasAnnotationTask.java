@@ -18,6 +18,28 @@
 
 package io.github.mzmine.modules.dataprocessing.id_pfas_annotation;
 
-public class PfasAnnotationTask {
+import io.github.mzmine.taskcontrol.AbstractTask;
+import io.github.mzmine.util.MemoryMapStorage;
+import javax.annotation.Nullable;
 
+public class PfasAnnotationTask extends AbstractTask {
+
+  protected PfasAnnotationTask(@Nullable MemoryMapStorage storage) {
+    super(storage);
+  }
+
+  @Override
+  public String getTaskDescription() {
+    return null;
+  }
+
+  @Override
+  public double getFinishedPercentage() {
+    return 0;
+  }
+
+  @Override
+  public void run() {
+
+  }
 }

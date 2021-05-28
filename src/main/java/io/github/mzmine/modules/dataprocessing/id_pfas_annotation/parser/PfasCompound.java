@@ -126,7 +126,7 @@ public class PfasCompound {
       if (b == null) {
         continue;
       }
-      if (b.getName().equals(req)) {
+      if (b.getName().equals(req) || (b.getTypes() != null && b.getTypes().contains(req))) {
         return true;
       }
     }
@@ -186,33 +186,32 @@ public class PfasCompound {
   }
 
   /**
-   *
    * @param polarityType
    * @return A list of all observed fragments including neutral losses.
    */
   public List<PfasFragment> getObservedIons(final PolarityType polarityType) {
-      assert polarityType != PolarityType.UNKNOWN;
-      assert polarityType != PolarityType.NEUTRAL;
+    assert polarityType != PolarityType.UNKNOWN;
+    assert polarityType != PolarityType.NEUTRAL;
 
-      IMolecularFormula chargedFormula;
-      if (formula.getCharge() == null || formula.getCharge() == 0) {
-        chargedFormula = FormulaUtils.cloneFormula(formula);
-        MolecularFormulaManipulator.adjustProtonation(chargedFormula, polarityType.getSign());
-      } else if (formula.getCharge() == 1 && polarityType == PolarityType.POSITIVE) {
-        chargedFormula = formula;
-      } else if (formula.getCharge() == -1 && polarityType == PolarityType.NEGATIVE) {
-        chargedFormula = formula;
-      } else {
-        return null;
-      }
-
-      final double precursorMz = FormulaUtils.calculateMzRatio(chargedFormula);
-
-      final List<PfasFragment> fragments = getFragments(polarityType);
-      fragments.addAll(getNeutralLosses(polarityType, precursorMz));
-
-      return fragments;
+    IMolecularFormula chargedFormula;
+    if (formula.getCharge() == null || formula.getCharge() == 0) {
+      chargedFormula = FormulaUtils.cloneFormula(formula);
+      MolecularFormulaManipulator.adjustProtonation(chargedFormula, polarityType.getSign());
+    } else if (formula.getCharge() == 1 && polarityType == PolarityType.POSITIVE) {
+      chargedFormula = formula;
+    } else if (formula.getCharge() == -1 && polarityType == PolarityType.NEGATIVE) {
+      chargedFormula = formula;
+    } else {
+      return null;
     }
+
+    final double precursorMz = FormulaUtils.calculateMzRatio(chargedFormula);
+
+    final List<PfasFragment> fragments = getFragments(polarityType);
+    fragments.addAll(getNeutralLosses(polarityType, precursorMz));
+
+    return fragments;
+  }
 
   public List<PfasFragment> getFragments(final PolarityType polarityType) {
     final List<PfasFragment> fragments = new ArrayList<>();
@@ -230,9 +229,9 @@ public class PfasCompound {
         }
 
         if (block.getBlockClass() == BlockClass.BACKBONE && formulas.get(j).contains(")n")) {
-          fragments.addAll(generateBackboneFragments(formulas.get(j)));
+          fragments.addAll(generateBackboneFragments(formulas.get(j), block));
         } else {
-          fragments.add(new PfasFragment(masses.get(j), formulas.get(j)));
+          fragments.add(new PfasFragment(masses.get(j), formulas.get(j), block));
         }
       }
     }
@@ -240,7 +239,8 @@ public class PfasCompound {
     return fragments;
   }
 
-  private List<PfasFragment> generateBackboneFragments(String fragmentFormula) {
+  private List<PfasFragment> generateBackboneFragments(String fragmentFormula,
+      BuildingBlock backbone) {
 
     final List<PfasFragment> fragments = new ArrayList<>();
 
@@ -251,19 +251,19 @@ public class PfasCompound {
           for (int k = 0; 0 < this.k; k++) {
             final String formula = getBackboneFormula(fragmentFormula, n, m, k);
             final double mz = FormulaUtils.calculateMzRatio(formula);
-            fragments.add(new PfasFragment(mz, formula));
+            fragments.add(new PfasFragment(mz, formula, backbone));
           }
         } else {
           for (int m = 0; m < this.m; m++) {
             final String formula = getBackboneFormula(fragmentFormula, n, m, -1);
             final double mz = FormulaUtils.calculateMzRatio(formula);
-            fragments.add(new PfasFragment(mz, formula));
+            fragments.add(new PfasFragment(mz, formula, backbone));
           }
         }
       } else {
         final String formula = getBackboneFormula(fragmentFormula, n, -1, -1);
         final double mz = FormulaUtils.calculateMzRatio(formula);
-        fragments.add(new PfasFragment(mz, formula));
+        fragments.add(new PfasFragment(mz, formula, backbone));
       }
     }
 
@@ -290,7 +290,8 @@ public class PfasCompound {
           continue;
         }
 
-        fragments.add(new PfasFragment(baseMass - masses.get(j), formulas.get(j)));
+        fragments.add(new PfasFragment(baseMass - masses.get(j),
+            "[M-H-" + formulas.get(j) + "]" + polarityType.asSingleChar(), block));
       }
     }
 

@@ -15,44 +15,19 @@ public class BuildingBlock {
   private final String name;
   private final String generalFormula;
   private final BlockClass blockClass;
+  private final String types;
   private final String smiles;
 
-  @Override
-  public String toString() {
-    StringBuilder b = new StringBuilder();
-    b = b.append(blockClass).append(", ").append(name).append(", ").append(generalFormula);
-    for (int i = 0; i < neutralLossFormulasNeg.size(); i++) {
-      b = b.append(", NL(-) ").append(i).append(": [").append(neutralLossFormulasNeg.get(i));
-      b = b.append(", ").append(neutralLossMassesNeg.get(i)).append(", ")
-          .append(neutralLossReqNeg.get(i)).append("]");
-    }
-    for (int i = 0; i < fragmentFormulasNeg.size(); i++) {
-      b = b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasNeg.get(i));
-      b = b.append(", ").append(fragmentMassesNeg.get(i)).append(", ").append(fragmentReqNeg.get(i))
-          .append("]");
-    }
-    for (int i = 0; i < neutralLossFormulasPos.size(); i++) {
-      b = b.append(", NL(+) ").append(i).append(": [").append(neutralLossFormulasPos.get(i));
-      b = b.append(", ").append(neutralLossMassesPos.get(i)).append(", ")
-          .append(neutralLossReqPos.get(i)).append("]");
-    }
-    for (int i = 0; i < fragmentFormulasPos.size(); i++) {
-      b = b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasPos.get(i));
-      b = b.append(", ").append(fragmentMassesPos.get(i)).append(", ").append(fragmentReqPos.get(i))
-          .append("]");
-    }
-    return b.toString();
-  }
-
   private final List<String> requires = new ArrayList<>();
+
   private final List<String> neutralLossFormulasPos = new ArrayList<>();
   private final List<Double> neutralLossMassesPos = new ArrayList<>();
   private final List<String> neutralLossReqPos = new ArrayList<>();
   private final List<String> fragmentFormulasPos = new ArrayList<>();
   private final List<Double> fragmentMassesPos = new ArrayList<>();
   private final List<String> fragmentReqPos = new ArrayList<>();
-
   private final List<String> neutralLossFormulasNeg = new ArrayList<>();
+
   private final List<Double> neutralLossMassesNeg = new ArrayList<>();
   private final List<String> neutralLossReqNeg = new ArrayList<>();
   private final List<String> fragmentFormulasNeg = new ArrayList<>();
@@ -60,11 +35,12 @@ public class BuildingBlock {
   private final List<String> fragmentReqNeg = new ArrayList<>();
 
   public BuildingBlock(@Nonnull final String name, @Nonnull final String generalFormula,
-      @Nonnull final BlockClass blockClass, @Nullable final String smiles) {
+      @Nonnull final BlockClass blockClass, @Nullable String types, @Nullable final String smiles) {
     this.name = name;
     this.generalFormula = generalFormula;
     this.blockClass = blockClass;
     this.smiles = smiles;
+    this.types = types;
   }
 
   public String getName() {
@@ -246,5 +222,37 @@ public class BuildingBlock {
 
   public List<String> getFragmentReqs(PolarityType polarityType) {
     return polarityType == PolarityType.POSITIVE ? getFragmentReqPos() : getFragmentReqNeg();
+  }
+
+  @Nullable
+  public String getTypes() {
+    return types;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder b = new StringBuilder();
+    b = b.append(blockClass).append(", ").append(name).append(", ").append(generalFormula);
+    for (int i = 0; i < neutralLossFormulasNeg.size(); i++) {
+      b = b.append(", NL(-) ").append(i).append(": [").append(neutralLossFormulasNeg.get(i));
+      b = b.append(", ").append(neutralLossMassesNeg.get(i)).append(", ")
+          .append(neutralLossReqNeg.get(i)).append("]");
+    }
+    for (int i = 0; i < fragmentFormulasNeg.size(); i++) {
+      b = b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasNeg.get(i));
+      b = b.append(", ").append(fragmentMassesNeg.get(i)).append(", ").append(fragmentReqNeg.get(i))
+          .append("]");
+    }
+    for (int i = 0; i < neutralLossFormulasPos.size(); i++) {
+      b = b.append(", NL(+) ").append(i).append(": [").append(neutralLossFormulasPos.get(i));
+      b = b.append(", ").append(neutralLossMassesPos.get(i)).append(", ")
+          .append(neutralLossReqPos.get(i)).append("]");
+    }
+    for (int i = 0; i < fragmentFormulasPos.size(); i++) {
+      b = b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasPos.get(i));
+      b = b.append(", ").append(fragmentMassesPos.get(i)).append(", ").append(fragmentReqPos.get(i))
+          .append("]");
+    }
+    return b.toString();
   }
 }
