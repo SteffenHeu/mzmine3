@@ -13,7 +13,6 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.FormulaUtils;
 import java.io.File;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 import org.junit.Assert;
@@ -30,7 +29,6 @@ public class PfasParserTest {
   public void testSplit() {
     String str = ";;;";
 
-    logger.info(() -> Arrays.toString(str.split(";", -1)) + "");
     Assertions.assertEquals(4, str.split(";", -1).length);
   }
 
@@ -43,7 +41,6 @@ public class PfasParserTest {
 
     PfasLibraryBuilder pfasLibraryBuilder = new PfasLibraryBuilder(parser.getEntries(),
         Range.closed(7, 8), Range.singleton(1), Range.singleton(1));
-    pfasLibraryBuilder.buildBlockMap();
     pfasLibraryBuilder.buildLibrary();
 
     final List<PfasCompound> library = pfasLibraryBuilder.getLibrary();
@@ -79,7 +76,6 @@ public class PfasParserTest {
 
     PfasLibraryBuilder pfasLibraryBuilder = new PfasLibraryBuilder(parser.getEntries(),
         Range.closed(8, 8), Range.singleton(1), Range.singleton(1));
-    pfasLibraryBuilder.buildBlockMap();
     pfasLibraryBuilder.buildLibrary();
 
     final List<PfasCompound> library = pfasLibraryBuilder.getLibrary();
@@ -121,7 +117,5 @@ public class PfasParserTest {
         .getIntensityCoverage(ml, matchingMzs, new MZTolerance(0.01, 0d));
 
     Assertions.assertEquals(0.6708860759493671, coverage);
-
-    logger.info("" + coverage);
   }
 }
