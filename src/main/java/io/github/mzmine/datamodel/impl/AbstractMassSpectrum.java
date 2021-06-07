@@ -23,7 +23,6 @@ import com.google.common.collect.Streams;
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.MassSpectrum;
 import io.github.mzmine.datamodel.MassSpectrumType;
-import io.github.mzmine.datamodel.Scan;
 import java.nio.DoubleBuffer;
 import java.util.Iterator;
 import java.util.logging.Logger;
@@ -65,7 +64,7 @@ public abstract class AbstractMassSpectrum implements MassSpectrum {
     basePeakIndex = 0;
     mzRange = Range.closed(mzValues.get(0), mzValues.get(mzValues.capacity() - 1));
 
-    for (int i = 0; i < mzValues.capacity() - 1; i++) {
+    for (int i = 0; i < mzValues.capacity(); i++) {
 
       // Check the order of the m/z values
       if ((i < mzValues.capacity() - 1) && (mzValues.get(i) > mzValues.get(i + 1))) {

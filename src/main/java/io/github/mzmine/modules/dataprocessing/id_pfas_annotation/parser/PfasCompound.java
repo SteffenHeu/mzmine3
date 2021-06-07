@@ -24,6 +24,7 @@ import io.github.mzmine.util.FormulaUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IMolecularFormula;
@@ -41,8 +42,9 @@ public class PfasCompound {
 
   private final int n, m, k;
 
-  protected PfasCompound(BuildingBlock backbone, BuildingBlock backboneLinker,
-      BuildingBlock functionalGroup, Collection<BuildingBlock> substituent, int n, int m, int k)
+  public PfasCompound(@Nonnull final BuildingBlock backbone,
+      @Nullable final BuildingBlock backboneLinker, @Nonnull final BuildingBlock functionalGroup,
+      @Nonnull final Collection<BuildingBlock> substituent, int n, int m, int k)
       throws InvalidCompoundConfigurationException {
     this.backbone = backbone;
     this.backboneLinker = backboneLinker;
@@ -53,7 +55,9 @@ public class PfasCompound {
     this.k = k;
 
     blocks.add(backbone);
-    blocks.add(backboneLinker);
+    if (backboneLinker != null) {
+      blocks.add(backboneLinker);
+    }
     blocks.add(functionalGroup);
     blocks.addAll(substituent);
 
@@ -64,7 +68,7 @@ public class PfasCompound {
     final IChemObjectBuilder inst = SilentChemObjectBuilder.getInstance();
 
     final IMolecularFormula backboneFormula = MolecularFormulaManipulator
-        .getMajorIsotopeMolecularFormula(getBackboneFormula(backbone), inst);
+        .getMajorIsotopeMolecularFormula(getBackboneFormula(backbone, n, m, k), inst);
 
     final IMolecularFormula functionalGroupFormula = MolecularFormulaManipulator
         .getMajorIsotopeMolecularFormula(getFgFormula(functionalGroup), inst);
@@ -122,7 +126,7 @@ public class PfasCompound {
       if (b == null) {
         continue;
       }
-      if (b.getName().equals(req)) {
+      if (b.getName().equals(req) || (b.getTypes() != null && b.getTypes().contains(req))) {
         return true;
       }
     }
@@ -143,8 +147,14 @@ public class PfasCompound {
     return true;
   }
 
-  private String getBackboneFormula(BuildingBlock backbone) {
+  private String getBackboneFormula(BuildingBlock backbone, int n, int m, int k) {
     String f = backbone.getGeneralFormula().replaceAll("\\)n", ")" + n).replaceAll("\\)m", ")" + m)
+        .replaceAll("\\)k", ")" + k).replaceAll("R", "");
+    return f;
+  }
+
+  private String getBackboneFormula(String formula, int n, int m, int k) {
+    String f = formula.replaceAll("\\)n", ")" + n).replaceAll("\\)m", ")" + m)
         .replaceAll("\\)k", ")" + k).replaceAll("R", "");
     return f;
   }
@@ -171,6 +181,15 @@ public class PfasCompound {
    */
   @Nullable
   public MassSpectrum getFragmentSpectrum(PolarityType polarityType) {
+    final List<PfasFragment> fragments = getObservedIons(polarityType);
+    return null;
+  }
+
+  /**
+   * @param polarityType
+   * @return A list of all observed fragments including neutral losses.
+   */
+  public List<PfasFragment> getObservedIons(final PolarityType polarityType) {
     assert polarityType != PolarityType.UNKNOWN;
     assert polarityType != PolarityType.NEUTRAL;
 
@@ -188,25 +207,94 @@ public class PfasCompound {
 
     final double precursorMz = FormulaUtils.calculateMzRatio(chargedFormula);
 
-    getSubstituent().stream().mapToDouble(block -> block.get)
-    return null;
+    final List<PfasFragment> fragments = getFragments(polarityType);
+    fragments.addAll(getNeutralLosses(polarityType, precursorMz));
+
+    return fragments;
   }
 
   public List<PfasFragment> getFragments(final PolarityType polarityType) {
     final List<PfasFragment> fragments = new ArrayList<>();
-    for(int i = 0; i < blocks.size(); i++) {
+
+    for (int i = 0; i < blocks.size(); i++) {
       final BuildingBlock block = blocks.get(i);
-      List<Double> masses = block.getFragmentMasses(polarityType);
-      List<String> formulas = block.getFragmentFormulas(polarityType);
-      List<String> reqs = block.getFragmentReqs(polarityType);
-      for(int j = 0; j < reqs.size(); j++) {
-        if(reqs.get(j) == null) {
+
+      final List<Double> masses = block.getFragmentMasses(polarityType);
+      final List<String> formulas = block.getFragmentFormulas(polarityType);
+      final List<String> reqs = block.getFragmentReqs(polarityType);
+
+      for (int j = 0; j < reqs.size(); j++) {
+        if (reqs.get(j) != null && !evaluateRequirement(blocks, reqs.get(j))) {
           continue;
         }
 
-        fragments.add(new PfasFragment(masses.get(j), formulas.get(j)));
-        
+        if (block.getBlockClass() == BlockClass.BACKBONE && formulas.get(j).contains(")n")) {
+          fragments.addAll(generateBackboneFragments(formulas.get(j), block));
+        } else {
+          fragments.add(new PfasFragment(masses.get(j), formulas.get(j), block));
+        }
       }
     }
+
+    return fragments;
+  }
+
+  private List<PfasFragment> generateBackboneFragments(String fragmentFormula,
+      BuildingBlock backbone) {
+
+    final List<PfasFragment> fragments = new ArrayList<>();
+
+    // generate fragments from the general formula
+    for (int n = 0; n < this.n; n++) {
+      if (this.m != -1) {
+        if (k != -1) {
+          for (int k = 0; 0 < this.k; k++) {
+            final String formula = getBackboneFormula(fragmentFormula, n, m, k);
+            final double mz = FormulaUtils.calculateMzRatio(formula);
+            fragments.add(new PfasFragment(mz, formula, backbone));
+          }
+        } else {
+          for (int m = 0; m < this.m; m++) {
+            final String formula = getBackboneFormula(fragmentFormula, n, m, -1);
+            final double mz = FormulaUtils.calculateMzRatio(formula);
+            fragments.add(new PfasFragment(mz, formula, backbone));
+          }
+        }
+      } else {
+        final String formula = getBackboneFormula(fragmentFormula, n, -1, -1);
+        final double mz = FormulaUtils.calculateMzRatio(formula);
+        fragments.add(new PfasFragment(mz, formula, backbone));
+      }
+    }
+
+    return fragments;
+  }
+
+  /**
+   * @param polarityType The polarity type
+   * @param baseMass     m/z of the precursor
+   * @return
+   */
+  public List<PfasFragment> getNeutralLosses(PolarityType polarityType, double baseMass) {
+    final List<PfasFragment> fragments = new ArrayList<>();
+
+    for (int i = 0; i < blocks.size(); i++) {
+      final BuildingBlock block = blocks.get(i);
+
+      final List<Double> masses = block.getNeutralLossMasses(polarityType);
+      final List<String> formulas = block.getNeutralLossFormulas(polarityType);
+      final List<String> reqs = block.getNeutralLossReqs(polarityType);
+
+      for (int j = 0; j < masses.size(); j++) {
+        if (reqs.get(j) != null && !evaluateRequirement(blocks, reqs.get(j))) {
+          continue;
+        }
+
+        fragments.add(new PfasFragment(baseMass - masses.get(j),
+            "[M-H-" + formulas.get(j) + "]" + polarityType.asSingleChar(), block));
+      }
+    }
+
+    return fragments;
   }
 }

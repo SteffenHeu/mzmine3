@@ -19,6 +19,7 @@ public class PfasCompoundBuilder {
 
   /**
    * Generates valid compounds for the given list of {@link BuildingBlock}s
+   *
    * @return A list of {@link PfasCompound}s
    */
   public List<PfasCompound> getCompounds(BuildingBlock backbone, BuildingBlock backboneLinker,
@@ -53,7 +54,7 @@ public class PfasCompoundBuilder {
       BuildingBlock backboneLinker, BuildingBlock functionalGroup,
       Collection<BuildingBlock> substituent, int n, int m, int k) {
     try {
-      PfasCompound compound = new PfasCompound(backbone, backboneLinker, functionalGroup,
+      final PfasCompound compound = new PfasCompound(backbone, backboneLinker, functionalGroup,
           substituent, n, m, k);
       compounds.add(compound);
     } catch (InvalidCompoundConfigurationException ignored) {

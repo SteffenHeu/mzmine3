@@ -42,21 +42,22 @@ public class PfasLibraryParser {
   private static final int NAME = 1;
   private static final int REQ = 2;
   private static final int GEN_FORM = 3;
-  private static final int SMILES = 4;
+  private static final int TYPES = 4;
+  private static final int SMILES = 5;
 
-  private static final int NL_FORMULA_NEG = 5;
-  private static final int NL_MASS_NEG = 6;
-  private static final int NL_REQ_NEG = 7;
-  private static final int FRAG_FORMULA_NEG = 8;
-  private static final int FRAG_MASS_NEG = 9;
-  private static final int FRAG_REQ_NEG = 10;
+  private static final int NL_FORMULA_NEG = 6;
+  private static final int NL_MASS_NEG = 7;
+  private static final int NL_REQ_NEG = 8;
+  private static final int FRAG_FORMULA_NEG = 9;
+  private static final int FRAG_MASS_NEG = 10;
+  private static final int FRAG_REQ_NEG = 11;
 
-  private static final int NL_FORMULA_POS = 11;
-  private static final int NL_MASS_POS = 12;
-  private static final int NL_REQ_POS = 13;
-  private static final int FRAG_FORMULA_POS = 14;
-  private static final int FRAG_MASS_POS = 15;
-  private static final int FRAG_REQ_POS = 16;
+  private static final int NL_FORMULA_POS = 12;
+  private static final int NL_MASS_POS = 13;
+  private static final int NL_REQ_POS = 14;
+  private static final int FRAG_FORMULA_POS = 15;
+  private static final int FRAG_MASS_POS = 16;
+  private static final int FRAG_REQ_POS = 17;
 
   private static final Logger logger = Logger.getLogger(PfasLibraryParser.class.getName());
 
@@ -94,6 +95,7 @@ public class PfasLibraryParser {
         final String name = line[NAME].trim();
         final String req = line[REQ].trim();
         final String form = line[GEN_FORM].trim();
+        final String types = line[TYPES].trim().length() > 0 ? line[TYPES].trim() : null;
         final String smiles = line[SMILES].trim().length() > 0 ? line[SMILES].trim() : null;
         if (name.isEmpty() || form.isEmpty()) {
           logger.severe(
@@ -101,12 +103,11 @@ public class PfasLibraryParser {
                   + form);
         }
 
-        final BuildingBlock block = new BuildingBlock(name, form, c, smiles);
+        final BuildingBlock block = new BuildingBlock(name, form, c, types, smiles);
 
         if (req.length() != 0 && req.split(innerSep).length != 0) {
           Arrays.stream(req.split(innerSep)).forEach(block::addRequires);
         }
-
         if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), NL_FORMULA_NEG, NL_MASS_NEG,
             NL_REQ_NEG)) {
           continue;
@@ -143,11 +144,10 @@ public class PfasLibraryParser {
     String[] reqs = line[reqIndex].split(innerSep, -1);
 
     if (formulas.length != masses.length || masses.length != reqs.length) {
-      logger.warning(
-          () -> "Line " + linesRead + ": Number of sub columns in columns" + formIndex + ", "
-              + massIndex + ", " + reqIndex + " " + "do not match: " + formulas.length + ", "
-              + masses.length + ", " + reqs.length);
-      return false;
+      throw new IllegalStateException(
+          "Line " + linesRead + ": Number of sub columns in columns" + formIndex + ", " + massIndex
+              + ", " + reqIndex + " " + "do not match: " + formulas.length + ", " + masses.length
+              + ", " + reqs.length);
     }
 
     if (formulas.length == 1 && formulas[0].isEmpty() && masses[0].isEmpty() && reqs[0].isEmpty()) {

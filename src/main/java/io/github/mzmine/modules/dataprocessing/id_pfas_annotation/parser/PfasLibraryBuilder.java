@@ -50,7 +50,7 @@ public class PfasLibraryBuilder {
     this.kRange = kRange;
   }
 
-  public void buildBlockMap() {
+  private void buildBlockMap() {
     if (!blockMap.isEmpty()) {
       throw new RuntimeException("Block map has already been build.");
     }
@@ -68,6 +68,8 @@ public class PfasLibraryBuilder {
   }
 
   public void buildLibrary() {
+    buildBlockMap();
+
     if (blockMap.isEmpty()) {
       return;
     }
