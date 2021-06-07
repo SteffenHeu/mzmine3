@@ -85,6 +85,8 @@ public class PfasParserTest {
     final PfasCompound pfoba = library.get(0);
     IMolecularFormula ionisedPFOBA = FormulaUtils.cloneFormula(pfoba.getFormula());
     MolecularFormulaManipulator.adjustProtonation(ionisedPFOBA, -1);
+//    logger.info(MolecularFormulaManipulator.getString(ionisedPFOBA));
+//    double mz = MolecularFormulaManipulator.getMass(ionisedPFOBA);
 
     List<PfasFragment> fragments = pfoba.getObservedIons(PolarityType.NEGATIVE);
 
@@ -92,13 +94,15 @@ public class PfasParserTest {
     Assertions.assertEquals(368.97659687990944, fragments.get(7).mz());
     Assertions.assertEquals("F(CF2)7-", fragments.get(7).formula());
     Assertions.assertEquals(
-        "PfasFragment[mz=545.0527162599095, formula=[M-H-CH2CO2H]-, block=SUBSTITUENT, "
+        "PfasFragment[mz=546.0605412919094, formula=[M-H-CH2CO2H]-, block=SUBSTITUENT, "
             + "Propylbetaine, (CH2)3N(CH3)2CH2COO, NL(-) 0: [Me2NCH2CO2H, 73.016378336, null], "
             + "NL(-) 1: [CH2CO2H, 59.013304336, null], F(-) 0: [Me2NC2H2O2-, 102.0560521, null], "
             + "NL(+) 0: [CH2CO2, 58.005479304, null], NL(+) 1: [(CH3)2NCH2CO2H, 88.039853432, null], "
-            + "NL(+) 2: [C2H4(CH3)2NCH2CO2H, 116.07115356, null], NL(+) 3: "
-            + "[COC2H4(CH3)2NCH2CO2H, 144.06606818, Amide], F(-) 0: [Me2NC2H2O2H2+, 104.070605, null]]",
+            + "NL(+) 2: [C2H4(CH3)2NCH2CO2H, 116.07115356, null], NL(+) 3: [COC2H4(CH3)2NCH2CO2H, "
+            + "144.06606818, Amide], F(-) 0: [Me2NC2H2O2H2+, 104.070605, null]]",
         fragments.get(10).toString());
+
+    fragments.forEach(f -> logger.info(f.toString()));
   }
 
   @Test

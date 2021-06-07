@@ -30,34 +30,35 @@ import javax.annotation.Nullable;
 
 public class PfasAnnotationModule implements MZmineProcessingModule {
 
-    @Nonnull
-    @Override
-    public String getName() {
-        return null;
-    }
+  @Nonnull
+  @Override
+  public String getName() {
+    return "PFAS annotation";
+  }
 
-    @Nullable
-    @Override
-    public Class<? extends ParameterSet> getParameterSetClass() {
-        return null;
-    }
+  @Nullable
+  @Override
+  public Class<? extends ParameterSet> getParameterSetClass() {
+    return PfasAnnotationParameters.class;
+  }
 
-    @Nonnull
-    @Override
-    public String getDescription() {
-        return null;
-    }
+  @Nonnull
+  @Override
+  public String getDescription() {
+    return "Annotates PFAS based on expected MS/MS spectra and precursor masses.";
+  }
 
-    @Nonnull
-    @Override
-    public ExitCode runModule(@Nonnull MZmineProject project, @Nonnull ParameterSet parameters,
-        @Nonnull Collection<Task> tasks) {
-        return null;
-    }
+  @Nonnull
+  @Override
+  public ExitCode runModule(@Nonnull MZmineProject project, @Nonnull ParameterSet parameters,
+      @Nonnull Collection<Task> tasks) {
+    tasks.add(new PfasAnnotationTask(null, project, parameters));
+    return ExitCode.OK;
+  }
 
-    @Nonnull
-    @Override
-    public MZmineModuleCategory getModuleCategory() {
-        return null;
-    }
+  @Nonnull
+  @Override
+  public MZmineModuleCategory getModuleCategory() {
+    return MZmineModuleCategory.IDENTIFICATION;
+  }
 }

@@ -4,6 +4,7 @@ import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.MassSpectrum;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -14,7 +15,7 @@ public class IntensityCoverageUtils {
 
   public static double getIntensityCoverage(@Nonnull final MassSpectrum spectrum,
       @Nonnull final double[] mzs, @Nonnull final MZTolerance tolerance) {
-    return getIntensityCoverage(spectrum, mzs, tolerance, null);
+    return getIntensityCoverage(spectrum, mzs, tolerance, null, null);
   }
 
   /**
@@ -23,15 +24,22 @@ public class IntensityCoverageUtils {
    * @param tolerance mz tolerance
    * @return
    */
-  public static double getIntensityCoverage(@Nonnull final MassSpectrum spectrum,
+  public static <T> double getIntensityCoverage(@Nonnull final MassSpectrum spectrum,
       @Nonnull final double[] mzs, @Nonnull final MZTolerance tolerance,
-      @Nullable List<Integer> matchedIndicesList) {
+      @Nullable final List<T> inPossibleFragments, @Nullable List<T> outMatchedFragments) {
+
+    if ((inPossibleFragments != null && outMatchedFragments == null) || (outMatchedFragments != null
+        && inPossibleFragments == null)) {
+      throw new IllegalArgumentException("Only one list specified.");
+    } else if(inPossibleFragments != null && (mzs.length != inPossibleFragments.size())) {
+      throw  new IllegalArgumentException("Number of mzs differs from possible fragments.");
+    }
 
     if (spectrum.getNumberOfDataPoints() == 0) {
       return 0d;
     }
 
-    final Double tic = spectrum.getTIC();
+    final Double tic = Objects.requireNonNullElse(spectrum.getTIC(), 1d);
 
     double coveredIntensity = 0d;
 
@@ -72,8 +80,8 @@ public class IntensityCoverageUtils {
           }
         }
 
-        if(matchedIndicesList != null) {
-          matchedIndicesList.add(i);
+        if (inPossibleFragments != null) {
+          outMatchedFragments.add(inPossibleFragments.get(i));
         }
         spectrumIndex = bestIndex + 1;  // don't match a signal twice
         coveredIntensity += bestIntensity;
