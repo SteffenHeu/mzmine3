@@ -24,8 +24,8 @@ import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
-import io.github.mzmine.datamodel.features.types.CommentType;
-import io.github.mzmine.datamodel.features.types.FormulaType;
+import io.github.mzmine.datamodel.features.types.annotations.pfasannotation.PfasAnnotationType;
+import io.github.mzmine.datamodel.features.types.annotations.pfasannotation.PfasMatchSummaryType;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasCompound;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasFragment;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryBuilder;
@@ -42,7 +42,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
 public class PfasAnnotationTask extends AbstractTask {
 
@@ -58,10 +57,9 @@ public class PfasAnnotationTask extends AbstractTask {
   private final MZTolerance mzTolerance;
   private final boolean checkPrecursorMz;
   private final double minCoverage;
-
+  private final AtomicInteger processed = new AtomicInteger(0);
   private List<PfasCompound> compounds;
   private int totalRows = 1;
-  private final AtomicInteger processed = new AtomicInteger(0);
   private String description;
 
   protected PfasAnnotationTask(@Nullable MemoryMapStorage storage, MZmineProject project,
@@ -109,8 +107,12 @@ public class PfasAnnotationTask extends AbstractTask {
       final List<ModularFeatureListRow> rows = flist.modularStream()
           .filter(row -> !row.getAllMS2Fragmentations().isEmpty()).toList();
 
+      if (!flist.getRowTypes().containsKey(PfasAnnotationType.class)) {
+        flist.addRowType(new PfasAnnotationType());
+      }
+
       rows.parallelStream().filter(row -> row.getBestFragmentation() != null).forEach(row -> {
-        PfasMatch bestMatch = null;
+//        PfasMatch bestMatch = null;
 
         final Scan msms = row.getBestFragmentation();
 
@@ -125,17 +127,17 @@ public class PfasAnnotationTask extends AbstractTask {
               .getIntensityCoverage(msms, comp.getIonMzs(msms.getPolarity()), mzTolerance,
                   comp.getObservedIons(msms.getPolarity()), matchedFragments);
 
-          if ((bestMatch == null && coverage >= minCoverage) || (bestMatch != null
+          /*if ((bestMatch == null && coverage >= minCoverage) || (bestMatch != null
               && coverage > bestMatch.getCoverageScore())) {
             bestMatch = new PfasMatch(row, comp, coverage, matchedFragments);
+          }*/
+
+          if (coverage >= minCoverage) {
+            row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class)
+                .add(new PfasMatch(row, comp, coverage, matchedFragments));
           }
         }
 
-        if (bestMatch != null) {
-          row.getManualAnnotation().set(FormulaType.class,
-              MolecularFormulaManipulator.getString(bestMatch.getCompound().getFormula()));
-          row.getManualAnnotation().set(CommentType.class, bestMatch.getCoverageScore() + "");
-        }
         processed.getAndIncrement();
         description = PREFIX + "Annotating row " + processed + "/" + totalRows;
       });

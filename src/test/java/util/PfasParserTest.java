@@ -33,7 +33,7 @@ public class PfasParserTest {
   }
 
   @Test
-  public void testParser() throws CloneNotSupportedException {
+  public void testParser() {
     final PfasLibraryParser parser = new PfasLibraryParser();
     URL path = this.getClass().getClassLoader().getResource("files/pfos-pfoa-database.CSV");
     File file = new File(path.getFile());

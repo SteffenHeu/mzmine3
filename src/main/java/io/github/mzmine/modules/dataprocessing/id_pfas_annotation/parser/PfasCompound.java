@@ -22,6 +22,7 @@ import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.util.FormulaUtils;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,6 +38,11 @@ public class PfasCompound {
   private final BuildingBlock backboneLinker;
   private final BuildingBlock functionalGroup;
   private final Collection<BuildingBlock> substituent;
+
+  public List<BuildingBlock> getBlocks() {
+    return List.copyOf(blocks);
+  }
+
   private final List<BuildingBlock> blocks = new ArrayList<>();
 
   private final List<PfasFragment> positveFragments;
@@ -44,11 +50,10 @@ public class PfasCompound {
 
   private final double[] positiveMzs;
   private final double[] negativeMzs;
-
+  private final int n, m, k;
+  private final String name;
   private Double positiveMz = null;
   private Double negativeMz = null;
-
-  private final int n, m, k;
 
   public PfasCompound(@Nonnull final BuildingBlock backbone,
       @Nullable final BuildingBlock backboneLinker, @Nonnull final BuildingBlock functionalGroup,
@@ -101,6 +106,9 @@ public class PfasCompound {
 
     positiveMzs = positveFragments.stream().mapToDouble(PfasFragment::mz).toArray();
     negativeMzs = negativeFragments.stream().mapToDouble(PfasFragment::mz).toArray();
+
+    name = getBackboneName() + " " + getBackboneLinkerName() + " " + getFunctionalGroupName() + " "
+        + getSubstituentNames();
   }
 
   public IMolecularFormula getFormula() {
@@ -111,16 +119,47 @@ public class PfasCompound {
     return backbone;
   }
 
+  public String getBackboneName() {
+    return backbone.getName();
+  }
+
   public BuildingBlock getBackboneLinker() {
     return backboneLinker;
+  }
+
+  public String getBackboneLinkerName() {
+    return backboneLinker != null ? backboneLinker.getName() : "";
   }
 
   public BuildingBlock getFunctionalGroup() {
     return functionalGroup;
   }
 
+  public String getFunctionalGroupName() {
+    return functionalGroup.getName();
+  }
+
   public Collection<BuildingBlock> getSubstituent() {
     return substituent;
+  }
+
+  public String getSubstituentNames() {
+    StringBuilder name = new StringBuilder();
+    final Iterator<BuildingBlock> iterator = substituent.iterator();
+    while (iterator.hasNext()) {
+      final BuildingBlock block = iterator.next();
+      name.append(block.getName());
+      if (iterator.hasNext()) {
+        name.append(" ");
+      }
+    }
+
+    return name.toString();
+  }
+
+  @Nonnull
+  public String getName() {
+    return name;
   }
 
   public int getN() {
@@ -198,9 +237,8 @@ public class PfasCompound {
     final List<PfasFragment> fragments = computeObservedFragments(polarityType);
     return null;
   }*/
-
   public List<PfasFragment> getObservedIons(final PolarityType polarityType) {
-   return polarityType == PolarityType.POSITIVE ? positveFragments : negativeFragments;
+    return polarityType == PolarityType.POSITIVE ? positveFragments : negativeFragments;
   }
 
   public double[] getPositiveIonMzs() {
@@ -232,16 +270,15 @@ public class PfasCompound {
   }
 
   /**
-   *
    * @param polarityType The ion polarity (positive or negative)
    * @return The m/z or null, if protonation cannot be adjusted.
    */
   public Double getPrecursorMz(PolarityType polarityType) {
     assert polarityType == PolarityType.POSITIVE || polarityType == PolarityType.NEGATIVE;
 
-    if(positiveMz != null && polarityType == PolarityType.POSITIVE) {
+    if (positiveMz != null && polarityType == PolarityType.POSITIVE) {
       return positiveMz;
-    } else if(negativeMz != null && polarityType == PolarityType.NEGATIVE) {
+    } else if (negativeMz != null && polarityType == PolarityType.NEGATIVE) {
       return negativeMz;
     }
 
@@ -256,13 +293,13 @@ public class PfasCompound {
     } else {
       final int charge = formula.getCharge();
       chargedFormula = FormulaUtils.cloneFormula(formula);
-      if(!MolecularFormulaManipulator
+      if (!MolecularFormulaManipulator
           .adjustProtonation(chargedFormula, (charge * -1) + polarityType.getSign())) {
         return null;
       }
     }
 
-    if(polarityType == PolarityType.POSITIVE) {
+    if (polarityType == PolarityType.POSITIVE) {
       positiveMz = FormulaUtils.calculateMzRatio(chargedFormula);
       return positiveMz;
     } else {
