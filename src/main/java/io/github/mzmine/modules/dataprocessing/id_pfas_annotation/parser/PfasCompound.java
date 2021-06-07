@@ -18,7 +18,6 @@
 
 package io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser;
 
-import io.github.mzmine.datamodel.MassSpectrum;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.util.FormulaUtils;
 import java.util.ArrayList;
@@ -39,6 +38,15 @@ public class PfasCompound {
   private final BuildingBlock functionalGroup;
   private final Collection<BuildingBlock> substituent;
   private final List<BuildingBlock> blocks = new ArrayList<>();
+
+  private final List<PfasFragment> positveFragments;
+  private final List<PfasFragment> negativeFragments;
+
+  private final double[] positiveMzs;
+  private final double[] negativeMzs;
+
+  private Double positiveMz = null;
+  private Double negativeMz = null;
 
   private final int n, m, k;
 
@@ -87,6 +95,12 @@ public class PfasCompound {
     }
 
     formula = backboneFormula;
+
+    negativeFragments = computeObservedFragments(PolarityType.NEGATIVE);
+    positveFragments = computeObservedFragments(PolarityType.POSITIVE);
+
+    positiveMzs = positveFragments.stream().mapToDouble(PfasFragment::mz).toArray();
+    negativeMzs = negativeFragments.stream().mapToDouble(PfasFragment::mz).toArray();
   }
 
   public IMolecularFormula getFormula() {
@@ -179,41 +193,85 @@ public class PfasCompound {
    * @return A computed fragment spectrum. Null if no fragment spectrum can be generated for the
    * given polarity type.
    */
-  @Nullable
+  /*@Nullable
   public MassSpectrum getFragmentSpectrum(PolarityType polarityType) {
-    final List<PfasFragment> fragments = getObservedIons(polarityType);
+    final List<PfasFragment> fragments = computeObservedFragments(polarityType);
     return null;
+  }*/
+
+  public List<PfasFragment> getObservedIons(final PolarityType polarityType) {
+   return polarityType == PolarityType.POSITIVE ? positveFragments : negativeFragments;
+  }
+
+  public double[] getPositiveIonMzs() {
+    return positiveMzs;
+  }
+
+  public double[] getNegativeIonMzs() {
+    return negativeMzs;
+  }
+
+  public double[] getIonMzs(PolarityType polarityType) {
+    return polarityType == PolarityType.POSITIVE ? positiveMzs : negativeMzs;
   }
 
   /**
    * @param polarityType
    * @return A list of all observed fragments including neutral losses.
    */
-  public List<PfasFragment> getObservedIons(final PolarityType polarityType) {
+  private List<PfasFragment> computeObservedFragments(final PolarityType polarityType) {
     assert polarityType != PolarityType.UNKNOWN;
     assert polarityType != PolarityType.NEUTRAL;
+
+    final double precursorMz = getPrecursorMz(polarityType);
+
+    final List<PfasFragment> fragments = computeFragments(polarityType);
+    fragments.addAll(computeNeutralLosses(polarityType, precursorMz));
+
+    return fragments;
+  }
+
+  /**
+   *
+   * @param polarityType The ion polarity (positive or negative)
+   * @return The m/z or null, if protonation cannot be adjusted.
+   */
+  public Double getPrecursorMz(PolarityType polarityType) {
+    assert polarityType == PolarityType.POSITIVE || polarityType == PolarityType.NEGATIVE;
+
+    if(positiveMz != null && polarityType == PolarityType.POSITIVE) {
+      return positiveMz;
+    } else if(negativeMz != null && polarityType == PolarityType.NEGATIVE) {
+      return negativeMz;
+    }
 
     IMolecularFormula chargedFormula;
     if (formula.getCharge() == null || formula.getCharge() == 0) {
       chargedFormula = FormulaUtils.cloneFormula(formula);
       MolecularFormulaManipulator.adjustProtonation(chargedFormula, polarityType.getSign());
-    } else if (formula.getCharge() == 1 && polarityType == PolarityType.POSITIVE) {
+    } else if (formula.getCharge() >= 1 && polarityType == PolarityType.POSITIVE) {
       chargedFormula = formula;
-    } else if (formula.getCharge() == -1 && polarityType == PolarityType.NEGATIVE) {
+    } else if (formula.getCharge() <= -1 && polarityType == PolarityType.NEGATIVE) {
       chargedFormula = formula;
     } else {
-      return null;
+      final int charge = formula.getCharge();
+      chargedFormula = FormulaUtils.cloneFormula(formula);
+      if(!MolecularFormulaManipulator
+          .adjustProtonation(chargedFormula, (charge * -1) + polarityType.getSign())) {
+        return null;
+      }
     }
 
-    final double precursorMz = FormulaUtils.calculateMzRatio(chargedFormula);
-
-    final List<PfasFragment> fragments = getFragments(polarityType);
-    fragments.addAll(getNeutralLosses(polarityType, precursorMz));
-
-    return fragments;
+    if(polarityType == PolarityType.POSITIVE) {
+      positiveMz = FormulaUtils.calculateMzRatio(chargedFormula);
+      return positiveMz;
+    } else {
+      negativeMz = FormulaUtils.calculateMzRatio(chargedFormula);
+      return negativeMz;
+    }
   }
 
-  public List<PfasFragment> getFragments(final PolarityType polarityType) {
+  private List<PfasFragment> computeFragments(final PolarityType polarityType) {
     final List<PfasFragment> fragments = new ArrayList<>();
 
     for (int i = 0; i < blocks.size(); i++) {
@@ -229,7 +287,7 @@ public class PfasCompound {
         }
 
         if (block.getBlockClass() == BlockClass.BACKBONE && formulas.get(j).contains(")n")) {
-          fragments.addAll(generateBackboneFragments(formulas.get(j), block));
+          fragments.addAll(computeBackboneFragments(formulas.get(j), block));
         } else {
           fragments.add(new PfasFragment(masses.get(j), formulas.get(j), block));
         }
@@ -239,7 +297,7 @@ public class PfasCompound {
     return fragments;
   }
 
-  private List<PfasFragment> generateBackboneFragments(String fragmentFormula,
+  private List<PfasFragment> computeBackboneFragments(String fragmentFormula,
       BuildingBlock backbone) {
 
     final List<PfasFragment> fragments = new ArrayList<>();
@@ -275,7 +333,7 @@ public class PfasCompound {
    * @param baseMass     m/z of the precursor
    * @return
    */
-  public List<PfasFragment> getNeutralLosses(PolarityType polarityType, double baseMass) {
+  private List<PfasFragment> computeNeutralLosses(PolarityType polarityType, double baseMass) {
     final List<PfasFragment> fragments = new ArrayList<>();
 
     for (int i = 0; i < blocks.size(); i++) {

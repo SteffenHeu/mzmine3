@@ -377,6 +377,9 @@
         <MenuItem text="SIRIUS / CSI-FingerID"
           onAction="#runModule"
           userData="io.github.mzmine.modules.dataprocessing.id_sirius.SiriusIdentificationModule"/>
+        <MenuItem text="PFAS annotation"
+          onAction="#runModule"
+          userData="io.github.mzmine.modules.dataprocessing.id_pfas_annotation.PfasAnnotationModule"/>
       </Menu>
 
       <Menu text="Search related peaks">
