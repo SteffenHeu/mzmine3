@@ -208,6 +208,7 @@ public class GroupMS2Task extends AbstractTask {
     }
     feature.set(ImsMsMsInfoType.class, eligibleMsMsInfos);
 
+    // merge MS/MS mobility scans from a single frame together.
     MZTolerance mergeTol = new MZTolerance(0.008, 25);
     ObservableList<MergedMsMsSpectrum> msmsSpectra = FXCollections.observableArrayList();
     for (ImsMsMsInfo info : eligibleMsMsInfos) {
@@ -220,6 +221,7 @@ public class GroupMS2Task extends AbstractTask {
     }
 
     if (!msmsSpectra.isEmpty()) {
+      // if applicable, combine MS/MS scans with the same CE to a single merged MS/MS
       if (combineTimsMS2) {
         ObservableList<MergedMsMsSpectrum> sameCEMerged = FXCollections.observableArrayList(
             SpectraMerging.mergeMsMsSpectra(msmsSpectra, mergeTol, MergingType.SUMMED,

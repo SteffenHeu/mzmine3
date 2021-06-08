@@ -22,6 +22,7 @@ import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.util.FormulaUtils;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -265,6 +266,8 @@ public class PfasCompound {
 
     final List<PfasFragment> fragments = computeFragments(polarityType);
     fragments.addAll(computeNeutralLosses(polarityType, precursorMz));
+
+    fragments.sort(Comparator.comparingDouble(PfasFragment::mz));
 
     return fragments;
   }
