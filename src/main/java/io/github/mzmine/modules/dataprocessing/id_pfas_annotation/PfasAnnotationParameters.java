@@ -21,6 +21,7 @@ package io.github.mzmine.modules.dataprocessing.id_pfas_annotation;
 import com.google.common.collect.Range;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.PercentParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
@@ -55,10 +56,22 @@ public class PfasAnnotationParameters extends SimpleParameterSet {
 
   public static final PercentParameter minimumCoverage = new PercentParameter(
       "Minimum intensity coverage",
-      "Describes how much intensity (in %) of the observed MS/MS spectrum has to be explained by the expected MS/MS spectra.", 0.6d, 0d, 1d);
+      "Describes how much intensity (in %) of the observed MS/MS spectrum has to be explained by the expected MS/MS spectra.",
+      0.6d, 0d, 1d);
+
+  public static final BooleanParameter removePrecursor = new BooleanParameter(
+      "Remove precursor signal from MS/MS",
+      "If ticked, the precursor ion signal will be removed from the MS/MS spectrum. (Default = true)",
+      true);
+
+  public static final BooleanParameter removeIsotopes = new BooleanParameter(
+      "Remove isotopic signals from MS/MS",
+      "If ticked, isotopic signals will be removed from the MS/MS spectrum. (Default = true)",
+      true);
 
   public PfasAnnotationParameters() {
-    super(new Parameter[]{featureLists, databaseFile, nRange, mRange, kRange, checkPrecursorMz, minimumCoverage});
+    super(new Parameter[]{featureLists, databaseFile, nRange, mRange, kRange, checkPrecursorMz,
+        minimumCoverage, removePrecursor, removeIsotopes});
   }
 
 }

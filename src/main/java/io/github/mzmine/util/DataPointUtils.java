@@ -3,12 +3,15 @@ package io.github.mzmine.util;
 import com.google.common.collect.Range;
 import com.google.common.primitives.Doubles;
 import io.github.mzmine.datamodel.DataPoint;
+import io.github.mzmine.datamodel.MassSpectrum;
 import io.github.mzmine.datamodel.features.ModularFeature;
+import io.github.mzmine.datamodel.impl.SimpleDataPoint;
 import java.nio.DoubleBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
+import javax.annotation.Nonnull;
 
 public class DataPointUtils {
 
@@ -132,8 +135,7 @@ public class DataPointUtils {
   }
 
   public static double[][] getDatapointsAboveNoiseLevel(DoubleBuffer rawMzs,
-      DoubleBuffer rawIntensities,
-      double noiseLevel) {
+      DoubleBuffer rawIntensities, double noiseLevel) {
     assert rawMzs.capacity() == rawIntensities.capacity();
 
     List<Double> mzs = new ArrayList<>();
@@ -171,10 +173,9 @@ public class DataPointUtils {
   }
 
   /**
-   *
-   * @param rawMzs array of mz values
+   * @param rawMzs         array of mz values
    * @param rawIntensities array of intensity values
-   * @param mzRange the mz range
+   * @param mzRange        the mz range
    * @return double[2][n], [0][] being mz values, [1][] being intensity values
    */
   public static double[][] getDataPointsInMzRange(double[] rawMzs, double[] rawIntensities,
@@ -188,7 +189,7 @@ public class DataPointUtils {
       if (mzRange.contains(rawMzs[i])) {
         mzs.add(rawMzs[i]);
         intensities.add(rawIntensities[i]);
-      } else if(mzRange.upperEndpoint() < rawMzs[i] || rawMzs[i] == 0.0) {
+      } else if (mzRange.upperEndpoint() < rawMzs[i] || rawMzs[i] == 0.0) {
         break;
       }
     }
@@ -197,5 +198,30 @@ public class DataPointUtils {
     data[1] = Doubles.toArray(intensities);
     return data;
   }
+
+  /**
+   * Retrieves the data points from any mass spectrum. If applicable, {@link
+   * io.github.mzmine.datamodel.data_access.ScanDataAccess}, {@link io.github.mzmine.datamodel.data_access.MobilityScanDataAccess}
+   * should be used, or the underlying double arrays shall be accessed directly via {@link
+   * #getDataPointsAsDoubleArray(DataPoint[])}, {@link MassSpectrum#getMzValues(double[])} and
+   * {@link MassSpectrum#getIntensityValues(double[])}. or
+   *
+   * @param spectrum  The mass spectrum.
+   * @return An array of data points.
+   */
+  public static DataPoint[] getDatapoints(@Nonnull final MassSpectrum spectrum) {
+    double[][] dps = new double[2][spectrum.getNumberOfDataPoints()];
+    spectrum.getMzValues(dps[0]);
+    spectrum.getIntensityValues(dps[1]);
+
+    DataPoint[] dataPoints = new DataPoint[spectrum.getNumberOfDataPoints()];
+
+    for (int i = 0; i < spectrum.getNumberOfDataPoints(); i++) {
+      dataPoints[i] = new SimpleDataPoint(dps[0][i], dps[1][i]);
+    }
+
+    return dataPoints;
+  }
+
 
 }

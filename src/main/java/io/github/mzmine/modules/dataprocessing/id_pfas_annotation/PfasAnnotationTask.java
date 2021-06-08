@@ -19,22 +19,31 @@
 package io.github.mzmine.modules.dataprocessing.id_pfas_annotation;
 
 import com.google.common.collect.Range;
+import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.MZmineProject;
+import io.github.mzmine.datamodel.MassSpectrum;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.types.annotations.pfasannotation.PfasAnnotationType;
 import io.github.mzmine.datamodel.features.types.annotations.pfasannotation.PfasMatchSummaryType;
+import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasCompound;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasFragment;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryBuilder;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryParser;
+import io.github.mzmine.modules.visualization.spectra.simplespectra.datapointprocessing.isotopes.MassListDeisotoper;
+import io.github.mzmine.modules.visualization.spectra.simplespectra.datapointprocessing.isotopes.MassListDeisotoperParameters;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
+import io.github.mzmine.util.DataPointSorter;
+import io.github.mzmine.util.DataPointUtils;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.SortingDirection;
+import io.github.mzmine.util.SortingProperty;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -58,6 +67,8 @@ public class PfasAnnotationTask extends AbstractTask {
   private final boolean checkPrecursorMz;
   private final double minCoverage;
   private final AtomicInteger processed = new AtomicInteger(0);
+  private final boolean removeIsotopes;
+  private final boolean removePrecursor;
   private List<PfasCompound> compounds;
   private int totalRows = 1;
   private String description;
@@ -77,6 +88,10 @@ public class PfasAnnotationTask extends AbstractTask {
     mzTolerance = parameterSet.getParameter(PfasAnnotationParameters.checkPrecursorMz)
         .getEmbeddedParameter().getValue();
     minCoverage = parameterSet.getParameter(PfasAnnotationParameters.minimumCoverage).getValue();
+    removePrecursor = parameterSet.getParameter(PfasAnnotationParameters.removePrecursor)
+        .getValue();
+    removeIsotopes = parameterSet.getParameter(PfasAnnotationParameters.removeIsotopes).getValue();
+
     parameters = parameterSet;
     this.project = project;
     description = PREFIX + "Waiting...";
@@ -115,6 +130,8 @@ public class PfasAnnotationTask extends AbstractTask {
 //        PfasMatch bestMatch = null;
 
         final Scan msms = row.getBestFragmentation();
+        final MassSpectrum processedMSMS = deisotopeAndRemovePrecursorIons(msms, mzTolerance,
+            msms.getPrecursorMZ(), removePrecursor, removeIsotopes);
 
         for (final PfasCompound comp : compounds) {
           if (checkPrecursorMz && !mzTolerance
@@ -124,7 +141,7 @@ public class PfasAnnotationTask extends AbstractTask {
 
           final List<PfasFragment> matchedFragments = new ArrayList<>();
           final double coverage = IntensityCoverageUtils
-              .getIntensityCoverage(msms, comp.getIonMzs(msms.getPolarity()), mzTolerance,
+              .getIntensityCoverage(processedMSMS, comp.getIonMzs(msms.getPolarity()), mzTolerance,
                   comp.getObservedIons(msms.getPolarity()), matchedFragments);
 
           /*if ((bestMatch == null && coverage >= minCoverage) || (bestMatch != null
@@ -139,7 +156,7 @@ public class PfasAnnotationTask extends AbstractTask {
         }
 
         // sort results
-        if(row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class) != null) {
+        if (row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class) != null) {
           row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class)
               .sort((a1, a2) -> Double.compare(a1.getCoverageScore(), a2.getCoverageScore() * -1));
         }
@@ -171,4 +188,71 @@ public class PfasAnnotationTask extends AbstractTask {
     return builder.getLibrary();
   }
 
+  /**
+   * @param spectrum        The mass spectrum.
+   * @param mzTolerance     the m/z tolerance for precursor and isotope removal
+   * @param precursorMz     The precursor mz
+   * @param removePrecursor if the precursor signals shall be removed.
+   * @param deisotope       if isotopic signals shall be removed
+   * @return
+   */
+  public MassSpectrum deisotopeAndRemovePrecursorIons(@Nonnull final MassSpectrum spectrum,
+      @Nonnull final MZTolerance mzTolerance, final double precursorMz,
+      final boolean removePrecursor, final boolean deisotope) {
+
+    DataPoint[] dps;
+    // preferable use mass lists.
+    if (spectrum instanceof Scan) {
+      dps = DataPointUtils.getDatapoints(((Scan) spectrum).getMassList());
+    } else {
+      dps = DataPointUtils.getDatapoints(spectrum);
+    }
+
+    if (deisotope) {
+      MassListDeisotoperParameters param = new MassListDeisotoperParameters();
+      param.getParameter(MassListDeisotoperParameters.maximumCharge).setValue(2);
+      param.getParameter(MassListDeisotoperParameters.mzTolerance).setValue(mzTolerance);
+      param.getParameter(MassListDeisotoperParameters.monotonicShape).setValue(true);
+
+      dps = MassListDeisotoper.filterIsotopes(dps, param);
+    }
+
+    // Usually the precursor has a high m/z value in the spectrum, so sort by descending m/z so we
+    //  don't have to loop over all datapoints.
+    final DataPointSorter sorter = new DataPointSorter(SortingProperty.MZ,
+        SortingDirection.Descending);
+
+    Arrays.sort(dps, sorter);
+
+    final double lower = mzTolerance.getToleranceRange(precursorMz).lowerEndpoint();
+
+    if (removePrecursor) {
+      int removed = 0;
+      for (int i = 0; i < dps.length; i++) {
+        if (dps[i].getMZ() < lower) {
+          break;
+        }
+
+        if (mzTolerance.checkWithinTolerance(precursorMz, dps[i].getMZ())) {
+          dps[i] = null;
+          removed++;
+        }
+      }
+
+      if (removed >= 1) {
+        final DataPoint[] newDps = new DataPoint[dps.length - removed];
+        int newDpsIndex = 0;
+        for (int i = 0; i < dps.length; i++) {
+          if (dps[i] != null) {
+            newDps[newDpsIndex] = dps[i];
+            newDpsIndex++;
+          }
+        }
+        dps = newDps;
+      }
+    }
+
+    final double[][] dataPoints = DataPointUtils.getDataPointsAsDoubleArray(dps);
+    return new SimpleMassList(null, dataPoints[0], dataPoints[1]);
+  }
 }
