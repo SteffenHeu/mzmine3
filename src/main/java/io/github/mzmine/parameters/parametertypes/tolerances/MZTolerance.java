@@ -61,6 +61,11 @@ public class MZTolerance {
     return new MZTolerance(maxAbs, maxPPM);
   }
 
+  public static double getPpmDifference(final double expected, final double measured) {
+    double ppm = (measured - expected) / expected * MILLION;
+    return ppm;
+  }
+
   public double getMzTolerance() {
     return mzTolerance;
   }

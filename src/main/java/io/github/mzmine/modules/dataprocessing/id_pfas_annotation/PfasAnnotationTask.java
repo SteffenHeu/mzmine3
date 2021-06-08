@@ -138,6 +138,12 @@ public class PfasAnnotationTask extends AbstractTask {
           }
         }
 
+        // sort results
+        if(row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class) != null) {
+          row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class)
+              .sort((a1, a2) -> Double.compare(a1.getCoverageScore(), a2.getCoverageScore() * -1));
+        }
+
         processed.getAndIncrement();
         description = PREFIX + "Annotating row " + processed + "/" + totalRows;
       });

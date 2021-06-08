@@ -36,5 +36,8 @@ public class PfasMatch {
     return matchedFragments;
   }
 
-
+  @Override
+  public String toString() {
+    return compound.getName();
+  }
 }

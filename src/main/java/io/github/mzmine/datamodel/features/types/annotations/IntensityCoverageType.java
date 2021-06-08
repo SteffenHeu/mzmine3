@@ -16,7 +16,7 @@
  *  USA
  */
 
-package io.github.mzmine.datamodel.features.types.annotations.pfasannotation;
+package io.github.mzmine.datamodel.features.types.annotations;
 
 import io.github.mzmine.datamodel.features.types.numbers.abstr.DoubleType;
 import java.text.DecimalFormat;

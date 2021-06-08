@@ -82,6 +82,12 @@ public class IntensityCoverageUtils {
 
         if (inPossibleFragments != null) {
           outMatchedFragments.add(inPossibleFragments.get(i));
+
+          /*if(inPossibleFragments.get(i) instanceof PfasFragment f) {
+            if(f.block().getName().equals("Betaine")) {
+              logger.info("Matched " + spectrumMz + " to " + mzs[i] + " - " + f.formula());
+            }
+          }*/
         }
         spectrumIndex = bestIndex + 1;  // don't match a signal twice
         coveredIntensity += bestIntensity;

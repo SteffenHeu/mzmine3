@@ -61,11 +61,11 @@ public class MatchedBlocksNode extends GridPane {
     final SimpleColorPalette palette = MZmineCore.getConfiguration().getDefaultColorPalette();
 
     for (Entry<BuildingBlock, Boolean> entry : matchedBlocks.entrySet()) {
-      addBlockToPane(entry.getKey(), entry.getValue() ? palette.getPositiveColor() :
-          palette.getNegativeColor());
+      addBlockToPane(entry.getKey(),
+          entry.getValue() ? palette.getPositiveColor() : palette.getNegativeColor());
     }
 
-    for(int i = 0; i < getColumnCount(); i++) {
+    for (int i = 0; i < getColumnCount(); i++) {
       getColumnConstraints().add(new ColumnConstraints(WIDTH));
     }
 
@@ -101,7 +101,7 @@ public class MatchedBlocksNode extends GridPane {
         // work out where the next label will be. standard layout:
         // B | F  | S2
         // L | S1 | S3
-        Point2D p = new Point2D((int) (1 + (numSubstituents / 2)), (1 + numSubstituents) % 2);
+        Point2D p = new Point2D((int) (1 + ((numSubstituents + 1) / 2)), (1 + numSubstituents) % 2);
         numSubstituents++;
         return p;
       }

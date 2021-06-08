@@ -4,19 +4,23 @@ import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.FormulaType;
 import io.github.mzmine.datamodel.features.types.ModularType;
 import io.github.mzmine.datamodel.features.types.ModularTypeProperty;
+import io.github.mzmine.datamodel.features.types.annotations.IntensityCoverageType;
+import io.github.mzmine.datamodel.features.types.annotations.PpmType;
 import io.github.mzmine.datamodel.features.types.modifiers.AnnotationType;
 import io.github.mzmine.datamodel.features.types.numbers.MatchingSignalsType;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.PfasMatch;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.List;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javax.annotation.Nonnull;
+import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
 public class PfasAnnotationType extends ModularType implements AnnotationType {
 
   private static final List<DataType> subTypes = List
-      .of(new PfasMatchSummaryType(), new FormulaType(),
-          new IntensityCoverageType(), new MatchedBlocksType(), new MatchingSignalsType());
+      .of(new PfasMatchSummaryType(), new FormulaType(), new PpmType(), new IntensityCoverageType(),
+          new MatchedBlocksType(), new MatchingSignalsType());
 
   @Nonnull
   @Override
@@ -64,10 +68,14 @@ public class PfasAnnotationType extends ModularType implements AnnotationType {
         }
       }
     } else {
-      data.set(FormulaType.class, match.getCompound().getFormula());
+      data.set(FormulaType.class,
+          MolecularFormulaManipulator.getString(match.getCompound().getFormula()));
       data.set(MatchingSignalsType.class, match.getMatchedFragments().size());
       data.set(IntensityCoverageType.class, match.getCoverageScore());
       data.set(MatchedBlocksType.class, match);
+      data.set(PpmType.class, MZTolerance.getPpmDifference(match.getCompound()
+              .getPrecursorMz(match.getRow().getBestFeature().getRepresentativeScan().getPolarity()),
+          match.getRow().getAverageMZ()));
     }
   }
 }
