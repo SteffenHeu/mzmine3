@@ -126,7 +126,6 @@ public class PfasAnnotationTask extends AbstractTask {
       }
 
       rows.parallelStream().filter(row -> row.getBestFragmentation() != null).forEach(row -> {
-//        PfasMatch bestMatch = null;
 
         final Scan msms = row.getBestFragmentation();
         final double[][] processedDp = ScanUtils

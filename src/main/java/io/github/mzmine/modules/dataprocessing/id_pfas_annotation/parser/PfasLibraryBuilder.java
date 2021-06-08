@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -48,6 +49,32 @@ public class PfasLibraryBuilder {
     this.nRange = nRange;
     this.mRange = mRange;
     this.kRange = kRange;
+
+    logger.finest(() -> "Initialised builder. n=" + nRange + " m=" + mRange + " k=" + kRange);
+  }
+
+  public static boolean isValid(BuildingBlock block) {
+    switch (block.getBlockClass()) {
+      case BACKBONE -> {
+        return FormulaUtils.checkMolecularFormula(
+            block.getGeneralFormula().replace("k", "").replace("m", "").replace("n", "")
+                .replace("R", "")) && block.getGeneralFormula().contains("n") && block
+            .getGeneralFormula().contains("R");
+      }
+      case BACKBONE_LINKER -> {
+        return FormulaUtils
+            .checkMolecularFormula(block.getGeneralFormula().replace("X", "").replace("R", ""))
+            && block.getGeneralFormula().contains("X") && block.getGeneralFormula().contains("R");
+      }
+      case SUBSTITUENT -> {
+        return FormulaUtils.checkMolecularFormula(block.getGeneralFormula());
+      }
+      case FUNCTIONAL_GROUP -> {
+        return FormulaUtils
+            .checkMolecularFormula(block.getGeneralFormula().replace("X", "").replace("Y", ""));
+      }
+    }
+    return false;
   }
 
   private void buildBlockMap() {
@@ -65,6 +92,12 @@ public class PfasLibraryBuilder {
 
     // add null, so we automatically build compounds without linkers.
     blockMap.computeIfAbsent(BlockClass.BACKBONE_LINKER, b -> new ArrayList<>()).add(null);
+
+    StringBuilder log = new StringBuilder("Block map initialised: ");
+    for (Entry<BlockClass, List<BuildingBlock>> entry : blockMap.entrySet()) {
+      log.append(entry.getKey()).append(": ").append(entry.getValue().size()).append("; ");
+    }
+    logger.finest(log::toString);
   }
 
   public void buildLibrary() {
@@ -108,6 +141,8 @@ public class PfasLibraryBuilder {
     }
 
     library = compounds;
+    logger.finest(
+        () -> "Built " + compounds.size() + " compounds from " + blocks.size() + " blocks.");
   }
 
   @Nullable
@@ -130,30 +165,6 @@ public class PfasLibraryBuilder {
 
   public Range<Integer> getkRange() {
     return kRange;
-  }
-
-  public static boolean isValid(BuildingBlock block) {
-    switch (block.getBlockClass()) {
-      case BACKBONE -> {
-        return FormulaUtils.checkMolecularFormula(
-            block.getGeneralFormula().replace("k", "").replace("m", "").replace("n", "")
-                .replace("R", "")) && block.getGeneralFormula().contains("n") && block
-            .getGeneralFormula().contains("R");
-      }
-      case BACKBONE_LINKER -> {
-        return FormulaUtils
-            .checkMolecularFormula(block.getGeneralFormula().replace("X", "").replace("R", ""))
-            && block.getGeneralFormula().contains("X") && block.getGeneralFormula().contains("R");
-      }
-      case SUBSTITUENT -> {
-        return FormulaUtils.checkMolecularFormula(block.getGeneralFormula());
-      }
-      case FUNCTIONAL_GROUP -> {
-        return FormulaUtils
-            .checkMolecularFormula(block.getGeneralFormula().replace("X", "").replace("Y", ""));
-      }
-    }
-    return false;
   }
 
 

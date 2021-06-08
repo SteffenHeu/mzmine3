@@ -68,6 +68,8 @@ public class PfasLibraryParser {
 
   public boolean read(File file) {
 
+    logger.finest(() -> "Reading pfas compound library from " + file.getAbsolutePath());
+
     final List<BuildingBlock> blocks = new ArrayList<>();
     try {
       final CSVParser parser = new CSVParserBuilder().withSeparator(sep).build();
@@ -132,6 +134,9 @@ public class PfasLibraryParser {
       return false;
     }
     entries = blocks;
+
+    logger.finest(() -> "Loaded " + entries.size() + " building blocks from file.");
+
     return true;
   }
 
