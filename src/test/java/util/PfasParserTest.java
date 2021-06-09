@@ -91,8 +91,8 @@ public class PfasParserTest {
     List<PfasFragment> fragments = pfoba.getObservedIons(PolarityType.NEGATIVE);
 
     Assertions.assertEquals(11, fragments.size());
-    Assertions.assertEquals(368.97659687990944, fragments.get(7).mz());
-    Assertions.assertEquals("F(CF2)7-", fragments.get(7).formula());
+    Assertions.assertEquals(368.97659687990944, fragments.get(8).mz());
+    Assertions.assertEquals("F(CF2)7-", fragments.get(8).formula());
     Assertions.assertEquals(
         "PfasFragment[mz=546.0605412919094, formula=[M-H-CH2CO2H]-, block=SUBSTITUENT, "
             + "Propylbetaine, (CH2)3N(CH3)2CH2COO, NL(-) 0: [Me2NCH2CO2H, 73.016378336, null], "
