@@ -181,11 +181,15 @@ public class FormulaUtils {
    * [C21H30N7O17P3]2+  gives 372.54500261509054 (charge is +2)
    * 
    * @param  ionicFormula ionic formula string
-   * @return              ion m/z ratio
+   * @return              ion m/z ratio or null if an invalid formula was given.
    */
-  public static double calculateMzRatio(String ionicFormula) {
+  public static Double calculateMzRatio(String ionicFormula) {
     IChemObjectBuilder builder = SilentChemObjectBuilder.getInstance();
     IMolecularFormula mf = MolecularFormulaManipulator.getMolecularFormula(ionicFormula, builder);
+
+    if(mf == null) {
+      return null;
+    }
 
     int charge = 1;
     char lastChar = ionicFormula.charAt(ionicFormula.length() - 1);

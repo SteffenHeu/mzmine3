@@ -35,32 +35,27 @@ import javax.annotation.Nullable;
 
 public class PfasLibraryParser {
 
-  private final char sep = ',';
-  private final String innerSep = ";";
-
   private static final int CLASS = 0;
   private static final int NAME = 1;
   private static final int REQ = 2;
   private static final int GEN_FORM = 3;
   private static final int TYPES = 4;
   private static final int SMILES = 5;
-
   private static final int NL_FORMULA_NEG = 6;
   private static final int NL_MASS_NEG = 7;
   private static final int NL_REQ_NEG = 8;
   private static final int FRAG_FORMULA_NEG = 9;
   private static final int FRAG_MASS_NEG = 10;
   private static final int FRAG_REQ_NEG = 11;
-
   private static final int NL_FORMULA_POS = 12;
   private static final int NL_MASS_POS = 13;
   private static final int NL_REQ_POS = 14;
   private static final int FRAG_FORMULA_POS = 15;
   private static final int FRAG_MASS_POS = 16;
   private static final int FRAG_REQ_POS = 17;
-
   private static final Logger logger = Logger.getLogger(PfasLibraryParser.class.getName());
-
+  private final char sep = ',';
+  private final String innerSep = ";";
   private List<BuildingBlock> entries;
 
   public PfasLibraryParser() {
@@ -172,6 +167,8 @@ public class PfasLibraryParser {
       }
 
       if (block.getBlockClass() != BlockClass.BACKBONE && mass == null && formula != null) {
+        // the mass calculated here may be "null", in case the formula was invalid the the time.
+        // some functional group fragments require the backbone to calculate the m/z of fragments
         if (formula.contains("+") || formula.contains("-")) {
           mass = FormulaUtils.calculateMzRatio(formula);
         } else {

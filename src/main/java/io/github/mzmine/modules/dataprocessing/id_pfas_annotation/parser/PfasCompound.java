@@ -34,21 +34,17 @@ import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
 public class PfasCompound {
 
+  private static final String FRAGMENT_BACKBONE_REGEX =
+      "(" + PfasLibraryBuilder.BACKBONE_PLACEHOLDER + ")([A-Z])";
+
   private final IMolecularFormula formula;
   private final BuildingBlock backbone;
   private final BuildingBlock backboneLinker;
   private final BuildingBlock functionalGroup;
   private final Collection<BuildingBlock> substituent;
-
-  public List<BuildingBlock> getBlocks() {
-    return List.copyOf(blocks);
-  }
-
   private final List<BuildingBlock> blocks = new ArrayList<>();
-
   private final List<PfasFragment> positveFragments;
   private final List<PfasFragment> negativeFragments;
-
   private final double[] positiveMzs;
   private final double[] negativeMzs;
   private final int n, m, k;
@@ -82,21 +78,21 @@ public class PfasCompound {
     final IChemObjectBuilder inst = SilentChemObjectBuilder.getInstance();
 
     final IMolecularFormula backboneFormula = MolecularFormulaManipulator
-        .getMajorIsotopeMolecularFormula(getBackboneFormula(backbone, n, m, k), inst);
+        .getMajorIsotopeMolecularFormula(getBlockFormula(backbone, n, m, k), inst);
 
     final IMolecularFormula functionalGroupFormula = MolecularFormulaManipulator
-        .getMajorIsotopeMolecularFormula(getFgFormula(functionalGroup), inst);
+        .getMajorIsotopeMolecularFormula(getBlockFormula(functionalGroup, n, m, k), inst);
     backboneFormula.add(functionalGroupFormula);
 
     for (BuildingBlock subs : substituent) {
       final IMolecularFormula substituentFormula = MolecularFormulaManipulator
-          .getMajorIsotopeMolecularFormula(getSubstituentFormula(subs), inst);
+          .getMajorIsotopeMolecularFormula(getBlockFormula(subs, n, m, k), inst);
       backboneFormula.add(substituentFormula);
     }
 
     if (backboneLinker != null) {
       final IMolecularFormula backboneLinkerFormula = MolecularFormulaManipulator
-          .getMajorIsotopeMolecularFormula(getBackboneLinkerFormula(backboneLinker), inst);
+          .getMajorIsotopeMolecularFormula(getBlockFormula(backboneLinker, n, m, k), inst);
       backboneFormula.add(backboneLinkerFormula);
     }
 
@@ -110,6 +106,32 @@ public class PfasCompound {
 
     name = getBackboneName() + " " + getBackboneLinkerName() + " " + getFunctionalGroupName() + " "
         + getSubstituentNames();
+  }
+
+  private String getBlockFormula(@Nonnull BuildingBlock block, int n, int m, int k) {
+    return switch (block.getBlockClass()) {
+      case BACKBONE -> block.getGeneralFormula().replaceAll("\\)n", ")" + n)
+          .replaceAll("\\)m", ")" + m).replaceAll("\\)k", ")" + k)
+          .replaceAll(PfasLibraryBuilder.FG_PLACEHOLDER, "");
+      case BACKBONE_LINKER -> block.getGeneralFormula()
+          .replaceAll(PfasLibraryBuilder.BACKBONE_PLACEHOLDER, "")
+          .replaceAll(PfasLibraryBuilder.FG_PLACEHOLDER, "");
+      case FUNCTIONAL_GROUP -> block.getGeneralFormula()
+          .replaceAll(PfasLibraryBuilder.BACKBONE_PLACEHOLDER, "")
+          .replaceAll("(" + PfasLibraryBuilder.SUBSTITUENT_PLACEHOLDER + ")([0-9]?)", "");
+      case SUBSTITUENT -> block.getGeneralFormula();
+    };
+  }
+
+  @Nonnull
+  private String getBackboneFragmentFormula(@Nonnull String formula, int n, int m, int k) {
+    String f = formula.replaceAll("\\)n", ")" + n).replaceAll("\\)m", ")" + m)
+        .replaceAll("\\)k", ")" + k).replaceAll(PfasLibraryBuilder.FG_PLACEHOLDER, "");
+    return f;
+  }
+
+  public List<BuildingBlock> getBlocks() {
+    return List.copyOf(blocks);
   }
 
   public IMolecularFormula getFormula() {
@@ -199,33 +221,6 @@ public class PfasCompound {
       }
     }
     return true;
-  }
-
-  private String getBackboneFormula(BuildingBlock backbone, int n, int m, int k) {
-    String f = backbone.getGeneralFormula().replaceAll("\\)n", ")" + n).replaceAll("\\)m", ")" + m)
-        .replaceAll("\\)k", ")" + k).replaceAll("R", "");
-    return f;
-  }
-
-  private String getBackboneFormula(String formula, int n, int m, int k) {
-    String f = formula.replaceAll("\\)n", ")" + n).replaceAll("\\)m", ")" + m)
-        .replaceAll("\\)k", ")" + k).replaceAll("R", "");
-    return f;
-  }
-
-  private String getFgFormula(BuildingBlock fg) {
-    String f = fg.getGeneralFormula().replaceAll("X", "").replaceAll("(Z)([0-9]?)", "");
-    return f;
-  }
-
-  private String getBackboneLinkerFormula(BuildingBlock backboneLinker) {
-    String f = backboneLinker.getGeneralFormula().replaceAll("X", "").replaceAll("R", "");
-    return f;
-  }
-
-  private String getSubstituentFormula(BuildingBlock substituent) {
-    String f = substituent.getGeneralFormula();
-    return f;
   }
 
   /**
@@ -329,6 +324,14 @@ public class PfasCompound {
         if (block.getBlockClass() == BlockClass.BACKBONE && formulas.get(j).contains(")n")) {
           fragments.addAll(computeBackboneFragments(formulas.get(j), block));
         } else {
+
+          // in case some fragments require the backbone to be known, we have to compute the mass here.
+          if (formulas.get(j).matches(FRAGMENT_BACKBONE_REGEX) && masses.get(j) == null) {
+            final String formula = getBackboneFragmentFormula(formulas.get(j), n, m, k);
+            formulas.set(j, formula);
+            masses.set(j, FormulaUtils.calculateMzRatio(formula));
+          }
+
           fragments.add(new PfasFragment(masses.get(j), formulas.get(j), block));
         }
       }
@@ -347,19 +350,19 @@ public class PfasCompound {
       if (this.m != -1) {
         if (k != -1) {
           for (int k = 0; 0 < this.k; k++) {
-            final String formula = getBackboneFormula(fragmentFormula, n, m, k);
+            final String formula = getBackboneFragmentFormula(fragmentFormula, n, m, k);
             final double mz = FormulaUtils.calculateMzRatio(formula);
             fragments.add(new PfasFragment(mz, formula, backbone));
           }
         } else {
           for (int m = 0; m < this.m; m++) {
-            final String formula = getBackboneFormula(fragmentFormula, n, m, -1);
+            final String formula = getBackboneFragmentFormula(fragmentFormula, n, m, -1);
             final double mz = FormulaUtils.calculateMzRatio(formula);
             fragments.add(new PfasFragment(mz, formula, backbone));
           }
         }
       } else {
-        final String formula = getBackboneFormula(fragmentFormula, n, -1, -1);
+        final String formula = getBackboneFragmentFormula(fragmentFormula, n, -1, -1);
         final double mz = FormulaUtils.calculateMzRatio(formula);
         fragments.add(new PfasFragment(mz, formula, backbone));
       }

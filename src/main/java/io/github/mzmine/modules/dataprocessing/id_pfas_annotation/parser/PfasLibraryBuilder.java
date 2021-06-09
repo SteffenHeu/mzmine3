@@ -18,6 +18,10 @@ import javax.annotation.Nullable;
 
 public class PfasLibraryBuilder {
 
+  protected static final String BACKBONE_PLACEHOLDER = "X";
+  protected static final String FG_PLACEHOLDER = "R";
+  protected static final String SUBSTITUENT_PLACEHOLDER = "Z";
+
   private static final Logger logger = Logger.getLogger(PfasLibraryBuilder.class.getName());
 
   @Nonnull
@@ -58,20 +62,22 @@ public class PfasLibraryBuilder {
       case BACKBONE -> {
         return FormulaUtils.checkMolecularFormula(
             block.getGeneralFormula().replace("k", "").replace("m", "").replace("n", "")
-                .replace("R", "")) && block.getGeneralFormula().contains("n") && block
-            .getGeneralFormula().contains("R");
+                .replace(FG_PLACEHOLDER, "")) && block.getGeneralFormula().contains("n") && block
+            .getGeneralFormula().contains(FG_PLACEHOLDER);
       }
       case BACKBONE_LINKER -> {
-        return FormulaUtils
-            .checkMolecularFormula(block.getGeneralFormula().replace("X", "").replace("R", ""))
-            && block.getGeneralFormula().contains("X") && block.getGeneralFormula().contains("R");
+        return FormulaUtils.checkMolecularFormula(
+            block.getGeneralFormula().replace(BACKBONE_PLACEHOLDER, "").replace(FG_PLACEHOLDER, ""))
+            && block.getGeneralFormula().contains(BACKBONE_PLACEHOLDER) && block.getGeneralFormula()
+            .contains(FG_PLACEHOLDER);
       }
       case SUBSTITUENT -> {
         return FormulaUtils.checkMolecularFormula(block.getGeneralFormula());
       }
       case FUNCTIONAL_GROUP -> {
-        return FormulaUtils
-            .checkMolecularFormula(block.getGeneralFormula().replace("X", "").replace("Y", ""));
+        return FormulaUtils.checkMolecularFormula(
+            block.getGeneralFormula().replace(BACKBONE_PLACEHOLDER, "")
+                .replace(SUBSTITUENT_PLACEHOLDER, ""));
       }
     }
     return false;
