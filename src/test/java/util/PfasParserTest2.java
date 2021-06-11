@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
@@ -50,10 +49,9 @@ public class PfasParserTest2 {
   }
 
   @Test
-  @Disabled
   public void testParser() {
     final PfasLibraryParser2 parser = new PfasLibraryParser2();
-    URL path = this.getClass().getClassLoader().getResource("files/pfos-pfoa-database2.CSV");
+    URL path = this.getClass().getClassLoader().getResource("files/pfos-pfoa-database-new-format.csv");
     File file = new File(path.getFile());
     Assertions.assertEquals(true, parser.read(file));
 

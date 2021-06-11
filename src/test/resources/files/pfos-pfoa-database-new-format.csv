@@ -1,0 +1,5 @@
+Class;Name;Requires;General Formula;Types;Smiles;Neutral losses (-);Fragments (-);Neutral losses (+);Fragments (+);Sources
+Backbone;Perfluoroalkyl;;F(CF2)nR;;;;"{F(CF2)n-;;}";;;
+Functional group;Carbonyl;;XCO2Z;;;"{CO2;;Hydrogen}";;;;
+Functional group;Sulfonyl;;XSO3Z;;;"{SO3;;Hydrogen}";"{SO3-;;}";"{SO2;;Sulfonamide}";;
+Substituent;Hydrogen;;H;;;;;;;
