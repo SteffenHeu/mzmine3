@@ -8,7 +8,7 @@ import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.IntensityCover
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasCompound;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasFragment;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryBuilder;
-import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryParser2;
+import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryParser;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.FormulaUtils;
 import java.io.File;
@@ -21,9 +21,9 @@ import org.junit.jupiter.api.Test;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
-public class PfasParserTest2 {
+public class PfasParserTest {
 
-  private static final Logger logger = Logger.getLogger(PfasParserTest2.class.getName());
+  private static final Logger logger = Logger.getLogger(PfasParserTest.class.getName());
 
   @Test
   public void testSplit() {
@@ -34,7 +34,7 @@ public class PfasParserTest2 {
 
   @Test
   public void parseTest() {
-    final PfasLibraryParser2 parser = new PfasLibraryParser2();
+    final PfasLibraryParser parser = new PfasLibraryParser();
 
     URL path = this.getClass().getClassLoader().getResource("files/Pfas-database-new-format.csv");
     File file = new File(path.getFile());
@@ -50,7 +50,7 @@ public class PfasParserTest2 {
 
   @Test
   public void testParser() {
-    final PfasLibraryParser2 parser = new PfasLibraryParser2();
+    final PfasLibraryParser parser = new PfasLibraryParser();
     URL path = this.getClass().getClassLoader().getResource("files/pfos-pfoa-database-new-format.csv");
     File file = new File(path.getFile());
     Assertions.assertEquals(true, parser.read(file));
@@ -80,7 +80,7 @@ public class PfasParserTest2 {
 
   @Test
   public void testFragmentSpectrum() {
-    final PfasLibraryParser2 parser = new PfasLibraryParser2();
+    final PfasLibraryParser parser = new PfasLibraryParser();
     URL path = this.getClass().getClassLoader()
         .getResource("files/pfas-betaineamide-test-new-format.CSV");
     File file = new File(path.getFile());

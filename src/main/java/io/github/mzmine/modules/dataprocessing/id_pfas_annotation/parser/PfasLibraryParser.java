@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class PfasLibraryParser2 {
+public class PfasLibraryParser {
 
   private static final int CLASS = 0;
   private static final int NAME = 1;
@@ -48,12 +48,12 @@ public class PfasLibraryParser2 {
   private static final int POS_NL = 8;
   private static final int POS_FRAG = 9;
 
-  private static final Logger logger = Logger.getLogger(PfasLibraryParser2.class.getName());
+  private static final Logger logger = Logger.getLogger(PfasLibraryParser.class.getName());
   private final char sep = ';';
   private final String innerSep = ";";
   private List<BuildingBlock> entries;
 
-  public PfasLibraryParser2() {
+  public PfasLibraryParser() {
   }
 
   public boolean read(File file) throws IllegalStateException {
