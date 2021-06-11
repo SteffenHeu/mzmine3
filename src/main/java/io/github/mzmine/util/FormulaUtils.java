@@ -110,6 +110,19 @@ public class FormulaUtils {
   @Nonnull
   public static Map<String, Integer> parseFormula(String formula) {
 
+    /*final IMolecularFormula form = MolecularFormulaManipulator
+        .getMajorIsotopeMolecularFormula(formula, SilentChemObjectBuilder.getInstance());
+
+    Map<String, Integer> map = new HashMap<>();
+
+    for (IIsotope isotope : form.isotopes()) {
+      Integer currentCount = map.computeIfAbsent(isotope.getSymbol(), str -> 0);
+      currentCount += form.getIsotopeCount(isotope);
+      map.put(isotope.getSymbol(), currentCount);
+    }
+
+    return map;*/
+
     Map<String, Integer> parsedFormula = new Hashtable<String, Integer>();
 
     Pattern pattern = Pattern.compile("([A-Z][a-z]?)(-?[0-9]*)");
@@ -128,6 +141,9 @@ public class FormulaUtils {
       int newCount = currentCount + addCount;
       parsedFormula.put(element, newCount);
     }
+
+
+
     return parsedFormula;
   }
 
@@ -232,15 +248,10 @@ public class FormulaUtils {
     if (formula.trim().length() == 0)
       return 0;
 
-    Map<String, Integer> parsedFormula = parseFormula(formula);
+    final IMolecularFormula form = MolecularFormulaManipulator
+        .getMajorIsotopeMolecularFormula(formula, SilentChemObjectBuilder.getInstance());
 
-    double totalMass = 0;
-    for (String element : parsedFormula.keySet()) {
-      int count = parsedFormula.get(element);
-      double elementMass = getElementMass(element);
-      totalMass += count * elementMass;
-    }
-
+    double totalMass = MolecularFormulaManipulator.getMass(form);
     totalMass -= charge * electronMass;
 
     return totalMass;
