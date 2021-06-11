@@ -1,0 +1,4 @@
+﻿Class;Name;Requires;General Formula;Types;Smiles;Neutral loss formula (-);Fragment formula (-);Neutral loss formula (+);Fragment formula (+);Sources;;;;;;;
+Backbone;Perfluoroalkyl;;F(CF2)nR;;;;"{F(CF2)n-;;}";;"{F(CF2)n+;;}";https://pubs.acs.org/doi/10.1021/es403729e;;;;;;;
+Functional group;Amide;;XCONHZ;;;;;;;;;;;;;;
+Substituent;Propylbetaine;;(CH2)3N(CH3)2CH2COO;Alkyl;;"{(CH3)2NCH2CO2H;;}{CH2CO2H;;}";"{(CH3)2NC2H2O2-;;}";"{CH2CO2;;}{(CH3)2NCH2CO2H;;}{C2H4(CH3)2NCH2CO2H;;}{COC2H4(CH3)2NCH2CO2H;;Amide}";"{(CH3)2NC2H2O2H2+;;}";;;;;;;;

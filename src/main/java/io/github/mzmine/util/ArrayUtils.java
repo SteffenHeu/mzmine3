@@ -85,4 +85,13 @@ public class ArrayUtils {
       Arrays.fill(doubles, value);
     }
   }
+
+  public static boolean allEquals(boolean[] array, boolean value) {
+    for(boolean val : array) {
+      if(val != value) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

@@ -1,0 +1,7 @@
+﻿Class;Name;Requires;General Formula;Types;Smiles;Neutral loss formula (-);Fragment formula (-);Neutral loss formula (+);Fragment formula (+);Sources
+Backbone;Perfluoroalkyl;;F(CF2)nR;;;;"{F(CF2)n-;;}";;"{F(CF2)n+;;}";https://pubs.acs.org/doi/10.1021/es403729e
+Backbone;H-Perfluoroalkyl;;H(CF2)nR;;;;"{H(CF2)n-;;}";;;
+Backbone linker;n:2 Telomer;;XC2H4R;;;"{HF;;}{(HF)2;;}";;;;"https://pubs.acs.org/doi/10.1021/es403729e;https://pubs.acs.org/doi/10.1021/acs.est.8b02492"
+Functional group;Carbonyl;;XCO2Z;;;"{CO2;;Hydrogen}";;;;https://pubs.acs.org/doi/10.1021/es403729e
+Functional group;Sulfonyl;;XSO3Z;;;"{SO3;;Hydrogen}";"{SO3-;;}";"{SO2;;Sulfonamide}";;https://pubs.acs.org/doi/10.1021/acs.est.8b02492
+Substituent;Hydrogen;;H;;;;;;;

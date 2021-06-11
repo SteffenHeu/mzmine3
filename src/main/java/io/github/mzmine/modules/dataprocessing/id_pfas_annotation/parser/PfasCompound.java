@@ -19,6 +19,7 @@
 package io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser;
 
 import io.github.mzmine.datamodel.PolarityType;
+import io.github.mzmine.util.ArrayUtils;
 import io.github.mzmine.util.FormulaUtils;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -197,16 +198,21 @@ public class PfasCompound {
     return k;
   }
 
-  private boolean evaluateRequirement(Collection<BuildingBlock> blocks, String req) {
+  private boolean evaluateRequirement(Collection<BuildingBlock> blocks, String reqs) {
+    final String[] req = reqs.split("\\+");
+    final boolean[] reqOk = new boolean[req.length];
+
     for (BuildingBlock b : blocks) {
       if (b == null) {
         continue;
       }
-      if (b.getName().equals(req) || (b.getTypes() != null && b.getTypes().contains(req))) {
-        return true;
+      for(int i = 0; i < reqOk.length; i++) {
+        if (b.getName().equals(req[i]) || (b.getTypes() != null && b.getTypes().contains(req[i]))) {
+          reqOk[i] = true;
+        }
       }
     }
-    return false;
+    return ArrayUtils.allEquals(reqOk, true);
   }
 
   private boolean evaluateGeneralRequirements(Collection<BuildingBlock> blocks) {

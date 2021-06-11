@@ -1,9 +1,14 @@
 package io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser;
 
 import io.github.mzmine.datamodel.PolarityType;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -11,6 +16,11 @@ import javax.annotation.Nullable;
 public class BuildingBlock {
 
   private static final Logger logger = Logger.getLogger(BuildingBlock.class.getName());
+  /**
+   * Only used for {link #toString}.
+   */
+  private static final NumberFormat mzFormat = new DecimalFormat("0.000000",
+      new DecimalFormatSymbols(Locale.US));
 
   private final String name;
   private final String generalFormula;
@@ -234,23 +244,27 @@ public class BuildingBlock {
     StringBuilder b = new StringBuilder();
     b = b.append(blockClass).append(", ").append(name).append(", ").append(generalFormula);
     for (int i = 0; i < neutralLossFormulasNeg.size(); i++) {
-      b = b.append(", NL(-) ").append(i).append(": [").append(neutralLossFormulasNeg.get(i));
-      b = b.append(", ").append(neutralLossMassesNeg.get(i)).append(", ")
-          .append(neutralLossReqNeg.get(i)).append("]");
+      b.append(", NL(-) ").append(i).append(": [").append(neutralLossFormulasNeg.get(i));
+      double mass = Objects.requireNonNullElse(neutralLossMassesNeg.get(i), Double.NaN);
+      b.append(", ").append(mzFormat.format(mass)).append(", ").append(neutralLossReqNeg.get(i))
+          .append("]");
     }
     for (int i = 0; i < fragmentFormulasNeg.size(); i++) {
-      b = b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasNeg.get(i));
-      b = b.append(", ").append(fragmentMassesNeg.get(i)).append(", ").append(fragmentReqNeg.get(i))
+      b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasNeg.get(i));
+      double mass = Objects.requireNonNullElse(fragmentMassesNeg.get(i), Double.NaN);
+      b.append(", ").append(mzFormat.format(mass)).append(", ").append(fragmentReqNeg.get(i))
           .append("]");
     }
     for (int i = 0; i < neutralLossFormulasPos.size(); i++) {
-      b = b.append(", NL(+) ").append(i).append(": [").append(neutralLossFormulasPos.get(i));
-      b = b.append(", ").append(neutralLossMassesPos.get(i)).append(", ")
-          .append(neutralLossReqPos.get(i)).append("]");
+      b.append(", NL(+) ").append(i).append(": [").append(neutralLossFormulasPos.get(i));
+      double mass = Objects.requireNonNullElse(neutralLossMassesPos.get(i), Double.NaN);
+      b.append(", ").append(mzFormat.format(mass)).append(", ").append(neutralLossReqPos.get(i))
+          .append("]");
     }
     for (int i = 0; i < fragmentFormulasPos.size(); i++) {
-      b = b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasPos.get(i));
-      b = b.append(", ").append(fragmentMassesPos.get(i)).append(", ").append(fragmentReqPos.get(i))
+      b.append(", F(-) ").append(i).append(": [").append(fragmentFormulasPos.get(i));
+      double mass = Objects.requireNonNullElse(fragmentMassesPos.get(i), Double.NaN);
+      b.append(", ").append(mzFormat.format(mass)).append(", ").append(fragmentReqPos.get(i))
           .append("]");
     }
     return b.toString();
