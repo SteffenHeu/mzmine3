@@ -61,7 +61,7 @@ public class PfasLibraryParser {
   public PfasLibraryParser() {
   }
 
-  public boolean read(File file) {
+  public boolean read(File file) throws IllegalStateException {
 
     logger.finest(() -> "Reading pfas compound library from " + file.getAbsolutePath());
 
@@ -105,21 +105,25 @@ public class PfasLibraryParser {
         if (req.length() != 0 && req.split(innerSep).length != 0) {
           Arrays.stream(req.split(innerSep)).forEach(block::addRequires);
         }
-        if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), NL_FORMULA_NEG, NL_MASS_NEG,
-            NL_REQ_NEG)) {
-          continue;
-        }
-        if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), FRAG_FORMULA_NEG,
-            FRAG_MASS_NEG, FRAG_REQ_NEG)) {
-          continue;
-        }
-        if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), NL_FORMULA_POS, NL_MASS_POS,
-            NL_REQ_POS)) {
-          continue;
-        }
-        if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), FRAG_FORMULA_POS,
-            FRAG_MASS_POS, FRAG_REQ_POS)) {
-          continue;
+        try {
+          if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), NL_FORMULA_NEG,
+              NL_MASS_NEG, NL_REQ_NEG)) {
+            continue;
+          }
+          if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), FRAG_FORMULA_NEG,
+              FRAG_MASS_NEG, FRAG_REQ_NEG)) {
+            continue;
+          }
+          if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), NL_FORMULA_POS,
+              NL_MASS_POS, NL_REQ_POS)) {
+            continue;
+          }
+          if (!parseFragmentsOrLosses(line, block, reader.getLinesRead(), FRAG_FORMULA_POS,
+              FRAG_MASS_POS, FRAG_REQ_POS)) {
+            continue;
+          }
+        } catch (IllegalStateException e) {
+          throw e;
         }
 
         blocks.add(block);
@@ -137,7 +141,7 @@ public class PfasLibraryParser {
 
   private boolean parseFragmentsOrLosses(@Nonnull final String[] line,
       @Nonnull final BuildingBlock block, long linesRead, int formIndex, int massIndex,
-      int reqIndex) {
+      int reqIndex) throws IllegalStateException {
     // -1 to keep empty
     String[] formulas = line[formIndex].split(innerSep, -1);
     String[] masses = line[massIndex].split(innerSep, -1);

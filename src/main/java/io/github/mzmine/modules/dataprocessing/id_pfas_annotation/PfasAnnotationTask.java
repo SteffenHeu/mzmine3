@@ -31,7 +31,7 @@ import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasCompound;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasFragment;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryBuilder;
-import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryParser;
+import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasLibraryParser2;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
@@ -113,6 +113,11 @@ public class PfasAnnotationTask extends AbstractTask {
     description = PREFIX + "Building compound library...";
 
     compounds = buildPfasLibrary();
+    if (compounds == null) {
+      setStatus(TaskStatus.ERROR);
+      return;
+    }
+
     totalRows = Arrays.stream(flists).mapToInt(ModularFeatureList::getNumberOfRows).sum();
 
     description = PREFIX + "Annotating row " + processed + "/" + totalRows;
@@ -173,10 +178,15 @@ public class PfasAnnotationTask extends AbstractTask {
   }
 
   private List<PfasCompound> buildPfasLibrary() {
-    final PfasLibraryParser parser = new PfasLibraryParser();
-    if (!parser.read(libraryFile)) {
-      setErrorMessage("Cannot read library file.");
-      setStatus(TaskStatus.ERROR);
+    final PfasLibraryParser2 parser = new PfasLibraryParser2();
+
+    try {
+      if (!parser.read(libraryFile)) {
+        setErrorMessage("Cannot read library file.");
+        return null;
+      }
+    } catch (IllegalStateException e) {
+      setErrorMessage(e.getMessage());
       return null;
     }
 

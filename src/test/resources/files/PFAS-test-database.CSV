@@ -1,7 +1,0 @@
-Class,Name,Requires,General Formula,Types,Smiles,Neutral loss formula (-),Neutral loss mass (-),Neutral loss req (-),Fragment formula (-),Fragment mass (-),Fragment req (-),Neutral loss formula (+),Neutral loss mass (+),Neutral loss req (+),Fragment formula (+),Fragment mass (+),Fragment req (+)
-Backbone,Perfluoroalkyl,,F(CF2)nR,,,CF2,49.99680644,,F(CF2)n-,,,CF2,49.99680644,,F(CF2)n+,,
-Backbone,H-Perfluoroalkyl,,H(CF2)nR,,,,,,,,,,,,,,
-Backbone linker,n:2 Telomer,,XC2H4R,,,,,,,,,,,,,,
-Substituent,Hydrogen,,H,,,,,,,,,,,,,,
-Functional group,Carbonyls,n:2 Telomer,XCOOZ,,,CO2,43.98982924,Hydrogen,,,,,,,,,
-Functional group,Sulfonic acid,,XSO3Z,,,CO2,43.98982924,Hydrogen,,,,,,,,,

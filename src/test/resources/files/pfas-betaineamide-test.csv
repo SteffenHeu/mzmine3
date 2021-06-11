@@ -1,4 +1,0 @@
-Class,Name,Requires,General Formula,Types,Smiles,Neutral loss formula (-),Neutral loss mass (-),Neutral loss req (-),Fragment formula (-),Fragment mass (-),Fragment req (-),Neutral loss formula (+),Neutral loss mass (+),Neutral loss req (+),Fragment formula (+),Fragment mass (+),Fragment req (+)
-Backbone,Perfluoroalkyl,,F(CF2)nR,,,,,,F(CF2)n-,,,CF2,49.99680644,,F(CF2)n+,,
-Functional group,Amide,,XCONHZ,,,,,,,,,,,,,,
-Substituent,Propylbetaine,,(CH2)3N(CH3)2CH2COO,,,Me2NCH2CO2H;CH2CO2H,;,;,Me2NC2H2O2-,102.0560521,,CH2CO2;(CH3)2NCH2CO2H;C2H4(CH3)2NCH2CO2H;COC2H4(CH3)2NCH2CO2H,;;;,;;;Amide,Me2NC2H2O2H2+,104.070605,

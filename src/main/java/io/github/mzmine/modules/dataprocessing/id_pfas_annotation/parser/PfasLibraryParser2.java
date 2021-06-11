@@ -56,7 +56,7 @@ public class PfasLibraryParser2 {
   public PfasLibraryParser2() {
   }
 
-  public boolean read(File file) {
+  public boolean read(File file) throws IllegalStateException {
 
     logger.finest(() -> "Reading pfas compound library from " + file.getAbsolutePath());
 
@@ -126,7 +126,7 @@ public class PfasLibraryParser2 {
   }
 
   private boolean parseFragmentsOrLosses(@Nonnull final String[] line,
-      @Nonnull final BuildingBlock block, long linesRead, int index) {
+      @Nonnull final BuildingBlock block, long linesRead, int index) throws IllegalStateException {
     // -1 to keep empty
 
     final String col = line[index];
