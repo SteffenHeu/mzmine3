@@ -30,7 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import org.openscience.cdk.config.IsotopeFactory;
 import org.openscience.cdk.config.Isotopes;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
@@ -119,7 +119,7 @@ public class FormulaUtils {
     return count;
   }
 
-  @Nonnull
+  @NotNull
   public static Map<String, Integer> parseFormula(String formula) {
 
     /*final IMolecularFormula form = MolecularFormulaManipulator
@@ -157,8 +157,8 @@ public class FormulaUtils {
     return parsedFormula;
   }
 
-  @Nonnull
-  public static String formatFormula(@Nonnull Map<String, Integer> parsedFormula) {
+  @NotNull
+  public static String formatFormula(@NotNull Map<String, Integer> parsedFormula) {
 
     StringBuilder formattedFormula = new StringBuilder();
 

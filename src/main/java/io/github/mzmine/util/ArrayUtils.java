@@ -94,4 +94,18 @@ public class ArrayUtils {
     }
     return true;
   }
+
+  /**
+   * Reverses the given array.
+   * @param input The array.
+   */
+  public static void reverse(int[] input) {
+    int last = input.length - 1;
+    int middle = input.length / 2;
+    for (int i = 0; i <= middle; i++) {
+      int temp = input[i];
+      input[i] = input[last - i];
+      input[last - i] = temp;
+    }
+  }
 }
