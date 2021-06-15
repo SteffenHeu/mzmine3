@@ -37,6 +37,10 @@ import javax.annotation.Nullable;
 
 public class PfasLibraryParser {
 
+  protected static final String nRegex = "\\)n";
+  protected static final String mRegex = "\\)m";
+  protected static final String kRegex = "\\)k";
+
   private static final int CLASS = 0;
   private static final int NAME = 1;
   private static final int REQ = 2;
@@ -142,7 +146,7 @@ public class PfasLibraryParser {
     entries[0] = entries[0].replaceAll("\\{", "");
     entries[entries.length - 1] = entries[entries.length - 1].replaceAll("\\}", "");
 
-    final Pattern pairPattern = Pattern.compile("(\\S+)?;(\\S+)?;(\\S+)?");
+    final Pattern pairPattern = Pattern.compile("(\\S+)?;(\\S+)?;([\\S+\\s+]+)?");
     for (int i = 0; i < entries.length; i++) {
       String entry = entries[i];
 
@@ -168,7 +172,8 @@ public class PfasLibraryParser {
             + " is empty although a reqIndex is given.");
       }
 
-      if (block.getBlockClass() != BlockClass.BACKBONE && mass == null && formula != null) {
+      if (!(formula.contains(")n") || formula.contains(")m") || formula.contains(")k"))
+              && mass == null && formula != null) {
         // the mass calculated here may be "null", in case the formula was invalid the the time.
         // some functional group fragments require the backbone to calculate the m/z of fragments
         if (formula.contains("+") || formula.contains("-")) {

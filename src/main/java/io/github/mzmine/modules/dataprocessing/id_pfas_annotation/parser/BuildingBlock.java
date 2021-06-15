@@ -131,7 +131,7 @@ public class BuildingBlock {
       return false;
     }
 
-    if (exactMass != null && fragmentMassesNeg.stream()
+    if (exactMass != null && fragmentMassesNeg.stream().filter(d -> d != null)
         .anyMatch(d -> Double.compare(d, exactMass) == 0)) {
       logger.warning(
           () -> blockClass.name() + " already contains a negative fragment with mass " + exactMass);
@@ -152,7 +152,7 @@ public class BuildingBlock {
       return false;
     }
 
-    if (exactMass != null && neutralLossMassesNeg.stream()
+    if (exactMass != null && neutralLossMassesNeg.stream().filter(d -> d != null)
         .anyMatch(d -> Double.compare(d, exactMass) == 0)) {
       logger.warning(
           () -> blockClass.name() + " already contains a negative neutral loss with mass "
@@ -173,7 +173,7 @@ public class BuildingBlock {
       return false;
     }
 
-    if (exactMass != null && fragmentMassesPos.stream()
+    if (exactMass != null && fragmentMassesPos.stream().filter(d -> d != null)
         .anyMatch(d -> Double.compare(d, exactMass) == 0)) {
       logger.warning(
           () -> blockClass.name() + " already contains a positive fragment with mass " + exactMass);
@@ -194,7 +194,7 @@ public class BuildingBlock {
       return false;
     }
 
-    if (exactMass != null && neutralLossMassesPos.stream()
+    if (exactMass != null && neutralLossMassesPos.stream().filter(d -> d != null)
         .anyMatch(d -> Double.compare(d, exactMass) == 0)) {
       logger.warning(
           () -> blockClass.name() + " already contains a positive neutral loss with mass "
