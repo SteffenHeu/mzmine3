@@ -1425,8 +1425,8 @@ public class ScanUtils {
    * @param deisotope       if isotopic signals shall be removed
    * @return [0][] = mz, [1][] = intensity, sorted by ascending mz
    */
-  public static double[][] deisotopeAndRemovePrecursorIons(@Nonnull final MassSpectrum spectrum,
-      @Nonnull final MZTolerance mzTolerance, final double precursorMz,
+  public static double[][] deisotopeAndRemovePrecursorIons(@NotNull final MassSpectrum spectrum,
+      @NotNull final MZTolerance mzTolerance, final double precursorMz,
       final boolean removePrecursor, final boolean deisotope) {
 
     DataPoint[] dps;

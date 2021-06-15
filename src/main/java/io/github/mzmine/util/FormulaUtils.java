@@ -236,7 +236,7 @@ public class FormulaUtils {
     return mz;
   }
 
-  public static double calculateMzRatio(@Nonnull final IMolecularFormula formula) {
+  public static double calculateMzRatio(@NotNull final IMolecularFormula formula) {
     if(formula.getCharge() == null || formula.getCharge() == 0) {
       throw new IllegalArgumentException("Formula is not charged");
     }

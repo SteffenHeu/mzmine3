@@ -13,8 +13,8 @@ import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class PfasLibraryBuilder {
 
@@ -24,7 +24,7 @@ public class PfasLibraryBuilder {
 
   private static final Logger logger = Logger.getLogger(PfasLibraryBuilder.class.getName());
 
-  @Nonnull
+  @NotNull
   private final List<BuildingBlock> blocks = new ArrayList<>();
 
   private final Range<Integer> nRange;
@@ -42,13 +42,13 @@ public class PfasLibraryBuilder {
    * @param blocks The building blocks for this library. The list is copied, so changes to the
    *               original list are not reflected in this library builder.
    */
-  public PfasLibraryBuilder(@Nonnull final List<BuildingBlock> blocks) {
+  public PfasLibraryBuilder(@NotNull final List<BuildingBlock> blocks) {
     this(blocks, Range.closed(4, 8), Range.closed(1, 6), Range.closed(1, 6));
   }
 
-  public PfasLibraryBuilder(@Nonnull final List<BuildingBlock> blocks,
-      @Nonnull final Range<Integer> nRange, @Nonnull final Range<Integer> mRange,
-      @Nonnull final Range<Integer> kRange) {
+  public PfasLibraryBuilder(@NotNull final List<BuildingBlock> blocks,
+      @NotNull final Range<Integer> nRange, @NotNull final Range<Integer> mRange,
+      @NotNull final Range<Integer> kRange) {
     this.blocks.addAll(blocks);
     this.nRange = nRange;
     this.mRange = mRange;
@@ -156,7 +156,7 @@ public class PfasLibraryBuilder {
     return library;
   }
 
-  @Nonnull
+  @NotNull
   public List<BuildingBlock> getBlocks() {
     return blocks;
   }

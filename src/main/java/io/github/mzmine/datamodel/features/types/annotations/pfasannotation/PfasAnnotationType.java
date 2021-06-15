@@ -13,7 +13,7 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.List;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
 public class PfasAnnotationType extends ModularType implements AnnotationType {
@@ -22,13 +22,13 @@ public class PfasAnnotationType extends ModularType implements AnnotationType {
       .of(new PfasMatchSummaryType(), new FormulaType(), new PpmType(), new IntensityCoverageType(),
           new MatchedBlocksType(), new MatchingSignalsType());
 
-  @Nonnull
+  @NotNull
   @Override
   public String getHeaderString() {
     return "PFAS annotation";
   }
 
-  @Nonnull
+  @NotNull
   @Override
   public List<DataType> getSubDataTypes() {
     return subTypes;

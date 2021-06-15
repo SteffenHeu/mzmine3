@@ -46,8 +46,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class PfasAnnotationTask extends AbstractTask {
 
@@ -73,7 +73,7 @@ public class PfasAnnotationTask extends AbstractTask {
   private String description;
 
   protected PfasAnnotationTask(@Nullable MemoryMapStorage storage, MZmineProject project,
-      @Nonnull final ParameterSet parameterSet) {
+      @NotNull final ParameterSet parameterSet) {
     super(storage);
 
     flists = parameterSet.getParameter(PfasAnnotationParameters.featureLists).getValue()

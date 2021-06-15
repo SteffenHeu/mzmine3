@@ -32,8 +32,8 @@ import java.util.List;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class PfasLibraryParser {
 
@@ -129,8 +129,8 @@ public class PfasLibraryParser {
     return true;
   }
 
-  private boolean parseFragmentsOrLosses(@Nonnull final String[] line,
-      @Nonnull final BuildingBlock block, long linesRead, int index) throws IllegalStateException {
+  private boolean parseFragmentsOrLosses(@NotNull final String[] line,
+      @NotNull final BuildingBlock block, long linesRead, int index) throws IllegalStateException {
     // -1 to keep empty
 
     final String col = line[index];

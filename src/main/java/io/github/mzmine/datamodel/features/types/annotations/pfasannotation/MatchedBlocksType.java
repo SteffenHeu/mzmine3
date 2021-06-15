@@ -28,7 +28,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class MatchedBlocksType extends DataType<ObjectProperty<PfasMatch>> implements GraphicalColumType<PfasMatch> {
 
@@ -43,7 +43,7 @@ public class MatchedBlocksType extends DataType<ObjectProperty<PfasMatch>> imple
     return 60;
   }
 
-  @Nonnull
+  @NotNull
   @Override
   public String getHeaderString() {
     return "Matched";

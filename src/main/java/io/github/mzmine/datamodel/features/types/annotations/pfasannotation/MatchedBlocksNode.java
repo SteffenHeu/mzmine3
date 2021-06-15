@@ -35,7 +35,7 @@ import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class MatchedBlocksNode extends GridPane {
 
@@ -44,7 +44,7 @@ public class MatchedBlocksNode extends GridPane {
 
   private int numSubstituents = 0;
 
-  public MatchedBlocksNode(@Nonnull final PfasMatch match) {
+  public MatchedBlocksNode(@NotNull final PfasMatch match) {
     super();
 
     // get all blocks

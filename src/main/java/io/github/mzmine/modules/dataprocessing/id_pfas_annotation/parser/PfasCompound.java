@@ -26,8 +26,8 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.openscience.cdk.interfaces.IChemObjectBuilder;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 import org.openscience.cdk.silent.SilentChemObjectBuilder;
@@ -53,9 +53,9 @@ public class PfasCompound {
   private Double positiveMz = null;
   private Double negativeMz = null;
 
-  public PfasCompound(@Nonnull final BuildingBlock backbone,
-      @Nullable final BuildingBlock backboneLinker, @Nonnull final BuildingBlock functionalGroup,
-      @Nonnull final Collection<BuildingBlock> substituent, int n, int m, int k)
+  public PfasCompound(@NotNull final BuildingBlock backbone,
+      @Nullable final BuildingBlock backboneLinker, @NotNull final BuildingBlock functionalGroup,
+      @NotNull final Collection<BuildingBlock> substituent, int n, int m, int k)
       throws InvalidCompoundConfigurationException {
     this.backbone = backbone;
     this.backboneLinker = backboneLinker;
@@ -109,7 +109,7 @@ public class PfasCompound {
         + getSubstituentNames();
   }
 
-  private String getBlockFormula(@Nonnull BuildingBlock block, int n, int m, int k) {
+  private String getBlockFormula(@NotNull BuildingBlock block, int n, int m, int k) {
     return switch (block.getBlockClass()) {
       case BACKBONE -> block.getGeneralFormula().replaceAll("\\)n", ")" + n)
           .replaceAll("\\)m", ")" + m).replaceAll("\\)k", ")" + k)
@@ -124,8 +124,8 @@ public class PfasCompound {
     };
   }
 
-  @Nonnull
-  private String getBackboneFragmentFormula(@Nonnull String formula, int n, int m, int k) {
+  @NotNull
+  private String getBackboneFragmentFormula(@NotNull String formula, int n, int m, int k) {
     String f = formula.replaceAll("\\)n", ")" + n).replaceAll("\\)m", ")" + m)
         .replaceAll("\\)k", ")" + k).replaceAll(PfasLibraryBuilder.FG_PLACEHOLDER, "");
     return f;
@@ -181,7 +181,7 @@ public class PfasCompound {
     return name.toString();
   }
 
-  @Nonnull
+  @NotNull
   public String getName() {
     return name;
   }

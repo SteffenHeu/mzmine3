@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class DataPointUtils {
 
@@ -209,7 +209,7 @@ public class DataPointUtils {
    * @param spectrum  The mass spectrum.
    * @return An array of data points.
    */
-  public static DataPoint[] getDatapoints(@Nonnull final MassSpectrum spectrum) {
+  public static DataPoint[] getDatapoints(@NotNull final MassSpectrum spectrum) {
     double[][] dps = new double[2][spectrum.getNumberOfDataPoints()];
     spectrum.getMzValues(dps[0]);
     spectrum.getIntensityValues(dps[1]);

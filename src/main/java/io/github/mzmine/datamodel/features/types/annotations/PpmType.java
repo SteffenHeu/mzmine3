@@ -4,7 +4,7 @@ import io.github.mzmine.datamodel.features.types.numbers.abstr.DoubleType;
 import io.github.mzmine.main.MZmineCore;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class PpmType extends DoubleType {
 
@@ -14,7 +14,7 @@ public class PpmType extends DoubleType {
     super(new DecimalFormat("0.00"));
   }
 
-  @Nonnull
+  @NotNull
   @Override
   public String getHeaderString() {
     return MZmineCore.getConfiguration().getUnitFormat().format("\u0394", "ppm");

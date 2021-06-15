@@ -4,14 +4,14 @@ import com.google.common.collect.Range;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class PfasCompoundBuilder {
 
   private final Range<Integer> nRange, mRange, kRange;
 
-  public PfasCompoundBuilder(@Nonnull final Range<Integer> nRange,
-      @Nonnull final Range<Integer> mRange, @Nonnull final Range<Integer> kRange) {
+  public PfasCompoundBuilder(@NotNull final Range<Integer> nRange,
+      @NotNull final Range<Integer> mRange, @NotNull final Range<Integer> kRange) {
     this.nRange = nRange;
     this.mRange = mRange;
     this.kRange = kRange;

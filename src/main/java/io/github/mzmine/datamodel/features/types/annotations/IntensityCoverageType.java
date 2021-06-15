@@ -21,7 +21,7 @@ package io.github.mzmine.datamodel.features.types.annotations;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.DoubleType;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import javax.annotation.Nonnull;
+import org.jetbrains.annotations.NotNull;
 
 public class IntensityCoverageType extends DoubleType {
 
@@ -31,7 +31,7 @@ public class IntensityCoverageType extends DoubleType {
     super(format);
   }
 
-  @Nonnull
+  @NotNull
   @Override
   public String getHeaderString() {
     return "Coverage";

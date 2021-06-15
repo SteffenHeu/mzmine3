@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class BuildingBlock {
 
@@ -44,8 +44,8 @@ public class BuildingBlock {
   private final List<Double> fragmentMassesNeg = new ArrayList<>();
   private final List<String> fragmentReqNeg = new ArrayList<>();
 
-  public BuildingBlock(@Nonnull final String name, @Nonnull final String generalFormula,
-      @Nonnull final BlockClass blockClass, @Nullable String types, @Nullable final String smiles) {
+  public BuildingBlock(@NotNull final String name, @NotNull final String generalFormula,
+      @NotNull final BlockClass blockClass, @Nullable String types, @Nullable final String smiles) {
     this.name = name;
     this.generalFormula = generalFormula;
     this.blockClass = blockClass;

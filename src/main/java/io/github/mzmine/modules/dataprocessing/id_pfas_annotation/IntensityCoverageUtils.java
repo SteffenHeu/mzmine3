@@ -6,15 +6,15 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class IntensityCoverageUtils {
 
   private static final Logger logger = Logger.getLogger(IntensityCoverageUtils.class.getName());
 
-  public static double getIntensityCoverage(@Nonnull final MassSpectrum spectrum,
-      @Nonnull final double[] mzs, @Nonnull final MZTolerance tolerance) {
+  public static double getIntensityCoverage(@NotNull final MassSpectrum spectrum,
+      @NotNull final double[] mzs, @NotNull final MZTolerance tolerance) {
     return getIntensityCoverage(spectrum, mzs, tolerance, null, null);
   }
 
@@ -24,8 +24,8 @@ public class IntensityCoverageUtils {
    * @param tolerance mz tolerance
    * @return
    */
-  public static <T> double getIntensityCoverage(@Nonnull final MassSpectrum spectrum,
-      @Nonnull final double[] mzs, @Nonnull final MZTolerance tolerance,
+  public static <T> double getIntensityCoverage(@NotNull final MassSpectrum spectrum,
+      @NotNull final double[] mzs, @NotNull final MZTolerance tolerance,
       @Nullable final List<T> inPossibleFragments, @Nullable List<T> outMatchedFragments) {
 
     if ((inPossibleFragments != null && outMatchedFragments == null) || (outMatchedFragments != null
