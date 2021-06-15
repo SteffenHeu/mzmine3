@@ -63,6 +63,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javafx.collections.FXCollections;
@@ -74,6 +75,19 @@ import javax.annotation.Nullable;
  * Scan related utilities
  */
 public class ScanUtils {
+
+  private static final Logger logger = Logger.getLogger(ScanUtils.class.getName());
+
+  /**
+   * Common utility method to be used as Scan.toString() method in various Scan implementations
+   *
+   * @param scan Scan to be converted to String
+   * @return String representation of the scan
+   */
+  public static @Nonnull
+  String scanToString(@Nonnull Scan scan) {
+    return scanToString(scan, false);
+  }
 
   /**
    * Common utility method to be used as Scan.toString() method in various Scan implementations
@@ -133,9 +147,12 @@ public class ScanUtils {
 
   @Deprecated
   public static DataPoint[] extractDataPoints(MassSpectrum spectrum) {
-    DataPoint result[] = new DataPoint[spectrum.getNumberOfDataPoints()];
-    for (int i = 0; i < spectrum.getNumberOfDataPoints(); i++) {
-      result[i] = new SimpleDataPoint(spectrum.getMzValue(i), spectrum.getIntensityValue(i));
+    int size = spectrum.getNumberOfDataPoints();
+    DataPoint result[] = new DataPoint[size];
+    double[] mz = spectrum.getMzValues(new double[size]);
+    double[] intensity = spectrum.getIntensityValues(new double[size]);
+    for (int i = 0; i < size; i++) {
+      result[i] = new SimpleDataPoint(mz[i], intensity[i]);
     }
     return result;
   }
@@ -401,10 +418,11 @@ public class ScanUtils {
 
           // Find existing right neighbour
           double rightNeighbourValue = afterY;
-          int rightNeighbourBinIndex = (binValues.length - 1) + (int) Math
+          int rightNeighbourBinIndex = (binValues.length - 1)
+                                       + (int) Math
               .ceil((afterX - binRange.upperEndpoint()) / binWidth);
-          for (int anotherBinIndex = binIndex + 1; anotherBinIndex < binValues.length;
-              anotherBinIndex++) {
+          for (int anotherBinIndex =
+              binIndex + 1; anotherBinIndex < binValues.length; anotherBinIndex++) {
             if (binValues[anotherBinIndex] != null) {
               rightNeighbourValue = binValues[anotherBinIndex];
               rightNeighbourBinIndex = anotherBinIndex;
@@ -412,8 +430,8 @@ public class ScanUtils {
             }
           }
 
-          double slope = (rightNeighbourValue - leftNeighbourValue) / (rightNeighbourBinIndex
-              - leftNeighbourBinIndex);
+          double slope = (rightNeighbourValue - leftNeighbourValue)
+                         / (rightNeighbourBinIndex - leftNeighbourBinIndex);
           binValues[binIndex] = leftNeighbourValue + slope * (binIndex - leftNeighbourBinIndex);
 
         }
@@ -1355,6 +1373,22 @@ public class ScanUtils {
     return pointsWithinRange;
   }
 
+  /**
+   * Most abundant n signals
+   *
+   * @param scan
+   * @param n
+   * @return
+   */
+  public static DataPoint[] getMostAbundantSignals(DataPoint[] scan, int n) {
+    if (scan.length <= n) {
+      return scan;
+    } else {
+      Arrays.sort(scan,
+          new DataPointSorter(SortingProperty.Intensity, SortingDirection.Descending));
+      return Arrays.copyOf(scan, n);
+    }
+  }
 
   /**
    * Binning modes
@@ -1362,6 +1396,7 @@ public class ScanUtils {
   public static enum BinningType {
     SUM, MAX, MIN, AVG
   }
+
 
   /**
    * Integer conversion methods.

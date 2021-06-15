@@ -1,16 +1,16 @@
 /*
  * Copyright 2006-2020 The MZmine Development Team
- * 
+ *
  * This file is part of MZmine.
- * 
+ *
  * MZmine is free software; you can redistribute it and/or modify it under the terms of the GNU
  * General Public License as published by the Free Software Foundation; either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
  * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
  * Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
  * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
  * USA
@@ -22,7 +22,6 @@ import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.identities.MolecularFormulaIdentity;
 import io.github.mzmine.datamodel.identities.iontype.IonType;
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -49,25 +48,36 @@ public class FormulaUtils {
   /**
    * Sort all molecular formulas by score of ppm distance, isotope sccore and msms score (with
    * weighting). Best will be at first position
-   * 
+   *
    * @param list
-   * @param neutralMass
    * @param ppmMax
    * @param weightIsotopeScore
    * @param weightMSMSscore
    */
-  public static void sortFormulaList(List<MolecularFormulaIdentity> list, double ppmMax,
+  public static void sortFormulaList(List<? extends MolecularFormulaIdentity> list, double ppmMax,
       double weightIsotopeScore, double weightMSMSscore) {
-    if (list == null)
+    if (list == null) {
       return;
-    list.sort(new Comparator<MolecularFormulaIdentity>() {
-      @Override
-      public int compare(MolecularFormulaIdentity a, MolecularFormulaIdentity b) {
-        double scoreA = a.getScore(ppmMax, weightIsotopeScore, weightMSMSscore);
-        double scoreB = b.getScore(ppmMax, weightIsotopeScore, weightMSMSscore);
-        // best to position 0 (therefore change A B)
-        return Double.compare(scoreB, scoreA);
-      }
+    }
+
+    list.sort((a, b) -> {
+      double scoreA = a.getScore(ppmMax, weightIsotopeScore, weightMSMSscore);
+      double scoreB = b.getScore(ppmMax, weightIsotopeScore, weightMSMSscore);
+      // best to position 0 (therefore change A B)
+      return Double.compare(scoreB, scoreA);
+    });
+  }
+  public static void sortFormulaList(List<? extends MolecularFormulaIdentity> list, double neutralMassOverride, double ppmMax,
+      double weightIsotopeScore, double weightMSMSscore) {
+    if (list == null) {
+      return;
+    }
+
+    list.sort((a, b) -> {
+      double scoreA = a.getScore(neutralMassOverride, ppmMax, weightIsotopeScore, weightMSMSscore);
+      double scoreB = b.getScore(neutralMassOverride, ppmMax, weightIsotopeScore, weightMSMSscore);
+      // best to position 0 (therefore change A B)
+      return Double.compare(scoreB, scoreA);
     });
   }
 
@@ -92,8 +102,9 @@ public class FormulaUtils {
 
   public static boolean containsElement(IMolecularFormula f, String element) {
     for (IIsotope iso : f.isotopes()) {
-      if (iso.getSymbol().equals(element))
+      if (iso.getSymbol().equals(element)) {
         return true;
+      }
     }
     return false;
   }
@@ -101,8 +112,9 @@ public class FormulaUtils {
   public static int countElement(IMolecularFormula f, String element) {
     int count = 0;
     for (IIsotope iso : f.isotopes()) {
-      if (iso.getSymbol().equals(element))
+      if (iso.getSymbol().equals(element)) {
         count += f.getIsotopeCount(iso);
+      }
     }
     return count;
   }
@@ -132,8 +144,9 @@ public class FormulaUtils {
       String element = matcher.group(1);
       String countString = matcher.group(2);
       int addCount = 1;
-      if ((countString.length() > 0) && (!countString.equals("-")))
+      if ((countString.length() > 0) && (!countString.equals("-"))) {
         addCount = Integer.parseInt(countString);
+      }
       int currentCount = 0;
       if (parsedFormula.containsKey(element)) {
         currentCount = parsedFormula.get(element);
@@ -141,9 +154,6 @@ public class FormulaUtils {
       int newCount = currentCount + addCount;
       parsedFormula.put(element, newCount);
     }
-
-
-
     return parsedFormula;
   }
 
@@ -158,22 +168,25 @@ public class FormulaUtils {
     if (elements.contains("C")) {
       int countC = parsedFormula.get("C");
       formattedFormula.append("C");
-      if (countC > 1)
+      if (countC > 1) {
         formattedFormula.append(countC);
+      }
       elements.remove("C");
       if (elements.contains("H")) {
         int countH = parsedFormula.get("H");
         formattedFormula.append("H");
-        if (countH > 1)
+        if (countH > 1) {
           formattedFormula.append(countH);
+        }
         elements.remove("H");
       }
     }
     for (String element : elements) {
       formattedFormula.append(element);
       int count = parsedFormula.get(element);
-      if (count > 1)
+      if (count > 1) {
         formattedFormula.append(count);
+      }
     }
     return formattedFormula.toString();
   }
@@ -209,10 +222,10 @@ public class FormulaUtils {
 
     int charge = 1;
     char lastChar = ionicFormula.charAt(ionicFormula.length() - 1);
-    if(lastChar == '-') {
+    if (lastChar == '-') {
       charge = -1;
     }
-    if(mf.getCharge() != null) {
+    if (mf.getCharge() != null) {
       charge = mf.getCharge();
     }
 
@@ -245,8 +258,9 @@ public class FormulaUtils {
    */
   public static double calculateExactMass(String formula, int charge) {
 
-    if (formula.trim().length() == 0)
+    if (formula.trim().length() == 0) {
       return 0;
+    }
 
     final IMolecularFormula form = MolecularFormulaManipulator
         .getMajorIsotopeMolecularFormula(formula, SilentChemObjectBuilder.getInstance());
@@ -277,8 +291,9 @@ public class FormulaUtils {
   public static String ionizeFormula(String formula, IonizationType ionType, int charge) {
 
     // No ionization
-    if (ionType == IonizationType.NO_IONIZATION)
+    if (ionType == IonizationType.NO_IONIZATION) {
       return formula;
+    }
 
     StringBuilder combinedFormula = new StringBuilder();
     combinedFormula.append(formula);
@@ -292,7 +307,7 @@ public class FormulaUtils {
 
   /**
    * Checks if a formula string only contains valid isotopes/elements.
-   * 
+   *
    * @param formula String of the molecular formula.
    * @return true / false
    */
@@ -330,7 +345,7 @@ public class FormulaUtils {
   /**
    * Creates a formula with the major isotopes (important to use this method for exact mass
    * calculation over the CDK version, which generates formulas without an exact mass)
-   * 
+   *
    * @param formula
    * @return the formula or null
    */
@@ -341,8 +356,9 @@ public class FormulaUtils {
       IMolecularFormula f = MolecularFormulaManipulator
           .getMajorIsotopeMolecularFormula(formula.replace(" ", ""), builder);
 
-      if (f == null)
+      if (f == null) {
         return null;
+      }
       // replace isotopes
       // needed, as MolecularFormulaManipulator method returns isotopes
       // without exact mass info
@@ -361,7 +377,7 @@ public class FormulaUtils {
 
   /**
    * Searches for all isotopes exactmass=null and replaces them with the major isotope
-   * 
+   *
    * @param f
    * @return
    * @throws IOException
@@ -377,8 +393,9 @@ public class FormulaUtils {
         // replace
         IsotopeFactory iFac = Isotopes.getInstance();
         IIsotope major = iFac.getMajorIsotope(iso.getAtomicNumber());
-        if (major != null)
+        if (major != null) {
           f.addIsotope(major, isotopeCount);
+        }
         return replaceAllIsotopesWithoutExactMass(f);
       }
     }
@@ -387,7 +404,6 @@ public class FormulaUtils {
   }
 
   /**
-   * 
    * @param result is going to be changed. is also the returned value
    * @param sub
    * @return
@@ -405,8 +421,9 @@ public class FormulaUtils {
             int realCount = result.getIsotopeCount(realIsotope);
             int remaining = realCount - count;
             result.removeIsotope(realIsotope);
-            if (remaining > 0)
+            if (remaining > 0) {
               result.addIsotope(realIsotope, remaining);
+            }
             count -= realCount;
             break;
           }
@@ -417,7 +434,6 @@ public class FormulaUtils {
   }
 
   /**
-   * 
    * @param result is going to be changed. is also the returned value
    * @param add
    * @return
@@ -436,8 +452,9 @@ public class FormulaUtils {
    * @return True, if both isotope are the same
    */
   private static boolean equalIsotopes(IIsotope isotopeOne, IIsotope isotopeTwo) {
-    if (!isotopeOne.getSymbol().equals(isotopeTwo.getSymbol()))
+    if (!isotopeOne.getSymbol().equals(isotopeTwo.getSymbol())) {
       return false;
+    }
     // exactMass and naturalAbundance is null when using
     // createMajorIsotopeMolFormula
     // // XXX: floating point comparision!
