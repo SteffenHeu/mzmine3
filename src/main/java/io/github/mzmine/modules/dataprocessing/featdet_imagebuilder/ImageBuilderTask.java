@@ -20,17 +20,6 @@
 package io.github.mzmine.modules.dataprocessing.featdet_imagebuilder;
 
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.logging.Logger;
-import javax.annotation.Nullable;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
@@ -53,6 +42,17 @@ import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.FeatureConvertors;
 import io.github.mzmine.util.MemoryMapStorage;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.logging.Logger;
+import org.jetbrains.annotations.Nullable;
 
 /*
  * @author Ansgar Korf (ansgar.korf@uni-muenster.de)
@@ -80,7 +80,8 @@ public class ImageBuilderTask extends AbstractTask {
   private final ModularFeatureList featureList;
 
   public ImageBuilderTask(MZmineProject project, RawDataFile rawDataFile, ParameterSet parameters,
-      @Nullable MemoryMapStorage storage) {
+      @Nullable
+          MemoryMapStorage storage) {
     super(storage);
 
     this.project = project;
@@ -336,7 +337,7 @@ public class ImageBuilderTask extends AbstractTask {
       image.setFeatureList(featureList);
       ModularFeature modular = FeatureConvertors.ImageToModularFeature(image, rawDataFile);
       ModularFeatureListRow newRow =
-          new ModularFeatureListRow(featureList, featureId, rawDataFile, modular);
+          new ModularFeatureListRow(featureList, featureId, modular);
       featureList.addRow(newRow);
       featureId++;
     }

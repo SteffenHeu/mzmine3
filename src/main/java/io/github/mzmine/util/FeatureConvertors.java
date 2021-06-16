@@ -78,6 +78,7 @@ import io.github.mzmine.modules.tools.qualityparameters.QualityParameters;
 import io.github.mzmine.util.scans.ScanUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import org.jetbrains.annotations.NotNull;
 
 public class FeatureConvertors {
 
@@ -89,7 +90,7 @@ public class FeatureConvertors {
    * @return output modular feature
    */
   static public ModularFeature ADAPChromatogramToModularFeature(
-      @Nonnull ADAPChromatogram chromatogram) {
+      @NotNull ADAPChromatogram chromatogram) {
 
     if (chromatogram.getFeatureList() == null) {
       throw new NullPointerException("Feature list of the ADAP chromatogram is null.");
@@ -154,7 +155,7 @@ public class FeatureConvertors {
   }
 
   public static ModularFeature IonMobilityIonTraceToModularFeature(
-      @Nonnull IIonMobilityTrace ionTrace, RawDataFile rawDataFile,
+      @NotNull IIonMobilityTrace ionTrace, RawDataFile rawDataFile,
       BinningMobilogramDataAccess mobilogramBinner) {
 
     if (ionTrace.getFeatureList() == null) {
@@ -241,9 +242,9 @@ public class FeatureConvertors {
     return modularFeature;
   }
 
-  public static ModularFeature tempIMTraceToModularFeature(@Nonnull TempIMTrace ionTrace,
-      RawDataFile rawDataFile, BinningMobilogramDataAccess mobilogramBinner,
-      ModularFeatureList flist) {
+  public static ModularFeature tempIMTraceToModularFeature(
+      @NotNull TempIMTrace ionTrace, RawDataFile rawDataFile,
+      BinningMobilogramDataAccess mobilogramBinner, ModularFeatureList flist) {
 
     ModularFeature modularFeature = new ModularFeature(flist);
 
@@ -278,7 +279,7 @@ public class FeatureConvertors {
     return modularFeature;
   }
 
-  public static ModularFeature ImageToModularFeature(@Nonnull IImage image,
+  public static ModularFeature ImageToModularFeature(@NotNull IImage image,
       RawDataFile rawDataFile) {
 
     if (image.getFeatureList() == null) {
@@ -357,7 +358,7 @@ public class FeatureConvertors {
    * @return output modular feature
    */
   static public ModularFeature ManualFeatureToModularFeature(ModularFeatureList featureList,
-      @Nonnull ManualFeature manualFeature) {
+      @NotNull ManualFeature manualFeature) {
 
     if (manualFeature.getFeatureList() == null) {
       throw new NullPointerException("Feature list of the manual feature is null.");

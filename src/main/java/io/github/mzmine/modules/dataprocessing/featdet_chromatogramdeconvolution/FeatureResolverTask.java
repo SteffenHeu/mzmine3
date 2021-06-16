@@ -18,10 +18,6 @@
 
 package io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution;
 
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.annotation.Nonnull;
 import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
@@ -57,6 +53,10 @@ import io.github.mzmine.util.R.RSessionWrapper;
 import io.github.mzmine.util.R.RSessionWrapperException;
 import io.github.mzmine.util.maths.CenterFunction;
 import io.github.mzmine.util.maths.CenterMeasure;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public class FeatureResolverTask extends AbstractTask {
 
@@ -219,52 +219,52 @@ public class FeatureResolverTask extends AbstractTask {
   /*
    * private FeatureList resolvePeaks(final FeatureList originalFeatureList, RSessionWrapper
    * rSession) throws RSessionWrapperException {
-   * 
+   *
    * // Get data file information. final RawDataFile dataFile =
    * originalFeatureList.getRawDataFile(0);
-   * 
+   *
    * // Feature resolver. final MZmineProcessingStep<PeakResolver> resolver =
    * parameters.getParameter(PEAK_RESOLVER).getValue(); // set msms pairing range this.setMSMSRange
    * = parameters.getParameter(mzRangeMSMS).getValue(); if (setMSMSRange) { this.msmsRange =
    * parameters.getParameter(mzRangeMSMS).getEmbeddedParameter().getValue(); } else { this.msmsRange
    * = 0; }
-   * 
+   *
    * this.setMSMSRT = parameters.getParameter(RetentionTimeMSMS).getValue(); if (setMSMSRT) {
    * this.RTRangeMSMS =
    * parameters.getParameter(RetentionTimeMSMS).getEmbeddedParameter().getValue().floatValue(); }
    * else { this.RTRangeMSMS = 0; }
-   * 
+   *
    * // Create new feature list. final ModularFeatureList resolvedFeatureList = new
    * ModularFeatureList( originalFeatureList + " " + parameters.getParameter(SUFFIX).getValue(),
    * dataFile); DataTypeUtils.addDefaultChromatographicTypeColumns(resolvedFeatureList); if
    * (originalFeatureList.getRawDataFile(0) instanceof IMSRawDataFile) {
    * DataTypeUtils.addDefaultIonMobilityTypeColumns(resolvedFeatureList); }
-   * 
+   *
    * // Load previous applied methods. for (final FeatureListAppliedMethod method :
    * originalFeatureList.getAppliedMethods()) {
    * resolvedFeatureList.addDescriptionOfAppliedTask(method); }
-   * 
+   *
    * // Add task description to feature list. resolvedFeatureList.addDescriptionOfAppliedTask(new
    * SimpleFeatureListAppliedMethod( "Feature deconvolution by " + resolver,
    * resolver.getParameterSet()));
-   * 
+   *
    * // Initialise counters. processedRows = 0; totalRows = originalFeatureList.getNumberOfRows();
    * int peakId = 1;
-   * 
+   *
    * // Process each chromatogram. final FeatureListRow[] peakListRows =
    * originalFeatureList.getRows() .toArray(FeatureListRow[]::new); final int chromatogramCount =
    * peakListRows.length; for (int index = 0; !isCanceled() && index < chromatogramCount; index++) {
-   * 
+   *
    * final FeatureListRow currentRow = peakListRows[index]; final Feature chromatogram = (dataFile
    * instanceof IMSRawDataFile) ? FeatureConvertorIonMobility
    * .collapseMobilityDimensionOfModularFeature( (ModularFeature) currentRow.getFeature(dataFile)) :
    * currentRow.getFeature(dataFile);
-   * 
+   *
    * // Resolve peaks. final PeakResolver resolverModule = resolver.getModule(); final ParameterSet
    * resolverParams = resolver.getParameterSet(); final ResolvedPeak[] peaks =
    * resolverModule.resolvePeaks(chromatogram, resolverParams, rSession, mzCenterFunction,
    * msmsRange, RTRangeMSMS);
-   * 
+   *
    * // Add peaks to the new feature list. for (final ResolvedPeak peak : peaks) {
    * peak.setParentChromatogramRowID(currentRow.getID()); final ModularFeatureListRow newRow = new
    * ModularFeatureListRow(resolvedFeatureList, peakId++); final ModularFeature newFeature =
@@ -276,11 +276,11 @@ public class FeatureResolverTask extends AbstractTask {
    * newRow.set(FeatureShapeMobilogramType.class, true); //
    * newFeature.set(FeatureShapeIonMobilityRetentionTimeHeatMapType.class, // true); } else {
    * newRow.addFeature(dataFile, newFeature); }
-   * 
+   *
    * newRow.setFeatureInformation(peak.getPeakInformation()); resolvedFeatureList.addRow(newRow); }
-   * 
+   *
    * processedRows++; }
-   * 
+   *
    * return resolvedFeatureList; }
    */
 
@@ -316,9 +316,8 @@ public class FeatureResolverTask extends AbstractTask {
   }
 
   private void dimensionIndependentResolve(ModularFeatureList originalFeatureList) {
-    @Nonnull
-    final XYResolver<Double, Double, double[], double[]> resolver =
-        ((GeneralResolverParameters) parameters).getXYResolver(parameters);
+    @NotNull final XYResolver<Double, Double, double[], double[]> resolver = ((GeneralResolverParameters) parameters)
+        .getXYResolver(parameters);
     final RawDataFile dataFile = originalFeatureList.getRawDataFile(0);
     final ModularFeatureList resolvedFeatureList = createNewFeatureList(originalFeatureList);
 

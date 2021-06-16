@@ -37,7 +37,7 @@ import io.github.mzmine.util.MemoryMapStorage;
 import java.util.Hashtable;
 import java.util.logging.Logger;
 import javafx.collections.ObservableList;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 
 class LinearNormalizerTask extends AbstractTask {
 
@@ -215,7 +215,7 @@ class LinearNormalizerTask extends AbstractTask {
 
           if (normalizedRow == null) {
 
-            normalizedRow = new ModularFeatureListRow((ModularFeatureList) originalFeatureListRow.getFeatureList(),
+            normalizedRow = new ModularFeatureListRow(originalFeatureListRow.getFeatureList(),
                     originalFeatureListRow, false);
 
             rowMap.put(originalFeatureListRow, normalizedRow);
