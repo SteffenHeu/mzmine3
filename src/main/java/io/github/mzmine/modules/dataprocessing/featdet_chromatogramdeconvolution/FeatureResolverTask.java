@@ -321,14 +321,13 @@ public class FeatureResolverTask extends AbstractTask {
     final RawDataFile dataFile = originalFeatureList.getRawDataFile(0);
     final ModularFeatureList resolvedFeatureList = createNewFeatureList(originalFeatureList);
 
-    final ResolvingDimension dimension =
-        parameters.getParameter(GeneralResolverParameters.dimension).getValue();
+    final ResolvingDimension dimension = parameters
+        .getParameter(GeneralResolverParameters.dimension).getValue();
     final BinningMobilogramDataAccess mobilogramBinning = dataFile instanceof IMSRawDataFile
-        && originalFeatureList.getFeatureTypes().containsKey(MobilityType.class)
+            && originalFeatureList.getFeatureTypes().containsKey(MobilityType.class)
             ? EfficientDataAccess.of((IMSRawDataFile) dataFile,
-                BinningMobilogramDataAccess.getPreviousBinningWith(originalFeatureList,
-                    ((IMSRawDataFile) dataFile).getMobilityType()))
-            : null;
+            BinningMobilogramDataAccess.getPreviousBinningWith(originalFeatureList,
+                ((IMSRawDataFile) dataFile).getMobilityType())) : null;
 
     processedRows = 0;
     totalRows = originalFeatureList.getNumberOfRows();

@@ -99,8 +99,8 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
    * this final map is used in the FeaturesType - only ModularFeatureListRow is supposed to change
    * this map see {@link #addFeature}
    */
-  private final ObservableMap<DataType, Property<?>> map =
-      FXCollections.observableMap(new HashMap<>());
+  private final ObservableMap<DataType, Property<?>> map = FXCollections
+      .observableMap(new HashMap<>());
   private final Map<RawDataFile, ModularFeature> features;
   // buffert col charts and nodes
   private final Map<String, Node> buffertColCharts = new HashMap<>();
@@ -223,8 +223,7 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
         DataType newType = tclass.getConstructor().newInstance();
         ModularFeatureList flist = getFeatureList();
         flist.addRowType(newType);
-      } catch (NullPointerException | InstantiationException | NoSuchMethodException
-          | InvocationTargetException | IllegalAccessException e) {
+      } catch (NullPointerException | InstantiationException | NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
         e.printStackTrace();
         return;
       }
@@ -284,14 +283,14 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
    * @param feature
    */
   @Override
-  public void addFeature(RawDataFile raw, Feature feature) {
+  public synchronized void addFeature(RawDataFile raw, Feature feature) {
     if (!(feature instanceof ModularFeature)) {
       throw new IllegalArgumentException(
           "Cannot add non-modular feature to modular feature list row.");
     }
     if (!flist.equals(feature.getFeatureList())) {
       throw new IllegalArgumentException("Cannot add feature with different feature list to this "
-                                         + "row. Create feature with the correct feature list as an argument.");
+          + "row. Create feature with the correct feature list as an argument.");
     }
     if (raw == null) {
       throw new IllegalArgumentException("Raw file cannot be null");
@@ -348,9 +347,9 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
   }
 
   @Override
-  public float getAverageMobility() {
+  public Float getAverageMobility() {
     Property<Float> v = get(MobilityType.class);
-    return v == null || v.getValue() == null ? Float.NaN : v.getValue();
+    return v == null || v.getValue() == null ? null : v.getValue();
   }
 
   @Override
@@ -608,8 +607,7 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
   public double getMaxDataPointIntensity() {
     ObjectProperty<Range<Float>> rangeObjectProperty = get(IntensityRangeType.class);
     return rangeObjectProperty != null && rangeObjectProperty.getValue() != null
-        ? rangeObjectProperty.getValue().upperEndpoint()
-        : Double.NaN;
+        ? rangeObjectProperty.getValue().upperEndpoint() : Double.NaN;
   }
 
   @Nullable

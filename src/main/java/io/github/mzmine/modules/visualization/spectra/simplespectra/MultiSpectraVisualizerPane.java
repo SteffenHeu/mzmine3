@@ -37,6 +37,14 @@ import io.github.mzmine.modules.visualization.chromatogram.TICPlot;
 import io.github.mzmine.modules.visualization.chromatogram.TICPlotType;
 import io.github.mzmine.modules.visualization.chromatogram.TICVisualizerTab;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -200,7 +208,7 @@ public class MultiSpectraVisualizerPane extends BorderPane {
   }
 
   private int indexOfRaw(RawDataFile raw) {
-    return Arrays.asList(rawFiles).indexOf(raw);
+    return rawFiles.indexOf(raw);
   }
 
   private BorderPane addSpectra(Scan scan) {
