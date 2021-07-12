@@ -48,7 +48,7 @@ public class ADAPChromatogramBuilderParameters extends SimpleParameterSet {
           + "to be recognized as a chromatogram.\n"
           + "The optimal value depends on the chromatography system setup. The best way to set this parameter\n"
           + "is by studying the raw data and determining what is the typical time span of chromatographic features.",
-      5, true, 2, null);
+      5, true, 1, null);
 
   public static final MZToleranceParameter mzTolerance = new MZToleranceParameter();
 
