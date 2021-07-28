@@ -30,14 +30,18 @@ import io.github.mzmine.parameters.dialogs.ParameterSetupDialog;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.util.ExitCode;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.ButtonType;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -54,6 +58,8 @@ public class SimpleParameterSet implements ParameterSet {
   private static Logger logger = Logger.getLogger(MZmineCore.class.getName());
   protected Parameter<?> parameters[];
   private boolean skipSensitiveParameters = false;
+
+  private final BooleanProperty parametersChangeProperty = new SimpleBooleanProperty();
 
   public SimpleParameterSet() {
     this.parameters = new Parameter<?>[0];
@@ -190,6 +196,7 @@ public class SimpleParameterSet implements ParameterSet {
       return ExitCode.OK;
     }
     ParameterSetupDialog dialog = new ParameterSetupDialog(valueCheckRequired, this);
+    parametersChangeProperty.bind(dialog.parametersChangeProperty());
     dialog.showAndWait();
     return dialog.getExitCode();
   }
@@ -223,17 +230,19 @@ public class SimpleParameterSet implements ParameterSet {
       Collection<String> errorMessages) {
     boolean onlyImsFiles = true;
     boolean containsImsFile = false;
+    List<String> nonImsFilesList = new ArrayList<>();
+
     for (RawDataFile file : rawDataFiles) {
       if (!(file instanceof IMSRawDataFile)) {
         onlyImsFiles = false;
-        errorMessages.add("Non-ion mobility spectrometry files: " + file.getName());
+        nonImsFilesList.add("Non-ion mobility spectrometry files: " + file.getName());
       } else {
         containsImsFile = true;
       }
     }
 
-    Map<String, Boolean> showMsgMap = MZmineCore.getConfiguration().getPreferences().getParameter(
-        MZminePreferences.imsModuleWarnings).getValue();
+    Map<String, Boolean> showMsgMap = MZmineCore.getConfiguration().getPreferences()
+        .getParameter(MZminePreferences.imsModuleWarnings).getValue();
     String className = this.getClass().getName();
     Boolean showMsg = showMsgMap.getOrDefault(className, true);
 
@@ -263,15 +272,20 @@ public class SimpleParameterSet implements ParameterSet {
           "This module is designed for ion mobility data only. Cannot process non-ion mobility files.");
       errorMessages.add(
           "This module is designed for ion mobility data only. Cannot process non-ion mobility files.");
+      errorMessages.addAll(nonImsFilesList);
       return false;
     } else if (containsImsFile && getIonMobilitySupport() == IonMobilitySupport.UNSUPPORTED) {
       logger.warning("This module does not support ion mobility data.");
       errorMessages.add("This module does not support ion mobility data.");
-      return MZmineCore.getDesktop()
-          .displayConfirmation(
-              "This module does not support ion mobility data. This will lead to unexpected "
-                  + "results. Do you want to continue anyway?", ButtonType.YES, ButtonType.NO)
+
+      boolean returnVal = MZmineCore.getDesktop().displayConfirmation(
+          "This module does not support ion mobility data. This will lead to unexpected "
+              + "results. Do you want to continue anyway?", ButtonType.YES, ButtonType.NO)
           == ButtonType.YES;
+      if (!returnVal) {
+        errorMessages.addAll(nonImsFilesList);
+      }
+      return returnVal;
     } // dont have to check for IonMobilitySupport.SUPPORTED
 
     return true;
@@ -287,5 +301,16 @@ public class SimpleParameterSet implements ParameterSet {
   public String getRestrictedIonMobilitySupportMessage() {
     return "This module has certain restrictions when processing ion mobility data files. This "
         + "could lead to unexpected results. Do you want to continue anyway?";
+  }
+
+  /**
+   * Returns BooleanProperty which value is changed when some parameter of this ParameterSet is
+   * changed. It is useful to perform operations directly dependant on the components corresponding
+   * to this ParameterSet (e.g. TextField of a parameter is changed -> preview plot is updated).
+   *
+   * @return BooleanProperty signalizing a change of any parameter of this ParameterSet
+   */
+  public BooleanProperty parametersChangeProperty() {
+    return parametersChangeProperty;
   }
 }

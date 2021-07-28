@@ -18,17 +18,17 @@
 
 package io.github.mzmine.parameters.parametertypes;
 
-import java.util.Arrays;
 import io.github.mzmine.modules.MZmineProcessingStep;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.dialogs.ParameterSetupDialog;
+import java.util.Arrays;
 import javafx.collections.FXCollections;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Tooltip;
-import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.FlowPane;
 
-public class ModuleComboComponent extends BorderPane {
+public class ModuleComboComponent extends FlowPane {
 
   private ComboBox<MZmineProcessingStep<?>> comboBox;
   private Button setButton;
@@ -53,9 +53,8 @@ public class ModuleComboComponent extends BorderPane {
       int numOfParameters = parameterSet.getParameters().length;
       setButton.setDisable(numOfParameters == 0);
     });
-    setCenter(comboBox);
 
-    setButton = new Button("...");
+    setButton = new Button("Setup");
     setButton.setOnAction(e -> {
       MZmineProcessingStep<?> selected = comboBox.getSelectionModel().getSelectedItem();
       if (selected == null)
@@ -68,8 +67,9 @@ public class ModuleComboComponent extends BorderPane {
     });
     boolean buttonEnabled = (modules[0].getParameterSet() != null);
     setButton.setDisable(!buttonEnabled);
-    setRight(setButton);
 
+    super.setHgap(7d);
+    super.getChildren().addAll(comboBox, setButton);
   }
 
   public int getSelectedIndex() {
