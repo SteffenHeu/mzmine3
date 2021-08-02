@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,24 +8,17 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 
 package io.github.mzmine.modules.visualization.featurelisttable_modular;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.FeatureIdentity;
 import io.github.mzmine.datamodel.FeatureStatus;
@@ -39,8 +32,8 @@ import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.ImageType;
-import io.github.mzmine.datamodel.features.types.LipidAnnotationSummaryType;
-import io.github.mzmine.datamodel.features.types.LipidAnnotationType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidAnnotationSummaryType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidAnnotationType;
 import io.github.mzmine.datamodel.features.types.fx.ColumnType;
 import io.github.mzmine.datamodel.features.types.graphicalnodes.LipidSpectrumChart;
 import io.github.mzmine.main.MZmineCore;
@@ -51,8 +44,8 @@ import io.github.mzmine.modules.dataprocessing.id_nist.NistMsSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_onlinecompounddb.OnlineDBSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_sirius.SiriusIdentificationModule;
 import io.github.mzmine.modules.dataprocessing.id_spectraldbsearch.LocalSpectralDBSearchModule;
-import io.github.mzmine.modules.io.export_image_csv.ImageToCsvExportModule;
 import io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule;
+import io.github.mzmine.modules.io.export_image_csv.ImageToCsvExportModule;
 import io.github.mzmine.modules.io.spectraldbsubmit.view.MSMSLibrarySubmissionWindow;
 import io.github.mzmine.modules.visualization.chromatogram.ChromatogramVisualizerModule;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.export.IsotopePatternExportModule;
@@ -75,12 +68,19 @@ import io.github.mzmine.util.SortingDirection;
 import io.github.mzmine.util.SortingProperty;
 import io.github.mzmine.util.components.ConditionalMenuItem;
 import io.github.mzmine.util.scans.SpectraMerging;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Conditions should be chosen in a way that exceptions are impossible when the item is clicked. On
@@ -169,7 +169,7 @@ public class FeatureTableContextMenu extends ContextMenu {
         .setOnAction(e -> IsotopePatternExportModule.exportIsotopePattern(selectedRows.get(0)));
 
     final MenuItem exportMSMSItem = new ConditionalMenuItem("Export MS/MS pattern",
-        () -> selectedRows.size() == 1 && selectedRows.get(0).getBestFragmentation() != null);
+        () -> selectedRows.size() == 1 && selectedRows.get(0).getMostIntenseFragmentScan() != null);
     exportMSMSItem.setOnAction(e -> MSMSExportModule.exportMSMS(selectedRows.get(0)));
 
     final MenuItem exportToSirius =
@@ -329,8 +329,8 @@ public class FeatureTableContextMenu extends ContextMenu {
         MultiMsMsTab multi = new MultiMsMsTab(selectedRows,
             table.getFeatureList().getRawDataFiles(), selectedRows.get(0).getRawDataFiles().get(0));
         MZmineCore.getDesktop().addTab(multi);
-      } else if (selectedRow != null && selectedRow.getBestFragmentation() != null) {
-        SpectraVisualizerModule.addNewSpectrumTab(selectedRow.getBestFragmentation());
+      } else if (selectedRow != null && selectedRow.getMostIntenseFragmentScan() != null) {
+        SpectraVisualizerModule.addNewSpectrumTab(selectedRow.getMostIntenseFragmentScan());
       }
     });
 
@@ -338,13 +338,13 @@ public class FeatureTableContextMenu extends ContextMenu {
         () -> selectedRows.size() == 2 && getNumberOfRowsWithFragmentScans(selectedRows) == 2);
     showMSMSMirrorItem.setOnAction(e -> {
       MirrorScanWindowFX mirrorScanTab = new MirrorScanWindowFX();
-      mirrorScanTab.setScans(selectedRows.get(0).getBestFragmentation(),
-          selectedRows.get(1).getBestFragmentation());
+      mirrorScanTab.setScans(selectedRows.get(0).getMostIntenseFragmentScan(),
+          selectedRows.get(1).getMostIntenseFragmentScan());
       mirrorScanTab.show();
     });
 
     final MenuItem showAllMSMSItem = new ConditionalMenuItem("All MS/MS",
-        () -> !selectedRows.isEmpty() && !selectedRows.get(0).getAllMS2Fragmentations().isEmpty());
+        () -> !selectedRows.isEmpty() && !selectedRows.get(0).getAllFragmentScans().isEmpty());
     showAllMSMSItem.setOnAction(
         e -> MultiSpectraVisualizerTab.addNewMultiSpectraVisualizerTab(selectedRows.get(0)));
 
@@ -418,7 +418,7 @@ public class FeatureTableContextMenu extends ContextMenu {
     }
     int numFragmentScans = 0;
     for (ModularFeatureListRow row : rows) {
-      if (row.getBestFragmentation() != null) {
+      if (row.getMostIntenseFragmentScan() != null) {
         numFragmentScans++;
       }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,12 +8,12 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.util.scans;
@@ -856,7 +856,7 @@ public class ScanUtils {
   }
 
   public static Stream<Scan> streamAllFragmentScans(FeatureListRow row) {
-    return row.getAllMS2Fragmentations().stream();
+    return row.getAllFragmentScans().stream();
   }
 
   /**
@@ -890,7 +890,7 @@ public class ScanUtils {
   @NotNull
   public static ObservableList<Scan> listAllFragmentScans(FeatureListRow row, double noiseLevel,
       int minNumberOfSignals) throws MissingMassListException {
-    ObservableList<Scan> scans = row.getAllMS2Fragmentations();
+    ObservableList<Scan> scans = row.getAllFragmentScans();
     return listAllScans(scans, noiseLevel, minNumberOfSignals);
   }
 
@@ -1197,7 +1197,7 @@ public class ScanUtils {
    */
   public static @NotNull Collection<Scan> selectBestMS2Scans(@NotNull FeatureListRow row,
       @NotNull Integer topN) throws MissingMassListException {
-    final @NotNull List<Scan> allMS2Scans = row.getAllMS2Fragmentations();
+    final @NotNull List<Scan> allMS2Scans = row.getAllFragmentScans();
     return selectBestMS2Scans(allMS2Scans, topN);
   }
 

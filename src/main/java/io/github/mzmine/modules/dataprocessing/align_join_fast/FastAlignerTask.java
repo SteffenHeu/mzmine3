@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,12 +8,12 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.modules.dataprocessing.align_join_fast;
@@ -372,9 +372,9 @@ public class FastAlignerTask extends AbstractTask {
       // get data points of mass list of the best
       // fragmentation scans
       if (msLevel == 2) {
-        if (row.getBestFragmentation() != null && candidate.getBestFragmentation() != null) {
-          rowDPs = row.getBestFragmentation().getMassList().getDataPoints();
-          candidateDPs = candidate.getBestFragmentation().getMassList().getDataPoints();
+        if (row.getMostIntenseFragmentScan() != null && candidate.getMostIntenseFragmentScan() != null) {
+          rowDPs = row.getMostIntenseFragmentScan().getMassList().getDataPoints();
+          candidateDPs = candidate.getMostIntenseFragmentScan().getMassList().getDataPoints();
         } else {
           return false;
         }

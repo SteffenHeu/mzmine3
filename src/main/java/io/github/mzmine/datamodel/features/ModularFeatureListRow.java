@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,27 +8,16 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.datamodel.features;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Objects;
-import java.util.stream.Stream;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.FeatureIdentity;
 import io.github.mzmine.datamodel.FeatureInformation;
@@ -36,24 +25,24 @@ import io.github.mzmine.datamodel.FeatureStatus;
 import io.github.mzmine.datamodel.IsotopePattern;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
-import io.github.mzmine.datamodel.features.types.CommentType;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.DetectionType;
 import io.github.mzmine.datamodel.features.types.FeatureGroupType;
 import io.github.mzmine.datamodel.features.types.FeatureInformationType;
 import io.github.mzmine.datamodel.features.types.FeaturesType;
-import io.github.mzmine.datamodel.features.types.FormulaAnnotationType;
-import io.github.mzmine.datamodel.features.types.FormulaSummaryType;
-import io.github.mzmine.datamodel.features.types.IdentityType;
-import io.github.mzmine.datamodel.features.types.IonIdentityListType;
-import io.github.mzmine.datamodel.features.types.IonIdentityModularType;
-import io.github.mzmine.datamodel.features.types.LipidAnnotationSummaryType;
-import io.github.mzmine.datamodel.features.types.LipidAnnotationType;
-import io.github.mzmine.datamodel.features.types.ManualAnnotationType;
 import io.github.mzmine.datamodel.features.types.ModularType;
 import io.github.mzmine.datamodel.features.types.ModularTypeProperty;
-import io.github.mzmine.datamodel.features.types.SpectralLibMatchSummaryType;
-import io.github.mzmine.datamodel.features.types.SpectralLibraryMatchType;
+import io.github.mzmine.datamodel.features.types.annotations.CommentType;
+import io.github.mzmine.datamodel.features.types.annotations.FormulaAnnotationType;
+import io.github.mzmine.datamodel.features.types.annotations.FormulaSummaryType;
+import io.github.mzmine.datamodel.features.types.annotations.IdentityType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidAnnotationSummaryType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidAnnotationType;
+import io.github.mzmine.datamodel.features.types.annotations.ManualAnnotationType;
+import io.github.mzmine.datamodel.features.types.annotations.SpectralLibMatchSummaryType;
+import io.github.mzmine.datamodel.features.types.annotations.SpectralLibraryMatchType;
+import io.github.mzmine.datamodel.features.types.annotations.iin.IonIdentityListType;
+import io.github.mzmine.datamodel.features.types.annotations.iin.IonIdentityModularType;
 import io.github.mzmine.datamodel.features.types.numbers.AreaType;
 import io.github.mzmine.datamodel.features.types.numbers.CCSType;
 import io.github.mzmine.datamodel.features.types.numbers.ChargeType;
@@ -72,6 +61,16 @@ import io.github.mzmine.util.FeatureSorter;
 import io.github.mzmine.util.SortingDirection;
 import io.github.mzmine.util.SortingProperty;
 import io.github.mzmine.util.spectraldb.entry.SpectralDBFeatureIdentity;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.stream.Stream;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.MapProperty;
 import javafx.beans.property.ObjectProperty;
@@ -82,6 +81,8 @@ import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.scene.Node;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Map of all feature related data.
@@ -93,7 +94,7 @@ import javafx.scene.Node;
  *         creation in the chromatogram builder ~SteffenHeu
  */
 @SuppressWarnings("rawtypes")
-public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
+public class ModularFeatureListRow implements FeatureListRow {
 
   /**
    * this final map is used in the FeaturesType - only ModularFeatureListRow is supposed to change
@@ -209,6 +210,7 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
     return flist.getRowTypes();
   }
 
+  // todo make private?
   @Override
   public ObservableMap<DataType, Property<?>> getMap() {
     return map;
@@ -230,7 +232,7 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
       }
     }
     // access default method
-    ModularDataModel.super.set(tclass, value);
+    FeatureListRow.super.set(tclass, value);
 
     //
     if (tclass.equals(FeaturesType.class)) {
@@ -241,25 +243,16 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
     }
   }
 
-
+  @Override
   public Stream<ModularFeature> streamFeatures() {
     return this.getFeatures().stream().map(ModularFeature.class::cast).filter(Objects::nonNull);
   }
 
   // Helper methods
+  @Override
   public Range<Double> getMZRange() {
     ObjectProperty<Range<Double>> v = get(MZRangeType.class);
     return v == null || v.getValue() == null ? Range.singleton(0d) : v.getValue();
-  }
-
-  public float getHeight() {
-    Property<Float> v = get(HeightType.class);
-    return v == null || v.getValue() == null ? Float.NaN : v.getValue();
-  }
-
-  public float getArea() {
-    Property<Float> v = get(AreaType.class);
-    return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
 
   public ObservableMap<RawDataFile, ModularFeature> getFilesFeatures() {
@@ -268,11 +261,11 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
   }
 
   @Override
-  public ObservableList<Feature> getFeatures() {
+  public List<ModularFeature> getFeatures() {
     // TODO remove features object - not always do we have features
     // FeaturesType creates an empty ListProperty for that
     // return FXCollections.observableArrayList(get(FeaturesType.class).getValue().values());
-    return FXCollections.observableArrayList(features.values());
+    return new ArrayList<>(features.values());
   }
 
   public MapProperty<RawDataFile, ModularFeature> getFeaturesProperty() {
@@ -308,7 +301,7 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
    * @return
    */
   @Override
-  public int getID() {
+  public Integer getID() {
     Property<Integer> idProp = get(IDType.class);
     return idProp == null || idProp.getValue() == null ? -1 : idProp.getValue();
   }
@@ -326,24 +319,24 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
   }
 
   @Override
-  public double getAverageMZ() {
+  public Double getAverageMZ() {
     Property<Double> v = get(MZType.class);
     return v == null || v.getValue() == null ? Double.NaN : v.getValue();
   }
 
   @Override
-  public void setAverageMZ(double averageMZ) {
+  public void setAverageMZ(Double averageMZ) {
     // binding
   }
 
   @Override
-  public float getAverageRT() {
+  public Float getAverageRT() {
     Property<Float> v = get(RTType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
 
   @Override
-  public void setAverageRT(float averageRT) {
+  public void setAverageRT(Float averageRT) {
     // binding
   }
 
@@ -360,19 +353,19 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
   }
 
   @Override
-  public double getAverageHeight() {
+  public Float getAverageHeight() {
     Property<Float> v = get(HeightType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
 
   @Override
-  public int getRowCharge() {
+  public Integer getRowCharge() {
     Property<Integer> v = get(ChargeType.class);
     return v == null || v.getValue() == null ? 0 : v.getValue();
   }
 
   @Override
-  public double getAverageArea() {
+  public Float getAverageArea() {
     Property<Float> v = get(AreaType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
@@ -618,11 +611,11 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
   }
 
   @Override
-  public double getMaxDataPointIntensity() {
+  public Float getMaxDataPointIntensity() {
     ObjectProperty<Range<Float>> rangeObjectProperty = get(IntensityRangeType.class);
     return rangeObjectProperty != null && rangeObjectProperty.getValue() != null
         ? rangeObjectProperty.getValue().upperEndpoint()
-        : Double.NaN;
+        : Float.NaN;
   }
 
   @Nullable
@@ -634,7 +627,7 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
   }
 
   @Override
-  public Scan getBestFragmentation() {
+  public Scan getMostIntenseFragmentScan() {
     double bestTIC = 0.0;
     Scan bestScan = null;
     for (Feature feature : getFeatures()) {
@@ -659,7 +652,7 @@ public class ModularFeatureListRow implements FeatureListRow, ModularDataModel {
 
   @NotNull
   @Override
-  public ObservableList<Scan> getAllMS2Fragmentations() {
+  public ObservableList<Scan> getAllFragmentScans() {
     ObservableList<Scan> allMS2ScansList = FXCollections.observableArrayList();
     for (Feature feature : getFeatures()) {
       RawDataFile rawData = feature.getRawDataFile();

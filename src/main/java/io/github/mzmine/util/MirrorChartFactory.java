@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,16 +8,33 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.util;
 
+import io.github.mzmine.datamodel.DataPoint;
+import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.features.Feature;
+import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.gui.chartbasics.chartthemes.EStandardChartTheme;
+import io.github.mzmine.gui.chartbasics.gui.javafx.EChartViewer;
+import io.github.mzmine.gui.chartbasics.gui.swing.EChartPanel;
+import io.github.mzmine.main.MZmineCore;
+import io.github.mzmine.modules.visualization.spectra.multimsms.SpectrumChartFactory;
+import io.github.mzmine.modules.visualization.spectra.multimsms.pseudospectra.PseudoSpectraRenderer;
+import io.github.mzmine.modules.visualization.spectra.multimsms.pseudospectra.PseudoSpectrumDataSet;
+import io.github.mzmine.util.color.SimpleColorPalette;
+import io.github.mzmine.util.scans.ScanUtils;
+import io.github.mzmine.util.spectraldb.entry.DBEntryField;
+import io.github.mzmine.util.spectraldb.entry.DataPointsTag;
+import io.github.mzmine.util.spectraldb.entry.SpectralDBFeatureIdentity;
 import java.awt.Color;
 import java.text.DecimalFormat;
 import java.text.MessageFormat;
@@ -37,23 +54,6 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.title.LegendTitle;
 import org.jfree.chart.ui.RectangleEdge;
 import org.jfree.chart.ui.RectangleInsets;
-import io.github.mzmine.datamodel.DataPoint;
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.Scan;
-import io.github.mzmine.datamodel.features.Feature;
-import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.gui.chartbasics.chartthemes.EStandardChartTheme;
-import io.github.mzmine.gui.chartbasics.gui.javafx.EChartViewer;
-import io.github.mzmine.gui.chartbasics.gui.swing.EChartPanel;
-import io.github.mzmine.main.MZmineCore;
-import io.github.mzmine.modules.visualization.spectra.multimsms.SpectrumChartFactory;
-import io.github.mzmine.modules.visualization.spectra.multimsms.pseudospectra.PseudoSpectraRenderer;
-import io.github.mzmine.modules.visualization.spectra.multimsms.pseudospectra.PseudoSpectrumDataSet;
-import io.github.mzmine.util.color.SimpleColorPalette;
-import io.github.mzmine.util.scans.ScanUtils;
-import io.github.mzmine.util.spectraldb.entry.DBEntryField;
-import io.github.mzmine.util.spectraldb.entry.DataPointsTag;
-import io.github.mzmine.util.spectraldb.entry.SpectralDBFeatureIdentity;
 
 public class MirrorChartFactory {
 
@@ -241,7 +241,7 @@ public class MirrorChartFactory {
       boolean useBestForMissingRaw) {
     Scan scan = null;
     if (alwaysShowBest || raw == null) {
-      scan = row.getBestFragmentation();
+      scan = row.getMostIntenseFragmentScan();
     } else if (raw != null) {
       Feature peak = row.getFeature(raw);
       if (peak != null) {
@@ -249,7 +249,7 @@ public class MirrorChartFactory {
       }
     }
     if (scan == null && useBestForMissingRaw) {
-      scan = row.getBestFragmentation();
+      scan = row.getMostIntenseFragmentScan();
     }
     return scan;
   }

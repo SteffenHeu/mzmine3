@@ -1,18 +1,19 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
  * MZmine is free software; you can redistribute it and/or modify it under the terms of the GNU
- * General License as published by the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * General Public License as published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
- * You should have received a copy of the GNU General License along with MZmine; if not, write to
- * the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+ * You should have received a copy of the GNU General Public License along with MZmine; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.datamodel.features;
@@ -45,17 +46,17 @@ public interface Feature {
   /**
    * This method returns raw M/Z value of the feature
    */
-  double getMZ();
+  Double getMZ();
 
   /**
    * Sets raw M/Z value of the feature
    */
-  void setMZ(double mz);
+  void setMZ(Double mz);
 
   /**
    * This method returns raw retention time of the feature in minutes
    */
-  float getRT();
+  Float getRT();
 
   /**
    * Sets retention time of the feature
@@ -65,17 +66,17 @@ public interface Feature {
   /**
    * This method returns the raw height of the feature
    */
-  float getHeight();
+  Float getHeight();
 
   /**
    * Sets height of the feature
    */
-  void setHeight(float height);
+  void setHeight(Float height);
 
   /**
    * This method returns the raw area of the feature
    */
-  float getArea();
+  Float getArea();
 
   /**
    * Sets area of the feature
@@ -180,7 +181,7 @@ public interface Feature {
   Range<Float> getRawDataPointsIntensityRange();
 
   /**
-   * Returns the number of scan that represents the fragmentation of this feature in MS2 level.
+   * Returns the scan that represents the fragmentation of this feature in MS2 level.
    */
   Scan getMostIntenseFragmentScan();
 
@@ -194,7 +195,6 @@ public interface Feature {
    *
    * @param allMS2FragmentScanNumbers
    */
-  //void setAllMS2FragmentScanNumbers(List<Integer> allMS2FragmentScanNumbers); ?
   void setAllMS2FragmentScans(ObservableList<Scan> allMS2FragmentScanNumbers);
 
   /**
@@ -270,42 +270,42 @@ public interface Feature {
   /**
    * Returns the charge of this ion. If the charge is unknown, returns 0.
    */
-  int getCharge();
+  Integer getCharge();
 
   /**
    * Sets the charge of this ion
    */
-  void setCharge(int charge);
+  void setCharge(Integer charge);
 
   /**
    * This method returns the full width at half maximum (FWHM) of the feature
    */
-  float getFWHM();
+  Float getFWHM();
 
   /**
    * Sets the full width at half maximum (FWHM)
    */
-  void setFWHM(double fwhm);
+  void setFWHM(Float fwhm);
 
   /**
    * This method returns the tailing factor of the feature
    */
-  float getTailingFactor();
+  Float getTailingFactor();
 
   /**
    * Sets the tailing factor
    */
-  void setTailingFactor(double tf);
+  void setTailingFactor(Float tf);
 
   /**
    * This method returns the asymmetry factor of the feature
    */
-  float getAsymmetryFactor();
+  Float getAsymmetryFactor();
 
   /**
    * Sets the asymmetry factor
    */
-  void setAsymmetryFactor(double af);
+  void setAsymmetryFactor(Float af);
 
   // dulab Edit
   void outputChromToFile();

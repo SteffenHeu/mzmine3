@@ -178,14 +178,14 @@ public class IonNetworkMSMSCheckTask extends AbstractTask {
 
       if (rows != null) {
         for (FeatureListRow parent : rows) {
-          if (parent == null || parent.getID() == row.getID()) {
+          if (parent == null || parent.getID().equals(row.getID())) {
             continue;
           }
 
           // only correlated rows in this group
           if (group == null || group.isCorrelated(row, parent)) {
             // has MS/MS
-            Scan msmsScan = parent.getBestFragmentation();
+            Scan msmsScan = parent.getMostIntenseFragmentScan();
             if (msmsScan == null) {
               continue;
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,12 +8,12 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.datamodel.features;
@@ -305,6 +305,7 @@ public class ModularFeature implements Feature, ModularDataModel {
     return flist.getFeatureTypes();
   }
 
+  // todo make this private?
   @Override
   public ObservableMap<DataType, Property<?>> getMap() {
     return map;
@@ -387,46 +388,46 @@ public class ModularFeature implements Feature, ModularDataModel {
   }
 
   @Override
-  public int getCharge() {
+  public Integer getCharge() {
     Property<Integer> charge = get(ChargeType.class);
     return charge == null || charge.getValue() == null ? 0 : charge.getValue();
   }
 
   @Override
-  public void setCharge(int charge) {
+  public void setCharge(Integer charge) {
     set(ChargeType.class, charge);
   }
 
   @Override
-  public float getFWHM() {
+  public Float getFWHM() {
     Property<Float> v = get(FwhmType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
 
   @Override
-  public void setFWHM(double fwhm) {
+  public void setFWHM(Float fwhm) {
     set(FwhmType.class, fwhm);
   }
 
   @Override
-  public float getTailingFactor() {
+  public Float getTailingFactor() {
     Property<Float> v = get(TailingFactorType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
 
   @Override
-  public void setTailingFactor(double tf) {
+  public void setTailingFactor(Float tf) {
     set(TailingFactorType.class, tf);
   }
 
   @Override
-  public float getAsymmetryFactor() {
+  public Float getAsymmetryFactor() {
     Property<Float> v = get(AsymmetryFactorType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
 
   @Override
-  public void setAsymmetryFactor(double af) {
+  public void setAsymmetryFactor(Float af) {
     set(AsymmetryFactorType.class, af);
   }
 
@@ -533,7 +534,8 @@ public class ModularFeature implements Feature, ModularDataModel {
     return v == null || v.getValue() == null ? null : v.getValue();
   }
 
-  public float getRT() {
+  @Override
+  public Float getRT() {
     Property<Float> v = get(RTType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
@@ -550,27 +552,28 @@ public class ModularFeature implements Feature, ModularDataModel {
     return v == null || v.getValue() == null ? FeatureStatus.UNKNOWN : v.getValue();
   }
 
-  public double getMZ() {
+  @Override
+  public Double getMZ() {
     Property<Double> mz = get(MZType.class);
     return mz == null || mz.getValue() == null ? Double.NaN : mz.getValue();
   }
 
   @Override
-  public void setMZ(double mz) {
+  public void setMZ(Double mz) {
     set(MZType.class, mz);
   }
 
-  public float getHeight() {
+  public Float getHeight() {
     Property<Float> v = get(HeightType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }
 
   @Override
-  public void setHeight(float height) {
+  public void setHeight(Float height) {
     set(HeightType.class, height);
   }
 
-  public float getArea() {
+  public Float getArea() {
     Property<Float> v = get(AreaType.class);
     return v == null || v.getValue() == null ? Float.NaN : v.getValue();
   }

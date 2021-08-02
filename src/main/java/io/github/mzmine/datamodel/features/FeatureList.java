@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,12 +8,12 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the im plied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.datamodel.features;
@@ -86,12 +86,12 @@ public interface FeatureList {
    * @param row         Row of the feature list
    * @param rawDataFile Raw data file where the feature is detected/estimated
    */
-  public Feature getFeature(int row, RawDataFile rawDataFile);
+  public ModularFeature getFeature(int row, RawDataFile rawDataFile);
 
   /**
    * Returns all features for a raw data file
    */
-  public ObservableList<Feature> getFeatures(RawDataFile rawDataFile);
+  public List<ModularFeature> getFeatures(RawDataFile rawDataFile);
 
   /**
    * Returns all features on one row
@@ -131,7 +131,7 @@ public interface FeatureList {
    *
    * @return
    */
-  default Stream<Feature> streamFeatures(boolean parallel) {
+  default Stream<ModularFeature> streamFeatures(boolean parallel) {
     return parallel ? parallelStreamFeatures() : streamFeatures();
   }
 
@@ -140,14 +140,14 @@ public interface FeatureList {
    *
    * @return
    */
-  public Stream<Feature> streamFeatures();
+  public Stream<ModularFeature> streamFeatures();
 
   /**
    * Parallel stream of all rows.features across all samples
    *
    * @return
    */
-  public Stream<Feature> parallelStreamFeatures();
+  public Stream<ModularFeature> parallelStreamFeatures();
 
   /**
    * The selected scans to build this feature/chromatogram

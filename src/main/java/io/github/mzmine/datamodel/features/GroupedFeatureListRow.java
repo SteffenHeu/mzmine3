@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,11 +8,12 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.datamodel.features;
@@ -70,7 +71,7 @@ public abstract class GroupedFeatureListRow implements FeatureListRow {
   }
 
   @Override
-  public int getID() {
+  public Integer getID() {
     return mainRow.getID();
   }
 
@@ -80,7 +81,7 @@ public abstract class GroupedFeatureListRow implements FeatureListRow {
   }
 
   @Override
-  public ObservableList<Feature> getFeatures() {
+  public List<ModularFeature> getFeatures() {
     return mainRow.getFeatures();
   }
 
@@ -111,27 +112,27 @@ public abstract class GroupedFeatureListRow implements FeatureListRow {
   }
 
   @Override
-  public double getAverageMZ() {
+  public Double getAverageMZ() {
     return mainRow.getAverageMZ();
   }
 
   @Override
-  public float getAverageRT() {
+  public Float getAverageRT() {
     return mainRow.getAverageRT();
   }
 
   @Override
-  public double getAverageHeight() {
+  public Float getAverageHeight() {
     return mainRow.getAverageHeight();
   }
 
   @Override
-  public int getRowCharge() {
+  public Integer getRowCharge() {
     return mainRow.getRowCharge();
   }
 
   @Override
-  public double getAverageArea() {
+  public Float getAverageArea() {
     return mainRow.getAverageArea();
   }
 
@@ -146,12 +147,12 @@ public abstract class GroupedFeatureListRow implements FeatureListRow {
   }
 
   @Override
-  public void setAverageMZ(double averageMZ) {
+  public void setAverageMZ(Double averageMZ) {
     mainRow.setAverageMZ(averageMZ);
   }
 
   @Override
-  public void setAverageRT(float averageRT) {
+  public void setAverageRT(Float averageRT) {
     mainRow.setAverageRT(averageRT);
   }
 
@@ -191,7 +192,7 @@ public abstract class GroupedFeatureListRow implements FeatureListRow {
   }
 
   @Override
-  public double getMaxDataPointIntensity() {
+  public Float getMaxDataPointIntensity() {
     return mainRow.getMaxDataPointIntensity();
   }
 
@@ -201,14 +202,14 @@ public abstract class GroupedFeatureListRow implements FeatureListRow {
   }
 
   @Override
-  public Scan getBestFragmentation() {
-    return mainRow.getBestFragmentation();
+  public Scan getMostIntenseFragmentScan() {
+    return mainRow.getMostIntenseFragmentScan();
   }
 
   @NotNull
   @Override
-  public ObservableList<Scan> getAllMS2Fragmentations() {
-    return mainRow.getAllMS2Fragmentations();
+  public ObservableList<Scan> getAllFragmentScans() {
+    return mainRow.getAllFragmentScans();
   }
 
   @Override

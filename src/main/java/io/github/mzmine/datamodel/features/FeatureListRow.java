@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,16 +8,17 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.datamodel.features;
 
+import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.FeatureIdentity;
 import io.github.mzmine.datamodel.FeatureInformation;
 import io.github.mzmine.datamodel.FeatureStatus;
@@ -30,6 +31,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipididentification.lipidutils
 import io.github.mzmine.util.spectraldb.entry.SpectralDBFeatureIdentity;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.jetbrains.annotations.NotNull;
@@ -38,7 +40,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Interface representing feature list row
  */
-public interface FeatureListRow {
+public interface FeatureListRow extends ModularDataModel {
 
   /**
    * Return raw data with features on this row
@@ -48,17 +50,20 @@ public interface FeatureListRow {
   /**
    * Returns ID of this row
    */
-  public int getID();
+  public Integer getID();
 
   /**
    * Returns number of features assigned to this row
    */
   public int getNumberOfFeatures();
 
+  // Helper methods
+  Range<Double> getMZRange();
+
   /**
    * Return features assigned to this row
    */
-  public ObservableList<Feature> getFeatures();
+  public List<ModularFeature> getFeatures();
 
   /**
    * Returns feature for given raw data file
@@ -89,22 +94,22 @@ public interface FeatureListRow {
   /**
    * Returns average M/Z for features on this row
    */
-  public double getAverageMZ();
+  public Double getAverageMZ();
 
   /**
    * Sets average mz for this row
    */
-  public void setAverageMZ(double averageMZ);
+  public void setAverageMZ(Double averageMZ);
 
   /**
    * Returns average RT for features on this row
    */
-  public float getAverageRT();
+  public Float getAverageRT();
 
   /**
    * Sets average rt for this row
    */
-  public void setAverageRT(float averageRT);
+  public void setAverageRT(Float averageRT);
 
   /**
    * Returns average mobility for features on this row
@@ -117,17 +122,17 @@ public interface FeatureListRow {
   /**
    * Returns average height for features on this row
    */
-  public double getAverageHeight();
+  public Float getAverageHeight();
 
   /**
    * Returns the charge for feature on this row. If more charges are found 0 is returned
    */
-  public int getRowCharge();
+  public Integer getRowCharge();
 
   /**
    * Returns average area for features on this row
    */
-  public double getAverageArea();
+  public Float getAverageArea();
 
   /**
    * Returns comment for this row
@@ -199,7 +204,7 @@ public interface FeatureListRow {
    *
    * @return Maximum intensity
    */
-  public double getMaxDataPointIntensity();
+  public Float getMaxDataPointIntensity();
 
   /**
    * Returns the most intense feature in this row
@@ -209,13 +214,13 @@ public interface FeatureListRow {
   /**
    * Returns the most intense fragmentation scan in this row
    */
-  public Scan getBestFragmentation();
+  public Scan getMostIntenseFragmentScan();
 
   /**
    * Returns all fragmentation scans of this row
    */
   @NotNull
-  public ObservableList<Scan> getAllMS2Fragmentations();
+  public ObservableList<Scan> getAllFragmentScans();
 
   /**
    * Returns the most intense isotope pattern in this row. If there are no isotope patterns present
@@ -368,7 +373,7 @@ public interface FeatureListRow {
    */
   default boolean hasMs2Fragmentation() {
     // should be faster. Best fragmentation loops through all spectra to find best
-    return getAllMS2Fragmentations() != null && !getAllMS2Fragmentations().isEmpty();
+    return getAllFragmentScans() != null && !getAllFragmentScans().isEmpty();
   }
 
   /**
@@ -396,4 +401,8 @@ public interface FeatureListRow {
    * @param matchedLipid the matched lipid
    */
   void addLipidAnnotation(MatchedLipid matchedLipid);
+
+  // -- ModularFeatureListRow additions
+  public Stream<ModularFeature> streamFeatures();
+
 }

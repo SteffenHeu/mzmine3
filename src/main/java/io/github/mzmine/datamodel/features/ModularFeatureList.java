@@ -1,3 +1,21 @@
+/*
+ * Copyright 2006-2021 The MZmine Development Team
+ *
+ * This file is part of MZmine.
+ *
+ * MZmine is free software; you can redistribute it and/or modify it under the terms of the GNU
+ * General Public License as published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with MZmine; if not,
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ */
+
 package io.github.mzmine.datamodel.features;
 
 import com.google.common.collect.Range;
@@ -7,8 +25,8 @@ import io.github.mzmine.datamodel.features.correlation.R2RMap;
 import io.github.mzmine.datamodel.features.correlation.RowsRelationship;
 import io.github.mzmine.datamodel.features.correlation.RowsRelationship.Type;
 import io.github.mzmine.datamodel.features.types.DataType;
-import io.github.mzmine.datamodel.features.types.ManualAnnotationType;
 import io.github.mzmine.datamodel.features.types.ModularType;
+import io.github.mzmine.datamodel.features.types.annotations.ManualAnnotationType;
 import io.github.mzmine.datamodel.features.types.numbers.IDType;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.util.CorrelationGroupingUtils;
@@ -282,8 +300,8 @@ public class ModularFeatureList implements FeatureList {
    * Returns all features for a raw data file
    */
   @Override
-  public ObservableList<Feature> getFeatures(RawDataFile raw) {
-    ObservableList<Feature> features = FXCollections.observableArrayList();
+  public List<ModularFeature> getFeatures(RawDataFile raw) {
+    List<ModularFeature> features = new ArrayList<>();
     for (int row = 0; row < getNumberOfRows(); row++) {
       ModularFeature f = getFeature(row, raw);
       if (f != null) {
@@ -428,23 +446,16 @@ public class ModularFeatureList implements FeatureList {
   }
 
   @Override
-  public Stream<Feature> streamFeatures() {
+  public Stream<ModularFeature> streamFeatures() {
     return stream().flatMap(row -> row.getFeatures().stream()).filter(Objects::nonNull);
   }
 
-  public Stream<ModularFeature> modularStreamFeatures() {
-    return streamFeatures().map(feature -> (ModularFeature) feature);
-  }
-
   @Override
-  public Stream<Feature> parallelStreamFeatures() {
+  public Stream<ModularFeature> parallelStreamFeatures() {
     return parallelStream().flatMap(row -> row.getFeatures().stream())
         .filter(Objects::nonNull);
   }
 
-  public Stream<ModularFeature> modularParallelStreamFeatures() {
-    return parallelStreamFeatures().map(feature -> (ModularFeature) feature);
-  }
 
   /**
    * @see FeatureList#getFeatureListRowNum(Feature)

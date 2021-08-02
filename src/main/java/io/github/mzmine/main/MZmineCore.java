@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,12 +8,12 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 
 package io.github.mzmine.main;
@@ -44,6 +44,7 @@ import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.Runtime.Version;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -302,23 +303,24 @@ public final class MZmineCore {
   }
 
   @NotNull
-  public static String getMZmineVersion() {
+  public static Version getMZmineVersion() {
     try {
       ClassLoader myClassLoader = MZmineCore.class.getClassLoader();
       InputStream inStream = myClassLoader.getResourceAsStream("mzmineversion.properties");
       if (inStream == null) {
-        return "0.0";
+        return Version.parse("3-SNAPSHOT");
       }
       Properties properties = new Properties();
       properties.load(inStream);
-      String version = properties.getProperty("mzmine.version");
-      if ((version == null) || (version.startsWith("$"))) {
-        return "0.0";
+      String versionString = properties.getProperty("mzmine.version");
+      if ((versionString == null) || (versionString.startsWith("$"))) {
+        return Version.parse("3-SNAPSHOT");
       }
+      Version version = Version.parse(versionString);
       return version;
     } catch (Exception e) {
       e.printStackTrace();
-      return "0.0";
+      return Version.parse("3-SNAPSHOT");
     }
   }
 

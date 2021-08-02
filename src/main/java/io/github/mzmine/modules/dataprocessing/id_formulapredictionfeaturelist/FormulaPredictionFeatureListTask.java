@@ -1,5 +1,5 @@
 /*
- * Copyright 2006-2020 The MZmine Development Team
+ * Copyright 2006-2021 The MZmine Development Team
  *
  * This file is part of MZmine.
  *
@@ -8,12 +8,12 @@
  * License, or (at your option) any later version.
  *
  * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
- * Public License for more details.
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301
- * USA
+ * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
  */
 package io.github.mzmine.modules.dataprocessing.id_formulapredictionfeaturelist;
 
@@ -25,7 +25,7 @@ import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
-import io.github.mzmine.datamodel.features.types.FormulaAnnotationType;
+import io.github.mzmine.datamodel.features.types.annotations.FormulaAnnotationType;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.id_formula_sort.FormulaSortParameters;
 import io.github.mzmine.modules.dataprocessing.id_formulaprediction.ResultFormula;
@@ -292,7 +292,7 @@ public class FormulaPredictionFeatureListTask extends AbstractTask {
     Map<Double, String> msmsAnnotations = null;
 
     if (checkMSMS) {
-      Scan msmsScan = peakListRow.getBestFragmentation();
+      Scan msmsScan = peakListRow.getMostIntenseFragmentScan();
       if (msmsScan != null) {
         MassList ms2MassList = msmsScan.getMassList();
         if (ms2MassList == null) {
