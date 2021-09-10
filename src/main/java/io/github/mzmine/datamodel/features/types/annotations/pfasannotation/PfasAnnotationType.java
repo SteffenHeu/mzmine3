@@ -1,9 +1,9 @@
 package io.github.mzmine.datamodel.features.types.annotations.pfasannotation;
 
 import io.github.mzmine.datamodel.features.types.DataType;
-import io.github.mzmine.datamodel.features.types.FormulaType;
 import io.github.mzmine.datamodel.features.types.ModularType;
 import io.github.mzmine.datamodel.features.types.ModularTypeProperty;
+import io.github.mzmine.datamodel.features.types.annotations.FormulaType;
 import io.github.mzmine.datamodel.features.types.annotations.IntensityCoverageType;
 import io.github.mzmine.datamodel.features.types.annotations.PpmType;
 import io.github.mzmine.datamodel.features.types.modifiers.AnnotationType;

@@ -123,15 +123,15 @@ public class PfasAnnotationTask extends AbstractTask {
 
     for (var flist : flists) {
       final List<ModularFeatureListRow> rows = flist.modularStream()
-          .filter(row -> !row.getAllMS2Fragmentations().isEmpty()).toList();
+          .filter(row -> !row.getAllFragmentScans().isEmpty()).toList();
 
       if (!flist.getRowTypes().containsKey(PfasAnnotationType.class)) {
         flist.addRowType(new PfasAnnotationType());
       }
 
-      rows.parallelStream().filter(row -> row.getBestFragmentation() != null).forEach(row -> {
+      rows.parallelStream().filter(row -> row.getMostIntenseFragmentScan() != null).forEach(row -> {
 
-        final Scan msms = row.getBestFragmentation();
+        final Scan msms = row.getMostIntenseFragmentScan();
         final double[][] processedDp = ScanUtils
             .deisotopeAndRemovePrecursorIons(msms, mzTolerance, msms.getPrecursorMZ(),
                 removePrecursor, removeIsotopes);
