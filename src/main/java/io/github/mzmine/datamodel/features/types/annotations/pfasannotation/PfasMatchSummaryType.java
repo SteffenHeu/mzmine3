@@ -16,4 +16,8 @@ public class PfasMatchSummaryType extends ListDataType<PfasMatch> implements Ann
   }
 
 
+  @Override
+  public @NotNull String getUniqueID() {
+    return "pfas_annotation_summary";
+  }
 }

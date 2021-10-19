@@ -44,6 +44,7 @@ import io.github.mzmine.util.scans.ScanUtils;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jetbrains.annotations.NotNull;
@@ -73,8 +74,8 @@ public class PfasAnnotationTask extends AbstractTask {
   private String description;
 
   protected PfasAnnotationTask(@Nullable MemoryMapStorage storage, MZmineProject project,
-      @NotNull final ParameterSet parameterSet) {
-    super(storage);
+      @NotNull final ParameterSet parameterSet, @NotNull Date moduleCallDate) {
+    super(storage, moduleCallDate);
 
     flists = parameterSet.getParameter(PfasAnnotationParameters.featureLists).getValue()
         .getMatchingFeatureLists();
@@ -132,21 +133,20 @@ public class PfasAnnotationTask extends AbstractTask {
       rows.parallelStream().filter(row -> row.getMostIntenseFragmentScan() != null).forEach(row -> {
 
         final Scan msms = row.getMostIntenseFragmentScan();
-        final double[][] processedDp = ScanUtils
-            .deisotopeAndRemovePrecursorIons(msms, mzTolerance, msms.getPrecursorMZ(),
-                removePrecursor, removeIsotopes);
+        final double[][] processedDp = ScanUtils.deisotopeAndRemovePrecursorIons(msms, mzTolerance,
+            msms.getPrecursorMZ(), removePrecursor, removeIsotopes);
         final MassSpectrum processedMSMS = new SimpleMassList(null, processedDp[0], processedDp[1]);
 
         for (final PfasCompound comp : compounds) {
-          if (checkPrecursorMz && !mzTolerance
-              .checkWithinTolerance(comp.getPrecursorMz(msms.getPolarity()), row.getAverageMZ())) {
+          if (checkPrecursorMz && !mzTolerance.checkWithinTolerance(
+              comp.getPrecursorMz(msms.getPolarity()), row.getAverageMZ())) {
             continue;
           }
 
           final List<PfasFragment> matchedFragments = new ArrayList<>();
-          final double coverage = IntensityCoverageUtils
-              .getIntensityCoverage(processedMSMS, comp.getIonMzs(msms.getPolarity()), mzTolerance,
-                  comp.getObservedIons(msms.getPolarity()), matchedFragments);
+          final double coverage = IntensityCoverageUtils.getIntensityCoverage(processedMSMS,
+              comp.getIonMzs(msms.getPolarity()), mzTolerance,
+              comp.getObservedIons(msms.getPolarity()), matchedFragments);
 
           /*if ((bestMatch == null && coverage >= minCoverage) || (bestMatch != null
               && coverage > bestMatch.getCoverageScore())) {
@@ -169,8 +169,9 @@ public class PfasAnnotationTask extends AbstractTask {
         description = PREFIX + "Annotating row " + processed + "/" + totalRows;
       });
 
-      flist.getAppliedMethods()
-          .add(new SimpleFeatureListAppliedMethod(PfasAnnotationModule.class, parameters));
+      flist.getAppliedMethods().add(
+          new SimpleFeatureListAppliedMethod(PfasAnnotationModule.class, parameters,
+              getModuleCallDate()));
     }
 
     setStatus(TaskStatus.FINISHED);

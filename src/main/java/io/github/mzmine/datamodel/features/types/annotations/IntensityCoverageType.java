@@ -31,6 +31,11 @@ public class IntensityCoverageType extends DoubleType {
     super(format);
   }
 
+  @Override
+  public @NotNull String getUniqueID() {
+    return "intensity_coverage";
+  }
+
   @NotNull
   @Override
   public String getHeaderString() {

@@ -25,6 +25,7 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.Task;
 import io.github.mzmine.util.ExitCode;
 import java.util.Collection;
+import java.util.Date;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -48,11 +49,11 @@ public class PfasAnnotationModule implements MZmineProcessingModule {
     return "Annotates PFAS based on expected MS/MS spectra and precursor masses.";
   }
 
-  @NotNull
   @Override
-  public ExitCode runModule(@NotNull MZmineProject project, @NotNull ParameterSet parameters,
-      @NotNull Collection<Task> tasks) {
-    tasks.add(new PfasAnnotationTask(null, project, parameters));
+  public @NotNull ExitCode runModule(@NotNull MZmineProject project,
+      @NotNull ParameterSet parameters, @NotNull Collection<Task> tasks,
+      @NotNull Date moduleCallDate) {
+    tasks.add(new PfasAnnotationTask(null, project, parameters, moduleCallDate));
     return ExitCode.OK;
   }
 

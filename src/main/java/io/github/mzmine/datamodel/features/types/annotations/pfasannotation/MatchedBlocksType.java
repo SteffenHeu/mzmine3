@@ -43,6 +43,11 @@ public class MatchedBlocksType extends DataType<ObjectProperty<PfasMatch>> imple
     return 60;
   }
 
+  @Override
+  public @NotNull String getUniqueID() {
+    return "pfas_matched_blocks";
+  }
+
   @NotNull
   @Override
   public String getHeaderString() {

@@ -5,9 +5,9 @@ import io.github.mzmine.datamodel.features.types.ModularType;
 import io.github.mzmine.datamodel.features.types.ModularTypeProperty;
 import io.github.mzmine.datamodel.features.types.annotations.FormulaType;
 import io.github.mzmine.datamodel.features.types.annotations.IntensityCoverageType;
-import io.github.mzmine.datamodel.features.types.annotations.PpmType;
 import io.github.mzmine.datamodel.features.types.modifiers.AnnotationType;
 import io.github.mzmine.datamodel.features.types.numbers.MatchingSignalsType;
+import io.github.mzmine.datamodel.features.types.numbers.MzPpmDifferenceType;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.PfasMatch;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.List;
@@ -19,7 +19,7 @@ import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 public class PfasAnnotationType extends ModularType implements AnnotationType {
 
   private static final List<DataType> subTypes = List
-      .of(new PfasMatchSummaryType(), new FormulaType(), new PpmType(), new IntensityCoverageType(),
+      .of(new PfasMatchSummaryType(), new FormulaType(), new MzPpmDifferenceType(), new IntensityCoverageType(),
           new MatchedBlocksType(), new MatchingSignalsType());
 
   @NotNull
@@ -73,9 +73,14 @@ public class PfasAnnotationType extends ModularType implements AnnotationType {
       data.set(MatchingSignalsType.class, match.getMatchedFragments().size());
       data.set(IntensityCoverageType.class, match.getCoverageScore());
       data.set(MatchedBlocksType.class, match);
-      data.set(PpmType.class, MZTolerance.getPpmDifference(match.getCompound()
+      data.set(MzPpmDifferenceType.class, MZTolerance.getPpmDifference(match.getCompound()
               .getPrecursorMz(match.getRow().getBestFeature().getRepresentativeScan().getPolarity()),
           match.getRow().getAverageMZ()));
     }
+  }
+
+  @Override
+  public @NotNull String getUniqueID() {
+    return "pfas_annotation_modular";
   }
 }
