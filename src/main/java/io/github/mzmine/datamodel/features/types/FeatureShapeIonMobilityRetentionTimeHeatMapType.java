@@ -24,6 +24,7 @@ import io.github.mzmine.datamodel.ImagingRawDataFile;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
 import io.github.mzmine.datamodel.features.ModularFeature;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.types.graphicalnodes.FeatureShapeIonMobilityRetentionTimeHeatMapChart;
 import io.github.mzmine.datamodel.features.types.modifiers.GraphicalColumType;
@@ -40,11 +41,21 @@ import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.layout.StackPane;
 import javafx.scene.text.TextAlignment;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class FeatureShapeIonMobilityRetentionTimeHeatMapType extends LinkedDataType implements
     GraphicalColumType<Boolean> {
+
+  @NotNull
+  @Override
+  public final String getUniqueID() {
+    // Never change the ID for compatibility during saving/loading of type
+    return "feature_shape_ion_mobility_rt_heatmap";
+  }
 
   @NotNull
   @Override
@@ -101,5 +112,24 @@ public class FeatureShapeIonMobilityRetentionTimeHeatMapType extends LinkedDataT
       @NotNull List<RawDataFile> file) {
     return () -> MZmineCore.runLater(() -> MZmineCore.getDesktop()
         .addTab(new IMSFeatureVisualizerTab(row.getFeature(file.get(0)))));
+  }
+
+  @Override
+  public Object loadFromXML(@NotNull XMLStreamReader reader, @NotNull ModularFeatureList flist,
+      @NotNull ModularFeatureListRow row, @Nullable ModularFeature feature,
+      @Nullable RawDataFile file) throws XMLStreamException {
+    // return something so this datatype is loaded and added to the feature table
+    return false;
+  }
+
+  @Override
+  public void saveToXML(@NotNull final XMLStreamWriter writer, @Nullable final Object value,
+      @NotNull final ModularFeatureList flist, @NotNull final ModularFeatureListRow row,
+      @Nullable final ModularFeature feature, @Nullable final RawDataFile file)
+      throws XMLStreamException {
+    if (value == null) {
+      return;
+    }
+    writer.writeCharacters(String.valueOf(value));
   }
 }

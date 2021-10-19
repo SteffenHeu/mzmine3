@@ -44,6 +44,7 @@ import io.github.mzmine.util.MemoryMapStorage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -51,6 +52,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /*
@@ -79,9 +81,8 @@ public class ImageBuilderTask extends AbstractTask {
   private final ModularFeatureList featureList;
 
   public ImageBuilderTask(MZmineProject project, RawDataFile rawDataFile, ParameterSet parameters,
-      @Nullable
-          MemoryMapStorage storage) {
-    super(storage);
+      @Nullable MemoryMapStorage storage, @NotNull Date moduleCallDate) {
+    super(storage, moduleCallDate);
 
     this.project = project;
     this.rawDataFile = (ImagingRawDataFile) rawDataFile;
@@ -163,10 +164,10 @@ public class ImageBuilderTask extends AbstractTask {
       }
       progress = (processedScans / (double) scans.length) / 4;
       processedScans++;
-      featureList.setSelectedScans(rawDataFile, List.of(scans));
     }
 
-    logger.info("Extracted " + allDataPoints.size() + " ims data points");
+    featureList.setSelectedScans(rawDataFile, List.of(scans));
+    logger.info("Extracted " + allDataPoints.size() + " data points");
     return allDataPoints;
   }
 
@@ -339,7 +340,7 @@ public class ImageBuilderTask extends AbstractTask {
     }
     rawDataFile.getAppliedMethods().forEach(m -> featureList.getAppliedMethods().add(m));
     featureList.getAppliedMethods().add(new SimpleFeatureListAppliedMethod(
-        ImageBuilderModule.class, parameterSet));
+        ImageBuilderModule.class, parameterSet, getModuleCallDate()));
     project.addFeatureList(featureList);
   }
 
