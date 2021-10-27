@@ -73,7 +73,7 @@ public class PfasAnnotationType extends ModularType implements AnnotationType {
       data.set(MatchingSignalsType.class, match.getMatchedFragments().size());
       data.set(IntensityCoverageType.class, match.getCoverageScore());
       data.set(MatchedBlocksType.class, match);
-      data.set(MzPpmDifferenceType.class, MZTolerance.getPpmDifference(match.getCompound()
+      data.set(MzPpmDifferenceType.class, (float)MZTolerance.getPpmDifference(match.getCompound()
               .getPrecursorMz(match.getRow().getBestFeature().getRepresentativeScan().getPolarity()),
           match.getRow().getAverageMZ()));
     }
