@@ -52,6 +52,7 @@ public class DataPointsDataSet extends AbstractXYDataset implements IntervalXYDa
           dp.add(mzPeaks[i]);
         }
 
+
       }
       dp.add(mzPeaks[mzPeaks.length - 1]);
       this.mzPeaks = dp.toArray(new DataPoint[0]);
