@@ -78,9 +78,9 @@ public abstract class AbstractMassSpectrum implements MassSpectrum {
 
       // Update TIC
       totalIonCurrent += intensityValues.get(i);
-
     }
 
+    totalIonCurrent += intensityValues.get(intensityValues.capacity() - 1);
   }
 
 
