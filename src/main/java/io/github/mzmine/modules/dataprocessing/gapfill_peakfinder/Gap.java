@@ -240,4 +240,11 @@ public class Gap {
 
   }
 
+  public Range<Double> getMzRange() {
+    return mzRange;
+  }
+
+  public Range<Float> getRtRange() {
+    return rtRange;
+  }
 }

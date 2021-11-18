@@ -195,4 +195,9 @@ public class ImsGap extends Gap {
 
     peakListRow.addFeature(rawDataFile, f);
   }
+
+  public Range<Float> getMobilityRange() {
+    return mobilityRange;
+  }
+
 }
