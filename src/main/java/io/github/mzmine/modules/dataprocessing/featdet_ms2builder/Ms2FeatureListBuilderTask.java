@@ -3,7 +3,6 @@ package io.github.mzmine.modules.dataprocessing.featdet_ms2builder;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
-import io.github.mzmine.datamodel.Frame;
 import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
@@ -12,16 +11,11 @@ import io.github.mzmine.datamodel.data_access.EfficientDataAccess.ScanDataType;
 import io.github.mzmine.datamodel.data_access.ScanDataAccess;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.datamodel.features.types.MsMsInfoType;
-import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
-import io.github.mzmine.datamodel.msms.DDAMsMsInfo;
-import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.datamodel.msms.PasefMsMsInfo;
-import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.Gap;
-import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.ImsGap;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
+import io.github.mzmine.parameters.parametertypes.tolerances.mobilitytolerance.MobilityTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.MemoryMapStorage;
@@ -33,7 +27,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -49,15 +42,17 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
   private String featureListName;
   private final ScanSelection scanSelection;
   private final RTTolerance rtTolerance;
+  private final MobilityTolerance mobTolerance;
 
   public Ms2FeatureListBuilderTask(MemoryMapStorage storage, Date date) {
     super(storage, date);
     mzTolerance = new MZTolerance(0.005, 15);
     buildIntensityFromMS2TIC = true;
-    rtTolerance = null;
+    rtTolerance = ;
     scanSelection = null;
     file = null;
     flist = null;
+    mobTolerance = new MobilityTolerance(0.005f);
   }
 
   @Override
@@ -94,10 +89,12 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
       ddaMsMsInfos.add(info);
     }
 
-    final List<ImsGap> gaps = new ArrayList<>();
+    final List<Ms2ImsGap> gaps = new ArrayList<>();
     final Map<Range<Double>, List<PasefMsMsInfo>> mapOfRanges = map.asMapOfRanges();
     for (Entry<Range<Double>, List<PasefMsMsInfo>> entry : mapOfRanges.entrySet()) {
-      //gaps.stream().filter(gap -> gap.getMzRange().)
+      for (PasefMsMsInfo pasefMsMsInfo : entry.getValue()) {
+        gaps.stream().filter(gap -> gap.contains(pasefMsMsInfo))
+      }
     }
 
     final ModularFeatureList flist = new ModularFeatureList(featureListName, getMemoryMapStorage(),
