@@ -30,7 +30,7 @@ import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import org.jetbrains.annotations.NotNull;
 
-public class MatchedBlocksType extends DataType<ObjectProperty<PfasMatch>> implements GraphicalColumType<PfasMatch> {
+public class MatchedBlocksType extends DataType<PfasMatch> implements GraphicalColumType<PfasMatch> {
 
   @Override
   public Node getCellNode(TreeTableCell<ModularFeatureListRow, PfasMatch> cell,
@@ -57,5 +57,10 @@ public class MatchedBlocksType extends DataType<ObjectProperty<PfasMatch>> imple
   @Override
   public ObjectProperty<PfasMatch> createProperty() {
     return new SimpleObjectProperty<>();
+  }
+
+  @Override
+  public Class<PfasMatch> getValueClass() {
+    return PfasMatch.class;
   }
 }

@@ -26,7 +26,6 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.types.annotations.pfasannotation.PfasAnnotationType;
-import io.github.mzmine.datamodel.features.types.annotations.pfasannotation.PfasMatchSummaryType;
 import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasCompound;
 import io.github.mzmine.modules.dataprocessing.id_pfas_annotation.parser.PfasFragment;
@@ -134,7 +133,7 @@ public class PfasAnnotationTask extends AbstractTask {
 
         final Scan msms = row.getMostIntenseFragmentScan();
         final double[][] processedDp = ScanUtils.deisotopeAndRemovePrecursorIons(msms, mzTolerance,
-            msms.getPrecursorMZ(), removePrecursor, removeIsotopes);
+            msms.getPrecursorMz(), removePrecursor, removeIsotopes);
         final MassSpectrum processedMSMS = new SimpleMassList(null, processedDp[0], processedDp[1]);
 
         for (final PfasCompound comp : compounds) {
@@ -154,14 +153,20 @@ public class PfasAnnotationTask extends AbstractTask {
           }*/
 
           if (coverage >= minCoverage) {
-            row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class)
-                .add(new PfasMatch(row, comp, coverage, matchedFragments));
+            List<PfasMatch> pfasMatches = row.get(PfasAnnotationType.class);
+            if(pfasMatches == null) {
+              pfasMatches = new ArrayList<>();
+            } else if(pfasMatches.size() > 0) {
+              pfasMatches = new ArrayList<>(pfasMatches);
+            }
+            pfasMatches.add(new PfasMatch(row, comp, coverage, matchedFragments));
+            row.set(PfasAnnotationType.class, pfasMatches);
           }
         }
 
         // sort results
-        if (row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class) != null) {
-          row.get(PfasAnnotationType.class).get(PfasMatchSummaryType.class)
+        if (row.get(PfasAnnotationType.class) != null) {
+          row.get(PfasAnnotationType.class)
               .sort((a1, a2) -> Double.compare(a1.getCoverageScore(), a2.getCoverageScore() * -1));
         }
 

@@ -22,6 +22,7 @@ import com.opencsv.CSVParser;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
+import com.opencsv.exceptions.CsvValidationException;
 import io.github.mzmine.util.FormulaUtils;
 import java.io.File;
 import java.io.FileReader;
@@ -118,7 +119,7 @@ public class PfasLibraryParser {
         }
         blocks.add(block);
       }
-    } catch (IOException e) {
+    } catch (IOException | CsvValidationException e) {
       e.printStackTrace();
       return false;
     }
