@@ -28,8 +28,12 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.mobilitytolerance.MobilityTolerance;
 import io.github.mzmine.util.RangeUtils;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Ms2ImsGap extends ImsGap {
+
+  private final List<PasefMsMsInfo> infos;
 
   /**
    * Constructor: Initializes an empty gap
@@ -42,28 +46,38 @@ public class Ms2ImsGap extends ImsGap {
    */
   public Ms2ImsGap(FeatureListRow row, RawDataFile rawDataFile, Range<Double> mzRange,
       Range<Float> rtRange, Range<Float> mobilityRange,
-      BinningMobilogramDataAccess mobilogramBinning) {
+      BinningMobilogramDataAccess mobilogramBinning, PasefMsMsInfo info) {
     super(row, rawDataFile, mzRange, rtRange, mobilityRange, Double.POSITIVE_INFINITY,
         mobilogramBinning);
+    infos = new ArrayList<>();
+    infos.add(info);
   }
 
   public boolean contains(PasefMsMsInfo info, RTTolerance rtTol, MZTolerance mzTol,
       MobilityTolerance mobTol) {
-    var parentFrame = info.getParentFrame();
+    var msMsFrame = info.getMsMsFrame();
 
-    if (parentFrame == null) {
+    if (msMsFrame == null) {
       return false;
     }
 
-    var infoMobilityRange = Range.closed(
-        parentFrame.getMobilityForMobilityScanNumber(info.getSpectrumNumberRange().lowerEndpoint()),
-        parentFrame.getMobilityForMobilityScanNumber(
-            info.getSpectrumNumberRange().upperEndpoint()));
+    var infoMobilityRange = Range.singleton(msMsFrame.getMobilityForMobilityScanNumber(
+        info.getSpectrumNumberRange().lowerEndpoint())).span(Range.singleton(
+        msMsFrame.getMobilityForMobilityScanNumber(
+            info.getSpectrumNumberRange().upperEndpoint())));
 
     return mzTol.checkWithinTolerance(info.getIsolationMz(), RangeUtils.rangeCenter(mzRange))
         && rtTol.checkWithinTolerance(RangeUtils.rangeCenter(rtRange),
-        info.getParentFrame().getRetentionTime()) && mobTol.checkWithinTolerance(
+        msMsFrame.getRetentionTime()) && mobTol.checkWithinTolerance(
         RangeUtils.rangeCenter(getMobilityRange()),
         RangeUtils.rangeCenter(infoMobilityRange).floatValue());
+  }
+
+  public void addInfo(PasefMsMsInfo info) {
+    infos.add(info);
+  }
+
+  public List<PasefMsMsInfo> getInfos() {
+    return infos;
   }
 }
