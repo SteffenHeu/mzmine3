@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
@@ -180,7 +181,7 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
           info -> SpectraMerging.getMergedMsMsSpectrumForPASEF(info, mergeTol, MergingType.SUMMED,
               flist.getMemoryMapStorage(), null, null)).toList();
       final double[] intensities = mergedMsMsSpectra.stream()
-          .mapToDouble(MergedMsMsSpectrum::getTIC).toArray();
+          .mapToDouble(s -> Objects.requireNonNullElse(s.getTIC(), 0d)).toArray();
       final double[] mzs = mergedMsMsSpectra.stream()
           .mapToDouble(scan -> ((DDAMsMsInfo) scan.getMsMsInfo()).getIsolationMz()).toArray();
 
@@ -203,7 +204,7 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
                 sourceSpectra));
       }
 
-      finished = 0.3 + 0.6 * processedGaps.getAndIncrement() / numGaps;
+      finished = 0.3 + 0.6 * processedGaps.getAndIncrement() / (double) numGaps;
 
       return IonMobilogramTimeSeriesFactory.of(flist.getMemoryMapStorage(), mzs, intensities,
           mobilograms, binningMobilogramDataAccess);
