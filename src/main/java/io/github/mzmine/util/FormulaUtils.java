@@ -41,7 +41,7 @@ import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 public class FormulaUtils {
 
   private static Logger logger = Logger.getLogger(FormulaUtils.class.getName());
-  private static final double electronMass = 0.00054857990946;
+  public static final double electronMass = 0.00054857990946;
 
   /**
    * Sort all molecular formulas by score of ppm distance, isotope sccore and msms score (with
