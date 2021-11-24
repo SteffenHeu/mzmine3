@@ -9,9 +9,9 @@ import io.github.mzmine.datamodel.MassSpectrum;
 import io.github.mzmine.datamodel.MergedMsMsSpectrum;
 import io.github.mzmine.datamodel.MobilityScan;
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.data_access.BinningMobilogramDataAccess;
 import io.github.mzmine.datamodel.featuredata.IonMobilitySeries;
-import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
 import io.github.mzmine.datamodel.featuredata.impl.IonMobilogramTimeSeriesFactory;
 import io.github.mzmine.datamodel.featuredata.impl.SimpleIonMobilitySeries;
 import io.github.mzmine.datamodel.features.ModularFeature;
@@ -172,7 +172,7 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
     AtomicInteger processedGaps = new AtomicInteger(0);
     final int numGaps = gaps.size();
 
-    final List<IonMobilogramTimeSeries> ionMobilogramTimeSeries = gaps.stream().map(gap -> {
+    final List<ModularFeature> features = gaps.stream().map(gap -> {
       if (isCanceled()) {
         return null;
       }
@@ -204,10 +204,19 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
                 sourceSpectra));
       }
 
+      final var series = IonMobilogramTimeSeriesFactory.of(flist.getMemoryMapStorage(), mzs,
+          intensities, mobilograms, binningMobilogramDataAccess);
+
+      // create feature, merge ms/ms
+      final ModularFeature f = new ModularFeature(flist, file, series, FeatureStatus.DETECTED);
+      final List<Scan> mergedMsMs = SpectraMerging.mergeMsMsSpectra(mergedMsMsSpectra,
+          SpectraMerging.pasefMS2MergeTol, MergingType.SUMMED, flist.getMemoryMapStorage());
+      f.setAllMS2FragmentScans(mergedMsMs);
+      f.setFragmentScan(mergedMsMs.get(0));
+
       finished = 0.3 + 0.6 * processedGaps.getAndIncrement() / (double) numGaps;
 
-      return IonMobilogramTimeSeriesFactory.of(flist.getMemoryMapStorage(), mzs, intensities,
-          mobilograms, binningMobilogramDataAccess);
+      return f;
     }).toList();
 
     if (isCanceled()) {
@@ -215,14 +224,11 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
     }
 
     logger.finest(() -> "Building features.");
-    final List<ModularFeature> features = new ArrayList<>(ionMobilogramTimeSeries.stream()
-        .map(series -> new ModularFeature(flist, file, series, FeatureStatus.DETECTED)).toList());
-    features.sort(Comparator.comparingDouble(ModularFeature::getMZ));
 
     logger.finest(() -> "Building rows.");
     final AtomicInteger id = new AtomicInteger(0);
-    return features.stream().map(f -> new ModularFeatureListRow(flist, id.getAndIncrement(), f))
-        .toList();
+    return features.stream().sorted(Comparator.comparingDouble(ModularFeature::getMZ))
+        .map(f -> new ModularFeatureListRow(flist, id.getAndIncrement(), f)).toList();
   }
 
 }
