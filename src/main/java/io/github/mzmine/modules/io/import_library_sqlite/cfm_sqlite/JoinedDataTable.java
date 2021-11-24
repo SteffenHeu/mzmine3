@@ -148,7 +148,7 @@ public class JoinedDataTable extends SQLiteTable<String> {
       fields.put(DBEntryField.MS_LEVEL, "2");
       fields.put(DBEntryField.CHARGE, polarity.getSign());
       fields.put(DBEntryField.MZ, precursorMz);
-      fields.put(DBEntryField.COLLISION_ENERGY, String.valueOf(i * 20));
+      fields.put(DBEntryField.COLLISION_ENERGY, String.valueOf(i == 0 ? 10 : (i == 1 ? 20 : 40)));
       fields.put(DBEntryField.NUM_PEAKS, spectra.get(i).size());
       fields.put(DBEntryField.ION_MODE, polarity.toString());
       fields.put(DBEntryField.FORMULA, formula);
