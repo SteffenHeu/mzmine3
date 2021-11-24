@@ -143,7 +143,7 @@ public class JoinedDataTable extends SQLiteTable<String> {
       fields.put(DBEntryField.INCHI, inchiColumn.get(index));
       fields.put(DBEntryField.INCHIKEY, inchiKeyColumn.get(index));
       fields.put(DBEntryField.SMILES, smilesColumn.get(index));
-      fields.put(DBEntryField.ION_TYPE, "[M+H]+");
+      fields.put(DBEntryField.ION_TYPE, polarity == PolarityType.POSITIVE ? "[M+H]+" : "[M-H]-");
       fields.put(DBEntryField.INSTRUMENT, "in silico (CFM-ID)");
       fields.put(DBEntryField.MS_LEVEL, "2");
       fields.put(DBEntryField.CHARGE, polarity.getSign());
