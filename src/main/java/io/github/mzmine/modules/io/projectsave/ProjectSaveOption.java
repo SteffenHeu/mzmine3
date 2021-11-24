@@ -16,17 +16,31 @@
  *
  */
 
-package io.github.mzmine.modules.dataprocessing.id_spectraldbsearch;
+package io.github.mzmine.modules.io.projectsave;
 
-import io.github.mzmine.parameters.Parameter;
+/**
+ * @author Robin Schmid (https://github.com/robinschmid)
+ */
+public enum ProjectSaveOption {
+  STANDALONE("Standalone (large/flexible)", "Large flexible format that contains the raw data"), //
+  REFERENCING("Referencing (small)",
+      "Smaller format that points to the raw data files in their original path. "
+      + "Project might be corrupted by removing, renaming, or moving files.");
 
-public class SelectedRowsLocalSpectralDBSearchParameters extends LocalSpectralDBSearchParameters {
+  public final String name;
+  public final String description;
 
-  public SelectedRowsLocalSpectralDBSearchParameters() {
-    super(
-        new Parameter[]{dataBaseFile, msLevel, allMS2Spectra, mzTolerancePrecursor, removePrecursor,
-            noiseLevel, deisotoping, needsIsotopePattern, cropSpectraToOverlap, mzTolerance,
-            rtTolerance, minMatch, similarityFunction});
+  ProjectSaveOption(String name, String description) {
+    this.name = name;
+    this.description = description;
   }
 
+  @Override
+  public String toString() {
+    return name;
+  }
+
+  public String getDescription() {
+    return description;
+  }
 }
