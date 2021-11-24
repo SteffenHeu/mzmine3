@@ -179,7 +179,7 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
       final MZTolerance mergeTol = new MZTolerance(0.005, 15);
       final List<MergedMsMsSpectrum> mergedMsMsSpectra = gap.getInfos().stream().map(
           info -> SpectraMerging.getMergedMsMsSpectrumForPASEF(info, mergeTol, MergingType.SUMMED,
-              flist.getMemoryMapStorage(), null, null)).toList();
+              flist.getMemoryMapStorage(), null, null)).filter(Objects::nonNull).toList();
       final double[] intensities = mergedMsMsSpectra.stream()
           .mapToDouble(s -> Objects.requireNonNullElse(s.getTIC(), 0d)).toArray();
       final double[] mzs = mergedMsMsSpectra.stream()
