@@ -195,7 +195,7 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
         Arrays.fill(mobMzs, mzs[i]);
         for (int j = 0; j < sourceSpectra.size(); j++) {
           final MobilityScan mobScan = sourceSpectra.get(j);
-          mobIntensities[j] = mobScan.getTIC();
+          mobIntensities[j] = Objects.requireNonNullElse(mobScan.getTIC(), 0d);
           mobilities[j] = mobScan.getMobility();
         }
 
