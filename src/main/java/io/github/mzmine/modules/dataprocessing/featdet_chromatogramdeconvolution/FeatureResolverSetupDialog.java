@@ -196,6 +196,9 @@ public class FeatureResolverSetupDialog extends ParameterSetupDialogWithPreview 
     if (newValue == null) {
       return;
     }
+    if(!parameterSet.checkParameterValues(new ArrayList<>())) {
+      return;
+    }
     chart.removeAllDatasets();
 
     ResolvingDimension dimension = ResolvingDimension.RETENTION_TIME;

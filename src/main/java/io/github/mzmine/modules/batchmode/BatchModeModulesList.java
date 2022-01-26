@@ -33,6 +33,7 @@ import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.centwave.CentWaveResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.noiseamplitude.NoiseAmplitudeResolverModule;
+import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.regressionresolver.RegressionResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.savitzkygolay.SavitzkyGolayResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_gridmass.GridMassModule;
 import io.github.mzmine.modules.dataprocessing.featdet_imagebuilder.ImageBuilderModule;
@@ -208,6 +209,7 @@ public class BatchModeModulesList {
       BaselineFeatureResolverModule.class, //
       CentWaveResolverModule.class, //
       MinimumSearchFeatureResolverModule.class, //
+      RegressionResolverModule.class, //
       NoiseAmplitudeResolverModule.class, //
       SavitzkyGolayResolverModule.class, //
 
