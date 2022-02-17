@@ -33,6 +33,7 @@ package io.github.mzmine.modules.io.export_features_sirius;
 import io.github.mzmine.modules.tools.msmsspectramerge.MsMsSpectraMergeParameters;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.dialogs.ParameterSetupDialog;
+import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
@@ -43,6 +44,7 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParamete
 import io.github.mzmine.util.ExitCode;
 import java.util.List;
 import javafx.stage.FileChooser.ExtensionFilter;
+import org.jetbrains.annotations.NotNull;
 
 public class SiriusExportParameters extends SimpleParameterSet {
 
@@ -62,6 +64,7 @@ public class SiriusExportParameters extends SimpleParameterSet {
       "m/z tolerance to exclude duplicates in correlated spectrum", 0.001, 5);
   public static final BooleanParameter RENUMBER_ID =
       new BooleanParameter("Renumber IDs", "Resets the IDs (uses the row ID otherwise)", false);
+
   public static final BooleanParameter NEED_ANNOTATION =
       new BooleanParameter("Only rows with annotation",
           "Only export rows with an annotation (run MS annotate or metaMSEcorrelate)", false);
@@ -109,5 +112,10 @@ public class SiriusExportParameters extends SimpleParameterSet {
     ParameterSetupDialog dialog = new ParameterSetupDialog(valueCheckRequired, this, message);
     dialog.showAndWait();
     return dialog.getExitCode();
+  }
+
+  @Override
+  public @NotNull IonMobilitySupport getIonMobilitySupport() {
+    return IonMobilitySupport.SUPPORTED;
   }
 }

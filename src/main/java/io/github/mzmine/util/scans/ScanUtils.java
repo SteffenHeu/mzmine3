@@ -18,7 +18,6 @@
 
 package io.github.mzmine.util.scans;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.AtomicDouble;
 import io.github.mzmine.datamodel.DataPoint;
@@ -67,7 +66,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
@@ -680,21 +678,30 @@ public class ScanUtils {
   }
 
   /**
-   * Finds the MS/MS scan with highest intensity, within given retention time range and with
-   * precursor m/z within given m/z range
+   * Finds all MS/MS scans on MS2 level within given retention time range and with precursor m/z
+   * within given m/z range
+   *
+   * @return stream sorted by default sorting (highest TIC)
    */
-  public static Scan findBestFragmentScan(RawDataFile dataFile, Range<Float> rtRange,
-      Range<Double> mzRange) {
+  public static Stream<Scan> streamAllMS2FragmentScans(@NotNull RawDataFile dataFile,
+      @Nullable Range<Float> rtRange, @NotNull Range<Double> mzRange) {
+    return streamAllMS2FragmentScans(dataFile, rtRange, mzRange, FragmentScanSorter.DEFAULT_TIC);
+  }
 
-    assert dataFile != null;
-    assert rtRange != null;
-    assert mzRange != null;
+  /**
+   * Finds all MS/MS scans on MS2 level within given retention time range and with precursor m/z
+   * within given m/z range. Applies sorting if sorter is not null
+   *
+   * @param sorter sorted stream see {@link FragmentScanSorter}. Unsorted if null
+   * @return sorted stream
+   */
+  public static Stream<Scan> streamAllMS2FragmentScans(@NotNull RawDataFile dataFile,
+      @Nullable Range<Float> rtRange, @NotNull Range<Double> mzRange,
+      @Nullable Comparator<Scan> sorter) {
 
-    return dataFile.getScanNumbers(2).stream().filter(
-            s -> s.getBasePeakIntensity() != null && rtRange.contains(s.getRetentionTime()) && (
-                s.getMsMsInfo() != null && s.getMsMsInfo() instanceof DDAMsMsInfo dda
-                && mzRange.contains(dda.getIsolationMz())))
-        .max(Comparator.comparingDouble(s -> s.getBasePeakIntensity())).orElse(null);
+    final Stream<Scan> stream = dataFile.getScanNumbers(2).stream()
+        .filter(s -> matchesMS2Scan(s, rtRange, mzRange));
+    return sorter == null ? stream : stream.sorted(sorter);
   }
 
   /**
@@ -703,15 +710,21 @@ public class ScanUtils {
    */
   public static Scan[] findAllMS2FragmentScans(RawDataFile dataFile, Range<Float> rtRange,
       Range<Double> mzRange) {
-    assert dataFile != null;
-    assert rtRange != null;
-    assert mzRange != null;
+    return streamAllMS2FragmentScans(dataFile, rtRange, mzRange).toArray(Scan[]::new);
+  }
 
-    return dataFile.getScanNumbers(2).stream().filter(
-            s -> rtRange.contains(s.getRetentionTime()) && (s.getMsMsInfo() != null
-                                                            && s.getMsMsInfo() instanceof DDAMsMsInfo dda
-                                                            && mzRange.contains(dda.getIsolationMz())))
-        .toArray(Scan[]::new);
+  /**
+   * Checks if scan precursor mz and rt is in ranges
+   *
+   * @param s tested scan
+   * @return true if scan precursor mz is in range and rt
+   */
+  public static boolean matchesMS2Scan(Scan s, Range<Float> rtRange, Range<Double> mzRange) {
+    if (rtRange != null && !rtRange.contains(s.getRetentionTime())) {
+      return false;
+    }
+    final Double precursorMz = s.getPrecursorMz();
+    return precursorMz != null && mzRange.contains(precursorMz);
   }
 
   /**
@@ -1305,15 +1318,8 @@ public class ScanUtils {
     assert topN != null;
 
     // Keeps MS2 scans sorted by decreasing quality
-    TreeSet<Scan> sortedScans = new TreeSet<>(
-        Collections.reverseOrder(new ScanSorter(0, ScanSortMode.MAX_TIC)));
-    sortedScans.addAll(scans);
-
     // Filter top N scans into an immutable list
-    final List<Scan> topNScansList = sortedScans.stream().limit(topN)
-        .collect(ImmutableList.toImmutableList());
-
-    return topNScansList;
+    return scans.stream().sorted(new ScanSorter(0, ScanSortMode.MAX_TIC)).limit(topN).toList();
   }
 
   /**
