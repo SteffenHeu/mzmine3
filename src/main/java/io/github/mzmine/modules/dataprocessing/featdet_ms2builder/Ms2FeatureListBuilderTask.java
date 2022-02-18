@@ -212,7 +212,6 @@ public class Ms2FeatureListBuilderTask extends AbstractTask {
       final List<Scan> mergedMsMs = SpectraMerging.mergeMsMsSpectra(mergedMsMsSpectra,
           SpectraMerging.pasefMS2MergeTol, MergingType.SUMMED, flist.getMemoryMapStorage());
       f.setAllMS2FragmentScans(mergedMsMs);
-      f.setFragmentScan(mergedMsMs.get(0));
 
       finished = 0.3 + 0.6 * processedGaps.getAndIncrement() / (double) numGaps;
 

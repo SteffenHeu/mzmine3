@@ -64,6 +64,7 @@ public class FramePrecursorTable extends TDFDataTable<Long> {
 
   public FramePrecursorTable() {
     super(FRAME_PRECURSOR_TABLE, TDFPasefFrameMsMsInfoTable.FRAME_ID);
+
     // added by constructor
     frameIdColumn = (TDFDataColumn<Long>) getColumn(TDFPasefFrameMsMsInfoTable.FRAME_ID);
 
