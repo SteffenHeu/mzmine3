@@ -208,6 +208,9 @@
       <MenuItem onAction="#runModule"
         text="Targeted feature detection"
         userData="io.github.mzmine.modules.dataprocessing.featdet_targeted.TargetedFeatureDetectionModule"/>
+      <MenuItem onAction="#runModule"
+        text="XIC detection"
+        userData="io.github.mzmine.modules.dataprocessing.featdet_xic.XICBuilderModule"/>
     </Menu>
     <Menu text="LC-IMS-MS">
       <MenuItem onAction="#runModule"
