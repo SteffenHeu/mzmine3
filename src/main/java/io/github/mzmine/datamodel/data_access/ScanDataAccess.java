@@ -183,6 +183,17 @@ public abstract class ScanDataAccess implements Scan {
     return null;
   }
 
+  @Nullable
+  public Scan previousScan() throws MissingMassListException {
+    if(scanIndex > 0) {
+      scanIndex--;
+      Scan scan = getCurrentScan();
+      loadScanData(scan);
+      return scan;
+    }
+    return null;
+  }
+
   /**
    * Load scan data
    *
@@ -225,6 +236,10 @@ public abstract class ScanDataAccess implements Scan {
    */
   public boolean hasNextScan() {
     return scanIndex + 1 < getNumberOfScans();
+  }
+
+  public boolean hasPreviousScan() {
+    return scanIndex > 0;
   }
 
   /**
