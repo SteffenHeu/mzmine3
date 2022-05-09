@@ -47,6 +47,20 @@ public class XIC {
     TOLERANCE = rangeTolerance;
   }
 
+  public XIC(List<ExpandedDataPoint> dps, MZTolerance startTolerance, int numSeeds, int maxNumZeros,
+      double rangeTolerance) {
+    dps = dps.stream()
+        .sorted(Comparator.comparingDouble(ExpandedDataPoint::getIntensity).reversed()).toList();
+    seed = dps.get(0);
+    for (ExpandedDataPoint dp : dps) {
+      addDataPoint(dp);
+    }
+    tolerance = startTolerance;
+    CENTER_SIZE = numSeeds;
+    TERMINATION_THRESHOLD = maxNumZeros;
+    TOLERANCE = rangeTolerance;
+  }
+
   public Collection<ExpandedDataPoint> findDataPoints(@NotNull ScanDataAccess access) {
     access.jumpToScan(seed.getScan());
     final int startIndex = access.indexOf(seed.getScan());
@@ -182,19 +196,52 @@ public class XIC {
     return dps;
   }
 
-  public void merge(XIC xic) {
+  public XIC merge(XIC xic, XICMergeMethod mergeMethod) {
     // todo more sophisticated merge function
     // 1. option always use the most intense point, override all others
     // 2. option to use the more intense point and return all others as a new XIC if it specifies all previous parameters.
     // 3. only merge onto zeros
 
-    xic.getDps().values().forEach(dp -> {
-      // keep the more intense data point
-      // intensities might be zero on the edges, so we keep the higher data point.
-      dps.merge(dp.getScan(), dp,
-          (oldValue, newValue) -> newValue.getIntensity() > oldValue.getIntensity() ? newValue
-              : oldValue);
-    });
+    switch (mergeMethod) {
+      case MOST_INTENSE -> {
+        xic.getDps().values().forEach(dp -> {
+          // keep the more intense data point
+          // intensities might be zero on the edges, so we keep the higher data point.
+          dps.merge(dp.getScan(), dp,
+              (oldValue, newValue) -> newValue.getIntensity() > oldValue.getIntensity() ? newValue
+                  : oldValue);
+        });
+        return null;
+      }
+      case MOST_INTENSE_ITERATE -> {
+        final List<ExpandedDataPoint> remaining = xic.getDps().values().stream()
+            .<ExpandedDataPoint>mapMulti((dp, c) -> {
+              final ExpandedDataPoint current = dps.get(dp.getScan());
+              if (current == null) {
+                dps.put(dp.getScan(), dp); // add the point
+              } else if (dp.getIntensity() > current.getIntensity()) {
+                dps.put(dp.getScan(), dp); // add the new point
+                c.accept(current); // send the current one downstream
+              } else if (!current.equals(dp)) {
+                c.accept(dp); // send the dp downstream
+              }
+            }).toList();
+
+        if (remaining.isEmpty()) {
+          return null;
+        }
+        return new XIC(remaining, tolerance, CENTER_SIZE, TERMINATION_THRESHOLD, TOLERANCE);
+      }
+      case OVERRIDE_ZEROS -> {
+        xic.getDps().values().forEach(dp -> {
+          dps.merge(dp.getScan(), dp,
+              (oldValue, newValue) -> Double.compare(oldValue.getIntensity(), 0d) == 0 ? newValue
+                  : oldValue);
+        });
+        return null;
+      }
+      default -> throw new IllegalStateException("Unexpected value: " + mergeMethod);
+    }
   }
 
   public int getNumberOfUnequalOverlappingPoints(Map<Scan, ExpandedDataPoint> that) {

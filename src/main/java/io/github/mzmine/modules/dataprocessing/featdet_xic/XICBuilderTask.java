@@ -48,6 +48,7 @@ public class XICBuilderTask extends AbstractTask {
   private final int numSeeds;
   private final double rangeTolerance;
   private final @NotNull ParameterSet parameters;
+  private final XICMergeMethod xicMergeMethod;
   private double progress = 0d;
   private final ModularFeatureList flist;
   private final MZmineProject project;
@@ -64,6 +65,7 @@ public class XICBuilderTask extends AbstractTask {
     maxNumZeros = parameters.getValue(XICBuilderParameters.maxNumZeros);
     numSeeds = parameters.getValue(XICBuilderParameters.numSeeds);
     rangeTolerance = parameters.getValue(XICBuilderParameters.mzRangeTolerance);
+    xicMergeMethod = parameters.getValue(XICBuilderParameters.mergeMode);
     this.parameters = parameters;
     flist = new ModularFeatureList(file.getName(), getMemoryMapStorage(), file);
     this.project = project;
@@ -171,6 +173,10 @@ public class XICBuilderTask extends AbstractTask {
     List<XIC> unmergedXICs = new ArrayList<>();
 
     for (final XIC xic : xics) {
+      if(isCanceled()) {
+        return List.of();
+      }
+
       final double centerMz = xic.getCenterMz();
 
       final Entry<Range<Double>, List<XIC>> entry = xicMap.getEntry(centerMz);
@@ -220,12 +226,16 @@ public class XICBuilderTask extends AbstractTask {
       xicList.remove(0);
 
       for (XIC xic : xicList) {
-        final int numUnequalPoints = mainXIC.getNumberOfUnequalOverlappingPoints(xic.getDps());
+        /*final int numUnequalPoints = mainXIC.getNumberOfUnequalOverlappingPoints(xic.getDps());
         if (numUnequalPoints < 5) {
-          mainXIC.merge(xic);
+          mainXIC.merge(xic, xicMergeMethod);
         } else {
           logger.finest("Will not merge, too many unequal overlapping points. " + numUnequalPoints);
           unmergedXICs.add(xic);
+        }*/
+        final XIC remaining = mainXIC.merge(xic, xicMergeMethod);
+        if(remaining != null) {
+          unmergedXICs.add(remaining);
         }
       }
       mergedXICs.add(mainXIC);

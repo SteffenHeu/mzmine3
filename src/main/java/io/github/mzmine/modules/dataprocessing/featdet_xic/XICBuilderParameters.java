@@ -3,6 +3,7 @@ package io.github.mzmine.modules.dataprocessing.featdet_xic;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.PercentParameter;
@@ -43,8 +44,16 @@ public class XICBuilderParameters extends SimpleParameterSet {
       "Maximum number of consecutive 0s",
       "Maximum number of consecutive zero values for an XIC to be considered terminated.", 2);
 
+  public static final ComboParameter<XICMergeMethod> mergeMode = new ComboParameter<>(
+      "Duplicate XIC merging", """
+      Select how duplicate XICs will be merged.
+      Override zeros: Zeros will be overridden during merging, overlapping data points are discarded. 
+      Most intense: The most intense point will be retained of both XICs have a data point in one scan, others are discarded.
+      Iterative: The most intense data point will be retained, the others are used to create a new XIC.
+      """, XICMergeMethod.values(), XICMergeMethod.MOST_INTENSE);
+
   public XICBuilderParameters() {
     super(new Parameter[]{files, scans, mzTol, mzRangeTolerance, numSeeds, minHighestIntensity,
-        maxNumZeros});
+        maxNumZeros, mergeMode});
   }
 }
