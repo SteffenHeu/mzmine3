@@ -160,6 +160,7 @@ public class XICBuilderTask extends AbstractTask {
     flist.getAppliedMethods().add(
         new SimpleFeatureListAppliedMethod(XICBuilderModule.class, parameters,
             getModuleCallDate()));
+    flist.setSelectedScans(file, List.of(selection.getMatchingScans(file)));
     project.addFeatureList(flist);
 
     setStatus(TaskStatus.FINISHED);
