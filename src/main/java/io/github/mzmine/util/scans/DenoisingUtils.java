@@ -31,7 +31,13 @@ import com.google.common.collect.TreeRangeMap;
 import gnu.trove.list.array.TDoubleArrayList;
 import io.github.mzmine.datamodel.MassList;
 import io.github.mzmine.datamodel.MassSpectrum;
+import io.github.mzmine.datamodel.impl.SimpleMassSpectrum;
 import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
+import io.github.mzmine.main.MZmineCore;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetector;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.exactmass.ExactMassDetector;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.exactmass.ExactMassDetectorParameters;
+import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.DataPointSorter;
 import io.github.mzmine.util.DataPointUtils;
@@ -45,6 +51,21 @@ import org.jetbrains.annotations.Nullable;
 
 public class DenoisingUtils {
 
+  private static final MassDetector exactMass = MZmineCore.getModuleInstance(
+      ExactMassDetector.class);
+  private static final ParameterSet exactMassDetectorParameters = MZmineCore.getConfiguration()
+      .getModuleParameters(ExactMassDetector.class);
+
+  static {
+    exactMassDetectorParameters.setParameter(
+        ExactMassDetectorParameters.noiseLevel, 0d);
+    exactMassDetectorParameters.setParameter(
+        ExactMassDetectorParameters.detectIsotopes, false);
+  }
+
+  private DenoisingUtils() {
+  }
+
   public static <T extends MassSpectrum> double[][] getNonNoiseDataPoints(
       Collection<T> spectra, final MZTolerance mzTolerance,
       final int minDetections) {
@@ -54,7 +75,17 @@ public class DenoisingUtils {
           minDetections, spectra.size()));
     }
 
-    return SpectraMerging.calculatedMergedMzsAndIntensities(spectra,
+    final List<MassSpectrum> centroidSpectra = spectra.stream().map(s -> {
+      if (s.getSpectrumType().isCentroided()) {
+        return s;
+      } else {
+        final double[][] data = exactMass.getMassValues(s,
+            exactMassDetectorParameters);
+        return new SimpleMassSpectrum(data[0], data[1]);
+      }
+    }).toList();
+
+    return SpectraMerging.calculatedMergedMzsAndIntensities(centroidSpectra,
         mzTolerance, IntensityMergingType.SUMMED,
         SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, minDetections);
   }
@@ -70,9 +101,11 @@ public class DenoisingUtils {
 
     for (int i = 0; i < sorted[0].length; i++) {
       final double mz = sorted[0][i];
-      final Range<Double> range = SpectraMerging.createNewNonOverlappingRange(
-          mzMap, mzTolerance.getToleranceRange(mz));
-      mzMap.put(range, sorted[1][i]);
+      if (mzMap.get(mz) == null) {
+        final Range<Double> range = SpectraMerging.createNewNonOverlappingRange(
+            mzMap, mzTolerance.getToleranceRange(mz));
+        mzMap.put(range, sorted[1][i]);
+      }
     }
 
     final Map<T, double[][]> result = new HashMap<>();
@@ -95,6 +128,9 @@ public class DenoisingUtils {
 
       result.put(spectrum,
           new double[][]{mzs.toArray(), intensities.toArray()});
+
+      mzs.clear();
+      intensities.clear();
     }
 
     return result;

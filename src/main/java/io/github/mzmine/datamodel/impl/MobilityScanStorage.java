@@ -37,6 +37,7 @@ import io.github.mzmine.modules.dataprocessing.featdet_massdetection.centroid.Ce
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.exceptions.MissingMassListException;
+import io.github.mzmine.util.scans.ScanUtils;
 import java.nio.DoubleBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;

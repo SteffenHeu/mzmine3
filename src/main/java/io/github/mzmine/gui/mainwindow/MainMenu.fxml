@@ -188,6 +188,8 @@
     <Menu text="Mass detection">
       <MenuItem text="Mass detection" onAction="#runModule"
         userData="io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectionModule"/>
+      <MenuItem text="Auto denoise" onAction="#runModule"
+        userData="io.github.mzmine.modules.dataprocessing.featdet_autodenoise.AutoDenoiseModule"/>
       <MenuItem onAction="#runModule"
         text="FTMS shoulder peak filter"
         userData="io.github.mzmine.modules.dataprocessing.featdet_shoulderpeaksfilter.ShoulderPeaksFilterModule"/>
