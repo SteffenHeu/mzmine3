@@ -37,6 +37,7 @@ import io.github.mzmine.util.DataPointSorter;
 import io.github.mzmine.util.DataPointUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.scans.SpectraMerging.IntensityMergingType;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,43 +45,44 @@ import org.jetbrains.annotations.Nullable;
 
 public class DenoisingUtils {
 
-  public static double[][] getNonNoiseDataPoints(List<MassSpectrum> spectra,
-      final MZTolerance mzTolerance, final int minDetections) {
+  public static <T extends MassSpectrum> double[][] getNonNoiseDataPoints(
+      Collection<T> spectra, final MZTolerance mzTolerance,
+      final int minDetections) {
     if (minDetections > spectra.size()) {
       throw new RuntimeException(String.format(
           "Minimum number of detections (%d) is higher than number of input spectra (%d). Cannot denoise.",
           minDetections, spectra.size()));
     }
 
-    return SpectraMerging.calculatedMergedMzsAndIntensities(spectra, mzTolerance,
-        IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null,
-        minDetections);
+    return SpectraMerging.calculatedMergedMzsAndIntensities(spectra,
+        mzTolerance, IntensityMergingType.SUMMED,
+        SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, minDetections);
   }
 
-  public static Map<MassSpectrum, double[][]> denoiseToDataPoints(List<MassSpectrum> spectra,
-      final MZTolerance mzTolerance, final int minDetections) {
-    final double[][] nonNoiseDataPoints = getNonNoiseDataPoints(spectra, mzTolerance,
-        minDetections);
+  public static <T extends MassSpectrum> Map<T, double[][]> denoiseToDataPoints(
+      List<T> spectra, final MZTolerance mzTolerance, final int minDetections) {
+    final double[][] nonNoiseDataPoints = getNonNoiseDataPoints(spectra,
+        mzTolerance, minDetections);
 
-    final double[][] sorted = DataPointUtils.sort(nonNoiseDataPoints[0], nonNoiseDataPoints[1],
-        DataPointSorter.DEFAULT_INTENSITY);
+    final double[][] sorted = DataPointUtils.sort(nonNoiseDataPoints[0],
+        nonNoiseDataPoints[1], DataPointSorter.DEFAULT_INTENSITY);
     final RangeMap<Double, Double> mzMap = TreeRangeMap.create();
 
     for (int i = 0; i < sorted[0].length; i++) {
       final double mz = sorted[0][i];
-      final Range<Double> range = SpectraMerging.createNewNonOverlappingRange(mzMap,
-          mzTolerance.getToleranceRange(mz));
+      final Range<Double> range = SpectraMerging.createNewNonOverlappingRange(
+          mzMap, mzTolerance.getToleranceRange(mz));
       mzMap.put(range, sorted[1][i]);
     }
 
-    final Map<MassSpectrum, double[][]> result = new HashMap<>();
+    final Map<T, double[][]> result = new HashMap<>();
     TDoubleArrayList mzs = new TDoubleArrayList();
     TDoubleArrayList intensities = new TDoubleArrayList();
 
     double[] mzBuffer = new double[0];
     double[] intensityBuffer = new double[0];
 
-    for (final MassSpectrum spectrum : spectra) {
+    for (final T spectrum : spectra) {
       mzBuffer = spectrum.getMzValues(mzBuffer);
       intensityBuffer = spectrum.getIntensityValues(intensityBuffer);
 
@@ -91,18 +93,20 @@ public class DenoisingUtils {
         }
       }
 
-      result.put(spectrum, new double[][]{mzs.toArray(), intensities.toArray()});
+      result.put(spectrum,
+          new double[][]{mzs.toArray(), intensities.toArray()});
     }
 
     return result;
   }
 
-  public static Map<MassSpectrum, MassList> denoiseToMassList(List<MassSpectrum> spectra,
-      final MZTolerance mzTolerance, final int minDetections, @Nullable MemoryMapStorage storage) {
+  public static <T extends MassSpectrum> Map<T, MassList> denoiseToMassList(
+      List<T> spectra, final MZTolerance mzTolerance, final int minDetections,
+      @Nullable MemoryMapStorage storage) {
     var denoised = denoiseToDataPoints(spectra, mzTolerance, minDetections);
-    final Map<MassSpectrum, MassList> result = new HashMap<>();
-    denoised.forEach(
-        (spectrum, dataPoints) -> result.put(spectrum, new SimpleMassList(storage, dataPoints)));
+    final Map<T, MassList> result = new HashMap<>();
+    denoised.forEach((spectrum, dataPoints) -> result.put(spectrum,
+        new SimpleMassList(storage, dataPoints)));
 
     return result;
   }
