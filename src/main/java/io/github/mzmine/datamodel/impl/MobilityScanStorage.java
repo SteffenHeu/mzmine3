@@ -46,9 +46,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Memory efficient storage of {@link MobilityScan}s. Methods return an instance
- * of {@link StoredMobilityScan} or {@link StoredMobilityScanMassList} which is
- * garbage collected if not used anymore.
+ * Memory efficient storage of {@link MobilityScan}s. Methods return an instance of
+ * {@link StoredMobilityScan} or {@link StoredMobilityScanMassList} which is garbage collected if
+ * not used anymore.
  *
  * @author https://github.com/steffenheu
  */
@@ -131,9 +131,9 @@ public class MobilityScanStorage {
    * @param massDetector           The mass detector
    * @param massDetectorParameters The parameters for the mass detector.
    */
-  public void generateAndAddMobilityScanMassLists(
-      @Nullable MemoryMapStorage storage, @NotNull MassDetector massDetector,
-      @NotNull ParameterSet massDetectorParameters) {
+  public void generateAndAddMobilityScanMassLists(@Nullable MemoryMapStorage storage,
+      @NotNull MassDetector massDetector, @NotNull ParameterSet massDetectorParameters,
+      boolean denormalizeMSnScans) {
 
     if (massDetector instanceof CentroidMassDetector && Double.compare(
         massDetectorParameters.getValue(
@@ -151,16 +151,25 @@ public class MobilityScanStorage {
     final List<double[][]> data = new ArrayList<>();
 
     for (MobilityScan mobilityScan : getMobilityScans()) {
-      double[][] mzIntensity = massDetector.getMassValues(mobilityScan,
-          massDetectorParameters);
+      double[][] mzIntensity = massDetector.getMassValues(mobilityScan, massDetectorParameters);
+      if (denormalizeMSnScans && frame.getMSLevel() > 1) {
+        ScanUtils.denormalizeIntensitiesMultiplyByInjectTime(mzIntensity[1],
+            frame.getInjectionTime());
+      }
       data.add(mzIntensity);
     }
 
-    storeAsMassList(storage, data);
+    setMassLists(storage, data);
   }
 
-  public void storeAsMassList(@Nullable MemoryMapStorage storage,
-      List<double[][]> data) {
+  /**
+   * Sets the new masslists
+   *
+   * @param storage memory storage for masslists
+   * @param data    the masslists as [0,1] as [mzs, intensities] arrays, one for each MobilityScan
+   *                in this frame
+   */
+  public void setMassLists(final @Nullable MemoryMapStorage storage, final List<double[][]> data) {
     if (data.size() != getNumberOfMobilityScans()) {
       throw new IllegalStateException(
           "Length of MassList data list does not match number of mobility scans.");
