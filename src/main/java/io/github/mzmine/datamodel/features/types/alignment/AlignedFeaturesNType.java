@@ -23,32 +23,27 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.datamodel.features.types;
+package io.github.mzmine.datamodel.features.types.alignment;
 
 import io.github.mzmine.datamodel.features.types.numbers.abstr.IntegerType;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * This type describes the number of features that fall within the alignment ranges (mz, RT,
- * mobility) but were either not aligned or were extra features (2 features in a sample match the
- * ranges, this means 1 feature is extra).
- * <p>
- * This is calculated per sample level and the sum of all is reflected to the row. RowBinding is NOT
- * used because some sample might not have a feature while there were feature sin the range (failing
- * other filters)
+ * number of aligned features
  */
-public class AlignExtraFeaturesType extends IntegerType {
+public class AlignedFeaturesNType extends IntegerType {
 
   @NotNull
   @Override
   public final String getUniqueID() {
     // Never change the ID for compatibility during saving/loading of type
-    return "align_extra_features";
+    return "aligned_features_n";
   }
 
+  @NotNull
   @Override
-  public @NotNull String getHeaderString() {
-    return "Σ Extra features";
+  public String getHeaderString() {
+    return "Aligned features";
   }
 
 }
