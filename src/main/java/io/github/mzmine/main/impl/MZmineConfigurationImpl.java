@@ -1,26 +1,35 @@
 /*
- * Copyright 2006-2021 The MZmine Development Team
+ * Copyright (c) 2004-2022 The MZmine Development Team
  *
- * This file is part of MZmine.
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * MZmine is free software; you can redistribute it and/or modify it under the terms of the GNU
- * General Public License as published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  */
 
 package io.github.mzmine.main.impl;
 
 import io.github.mzmine.gui.chartbasics.chartthemes.ChartThemeParameters;
 import io.github.mzmine.gui.chartbasics.chartthemes.EStandardChartTheme;
+import io.github.mzmine.gui.preferences.ImageNormalization;
 import io.github.mzmine.gui.preferences.MZminePreferences;
+import io.github.mzmine.gui.preferences.NumberFormats;
 import io.github.mzmine.gui.preferences.UnitFormat;
 import io.github.mzmine.main.MZmineConfiguration;
 import io.github.mzmine.main.MZmineCore;
@@ -31,11 +40,11 @@ import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.EncryptionKeyParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameListSilentParameter;
 import io.github.mzmine.util.StringCrypter;
+import io.github.mzmine.util.XMLUtils;
 import io.github.mzmine.util.color.ColorsFX;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import io.github.mzmine.util.color.Vision;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -47,11 +56,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
@@ -72,8 +76,7 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
   private final MZminePreferences preferences;
 
   // list of last used projects
-  private final @NotNull
-  FileNameListSilentParameter lastProjects;
+  private final @NotNull FileNameListSilentParameter lastProjects;
 
   private final EncryptionKeyParameter globalEncrypter;
 
@@ -106,19 +109,18 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
     if (parameters == null) {
       // Create an instance of parameter set
       try {
-      MZmineModule moduleInstance = MZmineCore.getModuleInstance(moduleClass);
-      if (moduleInstance == null) {
-        logger.log(Level.WARNING,
-            "Module " + moduleClass + " does not exist");
-        return null;
-      }
+        MZmineModule moduleInstance = MZmineCore.getModuleInstance(moduleClass);
+        if (moduleInstance == null) {
+          logger.log(Level.WARNING, "Module " + moduleClass + " does not exist");
+          return null;
+        }
 
-      final Class<? extends ParameterSet> parameterSetClass = moduleInstance.getParameterSetClass();
-      if (parameterSetClass == null) {
-        logger.log(Level.WARNING,
-            "Module " + moduleClass + " does not provide any ParameterSet class");
-        return null;
-      }
+        final Class<? extends ParameterSet> parameterSetClass = moduleInstance.getParameterSetClass();
+        if (parameterSetClass == null) {
+          logger.log(Level.WARNING,
+              "Module " + moduleClass + " does not provide any ParameterSet class");
+          return null;
+        }
 
         try {
           parameters = parameterSetClass.getDeclaredConstructor().newInstance();
@@ -135,8 +137,8 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
         return null;
       }
 
-
       // Add the parameter set to the configuration
+      parameters.setModuleNameAttribute(MZmineCore.getModuleInstance(moduleClass).getName());
       moduleParameters.put(moduleClass, parameters);
 
     }
@@ -154,9 +156,9 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
       throw new IllegalArgumentException("Module " + moduleClass + " has no parameter set class");
     }
     if (!parametersClass.isInstance(parameters)) {
-      throw new IllegalArgumentException("Given parameter set is an instance of "
-                                         + parameters.getClass() + " instead of "
-                                         + parametersClass);
+      throw new IllegalArgumentException(
+          "Given parameter set is an instance of " + parameters.getClass() + " instead of "
+              + parametersClass);
     }
     moduleParameters.put(moduleClass, parameters);
 
@@ -215,6 +217,16 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
   }
 
   @Override
+  public NumberFormats getGuiFormats() {
+    return preferences.getGuiFormats();
+  }
+
+  @Override
+  public NumberFormats getExportFormats() {
+    return preferences.getExportFormats();
+  }
+
+  @Override
   public String getRexecPath() {
     File f = preferences.getParameter(MZminePreferences.rExecPath).getValue();
     if (f == null) {
@@ -231,7 +243,7 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
 
   @SuppressWarnings("unchecked")
   @Override
-  public void loadConfiguration(File file) throws IOException {
+  public void loadConfiguration(File file, boolean loadPreferences) throws IOException {
 
     try {
       DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -244,27 +256,31 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
 
       logger.finest("Loading desktop configuration");
 
-      XPathExpression expr = xpath.compile("//configuration/preferences");
-      NodeList nodes = (NodeList) expr.evaluate(configuration, XPathConstants.NODESET);
-      if (nodes.getLength() == 1) {
-        Element preferencesElement = (Element) nodes.item(0);
-        // loading encryption key
-        // this has to be read first because following parameters may
-        // already contain encrypted data
-        // that needs this key for encryption
-        if (file.equals(MZmineConfiguration.CONFIG_FILE)) {
-          new SimpleParameterSet(new Parameter[]{globalEncrypter})
-              .loadValuesFromXML(preferencesElement);
+      XPathExpression expr;
+      NodeList nodes;
+      if (loadPreferences) {
+        expr = xpath.compile("//configuration/preferences");
+        nodes = (NodeList) expr.evaluate(configuration, XPathConstants.NODESET);
+        if (nodes.getLength() == 1) {
+          Element preferencesElement = (Element) nodes.item(0);
+          // loading encryption key
+          // this has to be read first because following parameters may
+          // already contain encrypted data
+          // that needs this key for encryption
+          if (file.equals(MZmineConfiguration.CONFIG_FILE)) {
+            new SimpleParameterSet(new Parameter[]{globalEncrypter}).loadValuesFromXML(
+                preferencesElement);
+          }
+          preferences.loadValuesFromXML(preferencesElement);
         }
-        preferences.loadValuesFromXML(preferencesElement);
-      }
 
-      logger.finest("Loading last projects");
-      expr = xpath.compile("//configuration/lastprojects");
-      nodes = (NodeList) expr.evaluate(configuration, XPathConstants.NODESET);
-      if (nodes.getLength() == 1) {
-        Element lastProjectsElement = (Element) nodes.item(0);
-        lastProjects.loadValueFromXML(lastProjectsElement);
+        logger.finest("Loading last projects");
+        expr = xpath.compile("//configuration/lastprojects");
+        nodes = (NodeList) expr.evaluate(configuration, XPathConstants.NODESET);
+        if (nodes.getLength() == 1) {
+          Element lastProjectsElement = (Element) nodes.item(0);
+          lastProjects.loadValueFromXML(lastProjectsElement);
+        }
       }
 
       logger.finest("Loading modules configuration");
@@ -276,8 +292,8 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
         String moduleClassName = moduleElement.getAttribute("class");
 
         try {
-          Class<? extends MZmineModule> moduleClass =
-              (Class<? extends MZmineModule>) Class.forName(moduleClassName);
+          Class<? extends MZmineModule> moduleClass = (Class<? extends MZmineModule>) Class.forName(
+              moduleClassName);
 
           ParameterSet moduleParameters = getModuleParameters(moduleClass);
           moduleParameters.loadValuesFromXML(moduleElement);
@@ -331,8 +347,10 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
         moduleElement.appendChild(paramElement);
 
         ParameterSet moduleParameters = getModuleParameters(module.getClass());
-        moduleParameters.setSkipSensitiveParameters(skipSensitive);
-        moduleParameters.saveValuesToXML(paramElement);
+        if (moduleParameters != null) {
+          moduleParameters.setSkipSensitiveParameters(skipSensitive);
+          moduleParameters.saveValuesToXML(paramElement);
+        }
       }
 
       // save encryption key to local config only
@@ -340,13 +358,6 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
       final SimpleParameterSet encSet = new SimpleParameterSet(new Parameter[]{globalEncrypter});
       encSet.setSkipSensitiveParameters(skipSensitive);
       encSet.saveValuesToXML(prefElement);
-
-      TransformerFactory transfac = TransformerFactory.newInstance();
-      Transformer transformer = transfac.newTransformer();
-      transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-      transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-      transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-      transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
 
       // Create parent folder if it does not exist
       File confParent = file.getParentFile();
@@ -362,9 +373,7 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
         }
       }
 
-      StreamResult result = new StreamResult(new FileOutputStream(file));
-      DOMSource source = new DOMSource(configuration);
-      transformer.transform(source, result);
+      XMLUtils.saveToFile(file, configuration);
 
       // make user home config file invisible on windows
       if ((!skipSensitive) && (System.getProperty("os.name").toLowerCase().contains("windows"))) {
@@ -389,6 +398,11 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
   }
 
   @Override
+  public int getNumOfThreads() {
+    return preferences.getValue(MZminePreferences.numOfThreads);
+  }
+
+  @Override
   @NotNull
   public FileNameListSilentParameter getLastProjectsParameter() {
     return lastProjects;
@@ -396,12 +410,12 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
 
   @Override
   public SimpleColorPalette getDefaultColorPalette() {
-    SimpleColorPalette p =
-        preferences.getParameter(MZminePreferences.defaultColorPalette).getValue();
+    SimpleColorPalette p = preferences.getParameter(MZminePreferences.defaultColorPalette)
+        .getValue();
     if (!p.isValid()) {
       logger.warning(
           "Current default color palette set in preferences is invalid. Returning standard "
-          + "colors.");
+              + "colors.");
       p = new SimpleColorPalette(ColorsFX.getSevenColorPalette(Vision.DEUTERANOPIA, true));
       p.setName("default-deuternopia");
     }
@@ -412,9 +426,9 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
   public SimpleColorPalette getDefaultPaintScalePalette() {
     SimpleColorPalette p = preferences.getParameter(MZminePreferences.defaultPaintScale).getValue();
     if (!p.isValid()) {
-      logger
-          .warning("Current default paint scale set in preferences is invalid. Returning standard "
-                   + "colors.");
+      logger.warning(
+          "Current default paint scale set in preferences is invalid. Returning standard "
+              + "colors.");
       p = new SimpleColorPalette(ColorsFX.getSevenColorPalette(Vision.DEUTERANOPIA, true));
       p.setName("default-deuternopia");
     }
@@ -439,7 +453,14 @@ public class MZmineConfigurationImpl implements MZmineConfiguration {
 
   @Override
   public boolean isDarkMode() {
-    Boolean darkMode = preferences.getParameter(MZminePreferences.darkMode).getValue();
-    return darkMode == null ? false : darkMode;
+    Boolean darkMode = preferences.isDarkMode();
+    return darkMode != null && darkMode;
+  }
+
+  @Override
+  public ImageNormalization getImageNormalization() {
+    final ImageNormalization normalization = preferences.getParameter(
+        MZminePreferences.imageNormalization).getValue();
+    return normalization != null ? normalization : ImageNormalization.NO_NORMALIZATION;
   }
 }

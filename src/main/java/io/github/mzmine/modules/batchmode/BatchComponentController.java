@@ -1,19 +1,26 @@
 /*
- * Copyright 2006-2021 The MZmine Development Team
+ * Copyright (c) 2004-2022 The MZmine Development Team
  *
- * This file is part of MZmine.
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
  *
- * MZmine is free software; you can redistribute it and/or modify it under the terms of the GNU
- * General Public License as published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
  *
- * MZmine is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
- * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with MZmine; if not,
- * write to the Free Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
  */
 
 package io.github.mzmine.modules.batchmode;
@@ -26,6 +33,9 @@ import io.github.mzmine.modules.MZmineProcessingStep;
 import io.github.mzmine.modules.impl.MZmineProcessingStepImpl;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter;
+import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter.OriginalFeatureListOption;
 import io.github.mzmine.parameters.parametertypes.filenames.LastFilesButton;
 import io.github.mzmine.parameters.parametertypes.filenames.LastFilesComponent;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
@@ -34,21 +44,25 @@ import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelectio
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelectionType;
+import io.github.mzmine.util.DialogLoggerUtil;
 import io.github.mzmine.util.ExitCode;
+import io.github.mzmine.util.XMLUtils;
 import io.github.mzmine.util.javafx.DraggableListCell;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TextField;
@@ -61,12 +75,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
@@ -101,6 +110,9 @@ public class BatchComponentController implements LastFilesComponent {
   public Button btnClear;
   @FXML
   public TextField searchField;
+
+  @FXML
+  public ComboBox<OriginalFeatureListOption> cmbHandleFlists;
 
   private BatchQueue batchQueue;
 
@@ -184,6 +196,9 @@ public class BatchComponentController implements LastFilesComponent {
         setParametersPressed(null);
       }
     });
+
+    cmbHandleFlists.setItems(FXCollections.observableArrayList(OriginalFeatureListOption.values()));
+    cmbHandleFlists.setValue(OriginalFeatureListOption.REMOVE);
   }
 
   private boolean hasMatchingChild(TreeItem<Object> item, final String filter) {
@@ -236,20 +251,19 @@ public class BatchComponentController implements LastFilesComponent {
           .getModuleParameters(selectedMethod.getClass());
 
       // Clone the parameter set
-      final ParameterSet stepParams = methodParams.cloneParameterSet();
+      final ParameterSet stepParams =
+          methodParams == null ? new SimpleParameterSet() : methodParams.cloneParameterSet();
 
       // If this is not the first batch step, set the default for raw
       // data file and feature list selection
       if (!batchQueue.isEmpty()) {
         for (Parameter<?> param : stepParams.getParameters()) {
-          if (param instanceof RawDataFilesParameter) {
-            final RawDataFilesParameter rdfp = (RawDataFilesParameter) param;
+          if (param instanceof final RawDataFilesParameter rdfp) {
             final RawDataFilesSelection selection = new RawDataFilesSelection();
             selection.setSelectionType(RawDataFilesSelectionType.BATCH_LAST_FILES);
             rdfp.setValue(selection);
           }
-          if (param instanceof FeatureListsParameter) {
-            final FeatureListsParameter plp = (FeatureListsParameter) param;
+          if (param instanceof final FeatureListsParameter plp) {
             final FeatureListsSelection selection = new FeatureListsSelection();
             selection.setSelectionType(FeatureListsSelectionType.BATCH_LAST_FEATURELISTS);
             plp.setValue(selection);
@@ -401,7 +415,7 @@ public class BatchComponentController implements LastFilesComponent {
    * @throws FileNotFoundException        if the file can't be found.
    */
   private void saveBatchSteps(final File file)
-      throws ParserConfigurationException, TransformerException, FileNotFoundException {
+      throws ParserConfigurationException, TransformerException, IOException {
 
     // Create the document.
     final Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
@@ -412,15 +426,7 @@ public class BatchComponentController implements LastFilesComponent {
     // Serialize batch queue.
     batchQueue.saveToXml(element);
 
-    // Create transformer.
-    final Transformer transformer = TransformerFactory.newInstance().newTransformer();
-    transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-    transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-    transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-
-    // Write to file and transform.
-    transformer.transform(new DOMSource(document), new StreamResult(new FileOutputStream(file)));
+    XMLUtils.saveToFile(file, document);
 
     logger.info("Saved " + batchQueue.size() + " batch step(s) to " + file.getName());
     // add to last used files
@@ -437,9 +443,13 @@ public class BatchComponentController implements LastFilesComponent {
    */
   public void loadBatchSteps(final File file)
       throws ParserConfigurationException, IOException, SAXException {
-
-    final BatchQueue queue = BatchQueue.loadFromXml(
-        DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file).getDocumentElement());
+    List<String> errorMessages = new ArrayList<>();
+    final BatchQueue queue = BatchQueue.loadFromXml(XMLUtils.load(file).getDocumentElement(), errorMessages);
+    // check error messages and show dialog
+    if (!errorMessages.isEmpty()) {
+      DialogLoggerUtil.showMessageDialog("Check batch parameters carefully.",
+          String.join("\n", errorMessages));
+    }
 
     logger.info("Loaded " + queue.size() + " batch step(s) from " + file.getName());
 
@@ -489,8 +499,36 @@ public class BatchComponentController implements LastFilesComponent {
     return item;
   }
 
+
   // Queue operations.
   private enum QueueOperations {
     Replace, Prepend, Insert, Append
+  }
+
+  @FXML
+  void onHandleIntermediateFlistsPressed() {
+    final OriginalFeatureListOption option = cmbHandleFlists.getValue();
+    setHandleOriginalFeatureLists(option);
+    var str = switch (option) {
+      case KEEP -> "keep intermediate feature lists.";
+      case REMOVE -> "remove intermediate feature lists.";
+      case PROCESS_IN_PLACE -> "process on feature lists if possible and remove otherwise.";
+    };
+    MZmineCore.getDesktop()
+        .displayMessage("Batch mode updated", "Updated all batch steps to " + str);
+  }
+
+  public void setHandleOriginalFeatureLists(OriginalFeatureListOption option) {
+    final BatchQueue value = getValue();
+    for (MZmineProcessingStep<MZmineProcessingModule> step : value) {
+      final ParameterSet parameters = step.getParameterSet();
+      for (Parameter<?> parameter : parameters.getParameters()) {
+        if (parameter instanceof OriginalFeatureListHandlingParameter handleParameter) {
+          handleParameter.setValue(option != OriginalFeatureListOption.PROCESS_IN_PLACE ? option
+              : (handleParameter.isIncludeProcessInPlace()
+                  ? OriginalFeatureListOption.PROCESS_IN_PLACE : OriginalFeatureListOption.REMOVE));
+        }
+      }
+    }
   }
 }
