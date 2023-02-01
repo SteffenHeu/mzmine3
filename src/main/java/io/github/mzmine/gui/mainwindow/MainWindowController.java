@@ -508,7 +508,6 @@ public class MainWindowController {
 
     initMiniTaskView();
 
-
     // Update rawDataList context menu depending on selected items
     rawDataList.getSelectionModel().getSelectedItems()
         .addListener((ListChangeListener<GroupableListViewEntity>) change -> {
@@ -573,6 +572,13 @@ public class MainWindowController {
           }
         });
 
+    // add tasks tab
+    TableView<WrappedTask> tasksView = getTasksView();
+    getBottomBox().getChildren().remove(tasksView);
+    MZmineTab tab = new SimpleTab("Tasks");
+    tab.setContent(tasksView);
+    addTab(tab);
+    // add welcome tab
     addTab(new MZmineIntroductionTab());
 
     try {
@@ -604,7 +610,7 @@ public class MainWindowController {
             .forEach(t -> t.getActualTask().cancel()));
     miniTaskView.getProgressBarContextMenu().getItems().add(cancelAll);
     miniTaskView.setOnProgressBarClicked(e -> {
-      if(e.getButton() == MouseButton.PRIMARY) {
+      if (e.getButton() == MouseButton.PRIMARY) {
         MZmineCore.getDesktop().handleShowTaskView();
       }
     });

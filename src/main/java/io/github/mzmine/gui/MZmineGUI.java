@@ -124,7 +124,7 @@ public class MZmineGUI extends Application implements Desktop {
   private static MainWindowController mainWindowController;
   private static Stage mainStage;
   private static Scene rootScene;
-  private static WindowLocation currentTaskManagerLocation = WindowLocation.MAIN;
+  private static WindowLocation currentTaskManagerLocation = TAB;
   private static Stage currentTaskWindow;
   private Label statusLabel;
 
