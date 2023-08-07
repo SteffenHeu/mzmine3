@@ -50,12 +50,15 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.correlation.CorrelationData;
 import io.github.mzmine.datamodel.impl.SimplePseudoSpectrum;
+import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
+import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ADAPChromatogramBuilderParameters;
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule;
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderTask;
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.correlation.FeatureCorrelationUtil.DIA;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.combowithinput.MsLevelFilter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelectionType;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
@@ -73,7 +76,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -143,7 +148,7 @@ public class DiaMs2CorrTask extends AbstractTask {
   @Override
   public double getFinishedPercentage() {
     return (adapTask != null ? adapTask.getFinishedPercentage() * 0.5 : 0)
-           + (currentRow / (double) numRows) * 0.5d;
+        + (currentRow / (double) numRows) * 0.5d;
   }
 
   @Override
@@ -357,8 +362,8 @@ public class DiaMs2CorrTask extends AbstractTask {
 
   private ModularFeatureList buildChromatograms(MZmineProject dummyProject, RawDataFile file) {
     // currently the consecutive scans are used
-    adapTask = ModularADAPChromatogramBuilderTask.forChromatography(dummyProject, file,adapParameters,
-        getMemoryMapStorage(), getModuleCallDate(), DiaMs2CorrModule.class);
+    adapTask = ModularADAPChromatogramBuilderTask.forChromatography(dummyProject, file,
+        adapParameters, getMemoryMapStorage(), getModuleCallDate(), DiaMs2CorrModule.class);
 
     adapTask.run();
     adapTask = new FinishedTask(adapTask);
@@ -432,5 +437,32 @@ public class DiaMs2CorrTask extends AbstractTask {
     if (adapTask != null) {
       adapTask.cancel();
     }
+  }
+
+  private Map<IsolationWindow, List<Scan>> extractIsolationWindows(@NotNull final RawDataFile file) {
+    final ScanSelection scanSelection = new ScanSelection(MsLevelFilter.of(2));
+    Map<IsolationWindow, List<Scan>> windowScanMap = new HashMap<>();
+    for (Scan scan : scanSelection.getMatchingScans(file)) {
+      final MsMsInfo msMsInfo = scan.getMsMsInfo();
+      if(msMsInfo == null) {
+        continue;
+      }
+
+      final Range<Double> mzRange = msMsInfo.getIsolationWindow();
+
+      IsolationWindow window;
+      if(msMsInfo instanceof IonMobilityMsMsInfo imsInfo) {
+        final Range<Float> mobRange = imsInfo.getMobilityRange();
+        window = new IsolationWindow(mzRange, mobRange);
+      } else {
+        window = new IsolationWindow(mzRange, null);
+      }
+      final List<Scan> scans = windowScanMap.computeIfAbsent(window, w -> new ArrayList<>());
+      scans.add(scan);
+    }
+
+    return windowScanMap;
+    // todo: build chromatograms in correct ranges
+    // for ims files mock frames? maybe via dummy raw files?
   }
 }
