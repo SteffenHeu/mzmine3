@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -80,7 +80,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -782,8 +781,9 @@ public class ScanUtils {
     List<PasefMsMsInfo> featureMsMsInfos = new ArrayList<>();
     Collection<? extends Frame> ms2Frames = imsRawDataFile.getFrames(2, rtRange);
     for (Frame frame : ms2Frames) {
-      Set<PasefMsMsInfo> frameMsMsInfos = frame.getImsMsMsInfos();
-      for (PasefMsMsInfo msmsInfo : frameMsMsInfos) {
+      final List<PasefMsMsInfo> infos = frame.getImsMsMsInfos().stream()
+          .filter(info -> info instanceof PasefMsMsInfo).map(info -> (PasefMsMsInfo) info).toList();
+      for (PasefMsMsInfo msmsInfo : infos) {
         if (mzRange.contains(msmsInfo.getIsolationMz())) {
           featureMsMsInfos.add(msmsInfo);
         }

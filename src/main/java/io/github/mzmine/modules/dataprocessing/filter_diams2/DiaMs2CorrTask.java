@@ -80,6 +80,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -439,26 +440,27 @@ public class DiaMs2CorrTask extends AbstractTask {
     }
   }
 
-  private Map<IsolationWindow, List<Scan>> extractIsolationWindows(@NotNull final RawDataFile file) {
+  private Map<IsolationWindow, List<Scan>> extractIsolationWindows(
+      @NotNull final RawDataFile file) {
     final ScanSelection scanSelection = new ScanSelection(MsLevelFilter.of(2));
     Map<IsolationWindow, List<Scan>> windowScanMap = new HashMap<>();
     for (Scan scan : scanSelection.getMatchingScans(file)) {
-      final MsMsInfo msMsInfo = scan.getMsMsInfo();
-      if(msMsInfo == null) {
-        continue;
-      }
 
-      final Range<Double> mzRange = msMsInfo.getIsolationWindow();
+      if (scan instanceof Frame frame) {
+        final Set<IonMobilityMsMsInfo> imsMsMsInfos = frame.getImsMsMsInfos();
 
-      IsolationWindow window;
-      if(msMsInfo instanceof IonMobilityMsMsInfo imsInfo) {
-        final Range<Float> mobRange = imsInfo.getMobilityRange();
-        window = new IsolationWindow(mzRange, mobRange);
       } else {
+        final MsMsInfo msMsInfo = scan.getMsMsInfo();
+        if (msMsInfo == null) {
+          continue;
+        }
+
+        final Range<Double> mzRange = msMsInfo.getIsolationWindow();
+        IsolationWindow window;
         window = new IsolationWindow(mzRange, null);
+        final List<Scan> scans = windowScanMap.computeIfAbsent(window, w -> new ArrayList<>());
+        scans.add(scan);
       }
-      final List<Scan> scans = windowScanMap.computeIfAbsent(window, w -> new ArrayList<>());
-      scans.add(scan);
     }
 
     return windowScanMap;

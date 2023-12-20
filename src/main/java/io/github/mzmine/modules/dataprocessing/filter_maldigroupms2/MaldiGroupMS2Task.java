@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -164,8 +164,9 @@ public class MaldiGroupMS2Task extends AbstractTask {
       final List<PasefMsMsInfo> msmsInfos = files.stream()
           .flatMap(file -> file.getScanNumbers(2).stream()).filter(
               scan -> (scan instanceof ImagingFrame imgFrame)
-                  && imgFrame.getMaldiSpotInfo() != null)
-          .flatMap(f -> ((ImagingFrame) f).getImsMsMsInfos().stream())
+                  && imgFrame.getMaldiSpotInfo() != null).flatMap(
+              f -> ((ImagingFrame) f).getImsMsMsInfos().stream()
+                  .filter(i -> i instanceof PasefMsMsInfo).map(i -> (PasefMsMsInfo) i))
           .sorted(Comparator.comparingDouble(info -> info.getIsolationMz())).toList();
 
       // for all features

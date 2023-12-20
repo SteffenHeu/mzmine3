@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -41,7 +41,7 @@ import io.github.mzmine.datamodel.impl.BuildingMobilityScan;
 import io.github.mzmine.datamodel.impl.MsdkScanWrapper;
 import io.github.mzmine.datamodel.impl.SimpleFrame;
 import io.github.mzmine.datamodel.impl.masslist.ScanPointerMassList;
-import io.github.mzmine.datamodel.msms.PasefMsMsInfo;
+import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.MZmineProcessingStep;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetector;
@@ -296,7 +296,7 @@ public class MSDKmzMLImportTask extends AbstractTask {
 
     final List<BuildingMobilityScan> mobilityScans = new ArrayList<>();
     final List<BuildingImsMsMsInfo> buildingImsMsMsInfos = new ArrayList<>();
-    Set<PasefMsMsInfo> finishedImsMsMsInfos;
+    Set<IonMobilityMsMsInfo> finishedImsMsMsInfos;
     final IMSRawDataFile newImsFile = (IMSRawDataFile) newMZmineFile;
 
     // index ion mobility values first, some manufacturers don't save all scans for all frames if

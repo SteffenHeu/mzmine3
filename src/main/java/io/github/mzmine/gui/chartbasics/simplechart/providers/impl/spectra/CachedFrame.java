@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -35,8 +35,8 @@ import io.github.mzmine.datamodel.MobilityType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.impl.MobilityScanStorage;
+import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
-import io.github.mzmine.datamodel.msms.PasefMsMsInfo;
 import io.github.mzmine.util.DataPointUtils;
 import it.unimi.dsi.fastutil.doubles.DoubleImmutableList;
 import java.util.ArrayList;
@@ -143,13 +143,12 @@ public class CachedFrame implements Frame {
   }
 
   @Override
-  public @NotNull Set<PasefMsMsInfo> getImsMsMsInfos() {
+  public @NotNull Set<IonMobilityMsMsInfo> getImsMsMsInfos() {
     return originalFrame.getImsMsMsInfos();
   }
 
-  @Nullable
   @Override
-  public PasefMsMsInfo getImsMsMsInfoForMobilityScan(int mobilityScanNumber) {
+  public @Nullable IonMobilityMsMsInfo getImsMsMsInfoForMobilityScan(int mobilityScanNumber) {
     return originalFrame.getImsMsMsInfoForMobilityScan(mobilityScanNumber);
   }
 

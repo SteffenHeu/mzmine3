@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -32,7 +32,7 @@ import io.github.mzmine.datamodel.MobilityScan;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.data_access.BinningMobilogramDataAccess;
 import io.github.mzmine.datamodel.data_access.EfficientDataAccess;
-import io.github.mzmine.datamodel.msms.PasefMsMsInfo;
+import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
 import io.github.mzmine.gui.chartbasics.chartgroups.ChartGroup;
 import io.github.mzmine.gui.chartbasics.chartthemes.EStandardChartTheme;
 import io.github.mzmine.gui.chartbasics.gestures.SimpleDataDragGestureHandler;
@@ -285,17 +285,21 @@ public class IMSRawDataOverviewPane extends BorderPane {
     final Color boxClr = MZmineCore.getConfiguration().getDefaultColorPalette()
         .getNegativeColorAWT();
     final Color transparent = new Color(0.5f, 0f, 0f, 0.5f);
-    for (PasefMsMsInfo info : selectedFrame.get().getImsMsMsInfos()) {
-      final double mobLow = selectedFrame.get()
-          .getMobilityForMobilityScanNumber(info.getSpectrumNumberRange().lowerEndpoint());
-      final double mobHigh = selectedFrame.get()
-          .getMobilityForMobilityScanNumber(info.getSpectrumNumberRange().upperEndpoint());
-      var rect = new Rectangle2D.Double(info.getIsolationWindow().lowerEndpoint(),
-          Math.min(mobLow, mobHigh), RangeUtils.rangeLength(info.getIsolationWindow()),
-          Math.abs(mobHigh - mobLow));
-      final XYShapeAnnotation precursorIso = new XYShapeAnnotation(rect, new BasicStroke(1f),
-          Color.red, null);
-      heatmapChart.getXYPlot().addAnnotation(precursorIso);
+    for (IonMobilityMsMsInfo info : selectedFrame.get().getImsMsMsInfos()) {
+      try {
+        final double mobLow = selectedFrame.get()
+            .getMobilityForMobilityScanNumber(info.getSpectrumNumberRange().lowerEndpoint());
+        final double mobHigh = selectedFrame.get()
+            .getMobilityForMobilityScanNumber(info.getSpectrumNumberRange().upperEndpoint());
+        var rect = new Rectangle2D.Double(info.getIsolationWindow().lowerEndpoint(),
+            Math.min(mobLow, mobHigh), RangeUtils.rangeLength(info.getIsolationWindow()),
+            Math.abs(mobHigh - mobLow));
+        final XYShapeAnnotation precursorIso = new XYShapeAnnotation(rect, new BasicStroke(1f),
+            Color.red, null);
+        heatmapChart.getXYPlot().addAnnotation(precursorIso);
+      } catch (NullPointerException e) {
+        // silent, one of the ranges may be null.
+      }
     }
   }
 

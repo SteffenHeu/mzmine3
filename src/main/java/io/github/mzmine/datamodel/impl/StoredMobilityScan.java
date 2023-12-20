@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -34,7 +34,7 @@ import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.MobilityScan;
 import io.github.mzmine.datamodel.MobilityType;
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.msms.PasefMsMsInfo;
+import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
 import io.github.mzmine.util.scans.ScanUtils;
 import java.util.Iterator;
 import java.util.Objects;
@@ -165,9 +165,8 @@ public class StoredMobilityScan implements MobilityScan {
     return index;
   }
 
-  @Nullable
   @Override
-  public PasefMsMsInfo getMsMsInfo() {
+  public @Nullable IonMobilityMsMsInfo getMsMsInfo() {
     return storage.getFrame().getImsMsMsInfoForMobilityScan(getMobilityScanNumber());
   }
 

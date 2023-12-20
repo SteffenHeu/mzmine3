@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -296,7 +296,9 @@ public class GroupMS2Task extends AbstractTask {
     final List<Frame> frames = (List<Frame>) scans;
     final List<MsMsInfo> eligibleMsMsInfos = new ArrayList<>();
     for (Frame frame : frames) {
-      frame.getImsMsMsInfos().forEach(imsMsMsInfo -> {
+      final List<PasefMsMsInfo> infos = frame.getImsMsMsInfos().stream()
+          .filter(info -> info instanceof PasefMsMsInfo).map(info -> (PasefMsMsInfo) info).toList();
+      infos.forEach(imsMsMsInfo -> {
         if (mzTol.checkWithinTolerance(fmz, imsMsMsInfo.getIsolationMz())) {
           // if we have a mobility (=processed by IMS workflow), we can check for the correct range during assignment.
           if (mobility != null) {
