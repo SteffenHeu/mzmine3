@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -63,7 +63,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -84,21 +84,21 @@ public final class MZmineCore {
   private static final Logger logger = Logger.getLogger(MZmineCore.class.getName());
 
   private static final MZmineCore instance = new MZmineCore();
+  private static boolean isFxInitialized = false;
 
   // the default headless desktop is returned if no other desktop is set (e.g., during start up)
   // it is also used in headless mode
   private final Desktop defaultHeadlessDesktop = new HeadLessDesktop();
   private final List<MemoryMapStorage> storageList = Collections.synchronizedList(
       new ArrayList<>());
-  private final Map<Class<?>, MZmineModule> initializedModules = new Hashtable<>();
+  private final Map<String, MZmineModule> initializedModules = new HashMap<>();
   private TaskControllerImpl taskController;
   private MZmineConfiguration configuration;
   private Desktop desktop;
   private ProjectManagerImpl projectManager;
   private boolean headLessMode = true;
   private boolean tdfPseudoProfile = false;
-  // batch exit code is only set if run in headless mode with batch file
-  private ExitCode batchExitCode = null;
+  private boolean tsfProfile = false;
 
   private MZmineCore() {
     init();
@@ -137,6 +137,7 @@ public final class MZmineCore {
       MZmineArgumentParser argsParser = new MZmineArgumentParser();
       argsParser.parse(args);
       getInstance().tdfPseudoProfile = argsParser.isLoadTdfPseudoProfile();
+      getInstance().tsfProfile = argsParser.isLoadTsfProfile();
 
       // override preferences file by command line argument pref
       final File prefFile = Objects.requireNonNullElse(argsParser.getPreferencesFile(),
@@ -167,7 +168,7 @@ public final class MZmineCore {
         } else {
           logger.log(Level.WARNING,
               "Cannot create or access temp file directory that was set via program argument: "
-                  + tempDirectory.getAbsolutePath());
+              + tempDirectory.getAbsolutePath());
         }
       }
 
@@ -186,11 +187,19 @@ public final class MZmineCore {
             .getParameter(MZminePreferences.memoryOption).getValue();
       }
 
+      String numCores = argsParser.getNumCores();
+      setNumThreadsOverride(numCores);
+
+      // after loading the config and numCores
+      getInstance().taskController = TaskControllerImpl.getInstance();
+
       // apply memory management option
       keepInMemory.enforceToMemoryMapping();
 
       // batch mode defined by command line argument
       File batchFile = argsParser.getBatchFile();
+      File[] overrideDataFiles = argsParser.getOverrideDataFiles();
+      File[] overrideSpectralLibraryFiles = argsParser.getOverrideSpectralLibrariesFiles();
       boolean keepRunningInHeadless = argsParser.isKeepRunningAfterBatch();
 
       // track version use
@@ -203,9 +212,9 @@ public final class MZmineCore {
       if (!getInstance().headLessMode) {
         try {
           logger.info("Starting MZmine GUI");
+          isFxInitialized = true;
           Application.launch(MZmineGUI.class, args);
         } catch (Throwable e) {
-          e.printStackTrace();
           logger.log(Level.SEVERE, "Could not initialize GUI", e);
           System.exit(1);
         }
@@ -215,6 +224,7 @@ public final class MZmineCore {
         // Tracker
         GoogleAnalyticsTracker.track("MZmine Loaded (Headless mode)", "/JAVA/Main/HEADLESS");
 
+        Task batchTask = null;
         if (batchFile != null) {
           // load batch
           if ((!batchFile.exists()) || (!batchFile.canRead())) {
@@ -223,19 +233,44 @@ public final class MZmineCore {
           }
 
           // run batch file
-          getInstance().batchExitCode = BatchModeModule.runBatch(
-              getInstance().projectManager.getCurrentProject(), batchFile, Instant.now());
+          batchTask = BatchModeModule.runBatch(
+              getInstance().projectManager.getCurrentProject(), batchFile, overrideDataFiles,
+              overrideSpectralLibraryFiles, Instant.now());
         }
 
         // option to keep MZmine running after the batch is finished
         // currently used to test - maybe useful to provide an API to access more data or to run other modules on demand
         if (!keepRunningInHeadless) {
-          exit();
+          exit(batchTask);
         }
       }
     } catch (Exception ex) {
       logger.log(Level.SEVERE, "Error during MZmine start up", ex);
-      exit();
+      exit(null);
+    }
+  }
+
+  /**
+   * Set number of cores to automatic or to fixed number
+   *
+   * @param numCores "auto" for automatic or integer
+   */
+  public static void setNumThreadsOverride(@Nullable final String numCores) {
+    if (numCores != null) {
+      // set to preferences
+      var parameter = getInstance().configuration.getPreferences()
+          .getParameter(MZminePreferences.numOfThreads);
+      if (numCores.equalsIgnoreCase("auto") || numCores.equalsIgnoreCase("automatic")) {
+        parameter.setAutomatic(true);
+      } else {
+        try {
+          parameter.setValue(Integer.parseInt(numCores));
+        } catch (Exception ex) {
+          logger.log(Level.SEVERE,
+              "Cannot parse command line argument threads (int) set to " + numCores);
+          throw new IllegalArgumentException("numCores was set to " + numCores, ex);
+        }
+      }
     }
   }
 
@@ -251,8 +286,13 @@ public final class MZmineCore {
   /**
    * Exit MZmine (usually used in headless mode)
    */
-  public static void exit() {
-    if (instance.batchExitCode == ExitCode.OK || instance.batchExitCode == null) {
+  public static void exit(final @Nullable Task batchTask) {
+    if(isHeadLessMode() && isFxInitialized) {
+      // fx might be initialized for graphics export in headless mode - shut it down
+      // in GUI mode it is shut down automatically
+      Platform.exit();
+    }
+    if (batchTask == null || batchTask.isFinished()) {
       System.exit(0);
     } else {
       System.exit(1);
@@ -297,8 +337,11 @@ public final class MZmineCore {
   @SuppressWarnings("unchecked")
   public synchronized static <ModuleType extends MZmineModule> ModuleType getModuleInstance(
       Class<ModuleType> moduleClass) {
+    if (moduleClass == null) {
+      return null;
+    }
 
-    ModuleType module = (ModuleType) getInstance().initializedModules.get(moduleClass);
+    ModuleType module = (ModuleType) getInstance().initializedModules.get(moduleClass.getName());
 
     if (module == null) {
 
@@ -310,11 +353,10 @@ public final class MZmineCore {
         module = moduleClass.getDeclaredConstructor().newInstance();
 
         // Add to the module list
-        getInstance().initializedModules.put(moduleClass, module);
+        getInstance().initializedModules.put(moduleClass.getName(), module);
 
       } catch (Throwable e) {
         logger.log(Level.SEVERE, "Could not start module " + moduleClass, e);
-        e.printStackTrace();
         return null;
       }
     }
@@ -448,7 +490,6 @@ public final class MZmineCore {
       }
       return new Semver(versionString, SemverType.LOOSE);
     } catch (Exception e) {
-      e.printStackTrace();
       return new Semver("3-SNAPSHOT", SemverType.LOOSE);
     }
   }
@@ -500,8 +541,10 @@ public final class MZmineCore {
     }
 
     if (tempDir.isDirectory()) {
-      System.setProperty("java.io.tmpdir", tempDir.getAbsolutePath());
-      logger.finest(() -> "Working temporary directory is " + System.getProperty("java.io.tmpdir"));
+      FileAndPathUtil.setTempDir(tempDir.getAbsoluteFile());
+      logger.finest(() -> "Default temporary directory is " + System.getProperty("java.io.tmpdir"));
+      logger.finest(
+          () -> "Working temporary directory is " + FileAndPathUtil.getTempDir().toString());
       // check the new temp dir for old files.
       Thread cleanupThread2 = new Thread(new TmpFileCleanup());
       cleanupThread2.setPriority(Thread.MIN_PRIORITY);
@@ -517,6 +560,13 @@ public final class MZmineCore {
   }
 
   /**
+   * @return currently just negates {@link #isHeadLessMode()}
+   */
+  public static boolean isGUI() {
+    return !isHeadLessMode();
+  }
+
+  /**
    * @param r runnable to either run directly or on the JavaFX thread
    */
   public static void runLater(Runnable r) {
@@ -528,10 +578,27 @@ public final class MZmineCore {
   }
 
   /**
+   * @param r runnable to either run directly or on the JavaFX thread
+   */
+  public static void runLaterEnsureFxInitialized(Runnable r) {
+    if (Platform.isFxApplicationThread()) {
+      r.run();
+    } else {
+      if (!isFxInitialized) {
+        initJavaFxInHeadlessMode();
+      }
+      Platform.runLater(r);
+    }
+  }
+
+  /**
    * Simulates Swing's invokeAndWait(). Based on
    * https://news.kynosarges.org/2014/05/01/simulating-platform-runandwait/
    */
   public static void runOnFxThreadAndWait(Runnable r) {
+    if (!isFxInitialized) {
+      initJavaFxInHeadlessMode();
+    }
     FxThreadUtil.runOnFxThreadAndWait(r);
   }
 
@@ -554,6 +621,18 @@ public final class MZmineCore {
     return getProjectManager().getCurrentProject();
   }
 
+  /**
+   * Might be needed for graphics export in headless batch mode
+   */
+  public static void initJavaFxInHeadlessMode() {
+    if (isFxInitialized) {
+      return;
+    }
+    Platform.startup(() -> {
+    });
+    isFxInitialized = true;
+  }
+
   private void init() {
     // In the beginning, set the default locale to English, to avoid
     // problems with conversion of numbers etc. (e.g. decimal separator may
@@ -568,12 +647,15 @@ public final class MZmineCore {
 
     // Create instances of core modules
     projectManager = ProjectManagerImpl.getInstance();
-    taskController = TaskControllerImpl.getInstance();
 
     logger.fine("Initializing core classes..");
   }
 
   public boolean isTdfPseudoProfile() {
     return tdfPseudoProfile;
+  }
+
+  public boolean isTsfProfile() {
+    return tsfProfile;
   }
 }

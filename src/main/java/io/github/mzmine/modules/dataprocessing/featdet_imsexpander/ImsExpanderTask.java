@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -46,9 +46,9 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter.OriginalFeatureListOption;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
-import io.github.mzmine.taskcontrol.AllTasksFinishedListener;
 import io.github.mzmine.taskcontrol.TaskPriority;
 import io.github.mzmine.taskcontrol.TaskStatus;
+import io.github.mzmine.taskcontrol.threadpools.ThreadPoolTask;
 import io.github.mzmine.util.DataTypeUtils;
 import io.github.mzmine.util.FeatureListUtils;
 import io.github.mzmine.util.MemoryMapStorage;
@@ -56,9 +56,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -66,9 +64,9 @@ import org.jetbrains.annotations.Nullable;
 public class ImsExpanderTask extends AbstractTask {
 
   private static final Logger logger = Logger.getLogger(ImsExpanderTask.class.getName());
-  private static final int NUM_THREADS = MZmineCore.getConfiguration().getPreferences()
+  private final int NUM_THREADS = MZmineCore.getConfiguration().getPreferences()
       .getParameter(MZminePreferences.numOfThreads).getValue();
-  private static final String SUFFIX = " expanded ";
+  private static final String SUFFIX = " expanded";
   protected final ParameterSet parameters;
   protected final ModularFeatureList flist;
   final List<AbstractTask> tasks = new ArrayList<>();
@@ -78,6 +76,7 @@ public class ImsExpanderTask extends AbstractTask {
   private final AtomicInteger processedRows = new AtomicInteger(0);
   private final int binWidth;
   private final int maxNumTraces;
+  private final OriginalFeatureListOption handleOriginal;
   private String desc = "Mobility expanding.";
   private long totalRows = 1;
   private long createdRows = 0;
@@ -100,6 +99,7 @@ public class ImsExpanderTask extends AbstractTask {
         ? parameters.getParameter(ImsExpanderParameters.mobilogramBinWidth).getEmbeddedParameter()
         .getValue() : BinningMobilogramDataAccess.getRecommendedBinWidth(
         (IMSRawDataFile) flist.getRawDataFile(0));
+    handleOriginal = this.parameters.getParameter(ImsExpanderParameters.handleOriginal).getValue();
   }
 
   @Override
@@ -117,7 +117,7 @@ public class ImsExpanderTask extends AbstractTask {
       sum += finishedPercentage;
     }
     return 0.4 * sum / tasks.size() + 0.4 * (processedRows.get() / (double) totalRows)
-        + 0.2 * createdRows / (double) totalRows;
+           + 0.2 * createdRows / (double) totalRows;
   }
 
   @Override
@@ -126,7 +126,7 @@ public class ImsExpanderTask extends AbstractTask {
     if (flist.getNumberOfRawDataFiles() != 1 || !(flist.getRawDataFile(
         0) instanceof IMSRawDataFile imsFile)) {
       setErrorMessage("More than one raw data file in feature list " + flist.getName()
-          + " or no mobility dimension in raw data file.");
+                      + " or no mobility dimension in raw data file.");
       setStatus(TaskStatus.ERROR);
       return;
     }
@@ -150,13 +150,24 @@ public class ImsExpanderTask extends AbstractTask {
             useMzToleranceRange ? mzTolerance.getToleranceRange(row.getAverageMZ())
                 : row.getFeature(imsFile).getRawDataPointsMZRange())).toList());
 
+    if (expandingTraces.isEmpty()) {
+      newFlist.getAppliedMethods().add(
+          new SimpleFeatureListAppliedMethod(ImsExpanderModule.class, parameters,
+              getModuleCallDate()));
+      handleOriginal.reflectNewFeatureListToProject(SUFFIX, project, newFlist, flist);
+      setStatus(TaskStatus.FINISHED);
+      desc = "No traces in feature list " + flist.getName();
+      return;
+    }
+
     final List<Frame> frames = (List<Frame>) flist.getSeletedScans(flist.getRawDataFile(0));
     assert frames != null;
 
     // we partition the traces (sorted by rt) so we can start and end at specific frames. By splitting
     // the traces and not frames, we can also directly store the raw data on the SSD/HDD as soon as
     // a thread finishes. Thereby we can reduce the memory consumption, especially in images.
-    final int tracesPerList = Math.min(expandingTraces.size() / NUM_THREADS, maxNumTraces);
+    final int tracesPerList = Math.max(1,
+        Math.min(expandingTraces.size() / NUM_THREADS, maxNumTraces));
     expandingTraces.sort(
         (a, b) -> Float.compare(a.getRtRange().lowerEndpoint(), b.getRtRange().lowerEndpoint()));
     final List<List<ExpandingTrace>> subLists = Lists.partition(expandingTraces, tracesPerList);
@@ -184,34 +195,12 @@ public class ImsExpanderTask extends AbstractTask {
               mobilogramDataAccess, imsFile));
     }
 
-    final AtomicBoolean allThreadsFinished = new AtomicBoolean(false);
-    final AtomicBoolean mayContinue = new AtomicBoolean(true);
+    // might need a copy of task list -  we usually clear the tasks list to not hold on to memory
+    ThreadPoolTask poolTask = ThreadPoolTask.createDefaultTaskManagerPool(getTaskDescription(),
+        new ArrayList<>(tasks));
+    MZmineCore.getTaskController().runTaskOnThisThreadBlocking(poolTask);
 
-    // DO NOT DELETE, adds itself to the tasks
-    final AllTasksFinishedListener listener = new AllTasksFinishedListener(tasks, true,
-        c -> allThreadsFinished.set(true), c -> {
-      mayContinue.set(false);
-      allThreadsFinished.set(true);
-    }, c -> {
-      mayContinue.set(false);
-      allThreadsFinished.set(true);
-    });
-
-    MZmineCore.getTaskController().addTasks(tasks.toArray(AbstractTask[]::new));
-
-    while (!allThreadsFinished.get()) {
-      try {
-        Thread.sleep(100L);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-        logger.log(Level.WARNING, e.getMessage(), e);
-        setErrorMessage(e.getMessage());
-        setStatus(TaskStatus.ERROR);
-        return;
-      }
-    }
-
-    if (!mayContinue.get() || getStatus() == TaskStatus.CANCELED) {
+    if (poolTask.getStatus() == TaskStatus.CANCELED) {
       setStatus(TaskStatus.CANCELED);
       return;
     }
@@ -239,9 +228,6 @@ public class ImsExpanderTask extends AbstractTask {
     newFlist.getAppliedMethods().add(
         new SimpleFeatureListAppliedMethod(ImsExpanderModule.class, parameters,
             getModuleCallDate()));
-    final OriginalFeatureListOption handleOriginal = parameters.getParameter(
-        ImsExpanderParameters.handleOriginal).getValue();
-    // add new list / remove old if requested
     handleOriginal.reflectNewFeatureListToProject(SUFFIX, project, newFlist, flist);
     setStatus(TaskStatus.FINISHED);
   }

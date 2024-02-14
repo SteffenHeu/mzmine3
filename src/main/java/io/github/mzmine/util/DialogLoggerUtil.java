@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,7 +25,9 @@
 
 package io.github.mzmine.util;
 
+import io.github.mzmine.main.MZmineCore;
 import java.util.Optional;
+import java.util.logging.Logger;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.geometry.Insets;
@@ -35,8 +37,11 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
+import org.jetbrains.annotations.Nullable;
 
 public class DialogLoggerUtil {
+
+  private static final Logger logger = Logger.getLogger(DialogLoggerUtil.class.getName());
 
   /*
    * Dialogs
@@ -47,6 +52,10 @@ public class DialogLoggerUtil {
   }
 
   public static void showErrorDialog(String title, String message) {
+    logger.info(title + ": " + message);
+    if (MZmineCore.isHeadLessMode()) {
+      return;
+    }
     Alert alert = new Alert(AlertType.ERROR, null);
     alert.setTitle(title);
     // seems like a good size for the dialog message when an old batch is loaded into new version
@@ -58,7 +67,17 @@ public class DialogLoggerUtil {
     alert.showAndWait();
   }
 
-  public static void showMessageDialog(String title, String message) {
+  @Nullable
+  public static Alert showMessageDialog(String title, String message) {
+    return showMessageDialog(title, message, true);
+  }
+
+  @Nullable
+  public static Alert showMessageDialog(String title, String message, boolean modal) {
+    logger.info(title + ": " + message);
+    if (MZmineCore.isHeadLessMode()) {
+      return null;
+    }
     Alert alert = new Alert(AlertType.INFORMATION, null);
     alert.setTitle(title);
     alert.setHeaderText(title);
@@ -68,7 +87,12 @@ public class DialogLoggerUtil {
     HBox box = new HBox(label);
     box.setPadding(new Insets(5));
     alert.getDialogPane().setContent(box);
-    alert.showAndWait();
+    if (modal) {
+      alert.showAndWait();
+    } else {
+      alert.show();
+    }
+    return alert;
   }
 
   public static boolean showDialogYesNo(String title, String message) {
@@ -80,18 +104,22 @@ public class DialogLoggerUtil {
 
   /**
    * shows a message dialog just for a few given milliseconds
-   *
-   * @param title
-   * @param message
-   * @param time
    */
-  public static void showMessageDialogForTime(String title, String message, long time) {
-    Alert alert = new Alert(AlertType.INFORMATION, message);
-    alert.setTitle(title);
-    alert.show();
-    Timeline idleTimer = new Timeline(new KeyFrame(Duration.millis(time), e -> alert.hide()));
-    idleTimer.setCycleCount(1);
-    idleTimer.play();
+  public static void showMessageDialogForTime(String title, String message) {
+    showMessageDialogForTime(title, message, 3500);
+  }
+  public static void showMessageDialogForTime(String title, String message, long timeMillis) {
+    MZmineCore.runLater(() -> {
+      Alert alert = showMessageDialog(title, message, false);
+      if (alert == null) {
+        return;
+      }
+
+      Timeline idleTimer = new Timeline(
+          new KeyFrame(Duration.millis(timeMillis), e -> alert.hide()));
+      idleTimer.setCycleCount(1);
+      idleTimer.play();
+    });
   }
 
 }

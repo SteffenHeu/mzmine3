@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,6 +26,7 @@
 package io.github.mzmine.gui;
 
 
+import static io.github.mzmine.gui.WindowLocation.TAB;
 import static io.github.mzmine.modules.io.projectload.ProjectLoaderParameters.projectFile;
 
 import com.google.common.collect.ImmutableList;
@@ -34,9 +35,11 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.gui.NewVersionCheck.CheckType;
 import io.github.mzmine.gui.helpwindow.HelpWindow;
+import io.github.mzmine.gui.mainwindow.GlobalKeyHandler;
 import io.github.mzmine.gui.mainwindow.MZmineTab;
 import io.github.mzmine.gui.mainwindow.MainWindowController;
 import io.github.mzmine.gui.mainwindow.SimpleTab;
+import io.github.mzmine.gui.mainwindow.tasksview.TasksViewController;
 import io.github.mzmine.gui.preferences.MZminePreferences;
 import io.github.mzmine.main.GoogleAnalyticsTracker;
 import io.github.mzmine.main.MZmineCore;
@@ -50,7 +53,6 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.project.impl.ProjectChangeEvent;
 import io.github.mzmine.project.impl.ProjectChangeListener;
 import io.github.mzmine.taskcontrol.Task;
-import io.github.mzmine.taskcontrol.impl.WrappedTask;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.GUIUtils;
 import io.github.mzmine.util.javafx.FxColorUtil;
@@ -89,13 +91,15 @@ import javafx.scene.control.Dialog;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
-import javafx.scene.control.TableView;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -123,7 +127,7 @@ public class MZmineGUI extends Application implements Desktop {
   private static MainWindowController mainWindowController;
   private static Stage mainStage;
   private static Scene rootScene;
-  private static WindowLocation currentTaskManagerLocation = WindowLocation.MAIN;
+  private static WindowLocation currentTaskManagerLocation = WindowLocation.TAB;
   private static Stage currentTaskWindow;
   private Label statusLabel;
 
@@ -336,11 +340,13 @@ public class MZmineGUI extends Application implements Desktop {
       if (!rawDataFiles.isEmpty() || !libraryFiles.isEmpty()) {
         if (!rawDataFiles.isEmpty()) {
           logger.finest(() -> "Importing " + rawDataFiles.size() + " raw files via drag and drop: "
-              + rawDataFiles.stream().map(File::getAbsolutePath).collect(Collectors.joining(", ")));
+                              + rawDataFiles.stream().map(File::getAbsolutePath)
+                                  .collect(Collectors.joining(", ")));
         }
         if (!libraryFiles.isEmpty()) {
           logger.finest(() -> "Importing " + libraryFiles.size() + " raw files via drag and drop: "
-              + libraryFiles.stream().map(File::getAbsolutePath).collect(Collectors.joining(", ")));
+                              + libraryFiles.stream().map(File::getAbsolutePath)
+                                  .collect(Collectors.joining(", ")));
         }
 
         // set raw and library files to parameter
@@ -367,32 +373,25 @@ public class MZmineGUI extends Application implements Desktop {
     event.consume();
   }
 
-  public static TableView<WrappedTask> removeTasksFromBottom() {
-    TableView<WrappedTask> tasksView = mainWindowController.getTasksView();
-    mainWindowController.getBottomBox().getChildren().remove(tasksView);
-    return tasksView;
-  }
-
-  public static void addTasksToBottom() {
-    TableView<WrappedTask> tasksView = mainWindowController.getTasksView();
-    ObservableList<Node> children = mainWindowController.getBottomBox().getChildren();
-    if (!children.contains(tasksView)) {
-      children.add(0, tasksView);
-    }
-  }
-
   public static void handleTaskManagerLocationChange(WindowLocation loc) {
-    if (Objects.equals(loc, currentTaskManagerLocation)) {
+    if (mainWindowController == null) {
+      return;
+    }
+
+    if (loc == TAB && MZmineCore.getDesktop().getAllTabs().stream()
+        .anyMatch(t -> t.getText().equals("Tasks")) || (loc != TAB && Objects.equals(loc,
+        currentTaskManagerLocation))) {
+      // only return if we have that tab
       return;
     }
 
     String title = "Tasks";
-    TableView<WrappedTask> tasksView = mainWindowController.getTasksView();
+    Region tasksView = mainWindowController.getTasksView();
 
     // remove
     switch (currentTaskManagerLocation) {
       case TAB -> mainWindowController.removeTab(title);
-      case MAIN -> removeTasksFromBottom();
+      case MAIN -> mainWindowController.removeTasksFromBottom();
       case HIDDEN -> {
       }
       case EXTERNAL -> {
@@ -409,16 +408,39 @@ public class MZmineGUI extends Application implements Desktop {
         MZmineTab tab = new SimpleTab(title);
         tab.setContent(tasksView);
         MZmineCore.getDesktop().addTab(tab);
+        mainWindowController.selectTab(title);
       }
       case EXTERNAL -> {
         currentTaskWindow = addWindow(tasksView, title);
       }
-      case MAIN -> addTasksToBottom();
+      case MAIN -> mainWindowController.addTasksToBottom();
       case HIDDEN -> {
       }
     }
 
     currentTaskManagerLocation = loc;
+  }
+
+  @Override
+  public void handleShowTaskView() {
+    switch (currentTaskManagerLocation) {
+      case MAIN -> { // nothing, already visible
+      }
+      case TAB -> {
+        handleTaskManagerLocationChange(TAB);
+        mainWindowController.selectTab("Tasks");
+      }
+      case EXTERNAL -> {
+        if (currentTaskWindow != null) {
+          currentTaskWindow.hide();
+          currentTaskWindow.show();
+        } else {
+          handleTaskManagerLocationChange(TAB);
+        }
+      }
+      case HIDDEN -> handleTaskManagerLocationChange(TAB);
+
+    }
   }
 
   @Override
@@ -441,8 +463,7 @@ public class MZmineGUI extends Application implements Desktop {
       preferences.getValue(MZminePreferences.theme).apply(rootScene.getStylesheets());
 
     } catch (Exception e) {
-      e.printStackTrace();
-      logger.severe("Error loading MZmine GUI from FXML: " + e);
+      logger.log(Level.SEVERE, "Error loading MZmine GUI from FXML: " + e.getMessage(), e);
       Platform.exit();
     }
 
@@ -515,10 +536,12 @@ public class MZmineGUI extends Application implements Desktop {
     // Tracker
     GoogleAnalyticsTracker.track("MZmine Loaded (GUI mode)", "/JAVA/Main/GUI");
 
+    // add global keys that may be added to other dialogs to receive the same key event handling
+    rootScene.addEventFilter(KeyEvent.KEY_PRESSED, GlobalKeyHandler.getInstance());
+
     // register shutdown hook only if we have GUI - we don't want to
     // save configuration on exit if we only run a batch
-    ShutDownHook shutDownHook = new ShutDownHook();
-    Runtime.getRuntime().addShutdownHook(shutDownHook);
+    Runtime.getRuntime().addShutdownHook(new ShutDownHook());
     Runtime.getRuntime().addShutdownHook(new Thread(new TmpFileCleanup()));
   }
 
@@ -539,12 +562,12 @@ public class MZmineGUI extends Application implements Desktop {
   }
 
   @Override
-  public TableView<WrappedTask> getTasksView() {
-    return mainWindowController.getTasksView();
+  public @Nullable TasksViewController getTasksViewController() {
+    return mainWindowController.getTasksViewController();
   }
 
   @Override
-  public void openWebPage(URL url) {
+  public void openWebPage(@NotNull URL url) {
     openWebPage(String.valueOf(url));
   }
 
@@ -632,7 +655,18 @@ public class MZmineGUI extends Application implements Desktop {
 
       final StackPane pane = new StackPane(flow);
       pane.setPadding(new Insets(5));
-      dialog.getDialogPane().setContent(pane);
+
+      var scroll = new ScrollPane(pane);
+      scroll.setFitToWidth(true);
+      scroll.setFitToHeight(true);
+      var parent = new BorderPane(scroll);
+      stage.setMaxWidth(750);
+      stage.setMaxHeight(750);
+      pane.setMaxSize(800, 750);
+      scroll.setMaxSize(800, 750);
+      parent.setMaxSize(800, 750);
+      dialog.getDialogPane().setContent(parent);
+      dialog.setResizable(true);
 
       dialog.showAndWait();
     });
@@ -674,7 +708,7 @@ public class MZmineGUI extends Application implements Desktop {
       }
       return alertTask.get();
     } catch (Exception e) {
-      e.printStackTrace();
+      logger.log(Level.WARNING, e.getMessage(), e);
       return null;
     }
   }
@@ -722,7 +756,7 @@ public class MZmineGUI extends Application implements Desktop {
   }
 
   @Override
-  public ExitCode exitMZmine() {
+  public @NotNull ExitCode exitMZmine() {
 
     requestQuit();
     return ExitCode.UNKNOWN;
@@ -741,7 +775,10 @@ public class MZmineGUI extends Application implements Desktop {
   }
 
   @Override
-  public List<MZmineTab> getAllTabs() {
+  public @NotNull List<MZmineTab> getAllTabs() {
+    if (mainWindowController == null) {
+      return List.of();
+    }
     List<MZmineTab> tabs = new ArrayList<>();
 
     mainWindowController.getTabs().forEach(t -> {
@@ -762,6 +799,10 @@ public class MZmineGUI extends Application implements Desktop {
   @NotNull
   @Override
   public List<MZmineTab> getTabsInMainWindow() {
+    if (mainWindowController == null) {
+      return List.of();
+    }
+
     List<MZmineTab> tabs = new ArrayList<>();
 
     mainWindowController.getTabs().forEach(t -> {
@@ -822,10 +863,8 @@ public class MZmineGUI extends Application implements Desktop {
 
     try {
       return task.get();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
-    } catch (ExecutionException e) {
-      e.printStackTrace();
+    } catch (InterruptedException | ExecutionException e) {
+      logger.log(Level.WARNING, e.getMessage(), e);
     }
     return ButtonType.NO;
   }

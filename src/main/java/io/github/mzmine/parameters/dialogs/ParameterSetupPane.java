@@ -37,6 +37,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -47,6 +48,7 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
@@ -228,6 +230,12 @@ public class ParameterSetupPane extends BorderPane {
    * ok button was clicked
    */
   protected void callOkButton() {
+  }
+
+  /**
+   * check parameters button was clicked
+   */
+  protected void callCheckParametersButton() {
   }
 
   /**
@@ -416,6 +424,9 @@ public class ParameterSetupPane extends BorderPane {
       checkBox.selectedProperty()
           .addListener(((observable, oldValue, newValue) -> parametersChanged()));
     }
+    if (node instanceof ListView listview) {
+      listview.getItems().addListener((ListChangeListener) change -> parametersChanged());
+    }
     if (node instanceof Region panelComp) {
       for (int i = 0; i < panelComp.getChildrenUnmodifiable().size(); i++) {
         Node child = panelComp.getChildrenUnmodifiable().get(i);
@@ -440,4 +451,14 @@ public class ParameterSetupPane extends BorderPane {
     }
   }
 
+  /**
+   * Adds a button to check the parameter
+   */
+  public void addCheckParametersButton() {
+    Button btnCheck = new Button("Check");
+    btnCheck.setOnAction(e -> callCheckParametersButton());
+    pnlButtons.getButtons().addAll(btnCheck);
+    // this way its always right next to OK button
+    ButtonBar.setButtonData(btnCheck, ButtonData.OK_DONE);
+  }
 }

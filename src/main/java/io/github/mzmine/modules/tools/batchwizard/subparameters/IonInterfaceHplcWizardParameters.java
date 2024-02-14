@@ -32,27 +32,32 @@ import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.ranges.RTRangeParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
+import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance.Unit;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTToleranceParameter;
+import javafx.collections.FXCollections;
 
 public final class IonInterfaceHplcWizardParameters extends IonInterfaceWizardParameters {
 
   public static final RTToleranceParameter approximateChromatographicFWHM = new RTToleranceParameter(
       "Approximate feature FWHM",
-      "The approximate feature width (chromatograpic peak width) in retention time (full-width-at-half-maximum, FWHM). ");
+      "The approximate feature width (chromatograpic peak width) in retention time (full-width-at-half-maximum, FWHM). ",
+      FXCollections.observableArrayList(Unit.MINUTES, Unit.SECONDS));
 
   public static final RTToleranceParameter intraSampleRTTolerance = new RTToleranceParameter(
-      "Intra-sample RT tolerance",
+      "RT tolerance (intra-sample)",
       "Retention time tolerance for multiple signals of the same compound in the same "
-          + "sample.\nUsed to detect isotopes or multimers/adducts of the same compound.");
+          + "sample.\nUsed to detect isotopes or multimers/adducts of the same compound.",
+      FXCollections.observableArrayList(Unit.MINUTES, Unit.SECONDS));
 
   public static final RTToleranceParameter interSampleRTTolerance = new RTToleranceParameter(
-      "Inter-sample RT tolerance",
+      "RT tolerance (sample-to-sample)",
       "Retention time tolerance for the same compound in different samples.\n"
-          + "Used to align multiple measurements of the same sample or a batch run.");
+          + "Used to align multiple measurements of the same sample or a batch run.",
+      FXCollections.observableArrayList(Unit.MINUTES, Unit.SECONDS));
 
   public static final IntegerParameter minNumberOfDataPoints = new IntegerParameter(
-      "Min # of data points",
-      "Minimum number of data points as used in chromatogram building and feature resolving.", 4, 1,
+      "Minimum consecutive scans",
+      "Minimum number of consecutive scans with detected data points as used in chromatogram building and feature resolving.", 4, 1,
       Integer.MAX_VALUE);
 
   public static final RTRangeParameter cropRtRange = new RTRangeParameter("Crop retention time",

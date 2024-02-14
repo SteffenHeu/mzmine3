@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -102,30 +102,13 @@ public abstract class AbstractTask implements Task {
   }
 
   /**
-   * Convenience method for determining if this task has been canceled. Also returns true if the
-   * task encountered an error.
-   *
-   * @return true if this task has been canceled or stopped due to an error
-   */
-  public final boolean isCanceled() {
-    return (status == TaskStatus.CANCELED) || (status == TaskStatus.ERROR);
-  }
-
-  /**
-   * Convenience method for determining if this task has been completed
-   *
-   * @return true if this task is finished
-   */
-  public final boolean isFinished() {
-    return status == TaskStatus.FINISHED;
-  }
-
-  /**
    * @see io.github.mzmine.taskcontrol.Task#cancel()
    */
   @Override
   public void cancel() {
-    setStatus(TaskStatus.CANCELED);
+    if (!isFinished()) {
+      setStatus(TaskStatus.CANCELED);
+    }
   }
 
   /**
@@ -184,5 +167,10 @@ public abstract class AbstractTask implements Task {
 
   public Instant getModuleCallDate() {
     return moduleCallDate;
+  }
+
+  @Override
+  public String toString() {
+    return STR."Task (\{getName()}) description: \{getTaskDescription()}";
   }
 }

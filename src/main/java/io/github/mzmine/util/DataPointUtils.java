@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,11 +30,15 @@ import com.google.common.primitives.Doubles;
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.impl.SimpleDataPoint;
+import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.SimpleSpectralArrays;
+import io.github.mzmine.util.collections.BinarySearch;
 import java.nio.DoubleBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.IntToDoubleFunction;
+import org.jetbrains.annotations.NotNull;
 
 public class DataPointUtils {
 
@@ -43,8 +47,8 @@ public class DataPointUtils {
    * underlying DoubleBuffers of Scans or {@link io.github.mzmine.datamodel.featuredata.IonSeries}
    * and extending classes.
    *
-   * @return 2-d array with dimension double[2][dataPoints.length]. [0][i] will contain mz, [1][i]
-   * will contain intensity values.
+   * @return 2-d array [mzs, intensities] with dimension double[2][dataPoints.length]. [0][i] will
+   * contain mz, [1][i] will contain intensity values.
    */
   public static double[][] getDataPointsAsDoubleArray(DataPoint[] dataPoints) {
     double[][] data = new double[2][];
@@ -55,6 +59,23 @@ public class DataPointUtils {
       data[1][i] = dataPoints[i].getIntensity();
     }
     return data;
+  }
+
+  /**
+   * Used to keep legacy-modules running, not to be used in new modules. Directly access the
+   * underlying DoubleBuffers of Scans or {@link io.github.mzmine.datamodel.featuredata.IonSeries}
+   * and extending classes.
+   *
+   * @return mzs and intensities as arrays
+   */
+  public static SimpleSpectralArrays getDataPointsAsSpectralArrays(DataPoint[] dataPoints) {
+    double[] mzs = new double[dataPoints.length];
+    double[] intensities = new double[dataPoints.length];
+    for (int i = 0; i < dataPoints.length; i++) {
+      mzs[i] = dataPoints[i].getMZ();
+      intensities[i] = dataPoints[i].getIntensity();
+    }
+    return new SimpleSpectralArrays(mzs, intensities);
   }
 
   /**
@@ -88,16 +109,9 @@ public class DataPointUtils {
    */
   public static double[][] getDataPointsAsDoubleArray(DoubleBuffer mzValues,
       DoubleBuffer intensityValues) {
-    assert mzValues.capacity() == intensityValues.capacity();
-
-    double[][] data = new double[2][];
-    data[0] = new double[mzValues.capacity()];
-    data[1] = new double[mzValues.capacity()];
-    for (int i = 0; i < mzValues.capacity(); i++) {
-      data[0][i] = mzValues.get(i);
-      data[1][i] = intensityValues.get(i);
-    }
-    return data;
+    assert mzValues.limit() == intensityValues.limit();
+    return new double[][]{getDoubleBufferAsArray(mzValues),
+        getDoubleBufferAsArray(intensityValues)};
   }
 
   /**
@@ -105,11 +119,9 @@ public class DataPointUtils {
    * subclasses. Usually, the data should be accessed directly via the buffer.
    */
   public static double[] getDoubleBufferAsArray(DoubleBuffer values) {
-    double[] data = new double[values.capacity()];
-
-    for (int i = 0; i < values.capacity(); i++) {
-      data[i] = values.get(i);
-    }
+    double[] data = new double[values.limit()];
+    // set start to 0 to get absolute array not relative to point
+    values.get(0, data);
     return data;
   }
 
@@ -145,12 +157,12 @@ public class DataPointUtils {
 
   public static double[][] getDatapointsAboveNoiseLevel(DoubleBuffer rawMzs,
       DoubleBuffer rawIntensities, double noiseLevel) {
-    assert rawMzs.capacity() == rawIntensities.capacity();
+    assert rawMzs.limit() == rawIntensities.limit();
 
     List<Double> mzs = new ArrayList<>();
     List<Double> intensities = new ArrayList<>();
 
-    for (int i = 0; i < rawMzs.capacity(); i++) {
+    for (int i = 0; i < rawMzs.limit(); i++) {
       if (rawIntensities.get(i) > noiseLevel) {
         mzs.add(rawMzs.get(i));
         intensities.add(rawIntensities.get(i));
@@ -228,10 +240,104 @@ public class DataPointUtils {
    * @param sorter      sorting direction and property
    * @return sorted array of [2][length] for [mz, intensity]
    */
-  public static double[][] sort(double[] mzs, double[] intensities, DataPointSorter sorter) {
+  public static SimpleSpectralArrays sort(double[] mzs, double[] intensities,
+      DataPointSorter sorter) {
     assert mzs.length == intensities.length;
     DataPoint[] dps = DataPointUtils.getDataPoints(mzs, intensities);
     Arrays.sort(dps, sorter);
-    return getDataPointsAsDoubleArray(dps);
+    return getDataPointsAsSpectralArrays(dps);
+  }
+
+  /**
+   * Sorts the two arrays as data points
+   *
+   * @param spectrum spectral data
+   * @param sorter   sorting direction and property
+   * @return sorted spectral data
+   */
+  public static SimpleSpectralArrays sort(final SimpleSpectralArrays spectrum,
+      final DataPointSorter sorter) {
+    return DataPointUtils.sort(spectrum.mzs(), spectrum.intensities(), sorter);
+  }
+
+
+  /**
+   * Ensure sorting by mz ascending. Only applied if input data was unsorted.
+   *
+   * @param data input mzs and intensities
+   * @return either the input arrays if already sorted or new sorted arrays
+   */
+  public static SimpleSpectralArrays ensureSortingMzAscendingDefault(
+      final @NotNull SimpleSpectralArrays data) {
+    double[] mzs = data.mzs();
+    for (int i = 1; i < mzs.length; i++) {
+      if (mzs[i - 1] > mzs[i]) {
+        return sort(data, DataPointSorter.DEFAULT_MZ_ASCENDING);
+      }
+    }
+    // return input
+    return data;
+  }
+
+  /**
+   * Apply intensityPercentage filter so that the returned array contains all data points that make
+   * X % of the total intensity. The result is further cropped to a maxNumSignals.
+   *
+   * @param intensitySorted           sorted by intensity descending
+   * @param targetIntensityPercentage intensity percentage,e.g., 0.99
+   * @param maxNumSignals             maximum signals to crop to
+   * @return filtered data points array that make either >=X% of intensity or have reached the
+   * maxNumSignals
+   */
+  public static DataPoint[] filterDataByIntensityPercent(final DataPoint[] intensitySorted,
+      double targetIntensityPercentage, int maxNumSignals) {
+    double total = 0;
+    for (final DataPoint dp : intensitySorted) {
+      total += dp.getIntensity();
+    }
+
+    double sum = 0;
+    for (int i = 0; i < intensitySorted.length; i++) {
+      if (i >= maxNumSignals - 1) {
+        // max signals reached
+        return Arrays.copyOf(intensitySorted, maxNumSignals);
+      }
+      sum += intensitySorted[i].getIntensity();
+      if (sum / total >= targetIntensityPercentage) {
+        // intensity percentage reached
+        return Arrays.copyOf(intensitySorted, Math.min(i + 1, maxNumSignals));
+      }
+    }
+    // percent not reached - should not happen
+    return intensitySorted.length > maxNumSignals ? Arrays.copyOf(intensitySorted, maxNumSignals)
+        : intensitySorted;
+  }
+
+  /**
+   * Remove all signals that fall within precursorMZ +- removePrecursorMz
+   *
+   * @param mzSorted          sorted by mz ascending
+   * @param precursorMz       center of the signals to be removed
+   * @param removePrecursorMz +-delta to remove signals
+   * @return the filtered list
+   */
+  public static DataPoint[] removePrecursorMz(final DataPoint[] mzSorted, final double precursorMz,
+      final double removePrecursorMz) {
+    if (mzSorted.length == 0) {
+      return mzSorted;
+    }
+
+    IntToDoubleFunction mzExtractor = index -> mzSorted[index].getMZ();
+    // might be higher or lower or -1
+    final double lowerMz = precursorMz - removePrecursorMz;
+    final double upperMzBound = precursorMz + removePrecursorMz;
+
+    var indexRange = BinarySearch.indexRange(lowerMz, upperMzBound, mzSorted.length, mzExtractor);
+
+    return indexRange.copyRemoveRange(mzSorted);
+  }
+
+  public static boolean inRange(final double tested, final double center, final double delta) {
+    return tested >= center - delta && tested <= center + delta;
   }
 }

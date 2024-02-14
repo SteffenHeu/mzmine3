@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -226,10 +226,16 @@ public class TICPlot extends EChartViewer implements LabelColorMatch {
     }
   }
 
-  public void switchLegendVisible() {
-    // Toggle legend visibility.
+
+  public void setLegendVisible(boolean state) {
     final LegendTitle legend = getChart().getLegend();
-    legend.setVisible(!legend.isVisible());
+    legend.setVisible(state);
+    theme.setShowLegend(state);
+    //theme.apply paints first series in white/black which is wrong
+  }
+
+  public void switchLegendVisible() {
+    setLegendVisible(!theme.isShowLegend());
   }
 
   public void switchItemLabelsVisible() {
@@ -295,19 +301,41 @@ public class TICPlot extends EChartViewer implements LabelColorMatch {
     return plot;
   }
 
+
+  public synchronized void addDataSets(Collection<? extends XYDataset> dataSets) {
+    final boolean oldNotify = plot.isNotify();
+    plot.setNotify(false);
+    dataSets.forEach(this::addDataSet);
+    plot.setNotify(oldNotify);
+    if (oldNotify) {
+      chart.fireChartChanged();
+    }
+  }
+
   public synchronized int addDataSet(final XYDataset dataSet) {
     if ((dataSet instanceof TICDataSet) && (((TICDataSet) dataSet).getPlotType()
-        != getPlotType())) {
+                                            != getPlotType())) {
       throw new IllegalArgumentException("Added dataset of class '" + dataSet.getClass()
-          + "' does not have a compatible plotType. Expected '" + this.getPlotType().toString()
-          + "'");
+                                         + "' does not have a compatible plotType. Expected '"
+                                         + this.getPlotType().toString() + "'");
     }
+
     try {
-      final TICPlotRenderer renderer = (TICPlotRenderer) defaultRenderer.clone();
-      renderer.setSeriesPaint(0, plot.getDrawingSupplier().getNextPaint());
-      renderer.setSeriesFillPaint(0, plot.getDrawingSupplier().getNextFillPaint());
-      renderer.setSeriesShape(0, DATA_POINT_SHAPE);
-      renderer.setDefaultItemLabelsVisible(labelsVisible == 1);
+      final XYItemRenderer renderer;
+      if (dataSet instanceof MzRangeEicDataSet mzdataset) {
+        renderer = new FeatureTICRenderer();
+        renderer.setSeriesShape(0, DATA_POINT_SHAPE);
+        renderer.setDefaultItemLabelsVisible(labelsVisible == 1);
+        Color color = mzdataset.getAWTColor();
+        renderer.setSeriesPaint(0, color);
+        renderer.setSeriesFillPaint(0, color);
+      } else {
+        renderer = (TICPlotRenderer) defaultRenderer.clone();
+        renderer.setSeriesShape(0, DATA_POINT_SHAPE);
+        renderer.setDefaultItemLabelsVisible(labelsVisible == 1);
+        renderer.setSeriesPaint(0, plot.getDrawingSupplier().getNextPaint());
+        renderer.setSeriesFillPaint(0, plot.getDrawingSupplier().getNextFillPaint());
+      }
       return addDataSetAndRenderer(dataSet, renderer);
     } catch (CloneNotSupportedException e) {
       logger.log(Level.WARNING, "Unable to clone renderer", e);
@@ -373,8 +401,8 @@ public class TICPlot extends EChartViewer implements LabelColorMatch {
     // Check if the dataSet to be added is compatible with the type of plot.
     if (dataSet.getPlotType() != getPlotType()) {
       throw new IllegalArgumentException("Added dataset of class '" + dataSet.getClass()
-          + "' does not have a compatible plotType. Expected '" + this.getPlotType().toString()
-          + "'");
+                                         + "' does not have a compatible plotType. Expected '"
+                                         + this.getPlotType().toString() + "'");
     }
     return addDataSetAndRenderer(dataSet, renderer);
   }
@@ -409,6 +437,16 @@ public class TICPlot extends EChartViewer implements LabelColorMatch {
     return addDataSetAndRenderer(dataSet, renderer);
   }
 
+  public synchronized int addFeatureDataSetRandomColor(final FeatureDataSet dataSet) {
+    final FeatureTICRenderer renderer = new FeatureTICRenderer();
+    Color nextColorAWT = MZmineCore.getConfiguration().getDefaultColorPalette().getNextColorAWT();
+    renderer.setSeriesPaint(0, nextColorAWT);
+    renderer.setSeriesFillPaint(0, nextColorAWT);
+    renderer.setDefaultToolTipGenerator(new TICToolTipGenerator());
+    return addDataSetAndRenderer(dataSet, renderer);
+  }
+
+
   public synchronized void addFeatureDataSets(Collection<FeatureDataSet> dataSets) {
     final boolean oldNotify = plot.isNotify();
     plot.setNotify(false);
@@ -418,7 +456,6 @@ public class TICPlot extends EChartViewer implements LabelColorMatch {
       chart.fireChartChanged();
     }
   }
-
 
   public synchronized void addFeatureDataSet(final FeatureDataSet dataSet,
       final FeatureTICRenderer renderer) {
@@ -492,6 +529,27 @@ public class TICPlot extends EChartViewer implements LabelColorMatch {
     for (int i = 0; i < plot.getDatasetCount(); i++) {
       XYDataset ds = plot.getDataset(i);
       if (ds instanceof FeatureDataSet) {
+        plot.setDataset(getXYPlot().indexOf(ds), null);
+        plot.setRenderer(getXYPlot().indexOf(ds), null);
+      }
+    }
+    plot.setNotify(true);
+    if (notify) {
+      chart.fireChartChanged();
+    }
+  }
+
+  /**
+   * Removes all feature data sets.
+   *
+   * @param notify If false, the plot is not redrawn. This is useful, if multiple data sets are
+   *               added right after and the plot shall not be updated until then.
+   */
+  public synchronized void removeAllDataSetsOf(Class<? extends XYDataset> clazz, boolean notify) {
+    plot.setNotify(false);
+    for (int i = 0; i < plot.getDatasetCount(); i++) {
+      XYDataset ds = plot.getDataset(i);
+      if (clazz.isInstance(ds)) {
         plot.setDataset(getXYPlot().indexOf(ds), null);
         plot.setRenderer(getXYPlot().indexOf(ds), null);
       }

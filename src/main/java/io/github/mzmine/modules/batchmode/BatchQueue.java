@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -33,11 +33,16 @@ import io.github.mzmine.modules.MZmineProcessingStep;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterParameters;
 import io.github.mzmine.modules.impl.MZmineProcessingStepImpl;
+import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule;
+import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
+import io.github.mzmine.modules.io.import_spectral_library.SpectralLibraryImportParameters;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.util.CollectionUtils;
 import io.github.mzmine.util.javafx.ArrayObservableList;
+import java.io.File;
 import java.util.Collection;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.w3c.dom.Document;
@@ -50,39 +55,39 @@ import org.w3c.dom.NodeList;
 public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineProcessingModule>> {
 
   public static final Logger logger = Logger.getLogger(BatchQueue.class.getName());
-
+  // attr of the main xmlElement
+  public static final String XML_MZMINE_VERSION_ATTR = "mzmine_version";
   // Batch step element name.
   private static final String BATCH_STEP_ELEMENT = "batchstep";
-
   // Method element name.
   private static final String METHOD_ELEMENT = "method";
   private static final String MODULE_VERSION_ATTR = "parameter_version";
 
-  // attr of the main xmlElement
-  public static final String XML_MZMINE_VERSION_ATTR = "mzmine_version";
-
   /**
    * De-serialize from XML.
    *
-   * @param xmlElement the element that holds the XML.
+   * @param xmlElement        the element that holds the XML.
+   * @param skipUnkownModules skipping unknown modules is discouraged in batch mode. In GUI mode
+   *                          errors can be seen.
    * @return the de-serialized value.
    */
   public static BatchQueue loadFromXml(final Element xmlElement,
-      @NotNull final List<String> errorMessages) {
-    final Semver mzmineVersion;
+      @NotNull final List<String> errorMessages, boolean skipUnkownModules) {
+    Semver batchMzmineVersion = null;
     final String mzmineVersionError;
+    Semver mzmineVersion = MZmineCore.getMZmineVersion();
     if (xmlElement.hasAttribute(XML_MZMINE_VERSION_ATTR)) {
-      mzmineVersion = new Semver(xmlElement.getAttribute(XML_MZMINE_VERSION_ATTR));
+      batchMzmineVersion = new Semver(xmlElement.getAttribute(XML_MZMINE_VERSION_ATTR));
 
-      int versionCompare = mzmineVersion.compareTo(MZmineCore.getMZmineVersion());
+      int versionCompare = batchMzmineVersion.compareTo(mzmineVersion);
       String vstring = switch (versionCompare) {
         case -1 -> "an older";
         case 1 -> "a newer";
         case 0 -> "the same";
         default -> "";
       };
-      String msg = "The batch file was created with %s version of MZmine%s (current version is %s).".formatted(
-          vstring, mzmineVersion, MZmineCore.getMZmineVersion());
+      String msg = "The batch file was created with %s version of MZmine%s (this version is %s).".formatted(
+          vstring, batchMzmineVersion, mzmineVersion);
       logger.info(msg);
       //
       if (versionCompare != 0) {
@@ -92,8 +97,8 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
         mzmineVersionError = null;
       }
     } else {
-      mzmineVersionError = "Batch was created with an older version of MZmine prior to MZmine 3.4.0 (current version is %s).".formatted(
-          MZmineCore.getMZmineVersion());
+      mzmineVersionError = "Batch was created with an older version of MZmine prior to MZmine 3.4.0 (this version is %s).".formatted(
+          mzmineVersion);
       logger.warning(mzmineVersionError);
     }
 
@@ -137,9 +142,19 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
           moduleFound = MZmineCore.getModuleInstance(
               (Class<MZmineModule>) Class.forName(methodName));
         } catch (ClassNotFoundException e) {
-          logger.warning(
-              "Module not found for class " + methodName + " (maybe recreate the batch file)");
-          throw new UnknownModuleNameException(methodName, e);
+          String batchVersionStr =
+              batchMzmineVersion == null ? "of unspecified version" : batchMzmineVersion.toString();
+
+          String warning = """
+              Module not found for class %s (maybe recreate the batch file).
+              Current MZmine version: %s (batch was created with MZmine %s)""".formatted(methodName,
+              mzmineVersion, batchVersionStr);
+
+          errorMessages.add(warning);
+          logger.warning(warning);
+          if (!skipUnkownModules) {
+            throw new UnknownModuleNameException(methodName, e);
+          }
         }
       }
       if (moduleFound != null) {
@@ -147,13 +162,19 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
         final ParameterSet parameterSet = MZmineCore.getConfiguration()
             .getModuleParameters(moduleFound.getClass());
         final ParameterSet methodParams = parameterSet.cloneParameterSet();
+        int currentVersion = parameterSet.getVersion();
 
         // check version introduced in MZmine 3.4.0
         if (!stepElement.hasAttribute(MODULE_VERSION_ATTR)) {
           noModuleVersion = true;
+          // version is known to have changed in MZmine 3.4.0
+          if (currentVersion > 1) {
+            errorMessages.add(
+                "'%s' step parameters were changed.".formatted(moduleFound.getName()));
+          }
         } else {
           int version = Integer.parseInt(stepElement.getAttribute(MODULE_VERSION_ATTR));
-          String diff = switch (Integer.compare(version, parameterSet.getVersion())) {
+          String diff = switch (Integer.compare(version, currentVersion)) {
             case -1 -> "outdated";
             case 1 -> "newer";
             default -> null;
@@ -219,4 +240,34 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
       }
     }
   }
+
+  /**
+   * Replace all import files in the {@link AllSpectralDataImportModule} - which needs to be the
+   * first step in batch
+   *
+   * @param allDataFiles replaces import files
+   * @return true if success, false if not. e.g., if there was no data import step in the batch file
+   */
+  public boolean setImportFiles(final File[] allDataFiles, final File[] allLibraryFiles)
+      throws IllegalStateException {
+    MZmineProcessingStep<?> currentStep = get(0);
+    ParameterSet importParameters = currentStep.getParameterSet();
+    try {
+      if (allDataFiles != null) {
+        importParameters.getParameter(AllSpectralDataImportParameters.fileNames)
+            .setValue(allDataFiles);
+      }
+      if (allLibraryFiles != null) {
+        importParameters.getParameter(SpectralLibraryImportParameters.dataBaseFiles)
+            .setValue(allLibraryFiles);
+      }
+      return true;
+    } catch (Exception ex) {
+      logger.log(Level.WARNING,
+          "Could not change input data files in batch. When running batch and changing the data input, the first step in the batch needs to be the all spectral data import module.",
+          ex);
+      return false;
+    }
+  }
+
 }

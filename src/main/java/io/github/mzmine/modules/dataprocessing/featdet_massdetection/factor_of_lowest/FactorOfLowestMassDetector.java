@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,24 +25,41 @@
 
 package io.github.mzmine.modules.dataprocessing.featdet_massdetection.factor_of_lowest;
 
-import gnu.trove.list.array.TDoubleArrayList;
 import io.github.mzmine.datamodel.MassSpectrum;
+import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetector;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.exactmass.ExactMassDetector;
 import io.github.mzmine.parameters.ParameterSet;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Remove peaks below the minimum intensity x a user defined factor
+ * Remove peaks below the minimum intensity x a user defined factor.
+ * Can be applied to profile and centroid mode data
  */
 public class FactorOfLowestMassDetector implements MassDetector {
 
-  @Override
-  public double[][] getMassValues(MassSpectrum spectrum, ParameterSet parameters) {
+  private final double noiseFactor;
+
+  /**
+   * required to create a default instance via reflection
+   */
+  public FactorOfLowestMassDetector() {
+    this(0);
+  }
+
+  public FactorOfLowestMassDetector(double noiseFactor) {
+    this.noiseFactor = noiseFactor;
+  }
+
+  public static double[][] getMassValues(MassSpectrum spectrum, double noiseFactor) {
+    // need to apply centroiding to profile data first
+    if (spectrum.getSpectrumType() == MassSpectrumType.PROFILE) {
+      double[][] centroided = ExactMassDetector.getMassValues(spectrum, 0);
+      return getMassValues(centroided[0], centroided[1], MassSpectrumType.CENTROIDED, noiseFactor);
+    }
+
     // most likely working on {@link ScanDataAccess}
-
-    final double noiseFactor = parameters.getValue(
-        FactorOfLowestMassDetectorParameters.noiseFactor);
-
     // get the minimum intensity and base noise on this
     double noiseLevel = minIntensity(spectrum) * noiseFactor;
 
@@ -50,8 +67,8 @@ public class FactorOfLowestMassDetector implements MassDetector {
     final int points = spectrum.getNumberOfDataPoints();
 
     // lists of primitive doubles
-    TDoubleArrayList mzs = new TDoubleArrayList(points);
-    TDoubleArrayList intensities = new TDoubleArrayList(points);
+    DoubleArrayList mzs = new DoubleArrayList(points);
+    DoubleArrayList intensities = new DoubleArrayList(points);
     // Find possible mzPeaks
     for (int i = 0; i < points; i++) {
       // Is intensity above the noise level?
@@ -62,20 +79,17 @@ public class FactorOfLowestMassDetector implements MassDetector {
         intensities.add(intensity);
       }
     }
-    return new double[][]{mzs.toArray(), intensities.toArray()};
+    return new double[][]{mzs.toDoubleArray(), intensities.toDoubleArray()};
   }
 
-  @Override
-  public double[][] getMassValues(double[] mzs, double[] intensities, ParameterSet parameters) {
+  public static double[][] getMassValues(double[] mzs, double[] intensities,
+      final @NotNull MassSpectrumType type, double noiseFactor) {
     assert mzs.length == intensities.length;
-
-    final double noiseFactor = parameters.getValue(
-        FactorOfLowestMassDetectorParameters.noiseFactor);
-    return getMassValues(mzs, intensities, noiseFactor);
-  }
-
-  public double[][] getMassValues(double[] mzs, double[] intensities, double noiseFactor) {
-    assert mzs.length == intensities.length;
+    // need to apply centroiding to profile data first
+    if (type == MassSpectrumType.PROFILE) {
+      double[][] centroided = ExactMassDetector.getMassValues(mzs, intensities, 0);
+      return getMassValues(centroided[0], centroided[1], MassSpectrumType.CENTROIDED, noiseFactor);
+    }
 
     // get the minimum intensity and base noise on this
     double noiseLevel = minIntensity(intensities) * noiseFactor;
@@ -83,8 +97,8 @@ public class FactorOfLowestMassDetector implements MassDetector {
     // use number of centroid signals as base array list capacity
     final int points = mzs.length;
     // lists of primitive doubles
-    TDoubleArrayList pickedMZs = new TDoubleArrayList(points);
-    TDoubleArrayList pickedIntensities = new TDoubleArrayList(points);
+    DoubleArrayList pickedMZs = new DoubleArrayList(points);
+    DoubleArrayList pickedIntensities = new DoubleArrayList(points);
 
     // Find possible mzPeaks
     for (int i = 0; i < points; i++) {
@@ -95,10 +109,13 @@ public class FactorOfLowestMassDetector implements MassDetector {
         pickedIntensities.add(intensities[i]);
       }
     }
-    return new double[][]{pickedMZs.toArray(), pickedIntensities.toArray()};
+    return new double[][]{pickedMZs.toDoubleArray(), pickedIntensities.toDoubleArray()};
   }
 
-  private double minIntensity(double[] rawIntensities) {
+  private static double minIntensity(double[] rawIntensities) {
+    if (rawIntensities.length == 0) {
+      return 0;
+    }
     double minIntensity = Double.MAX_VALUE;
     for (double v : rawIntensities) {
       if (v < minIntensity) {
@@ -111,9 +128,13 @@ public class FactorOfLowestMassDetector implements MassDetector {
     return minIntensity;
   }
 
-  private double minIntensity(MassSpectrum spec) {
+  private static double minIntensity(MassSpectrum spec) {
+    var size = spec.getNumberOfDataPoints();
+    if (size == 0) {
+      return 0;
+    }
     double minIntensity = Double.MAX_VALUE;
-    for (int i = 0; i < spec.getNumberOfDataPoints(); i++) {
+    for (int i = 0; i < size; i++) {
       final double value = spec.getIntensityValue(i);
       if (value < minIntensity && value > 0) {
         minIntensity = value;
@@ -123,6 +144,28 @@ public class FactorOfLowestMassDetector implements MassDetector {
       minIntensity = 0;
     }
     return minIntensity;
+  }
+
+  @Override
+  public double[][] getMassValues(double[] mzs, double[] intensities,
+      final @NotNull MassSpectrumType type) {
+    return getMassValues(mzs, intensities, type, noiseFactor);
+  }
+
+  @Override
+  public FactorOfLowestMassDetector create(ParameterSet parameters) {
+    var noiseFactor = parameters.getValue(FactorOfLowestMassDetectorParameters.noiseFactor);
+    return new FactorOfLowestMassDetector(noiseFactor);
+  }
+
+  @Override
+  public boolean filtersActive() {
+    return noiseFactor > 1; // profile to centroid so always active
+  }
+
+  @Override
+  public double[][] getMassValues(MassSpectrum spectrum) {
+    return getMassValues(spectrum, noiseFactor);
   }
 
   @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -201,15 +201,6 @@ public interface MZmineProject {
   int getNumberOfFeatureLists();
 
   int getNumberOfLibraries();
-
-  /**
-   * Finds and sets a unique name for a data file
-   *
-   * @param raw  the target data file thats renamed
-   * @param name the new name candidate
-   * @return the unique name that was set
-   */
-  String setUniqueDataFileName(RawDataFile raw, String name);
 
   /**
    * Finds and sets a unique name for a feature list

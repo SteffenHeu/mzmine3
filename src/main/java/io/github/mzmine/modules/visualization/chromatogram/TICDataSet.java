@@ -57,37 +57,29 @@ import org.jfree.chart.axis.NumberAxis;
 public class TICDataSet extends AbstractTaskXYZDataset {
 
   private static final long serialVersionUID = 1L;
-
-  // Logger.
-  private final Logger logger = Logger.getLogger(this.getClass().getName());
-
   // For comparing small differences.
   private static final double EPSILON = 0.0000001;
-
   // Refresh interval (in milliseconds).
   private static final long REDRAW_INTERVAL = 100L;
-
   // Last time the data set was redrawn.
   private static long lastRedrawTime = System.currentTimeMillis();
-
+  // Logger.
+  private final Logger logger = Logger.getLogger(this.getClass().getName());
   private final RawDataFile dataFile;
 
   private final List<Scan> scans;
   private final int totalScans;
-  private int processedScans;
-
   private final double[] basePeakMZValues;
   private final double[] intensityValues;
   private final double[] rtValues;
   private final Range<Double> mzRange;
+  // Plot type
+  private final TICPlotType plotType;
+  private int processedScans;
   private double intensityMin;
   private double intensityMax;
   private TICVisualizerTab window;
-
   private String customSeriesKey = null;
-
-  // Plot type
-  private final TICPlotType plotType;
 
   /**
    * Create the data set.
@@ -355,6 +347,9 @@ public class TICDataSet extends AbstractTaskXYZDataset {
     // Determine plot type (now done from constructor).
     final TICPlotType plotType = this.plotType;
 
+    if (scans.isEmpty()) {
+      return;
+    }
     // fix for imZML files without a retention time in their scans -> crashes TIC Plot
     boolean useScanNumberAsRt = Double.compare(scans.get(0).getRetentionTime(),
         scans.get(scans.size() - 1).getRetentionTime()) == 0;
@@ -383,8 +378,9 @@ public class TICDataSet extends AbstractTaskXYZDataset {
       if (plotType == TICPlotType.TIC) {
 
         // Total ion count.
-        intensity = mzRange.encloses(scan.getDataPointMZRange()) ? scan.getTIC()
-            : ScanUtils.calculateTIC(scan, mzRange);
+        if (scan.getDataPointMZRange() != null) {
+          intensity = mzRange.encloses(scan.getDataPointMZRange()) ? scan.getTIC() : ScanUtils.calculateTIC(scan, mzRange);
+        }
 
       } else if (plotType == TICPlotType.BASEPEAK && basePeakIntensity != null) {
 

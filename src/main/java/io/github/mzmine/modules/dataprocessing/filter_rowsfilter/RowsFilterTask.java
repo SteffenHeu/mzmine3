@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,16 +39,18 @@ import io.github.mzmine.datamodel.features.types.annotations.GNPSSpectralLibrary
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.datamodel.features.types.numbers.IDType;
 import io.github.mzmine.modules.dataprocessing.id_gnpsresultsimport.GNPSLibraryMatch.ATT;
-import io.github.mzmine.modules.dataprocessing.id_lipididentification.lipidutils.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipididentification.common.lipididentificationtools.matchedlipidannotations.MatchedLipid;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.UserParameter;
 import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter.OriginalFeatureListOption;
+import io.github.mzmine.parameters.parametertypes.absoluterelative.AbsoluteAndRelativeInt;
 import io.github.mzmine.parameters.parametertypes.massdefect.MassDefectFilter;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.FormulaUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.RangeUtils;
+import io.github.mzmine.util.collections.BinarySearch.DefaultTo;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -108,8 +110,9 @@ public class RowsFilterTask extends AbstractTask {
   private final Range<Float> rtRange;
   private final Range<Float> fwhmRange;
   private final Isotope13CFilter isotope13CFilter;
-  private Double minCount;
+  private final AbsoluteAndRelativeInt minSamples;
   private final boolean removeRedundantIsotopeRows;
+  private final boolean keepAnnotated;
   private FeatureList filteredFeatureList;
   // Processed rows counter
   private int processedRows, totalRows;
@@ -136,6 +139,7 @@ public class RowsFilterTask extends AbstractTask {
 
     // Get parameters.
     keepAllWithMS2 = parameters.getValue(RowsFilterParameters.KEEP_ALL_MS2);
+    keepAnnotated = parameters.getValue(RowsFilterParameters.KEEP_ALL_ANNOTATED);
 
     onlyIdentified = parameters.getValue(RowsFilterParameters.HAS_IDENTITIES);
     filterByIdentityText = parameters.getValue(RowsFilterParameters.IDENTITY_TEXT);
@@ -152,8 +156,8 @@ public class RowsFilterTask extends AbstractTask {
     filterByKMD = parameters.getValue(RowsFilterParameters.KENDRICK_MASS_DEFECT);
     filterByMS2 = parameters.getValue(RowsFilterParameters.MS2_Filter);
     filterOption = parameters.getValue(RowsFilterParameters.REMOVE_ROW);
-    minCount = parameters.getParameter(RowsFilterParameters.MIN_FEATURE_COUNT)
-        .getEmbeddedParameter().getValue();
+    minSamples = parameters.getEmbeddedParameterValueIfSelectedOrElse(
+        RowsFilterParameters.MIN_FEATURE_COUNT, null);
     renumber = parameters.getValue(RowsFilterParameters.Reset_ID);
     filterByMassDefect = parameters.getValue(RowsFilterParameters.massDefect);
     massDefectFilter = filterByMassDefect ? parameters.getParameter(RowsFilterParameters.massDefect)
@@ -203,9 +207,7 @@ public class RowsFilterTask extends AbstractTask {
 
   @Override
   public double getFinishedPercentage() {
-
     return totalRows == 0 ? 0.0 : (double) processedRows / (double) totalRows;
-
   }
 
   @Override
@@ -290,12 +292,7 @@ public class RowsFilterTask extends AbstractTask {
     // otherwise we remove those that match all criteria
     boolean removeFailed = RowsFilterChoices.KEEP_MATCHING == filterOption;
 
-    // Handle < 1 values for minFeatureCount
-    if ((minCount == null) || (minCount < 1)) {
-      minCount = 1.0;
-    }
-    // Round value down to nearest hole number
-    int intMinCount = minCount.intValue();
+    final int totalSamples = featureList.getRawDataFiles().size();
 
     // Filter rows.
     totalRows = featureList.getNumberOfRows();
@@ -309,12 +306,13 @@ public class RowsFilterTask extends AbstractTask {
       final FeatureListRow row = iterator.next();
 
       final boolean hasMS2 = row.hasMs2Fragmentation();
+      final boolean annotated = row.isIdentified();
 
       // Only remove rows that match *all* of the criteria, so add
       // rows that fail any of the criteria.
       // Only add the row if none of the criteria have failed.
-      boolean keepRow = (keepAllWithMS2 && hasMS2)
-          || isFilterRowCriteriaFailed(intMinCount, row, hasMS2) != removeFailed;
+      boolean keepRow = (keepAllWithMS2 && hasMS2) || (keepAnnotated && annotated)
+          || isFilterRowCriteriaFailed(totalSamples, row, hasMS2) != removeFailed;
       if (processInCurrentList) {
         if (keepRow) {
           rowsCount++;
@@ -337,7 +335,8 @@ public class RowsFilterTask extends AbstractTask {
     return newFeatureList;
   }
 
-  private boolean isFilterRowCriteriaFailed(int intMinCount, FeatureListRow row, boolean hasMS2) {
+  private boolean isFilterRowCriteriaFailed(final int totalSamples, FeatureListRow row,
+      boolean hasMS2) {
 
     // Check ms2 filter .
     if (filterByMS2 && !hasMS2) {
@@ -347,7 +346,7 @@ public class RowsFilterTask extends AbstractTask {
     // Check number of features.
     final int featureCount = getFeatureCount(row, groupingParameter);
     if (filterByMinFeatureCount) {
-      if (featureCount < intMinCount) {
+      if (!minSamples.checkGreaterEqualMax(totalSamples, featureCount)) {
         return true;
       }
     }
@@ -529,12 +528,8 @@ public class RowsFilterTask extends AbstractTask {
       return true;
     }
 
-    if (removeRedundantIsotopeRows && isRowRedundantDueToIsotopePattern(row,
-        row.getBestIsotopePattern())) {
-      return true;
-    }
-
-    return false;
+    return removeRedundantIsotopeRows && isRowRedundantDueToIsotopePattern(row,
+        row.getBestIsotopePattern());
   }
 
   private int getFeatureCount(FeatureListRow row, String groupingParameter) {
@@ -586,12 +581,9 @@ public class RowsFilterTask extends AbstractTask {
     if (!removeRedundantIsotopeRows || pattern == null) {
       return false;
     }
-    final int featureDpIndex = pattern.binarySearch(row.getAverageMZ(), true);
+    final int featureDpIndex = pattern.binarySearch(row.getAverageMZ(), DefaultTo.CLOSEST_VALUE);
 
-    if (featureDpIndex != 0 && featureDpIndex != Objects.requireNonNullElse(
-        pattern.getBasePeakIndex(), -1)) {
-      return true;
-    }
-    return false;
+    return featureDpIndex != 0 && featureDpIndex != Objects.requireNonNullElse(
+        pattern.getBasePeakIndex(), -1);
   }
 }

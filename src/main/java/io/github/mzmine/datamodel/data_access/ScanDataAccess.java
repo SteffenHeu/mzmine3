@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,22 +26,17 @@
 package io.github.mzmine.datamodel.data_access;
 
 import com.google.common.collect.Range;
-import io.github.mzmine.datamodel.DataPoint;
-import io.github.mzmine.datamodel.MassList;
-import io.github.mzmine.datamodel.MassSpectrum;
-import io.github.mzmine.datamodel.MassSpectrumType;
-import io.github.mzmine.datamodel.PolarityType;
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.*;
 import io.github.mzmine.datamodel.data_access.EfficientDataAccess.ScanDataType;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.util.exceptions.MissingMassListException;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * The intended use of this memory access is to loop over all scans and access data points via
@@ -222,7 +217,7 @@ public abstract class ScanDataAccess implements Scan {
           currentNumberOfDataPoints = 0;
         }
       }
-      case CENTROID -> {
+      case MASS_LIST -> {
         MassList masses = scan.getMassList();
         if (masses == null) {
           throw new MissingMassListException(scan);
@@ -267,7 +262,7 @@ public abstract class ScanDataAccess implements Scan {
    */
   private int getMaxNumberOfDataPoints() {
     return switch (type) {
-      case CENTROID -> dataFile.getMaxCentroidDataPoints();
+      case MASS_LIST -> dataFile.getMaxCentroidDataPoints();
       case RAW -> dataFile.getMaxRawDataPoints();
     };
   }
@@ -281,7 +276,7 @@ public abstract class ScanDataAccess implements Scan {
         Scan scan = getCurrentScan();
         yield scan == null ? null : scan.getSpectrumType();
       }
-      case CENTROID -> MassSpectrumType.CENTROIDED;
+      case MASS_LIST -> MassSpectrumType.CENTROIDED;
     };
   }
 
@@ -328,12 +323,13 @@ public abstract class ScanDataAccess implements Scan {
   public MassSpectrum getCurrentDataSource() {
     return switch (type) {
       case RAW -> getCurrentScan();
-      case CENTROID -> getMassList();
+      case MASS_LIST -> getMassList();
     };
   }
 
+  @NotNull
   @Override
-  public @NotNull RawDataFile getDataFile() {
+  public RawDataFile getDataFile() {
     return dataFile;
   }
 

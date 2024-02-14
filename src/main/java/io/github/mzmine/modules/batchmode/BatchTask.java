@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -34,30 +34,36 @@ import io.github.mzmine.modules.MZmineModuleCategory;
 import io.github.mzmine.modules.MZmineProcessingModule;
 import io.github.mzmine.modules.MZmineProcessingStep;
 import io.github.mzmine.modules.MZmineRunnableModule;
+import io.github.mzmine.modules.batchmode.timing.StepTimeMeasurement;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.EmbeddedParameterSet;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
-import io.github.mzmine.parameters.parametertypes.filenames.FileNamesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.Task;
+import io.github.mzmine.taskcontrol.TaskController;
 import io.github.mzmine.taskcontrol.TaskPriority;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.taskcontrol.impl.WrappedTask;
+import io.github.mzmine.taskcontrol.threadpools.ThreadPoolTask;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.files.FileAndPathUtil;
 import java.io.File;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -84,6 +90,7 @@ public class BatchTask extends AbstractTask {
   private Boolean createResultsDir;
   private File parentDir;
   private int currentDataset;
+  private List<StepTimeMeasurement> stepTimes = new ArrayList<>();
 
   BatchTask(MZmineProject project, ParameterSet parameters, @NotNull Instant moduleCallDate) {
     this(project, parameters, moduleCallDate,
@@ -93,6 +100,7 @@ public class BatchTask extends AbstractTask {
   public BatchTask(final MZmineProject project, final ParameterSet parameters,
       final Instant moduleCallDate, final List<File> subDirectories) {
     super(null, moduleCallDate);
+    setName("Batch task");
     this.project = project;
     this.queue = parameters.getParameter(BatchModeParameters.batchQueue).getValue();
     // advanced parameters
@@ -119,9 +127,33 @@ public class BatchTask extends AbstractTask {
     previousCreatedFeatureLists = new ArrayList<>();
   }
 
+  /**
+   * Runs all tasks in a single {@link ThreadPoolTask} on the {@link TaskController#getExecutor()}
+   * default executor
+   *
+   * @param method     for logging
+   * @param tasksToRun list will be cleared after scheduling to avoid memory leak in long running
+   *                   tasks. all tasks will be organized by ThreadPool
+   * @return the {@link TaskStatus} of the carrier task reflecting the worst case of the sub tasks
+   * meaning that if any had an error > cancel > finished
+   */
+  private static TaskStatus runInTaskPool(final MZmineProcessingModule method,
+      final List<Task> tasksToRun) {
+    TaskController taskController = MZmineCore.getTaskController();
+    var description = STR."\{method.getName()} on \{tasksToRun.size()} items";
+    var threadPoolTask = ThreadPoolTask.createDefaultTaskManagerPool(description, tasksToRun);
+    // clear tasks to not leak the long running tasks by keeping them alive
+    tasksToRun.clear();
+    // Submit the tasks to the task controller for processing
+    // this runs the ThreadPoolTask on this thread (blocking) and calls all sub tasks in the default executor
+    WrappedTask finishedTask = taskController.runTaskOnThisThreadBlocking(threadPoolTask);
+    return finishedTask.getActualTask().getStatus();
+  }
+
   @Override
   public void run() {
 
+    Instant batchStart = Instant.now();
     setStatus(TaskStatus.PROCESSING);
     logger.info("Starting a batch of " + totalSteps + " steps");
 
@@ -131,10 +163,16 @@ public class BatchTask extends AbstractTask {
     // Process individual batch steps
     for (int i = 0; i < totalSteps; i++) {
       // at the end of one dataset, clear the project and start over again
-      if (useAdvanced && processedSteps % stepsPerDataset == 0) {
+      if (useAdvanced && currentStep() == 0) {
         // clear the old project
         MZmineCore.getProjectManager().clearProject();
         currentDataset++;
+
+        // print step times
+        if (!stepTimes.isEmpty()) {
+          printBatchTimes(batchStart);
+          stepTimes.clear();
+        }
 
         // change files
         File datasetDir = subDirectories.get(currentDataset);
@@ -148,10 +186,21 @@ public class BatchTask extends AbstractTask {
 
         if (allFiles.length != 0) {
           // set files to import
-          setImportFiles(allFiles);
-
+          if (!queue.setImportFiles(allFiles, null)) {
+            if (skipOnError) {
+              processedSteps += stepsPerDataset;
+              continue;
+            } else {
+              setStatus(TaskStatus.ERROR);
+              setErrorMessage(
+                  "Could not set data files in advanced batch mode. Will cancel all jobs. "
+                  + datasetName);
+              return;
+            }
+          }
           // set files to output
           setOutputFiles(parentDir, createResultsDir, datasetName);
+
         } else {
           errorDataset++;
           logger.info("No data files found in directory: " + datasetName);
@@ -189,6 +238,17 @@ public class BatchTask extends AbstractTask {
 
     logger.info("Finished a batch of " + totalSteps + " steps");
     setStatus(TaskStatus.FINISHED);
+    printBatchTimes(batchStart);
+    Duration duration = Duration.between(batchStart, Instant.now());
+    stepTimes.addFirst(new StepTimeMeasurement(0, getName(), duration));
+  }
+
+  private void printBatchTimes(final Instant batchStart) {
+    Duration duration = Duration.between(batchStart, Instant.now());
+    String times = stepTimes.stream().map(Objects::toString).collect(Collectors.joining("\n"));
+    logger.info(STR."""
+    Timing: Whole batch took \{duration} to finish
+    \{times}""");
   }
 
   private void setOutputFiles(final File parentDir, final boolean createResultsDir,
@@ -198,7 +258,7 @@ public class BatchTask extends AbstractTask {
       // only change for export modules
       if (currentStep.getModule() instanceof MZmineRunnableModule mod && (
           mod.getModuleCategory() == MZmineModuleCategory.FEATURELISTEXPORT
-              || mod.getModuleCategory() == MZmineModuleCategory.RAWDATAEXPORT)) {
+          || mod.getModuleCategory() == MZmineModuleCategory.RAWDATAEXPORT)) {
         ParameterSet params = currentStep.getParameterSet();
         for (final Parameter<?> p : params.getParameters()) {
           if (p instanceof FileNameParameter fnp) {
@@ -230,22 +290,17 @@ public class BatchTask extends AbstractTask {
     }
   }
 
-  private void setImportFiles(final File[] allFiles) {
-    MZmineProcessingStep<?> currentStep = queue.get(0);
-    ParameterSet importParameters = currentStep.getParameterSet();
-    FileNamesParameter importParam = importParameters.getParameter(
-        AllSpectralDataImportParameters.fileNames);
-    if (importParam == null) {
-      logger.warning(
-          "When running advanced batch, the first step in the batch needs to be the all spectral data import module.");
-      throw new IllegalStateException(
-          "When running advanced batch, the first step in the batch needs to be the all spectral data import module");
-    }
-    importParam.setValue(allFiles);
+  public List<StepTimeMeasurement> getStepTimes() {
+    return stepTimes;
+  }
+
+  public int currentStep() {
+    return processedSteps % stepsPerDataset;
   }
 
   private void processQueueStep(int stepNumber) {
 
+    Instant start = Instant.now();
     logger.info("Starting step # " + (stepNumber + 1));
 
     // Run next step of the batch
@@ -274,7 +329,7 @@ public class BatchTask extends AbstractTask {
         if (selectedFiles == null) {
           setStatus(TaskStatus.ERROR);
           setErrorMessage("Invalid parameter settings for module " + method.getName() + ": "
-              + "Missing parameter value for " + p.getName());
+                          + "Missing parameter value for " + p.getName());
           return;
         }
         selectedFiles.setBatchLastFiles(createdFiles);
@@ -312,32 +367,98 @@ public class BatchTask extends AbstractTask {
 
     // If current step didn't produce any tasks, continue with next step
     if (currentStepTasks.isEmpty()) {
+      // this might be the case for AllSpectralDataImportModule if all files are already loaded
+      // special option to skip already imported files in the AllSpectralDataImportParameters
+      // add skipped files
+      setLastFilesIfAllDataImportStep(batchStepParameters);
+      if (getStatus() == TaskStatus.ERROR) {
+        return;
+      }
       return;
     }
 
+    // submit as ThreadPoolTask
+    final TaskStatus status;
+    // create ThreadPool
+    if (currentStepTasks.size() > 1) {
+      status = runInTaskPool(method, currentStepTasks);
+    } else {
+      // Submit the tasks to the task controller for processing
+      status = runTasksIndividually(currentStepTasks);
+    }
+
+    if (status != TaskStatus.FINISHED) {
+      return;
+    }
+
+    createdDataFiles = new ArrayList<>(project.getCurrentRawDataFiles());
+    createdFeatureLists = new ArrayList<>(project.getCurrentFeatureLists());
+    createdDataFiles.removeAll(beforeDataFiles);
+    createdFeatureLists.removeAll(beforeFeatureLists);
+
+    // special option to skip already imported files in the AllSpectralDataImportParameters
+    // add skipped files
+    setLastFilesIfAllDataImportStep(batchStepParameters);
+    if (getStatus() == TaskStatus.ERROR) {
+      return;
+    }
+
+    // Clear the saved data files and feature lists. Save them to the
+    // "previous" lists, in case the next step does not produce any new data
+    if (!createdDataFiles.isEmpty()) {
+      previousCreatedDataFiles = createdDataFiles;
+    }
+    if (!createdFeatureLists.isEmpty()) {
+      previousCreatedFeatureLists = createdFeatureLists;
+    }
+
+    Duration duration = Duration.between(start, Instant.now());
+    stepTimes.add(new StepTimeMeasurement(stepNumber, method.getName(), duration));
+  }
+
+  /**
+   * Runs all tasks in the {@link TaskController}
+   *
+   * @param tasksToRun this list will be cleared after scheduling the tasks to avoid memory leaks
+   *                   during long running tasks
+   * @return TaskStatus of all tasks, the first cancel or error will be returned without checking
+   * the rest of the threads
+   */
+  private TaskStatus runTasksIndividually(List<Task> tasksToRun) {
+    final WrappedTask[] wrappedTasks = MZmineCore.getTaskController()
+        .addTasks(tasksToRun.toArray(new Task[0]));
+    tasksToRun.clear(); // do not keep the instance alive during long-running tasks
+
+    // TODO check if this performs better
+    for (final WrappedTask task : wrappedTasks) {
+      // wait for all to finish
+      try {
+        task.getFuture().get();
+      } catch (InterruptedException | ExecutionException e) {
+        return TaskStatus.ERROR;
+      }
+    }
+    if (true) {
+      return TaskStatus.FINISHED;
+    }
+
     boolean allTasksFinished = false;
-
-    // Submit the tasks to the task controller for processing
-    WrappedTask[] currentStepWrappedTasks = MZmineCore.getTaskController()
-        .addTasks(currentStepTasks.toArray(new Task[0]));
-    currentStepTasks = null;
-
-    while (!allTasksFinished) {
+    while (true) {
 
       // If we canceled the batch, cancel all running tasks
       if (isCanceled()) {
-        for (WrappedTask stepTask : currentStepWrappedTasks) {
+        for (WrappedTask stepTask : wrappedTasks) {
           stepTask.getActualTask().cancel();
         }
-        return;
+        return TaskStatus.CANCELED;
       }
 
       // First set to true, then check all tasks
       allTasksFinished = true;
 
-      for (WrappedTask stepTask : currentStepWrappedTasks) {
-
-        TaskStatus stepStatus = stepTask.getActualTask().getStatus();
+      for (WrappedTask stepTask : wrappedTasks) {
+        Task actualTask = stepTask.getActualTask();
+        TaskStatus stepStatus = actualTask.getStatus();
 
         // If any of them is not finished, keep checking
         if (stepStatus != TaskStatus.FINISHED) {
@@ -347,47 +468,52 @@ public class BatchTask extends AbstractTask {
         // If there was an error, we have to stop the whole batch
         if (stepStatus == TaskStatus.ERROR) {
           setStatus(TaskStatus.ERROR);
-          setErrorMessage(
-              stepTask.getActualTask().getTaskDescription() + ": " + stepTask.getActualTask()
-                  .getErrorMessage());
-          return;
+          setErrorMessage(actualTask.getTaskDescription() + ": " + actualTask.getErrorMessage());
+          return TaskStatus.ERROR;
         }
 
         // If user canceled any of the tasks, we have to cancel the
         // whole batch
         if (stepStatus == TaskStatus.CANCELED) {
           setStatus(TaskStatus.CANCELED);
-          for (WrappedTask t : currentStepWrappedTasks) {
+          for (WrappedTask t : wrappedTasks) {
             t.getActualTask().cancel();
           }
-          return;
+          return TaskStatus.CANCELED;
         }
-
       }
 
       // Wait 1s before checking the tasks again
-      if (!allTasksFinished) {
-        synchronized (this) {
-          try {
-            this.wait(1000);
-          } catch (InterruptedException e) {
-            // ignore
-          }
+      if (allTasksFinished) {
+        break;
+      }
+      synchronized (this) {
+        try {
+          this.wait(1000);
+        } catch (InterruptedException e) {
+          // ignore
         }
       }
     }
+    return TaskStatus.FINISHED;
+  }
 
-    createdDataFiles = new ArrayList<>(project.getCurrentRawDataFiles());
-    createdFeatureLists = new ArrayList<>(project.getCurrentFeatureLists());
-    createdDataFiles.removeAll(beforeDataFiles);
-    createdFeatureLists.removeAll(beforeFeatureLists);
-    // Clear the saved data files and feature lists. Save them to the
-    // "previous" lists, in case the next step does not produce any new data
-    if (!createdDataFiles.isEmpty()) {
-      previousCreatedDataFiles = createdDataFiles;
-    }
-    if (!createdFeatureLists.isEmpty()) {
-      previousCreatedFeatureLists = createdFeatureLists;
+  private void setLastFilesIfAllDataImportStep(final ParameterSet batchStepParameters) {
+    if (AllSpectralDataImportParameters.isParameterSetClass(batchStepParameters)) {
+      var loadedRawDataFiles = AllSpectralDataImportParameters.getLoadedRawDataFiles(
+          MZmineCore.getProject(), batchStepParameters);
+
+      // loaded should always be >= created as we are at most skipping files
+      if (loadedRawDataFiles.size() >= createdDataFiles.size()) {
+        createdDataFiles = loadedRawDataFiles;
+        previousCreatedDataFiles = createdDataFiles;
+      } else {
+        setStatus(TaskStatus.ERROR);
+        setErrorMessage(
+            "Wanted to set the last batch files from raw data import but failed because less data files were imported than expected.\n"
+            + "expected %d  but loaded %d".formatted(loadedRawDataFiles.size(),
+                createdDataFiles.size()));
+      }
     }
   }
 
@@ -408,7 +534,7 @@ public class BatchTask extends AbstractTask {
         if (selectedFeatureLists == null) {
           setStatus(TaskStatus.ERROR);
           setErrorMessage("Invalid parameter settings for module " + method.getName() + ": "
-              + "Missing parameter value for " + p.getName());
+                          + "Missing parameter value for " + p.getName());
           return false;
         }
         selectedFeatureLists.setBatchLastFeatureLists(createdFlists);
@@ -442,10 +568,12 @@ public class BatchTask extends AbstractTask {
         return "Batch mode";
       } else {
         return String.format("Batch step %d/%d of dataset %d/%d",
-            processedSteps % stepsPerDataset + 1, stepsPerDataset, currentDataset + 1, datasets);
+            Math.min(processedSteps % stepsPerDataset + 1, totalSteps), stepsPerDataset,
+            currentDataset + 1, datasets);
       }
     } else {
-      return String.format("Batch step %d/%d", processedSteps + 1, totalSteps);
+      return String.format("Batch step %d/%d", Math.min(processedSteps + 1, totalSteps),
+          totalSteps);
     }
   }
 

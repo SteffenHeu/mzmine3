@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,6 +36,28 @@ public interface Task extends Runnable {
 
   TaskStatus getStatus();
 
+
+  /**
+   * Convenience method for determining if this task has been canceled. Also returns true if the
+   * task encountered an error.
+   *
+   * @return true if this task has been canceled or stopped due to an error
+   */
+  default boolean isCanceled() {
+    TaskStatus status = getStatus();
+    return (status == TaskStatus.CANCELED) || (status == TaskStatus.ERROR);
+  }
+
+  /**
+   * Convenience method for determining if this task has been completed
+   *
+   * @return true if this task is finished
+   */
+  default boolean isFinished() {
+    TaskStatus status = getStatus();
+    return status == TaskStatus.FINISHED;
+  }
+
   String getErrorMessage();
 
   /**
@@ -55,4 +77,5 @@ public interface Task extends Runnable {
   boolean removeTaskStatusListener(TaskStatusListener list);
 
   void clearTaskStatusListener();
+
 }

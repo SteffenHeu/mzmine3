@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2023 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,16 +39,17 @@ import io.github.mzmine.datamodel.features.types.annotations.compounddb.Database
 import io.github.mzmine.datamodel.features.types.annotations.formula.FormulaType;
 import io.github.mzmine.datamodel.features.types.annotations.iin.IonTypeType;
 import io.github.mzmine.datamodel.features.types.modifiers.AnnotationType;
+import io.github.mzmine.datamodel.features.types.numbers.CCSRelativeErrorType;
 import io.github.mzmine.datamodel.features.types.numbers.CCSType;
 import io.github.mzmine.datamodel.features.types.numbers.MzPpmDifferenceType;
 import io.github.mzmine.datamodel.features.types.numbers.NeutralMassType;
 import io.github.mzmine.datamodel.features.types.numbers.PrecursorMZType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.CompoundAnnotationScoreType;
+import io.github.mzmine.datamodel.features.types.numbers.scores.IsotopePatternScoreType;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import javax.xml.stream.XMLStreamException;
@@ -64,25 +65,11 @@ public class CompoundDatabaseMatchesType extends ListWithSubsType<CompoundDBAnno
       new CompoundNameType(), new CompoundAnnotationScoreType(), new FormulaType(),
       new IonTypeType(), new SmilesStructureType(), new InChIStructureType(), new PrecursorMZType(),
       new MzPpmDifferenceType(), new NeutralMassType(), new RTType(), new CCSType(),
-      new DatabaseMatchInfoType());
+      new CCSRelativeErrorType(), new DatabaseMatchInfoType(), new IsotopePatternScoreType(),
+      new CommentType());
+
   private static final Logger logger = Logger.getLogger(
       CompoundDatabaseMatchesType.class.getName());
-  private static final Map<Class<? extends DataType>, Function<CompoundDBAnnotation, Object>> mapper = Map.ofEntries(
-      //
-      createEntry(CompoundDatabaseMatchesType.class, CompoundDBAnnotation::getCompoundName), //
-      createEntry(CompoundNameType.class, CompoundDBAnnotation::getCompoundName), //
-      createEntry(CompoundAnnotationScoreType.class, CompoundDBAnnotation::getScore),
-      createEntry(FormulaType.class, CompoundDBAnnotation::getFormula), //
-      createEntry(IonTypeType.class, CompoundDBAnnotation::getAdductType), //
-      createEntry(SmilesStructureType.class, CompoundDBAnnotation::getSmiles), //
-      createEntry(InChIStructureType.class, match -> match.get(new InChIStructureType())), //
-      createEntry(PrecursorMZType.class, CompoundDBAnnotation::getPrecursorMZ), //
-      createEntry(MzPpmDifferenceType.class, match -> match.get(MzPpmDifferenceType.class)), //
-      createEntry(NeutralMassType.class, match -> match.get(new NeutralMassType())), //
-      createEntry(RTType.class, match -> match.get(new RTType())), //
-      createEntry(CCSType.class, CompoundDBAnnotation::getCCS),
-      createEntry(DatabaseMatchInfoType.class, match -> match.get(DatabaseMatchInfoType.class)),
-      createEntry(CommentType.class, match -> match.get(CommentType.class)));
 
   public CompoundDatabaseMatchesType() {
   }
@@ -90,6 +77,12 @@ public class CompoundDatabaseMatchesType extends ListWithSubsType<CompoundDBAnno
   private static <T, R> R mapOrElse(@Nullable final T input, @NotNull final Function<T, R> mapper,
       @Nullable R elze) {
     return input != null ? mapper.apply(input) : elze;
+  }
+
+  @Override
+  protected <K> @Nullable K map(@NotNull final DataType<K> subType,
+      final CompoundDBAnnotation item) {
+    return item.get(subType);
   }
 
   @Override
@@ -108,11 +101,6 @@ public class CompoundDatabaseMatchesType extends ListWithSubsType<CompoundDBAnno
   }
 
   @Override
-  protected Map<Class<? extends DataType>, Function<CompoundDBAnnotation, Object>> getMapper() {
-    return mapper;
-  }
-
-  @Override
   public void saveToXML(@NotNull XMLStreamWriter writer, @Nullable Object value,
       @NotNull ModularFeatureList flist, @NotNull ModularFeatureListRow row,
       @Nullable ModularFeature feature, @Nullable RawDataFile file) throws XMLStreamException {
@@ -123,7 +111,7 @@ public class CompoundDatabaseMatchesType extends ListWithSubsType<CompoundDBAnno
     if (!(value instanceof List<?> list)) {
       throw new IllegalArgumentException(
           "Wrong value type for data type: " + this.getClass().getName() + " value class: "
-              + value.getClass());
+          + value.getClass());
     }
 
     for (Object o : list) {
@@ -139,7 +127,7 @@ public class CompoundDatabaseMatchesType extends ListWithSubsType<CompoundDBAnno
       @NotNull ModularFeatureList flist, @NotNull ModularFeatureListRow row,
       @Nullable ModularFeature feature, @Nullable RawDataFile file) throws XMLStreamException {
     if (!(reader.isStartElement() && reader.getLocalName().equals(CONST.XML_DATA_TYPE_ELEMENT)
-        && reader.getAttributeValue(null, CONST.XML_DATA_TYPE_ID_ATTR).equals(getUniqueID()))) {
+          && reader.getAttributeValue(null, CONST.XML_DATA_TYPE_ID_ATTR).equals(getUniqueID()))) {
       throw new IllegalStateException("Wrong element");
     }
 
