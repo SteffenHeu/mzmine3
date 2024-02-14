@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2004-2024 The MZmine Development Team
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package io.github.mzmine.modules.dataprocessing.featdet_xic;
 
 import com.google.common.collect.Range;
@@ -40,6 +65,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class XICBuilderTask extends AbstractTask {
 
+  private static final Logger logger = Logger.getLogger(XICBuilderTask.class.getName());
   private final ScanSelection selection;
   private final MZTolerance initTol;
   private final double minStartIntensity;
@@ -49,11 +75,9 @@ public class XICBuilderTask extends AbstractTask {
   private final double rangeTolerance;
   private final @NotNull ParameterSet parameters;
   private final XICMergeMethod xicMergeMethod;
-  private double progress = 0d;
   private final ModularFeatureList flist;
   private final MZmineProject project;
-
-  private static final Logger logger = Logger.getLogger(XICBuilderTask.class.getName());
+  private double progress = 0d;
 
   public XICBuilderTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
       RawDataFile file, @NotNull ParameterSet parameters, @NotNull MZmineProject project) {
@@ -85,7 +109,7 @@ public class XICBuilderTask extends AbstractTask {
   public void run() {
     setStatus(TaskStatus.PROCESSING);
 
-    final ScanDataAccess access = EfficientDataAccess.of(file, ScanDataType.CENTROID, selection);
+    final ScanDataAccess access = EfficientDataAccess.of(file, ScanDataType.MASS_LIST, selection);
     // make a list of all the data points
 
     logger.finest(() -> "Extracting data points above " + minStartIntensity + " intensity.");
