@@ -49,10 +49,14 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.DataTypeUtils;
-import io.github.mzmine.util.FeatureConvertors;
 import io.github.mzmine.util.FeatureListUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.maths.CenterFunction;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.List;
 import java.util.logging.Level;
@@ -101,6 +105,45 @@ public class FeatureResolverTask extends AbstractTask {
     processedRows = 0;
     totalRows = 0;
     this.mzCenterFunction = mzCenterFunction;
+  }
+
+  private static void exportFeatureToTsv(List<IonTimeSeries<? extends Scan>> resolvedSeries,
+      ModularFeature originalFeature, FeatureDataAccess access) {
+    final File dir = new File(
+        "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()));
+    dir.mkdirs();
+    if (!resolvedSeries.isEmpty()) {
+      try (var writer = Files.newBufferedWriter(new File(
+              "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()),
+              "feature_%d_full.tsv".formatted(originalFeature.getRow().getID())).toPath(),
+          StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+        writer.write("x\ty");
+        writer.newLine();
+        for (int i = 0; i < access.getNumberOfValues(); i++) {
+          writer.write("%.2f".formatted(access.getRetentionTime(i)));
+          writer.write("\t");
+          writer.write("%.2f".formatted(access.getIntensity(i)));
+          writer.newLine();
+        }
+      } catch (IOException e) {
+        //
+      }
+      try (var writer = Files.newBufferedWriter(new File(
+              "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()),
+              "feature_%d_ranges.tsv".formatted(originalFeature.getRow().getID())).toPath(),
+          StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+        writer.write("start\tend");
+        writer.newLine();
+        for (IonTimeSeries<? extends Scan> resolved : resolvedSeries) {
+          writer.write("%.2f".formatted(resolved.getRetentionTime(0)));
+          writer.write("\t");
+          writer.write(
+              "%.2f".formatted(resolved.getRetentionTime(resolved.getNumberOfValues() - 1)));
+        }
+      } catch (IOException e) {
+        //
+      }
+    }
   }
 
   @Override
@@ -207,6 +250,8 @@ public class FeatureResolverTask extends AbstractTask {
       final List<IonTimeSeries<? extends Scan>> resolvedSeries = resolver.resolve(access,
           getMemoryMapStorage());
 
+      exportFeatureToTsv(resolvedSeries, originalFeature, access);
+
       for (IonTimeSeries<? extends Scan> resolved : resolvedSeries) {
         final ModularFeatureListRow newRow = new ModularFeatureListRow(resolvedFeatureList,
             peakId++);
@@ -219,7 +264,7 @@ public class FeatureResolverTask extends AbstractTask {
         if (originalFeature.get(ImageType.class) != null) {
           f.set(ImageType.class, true);
         }
-        if(originalFeature.get(MaldiSpotType.class) != null) {
+        if (originalFeature.get(MaldiSpotType.class) != null) {
           f.set(MaldiSpotType.class, originalFeature.get(MaldiSpotType.class));
         }
         newRow.addFeature(originalFeature.getRawDataFile(), f);
