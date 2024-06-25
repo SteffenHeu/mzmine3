@@ -31,6 +31,7 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.data_access.EfficientDataAccess;
 import io.github.mzmine.datamodel.data_access.FeatureDataAccess;
+import io.github.mzmine.datamodel.featuredata.FeatureDataUtils;
 import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
 import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
 import io.github.mzmine.datamodel.features.Feature;
@@ -112,17 +113,18 @@ public class FeatureResolverTask extends AbstractTask {
     final File dir = new File(
         "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()));
     dir.mkdirs();
+    final float maxHeight = originalFeature.getHeight();
     if (!resolvedSeries.isEmpty()) {
       try (var writer = Files.newBufferedWriter(new File(
               "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()),
               "feature_%d_full.tsv".formatted(originalFeature.getRow().getID())).toPath(),
           StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
-        writer.write("x\ty");
+        writer.write("x\ty\tfactor=%f".formatted(maxHeight));
         writer.newLine();
         for (int i = 0; i < access.getNumberOfValues(); i++) {
-          writer.write("%.2f".formatted(access.getRetentionTime(i)));
+          writer.write("%.4f".formatted(access.getRetentionTime(i)));
           writer.write("\t");
-          writer.write("%.2f".formatted(access.getIntensity(i)));
+          writer.write("%f".formatted(access.getIntensity(i) / maxHeight));
           writer.newLine();
         }
       } catch (IOException e) {
@@ -132,13 +134,16 @@ public class FeatureResolverTask extends AbstractTask {
               "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()),
               "feature_%d_ranges.tsv".formatted(originalFeature.getRow().getID())).toPath(),
           StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
-        writer.write("start\tend");
+        writer.write("start\tend\tmax");
         writer.newLine();
         for (IonTimeSeries<? extends Scan> resolved : resolvedSeries) {
-          writer.write("%.2f".formatted(resolved.getRetentionTime(0)));
+          writer.write("%.4f".formatted(resolved.getRetentionTime(0)));
           writer.write("\t");
           writer.write(
-              "%.2f".formatted(resolved.getRetentionTime(resolved.getNumberOfValues() - 1)));
+              "%.4f".formatted(resolved.getRetentionTime(resolved.getNumberOfValues() - 1)));
+          writer.write("\t");
+          writer.write("%.4f".formatted(
+              resolved.getRetentionTime(FeatureDataUtils.getMostIntenseIndex(resolved))));
         }
       } catch (IOException e) {
         //
