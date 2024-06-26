@@ -144,6 +144,7 @@ public class FeatureResolverTask extends AbstractTask {
           writer.write("\t");
           writer.write("%.4f".formatted(
               resolved.getRetentionTime(FeatureDataUtils.getMostIntenseIndex(resolved))));
+          writer.newLine();
         }
       } catch (IOException e) {
         //
