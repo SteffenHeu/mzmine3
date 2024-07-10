@@ -26,6 +26,7 @@
 package io.github.mzmine.modules.dataprocessing.featdet_spectraldeconvolutiongc.rtgroupingandsharecorrelation;
 
 import com.google.common.collect.Range;
+import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.modules.dataprocessing.featdet_spectraldeconvolutiongc.SpectralDeconvolutionAlgorithm;
 import io.github.mzmine.parameters.ParameterSet;
@@ -73,7 +74,13 @@ public class RtGroupingAndShapeCorrelationAlgorithm implements SpectralDeconvolu
       // Find all clusters that the feature can potentially fit into
       for (List<ModularFeature> cluster : clusters) {
         ModularFeature clusterRepFeature = cluster.getFirst(); // Get the first feature as the representative
-        if (rtTolerance.checkWithinTolerance(clusterRepFeature.getRT(), feature.getRT())) {
+        Float clusterRepFeatureRt = clusterRepFeature.getRT();
+        Float featureRt = feature.getRT();
+        if (feature.getMobility() != null) {
+          clusterRepFeatureRt = clusterRepFeature.getMobility();
+          featureRt = feature.getMobility();
+        }
+        if (rtTolerance.checkWithinTolerance(clusterRepFeatureRt, featureRt)) {
           potentialClusters.add(cluster);
         }
       }
@@ -132,25 +139,58 @@ public class RtGroupingAndShapeCorrelationAlgorithm implements SpectralDeconvolu
   }
 
   private double calculateCorrelation(ModularFeature feature1, ModularFeature feature2) {
+    boolean isMobility = feature1.getMobility() != null && feature2.getMobility() != null;
     //find data points with shared rt
-    Range<Float> overlappingRtRange = getOverlap(feature1.getRawDataPointsRTRange(),
-        feature2.getRawDataPointsRTRange());
+    Range<Float> feature1rawDataPointsRTRange = feature1.getRawDataPointsRTRange();
+    Range<Float> feature2rawDataPointsRTRange = feature2.getRawDataPointsRTRange();
+    if (isMobility) {
+      feature1rawDataPointsRTRange = feature1.getMobilityRange();
+      feature2rawDataPointsRTRange = feature2.getMobilityRange();
+    }
+    Range<Float> overlappingRtRange = getOverlap(feature1rawDataPointsRTRange,
+        feature2rawDataPointsRTRange);
     if (overlappingRtRange == null) {
       return 0.0;
     }
     int numberOfDpsFeature1 = feature1.getNumberOfDataPoints();
+    if (feature1.getFeatureData() instanceof IonMobilogramTimeSeries ionMobilogramTimeSeries) {
+      numberOfDpsFeature1 = ionMobilogramTimeSeries.getSummedMobilogram().getNumberOfDataPoints();
+    }
     List<Double> feature1Profile = new ArrayList<>();
     for (int i = 0; i < numberOfDpsFeature1; i++) {
-      if (overlappingRtRange.contains(feature1.getFeatureData().getRetentionTime(i))) {
-        feature1Profile.add(feature1.getFeatureData().getIntensity(i));
+      float retentionTime1;
+      if (isMobility
+          && feature1.getFeatureData() instanceof IonMobilogramTimeSeries ionMobilogramTimeSeries) {
+        retentionTime1 = (float) ionMobilogramTimeSeries.getSummedMobilogram().getMobility(i);
+        if (overlappingRtRange.contains(retentionTime1)) {
+          feature1Profile.add(ionMobilogramTimeSeries.getSummedMobilogram().getIntensity(i));
+        }
+      } else {
+        retentionTime1 = feature1.getFeatureData().getRetentionTime(i);
+        if (overlappingRtRange.contains(retentionTime1)) {
+          feature1Profile.add(feature1.getFeatureData().getIntensity(i));
+        }
       }
     }
 
     List<Double> feature2Profile = new ArrayList<>();
     int numberOfDpsFeature2 = feature2.getNumberOfDataPoints();
+    if (feature2.getFeatureData() instanceof IonMobilogramTimeSeries ionMobilogramTimeSeries) {
+      numberOfDpsFeature2 = ionMobilogramTimeSeries.getSummedMobilogram().getNumberOfDataPoints();
+    }
     for (int i = 0; i < numberOfDpsFeature2; i++) {
-      if (overlappingRtRange.contains(feature2.getFeatureData().getRetentionTime(i))) {
+      float retentionTime2;
+      if (isMobility
+          && feature2.getFeatureData() instanceof IonMobilogramTimeSeries ionMobilogramTimeSeries) {
+        retentionTime2 = (float) ionMobilogramTimeSeries.getSummedMobilogram().getMobility(i);
+        if (overlappingRtRange.contains(retentionTime2)) {
+          feature2Profile.add(ionMobilogramTimeSeries.getSummedMobilogram().getIntensity(i));
+        }
+      } else {
+        retentionTime2 = feature2.getFeatureData().getRetentionTime(i);
+        if (overlappingRtRange.contains(retentionTime2)) {
         feature2Profile.add(feature2.getFeatureData().getIntensity(i));
+      }
       }
     }
 

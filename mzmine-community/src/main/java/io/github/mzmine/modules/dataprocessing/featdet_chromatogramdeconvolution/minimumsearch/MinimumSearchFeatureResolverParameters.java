@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2024 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -53,7 +53,7 @@ public class MinimumSearchFeatureResolverParameters extends GeneralResolverParam
       "Minimum search range RT/Mobility (absolute)",
       "If a local minimum is minimal in this range of retention time or mobility, it will be considered a border between two peaks.\n"
           + "Start optimising with a value close to the FWHM of a peak.",
-      new DecimalFormat("0.000"), 0.05);
+      new DecimalFormat("0.0000"), 0.05);
 
   public static final PercentParameter MIN_RELATIVE_HEIGHT = new PercentParameter(
       "Minimum relative height",
