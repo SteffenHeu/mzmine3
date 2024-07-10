@@ -28,6 +28,8 @@ package io.github.mzmine.modules.tools.batchwizard.builders;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.AbundanceMeasure;
+import io.github.mzmine.datamodel.MobilityType;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineProcessingModule;
 import io.github.mzmine.modules.MZmineProcessingStep;
@@ -51,6 +53,8 @@ import io.github.mzmine.modules.io.export_features_gnps.gc.GnpsGcExportAndSubmit
 import io.github.mzmine.modules.io.export_features_mgf.AdapMgfExportParameters.MzMode;
 import io.github.mzmine.modules.io.export_features_msp.AdapMspExportModule;
 import io.github.mzmine.modules.io.export_features_msp.AdapMspExportParameters;
+import io.github.mzmine.modules.io.gcxgctoims.GCxGCToImsModule;
+import io.github.mzmine.modules.io.gcxgctoims.GCxGCToImsParameters;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
@@ -62,6 +66,8 @@ import io.github.mzmine.parameters.parametertypes.OptionalValue;
 import io.github.mzmine.parameters.parametertypes.absoluterelative.AbsoluteAndRelativeInt;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelectionType;
+import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
+import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelectionType;
 import io.github.mzmine.parameters.parametertypes.selectors.SpectralLibrarySelection;
 import io.github.mzmine.parameters.parametertypes.submodules.ModuleComboParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -138,13 +144,22 @@ public class WizardBatchBuilderGcEiDeconvolution extends BaseWizardBatchBuilder 
         WorkflowGcElectronImpactWizardParameters.exportAnnotationGraphics);
     minNumberOfSignalsInDeconSpectra = getValue(params,
         WorkflowGcElectronImpactWizardParameters.MIN_NUMBER_OF_SIGNALS_IN_DECON_SPECTRA);
+
   }
 
   @Override
   public BatchQueue createQueue() {
     final BatchQueue q = new BatchQueue();
     makeAndAddImportTask(q);
-    makeAndAddMassDetectionStepForAllScans(q);
+
+    if (isImsActive && imsInstrumentType == MobilityType.GCxGC) {
+      makeandAddGCxGCToPseudoImsStep(q);
+      makeAndAddMassDetectionStepForAllScans(q);
+      makeAndAddMobilityScanMergerStep(q);
+    } else {
+      makeAndAddMassDetectionStepForAllScans(q);
+    }
+
     makeAndAddAdapChromatogramStep(q, minFeatureHeight, mzTolScans, massDetectorOption,
         minRtDataPoints, cropRtRange, polarity);
     if (rtSmoothing) {
@@ -154,6 +169,10 @@ public class WizardBatchBuilderGcEiDeconvolution extends BaseWizardBatchBuilder 
     if (recalibrateRetentionTime) {
       makeAndAddRetentionTimeCalibration(q, mzTolInterSample, interSampleRtTol,
           handleOriginalFeatureLists);
+    }
+    if (isImsActive && imsInstrumentType == MobilityType.GCxGC) {
+      makeAndAddImsExpanderStep(q);
+      makeAndAddMobilityResolvingStep(q, null);
     }
     makeSpectralDeconvolutionStep(q);
     makeAndAddAlignmentStep(q);
@@ -176,6 +195,16 @@ public class WizardBatchBuilderGcEiDeconvolution extends BaseWizardBatchBuilder 
       }
     }
     return q;
+  }
+
+  private void makeandAddGCxGCToPseudoImsStep(BatchQueue q) {
+    final ParameterSet param = ConfigService.getConfiguration()
+        .getModuleParameters(GCxGCToImsModule.class).cloneParameterSet();
+
+    param.setParameter(GCxGCToImsParameters.rawFiles,
+        new RawDataFilesSelection(RawDataFilesSelectionType.BATCH_LAST_FILES));
+    q.add(new MZmineProcessingStepImpl<>(MZmineCore.getModuleInstance(GCxGCToImsModule.class),
+        param));
   }
 
   @Override
