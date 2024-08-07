@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2024 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -114,22 +114,23 @@ public class FeatureResolverTask extends AbstractTask {
         "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()));
     dir.mkdirs();
     final float maxHeight = originalFeature.getHeight();
-    if (!resolvedSeries.isEmpty()) {
-      try (var writer = Files.newBufferedWriter(new File(
-              "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()),
-              "feature_%d_full.tsv".formatted(originalFeature.getRow().getID())).toPath(),
-          StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
-        writer.write("x\ty\tfactor=%f".formatted(maxHeight));
+//    if (!resolvedSeries.isEmpty()) {
+    try (var writer = Files.newBufferedWriter(
+        new File("D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()),
+            "feature_%d_full.tsv".formatted(originalFeature.getRow().getID())).toPath(),
+        StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+      writer.write("x\ty\tfactor=%f".formatted(maxHeight));
+      writer.newLine();
+      for (int i = 0; i < access.getNumberOfValues(); i++) {
+        writer.write("%f".formatted(access.getRetentionTime(i)));
+        writer.write("\t");
+        writer.write("%f".formatted(access.getIntensity(i) / maxHeight));
         writer.newLine();
-        for (int i = 0; i < access.getNumberOfValues(); i++) {
-          writer.write("%f".formatted(access.getRetentionTime(i)));
-          writer.write("\t");
-          writer.write("%f".formatted(access.getIntensity(i) / maxHeight));
-          writer.newLine();
-        }
-      } catch (IOException e) {
-        //
       }
+    } catch (IOException e) {
+      //
+    }
+    if (!resolvedSeries.isEmpty()) {
       try (var writer = Files.newBufferedWriter(new File(
               "D:/export/max_features/%s".formatted(originalFeature.getRawDataFile().getName()),
               "feature_%d_ranges.tsv".formatted(originalFeature.getRow().getID())).toPath(),
@@ -139,8 +140,7 @@ public class FeatureResolverTask extends AbstractTask {
         for (IonTimeSeries<? extends Scan> resolved : resolvedSeries) {
           writer.write("%f".formatted(resolved.getRetentionTime(0)));
           writer.write("\t");
-          writer.write(
-              "%f".formatted(resolved.getRetentionTime(resolved.getNumberOfValues() - 1)));
+          writer.write("%f".formatted(resolved.getRetentionTime(resolved.getNumberOfValues() - 1)));
           writer.write("\t");
           writer.write("%f".formatted(
               resolved.getRetentionTime(FeatureDataUtils.getMostIntenseIndex(resolved))));
