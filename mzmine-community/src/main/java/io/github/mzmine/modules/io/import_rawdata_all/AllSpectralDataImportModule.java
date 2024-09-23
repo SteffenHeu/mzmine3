@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2024 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -26,7 +25,6 @@
 package io.github.mzmine.modules.io.import_rawdata_all;
 
 import com.google.common.collect.Range;
-import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.ImagingRawDataFile;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
@@ -34,8 +32,6 @@ import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.MZmineModuleCategory;
 import io.github.mzmine.modules.MZmineProcessingModule;
-import io.github.mzmine.modules.MZmineProcessingStep;
-import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetector;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.MsProcessor;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.MsProcessorList;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.ScanImportProcessorConfig;
@@ -53,6 +49,7 @@ import io.github.mzmine.modules.io.import_rawdata_mzdata.MzDataImportTask;
 import io.github.mzmine.modules.io.import_rawdata_mzml.MSDKmzMLImportTask;
 import io.github.mzmine.modules.io.import_rawdata_mzxml.MzXMLImportTask;
 import io.github.mzmine.modules.io.import_rawdata_netcdf.NetCDFImportTask;
+import io.github.mzmine.modules.io.import_rawdata_thermo_raw.ThermoImportTaskDelegator;
 import io.github.mzmine.modules.io.import_rawdata_thermo_raw.ThermoRawImportTask;
 import io.github.mzmine.modules.io.import_rawdata_zip.ZipImportTask;
 import io.github.mzmine.modules.io.import_spectral_library.SpectralLibraryImportParameters;
@@ -97,30 +94,6 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
   // needs a storage for mass lists if advanced import with mass detection was selected but not supported for a MS file type
   private MemoryMapStorage storageMassLists = null;
 
-  @Override
-  public @NotNull String getName() {
-    return MODULE_NAME;
-  }
-
-  @NotNull
-  @Override
-  public String getDescription() {
-    return MODULE_DESCRIPTION;
-  }
-
-  @NotNull
-  @Override
-  public MZmineModuleCategory getModuleCategory() {
-    return MZmineModuleCategory.RAWDATAIMPORT;
-  }
-
-  @NotNull
-  @Override
-  public Class<? extends ParameterSet> getParameterSetClass() {
-    return AllSpectralDataImportParameters.class;
-  }
-
-
   /**
    * Define filters and processors for scans
    */
@@ -134,12 +107,10 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
     processors.add(new SortByMzMsProcessor());
 
     // read parameters
-    MZmineProcessingStep<MassDetector> ms1Detector = advanced.getEmbeddedParameterValueIfSelectedOrElse(
-        AdvancedSpectraImportParameters.msMassDetection, null);
-    MZmineProcessingStep<MassDetector> ms2Detector = advanced.getEmbeddedParameterValueIfSelectedOrElse(
-        AdvancedSpectraImportParameters.ms2MassDetection, null);
+    boolean ms1Detector = advanced.getValue(AdvancedSpectraImportParameters.msMassDetection);
+    boolean ms2Detector = advanced.getValue(AdvancedSpectraImportParameters.ms2MassDetection);
 
-    boolean applyMassDetection = ms1Detector != null || ms2Detector != null;
+    boolean applyMassDetection = ms1Detector || ms2Detector;
 
     boolean denormalizeMsn = advanced.getValue(AdvancedSpectraImportParameters.denormalizeMSnScans);
     Range<Double> cropMzRange = advanced.getEmbeddedParameterValueIfSelectedOrElse(
@@ -208,6 +179,29 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
       return true;
     }
     return false;
+  }
+
+  @Override
+  public @NotNull String getName() {
+    return MODULE_NAME;
+  }
+
+  @NotNull
+  @Override
+  public String getDescription() {
+    return MODULE_DESCRIPTION;
+  }
+
+  @NotNull
+  @Override
+  public MZmineModuleCategory getModuleCategory() {
+    return MZmineModuleCategory.RAWDATAIMPORT;
+  }
+
+  @NotNull
+  @Override
+  public Class<? extends ParameterSet> getParameterSetClass() {
+    return AllSpectralDataImportParameters.class;
   }
 
   @NotNull
@@ -361,8 +355,8 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
           new TSFImportTask(project, file, storage, module, parameters, moduleCallDate,
               scanProcessorConfig);
       // IMS
-      case BRUKER_TDF ->
-          new TDFImportTask(project, file, (IMSRawDataFile) newMZmineFile, module, parameters,
+      case BRUKER_TDF -> // ims files are big, use own storage
+          new TDFImportTask(project, file, MemoryMapStorage.forRawDataFile(), module, parameters,
               moduleCallDate);
       // MS
       case MZML, MZML_IMS ->
@@ -376,8 +370,8 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
       case NETCDF ->
           new NetCDFImportTask(project, file, newMZmineFile, module, parameters, moduleCallDate);
       case THERMO_RAW ->
-          new ThermoRawImportTask(project, file, newMZmineFile, module, parameters, moduleCallDate,
-              scanProcessorConfig);
+          new ThermoImportTaskDelegator(storage, moduleCallDate, file, scanProcessorConfig, project,
+              parameters, module);
       case ICPMSMS_CSV ->
           new IcpMsCVSImportTask(project, file, newMZmineFile, module, parameters, moduleCallDate);
       case MZML_GZIP, MZML_ZIP ->
@@ -387,7 +381,7 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
           new BafImportTask(storage, moduleCallDate, file, module, parameters, project,
               scanProcessorConfig);
 //      case AIRD -> throw new IllegalStateException("Unexpected value: " + fileType);
-      case /*WATERS_RAW,*/ SCIEX_WIFF, SCIEX_WIFF2, AGILENT_D ->
+      case WATERS_RAW, SCIEX_WIFF, SCIEX_WIFF2, AGILENT_D ->
           new MSConvertImportTask(moduleCallDate, file, scanProcessorConfig, project, module,
               parameters);
     };
@@ -417,22 +411,24 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
           new MzXMLImportTask(project, file, newMZmineFile, scanProcessorConfig, module, parameters,
               moduleCallDate);
       case BRUKER_TDF ->
-          new TDFImportTask(project, file, (IMSRawDataFile) newMZmineFile, scanProcessorConfig,
-              module, parameters, moduleCallDate);
+          new TDFImportTask(project, file, storage, scanProcessorConfig, module, parameters,
+              moduleCallDate);
       case THERMO_RAW ->
-          new ThermoRawImportTask(project, file, newMZmineFile, module, parameters, moduleCallDate,
-              scanProcessorConfig);
+          new ThermoImportTaskDelegator(storage, moduleCallDate, file, scanProcessorConfig, project,
+              parameters, module);
+//          new ThermoRawImportTask(project, file, module, parameters, moduleCallDate,
+//              scanProcessorConfig);
       case BRUKER_TSF ->
           new TSFImportTask(project, file, storage, module, parameters, moduleCallDate,
               scanProcessorConfig);
       case BRUKER_BAF ->
           new BafImportTask(storage, moduleCallDate, file, module, parameters, project,
               scanProcessorConfig);
-      case AGILENT_D, SCIEX_WIFF, SCIEX_WIFF2 ->
+      case AGILENT_D, SCIEX_WIFF, SCIEX_WIFF2, WATERS_RAW ->
           new MSConvertImportTask(moduleCallDate, file, scanProcessorConfig, project, module,
               parameters);
       // all unsupported tasks are wrapped to apply import and mass detection separately
-      case MZDATA,/* WATERS_RAW,*/ NETCDF, MZML_ZIP, MZML_GZIP, ICPMSMS_CSV ->
+      case MZDATA, NETCDF, MZML_ZIP, MZML_GZIP, ICPMSMS_CSV ->
           createWrappedAdvancedTask(fileType, project, file, newMZmineFile, scanProcessorConfig,
               module, parameters, moduleCallDate, storage);
     };
@@ -455,14 +451,13 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
   private RawDataFile createDataFile(RawDataFileType fileType, String absPath, String newName,
       MemoryMapStorage storage) throws IOException {
     return switch (fileType) {
-      case MZXML, MZDATA, THERMO_RAW, /*WATERS_RAW,*/ NETCDF, ICPMSMS_CSV ->
+      case MZXML, MZDATA, /*WATERS_RAW,*/ NETCDF, ICPMSMS_CSV ->
           MZmineCore.createNewFile(newName, absPath, storage);
       case MZML, MZML_IMS, MZML_ZIP, MZML_GZIP -> null; // created in Mzml import task
       case IMZML -> MZmineCore.createNewImagingFile(newName, absPath, storage);
-      case BRUKER_TDF -> MZmineCore.createNewIMSFile(newName, absPath, storage);
-      case BRUKER_TSF, BRUKER_BAF ->
+      case BRUKER_TSF, BRUKER_BAF, BRUKER_TDF ->
           null; // TSF can be anything: Single shot maldi, imaging, or LC-MS (non ims)
-      case /*WATERS_RAW,*/ SCIEX_WIFF, SCIEX_WIFF2, AGILENT_D -> null;
+      case WATERS_RAW, SCIEX_WIFF, SCIEX_WIFF2, AGILENT_D, THERMO_RAW -> null;
     };
   }
 
