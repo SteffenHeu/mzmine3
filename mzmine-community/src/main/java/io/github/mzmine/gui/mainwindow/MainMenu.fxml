@@ -179,6 +179,8 @@
     <Menu text="LC-MS">
       <MenuItem onAction="#runModule" text="Chromatogram builder"
         userData="io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule"/>
+      <MenuItem onAction="#runModule" text="Chromatogram builder"
+        userData="io.github.mzmine.modules.dataprocessing.featdet_xic.LoopXicBuilderModule"/>
       <MenuItem onAction="#runModule"
         text="Targeted feature detection"
         userData="io.github.mzmine.modules.dataprocessing.featdet_targeted.TargetedFeatureDetectionModule"/>

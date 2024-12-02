@@ -58,6 +58,7 @@ import io.github.mzmine.modules.dataprocessing.featdet_shoulderpeaksfilter.Shoul
 import io.github.mzmine.modules.dataprocessing.featdet_smoothing.SmoothingModule;
 import io.github.mzmine.modules.dataprocessing.featdet_spectraldeconvolutiongc.SpectralDeconvolutionGCModule;
 import io.github.mzmine.modules.dataprocessing.featdet_targeted.TargetedFeatureDetectionModule;
+import io.github.mzmine.modules.dataprocessing.featdet_xic.LoopXicBuilderModule;
 import io.github.mzmine.modules.dataprocessing.filter_alignscans.AlignScansModule;
 import io.github.mzmine.modules.dataprocessing.filter_blanksubtraction.FeatureListBlankSubtractionModule;
 import io.github.mzmine.modules.dataprocessing.filter_blanksubtraction_chromatograms.ChromatogramBlankSubtractionModule;
@@ -263,6 +264,7 @@ public class BatchModeModulesList {
            * {@link io.github.mzmine.modules.MZmineModuleCategory#EIC_BUILDING}
            */
           ModularADAPChromatogramBuilderModule.class, //
+          LoopXicBuilderModule.class, //
           MsnTreeFeatureDetectionModule.class, //
           GridMassModule.class, //
           IonMobilityTraceBuilderModule.class, //
