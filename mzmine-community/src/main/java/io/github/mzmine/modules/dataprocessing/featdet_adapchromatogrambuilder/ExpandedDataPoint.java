@@ -34,6 +34,7 @@ package io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder;
 
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.Scan;
+import java.util.Objects;
 
 
 /**
@@ -89,5 +90,24 @@ public class ExpandedDataPoint implements DataPoint {
 
   public Scan getScan() {
     return scan;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof ExpandedDataPoint)) {
+      return false;
+    }
+    ExpandedDataPoint that = (ExpandedDataPoint) o;
+    return Double.compare(that.mz, mz) == 0
+        && Double.compare(that.getIntensity(), getIntensity()) == 0 && Objects.equals(getScan(),
+        that.getScan());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getScan(), mz, getIntensity());
   }
 }
