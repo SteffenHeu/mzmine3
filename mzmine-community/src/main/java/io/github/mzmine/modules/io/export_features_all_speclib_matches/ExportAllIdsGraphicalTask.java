@@ -35,6 +35,11 @@ import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
+import io.github.mzmine.datamodel.features.types.DataType;
+import io.github.mzmine.datamodel.features.types.DataTypes;
+import io.github.mzmine.datamodel.features.types.annotations.CompoundDatabaseMatchesType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
+import io.github.mzmine.datamodel.features.types.annotations.SpectralLibraryMatchesType;
 import io.github.mzmine.datamodel.features.types.graphicalnodes.FeatureShapeChart;
 import io.github.mzmine.datamodel.features.types.graphicalnodes.FeatureShapeMobilogramChart;
 import io.github.mzmine.datamodel.features.types.graphicalnodes.ImageChart;
@@ -50,6 +55,7 @@ import io.github.mzmine.gui.preferences.NumberFormats;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.visualization.compdb.CompoundDatabaseMatchPane;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
 import io.github.mzmine.modules.visualization.spectra.spectralmatchresults.SpectralMatchPanelFX;
 import io.github.mzmine.parameters.ParameterSet;
@@ -66,6 +72,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -86,6 +93,7 @@ public class ExportAllIdsGraphicalTask extends AbstractTask {
   // buffer png export as this takes long time on fx thread
   final int bufferSize = 100;
   final SpectralMatchPanelFX[] panelBuffer = new SpectralMatchPanelFX[bufferSize];
+  final CompoundDatabaseMatchPane[] compoundPanelBuffer = new CompoundDatabaseMatchPane[bufferSize];
   final File[] filenameBuffer = new File[bufferSize];
   private final FeatureList[] flists;
   private final File dir;
@@ -100,12 +108,13 @@ public class ExportAllIdsGraphicalTask extends AbstractTask {
   private final boolean legendVisible;
   private final boolean exportLipidMatches;
   private final boolean exportSpectralLibMatches;
+  private final boolean exportCompoundMatches;
+  private final NumberFormats form = MZmineCore.getConfiguration().getExportFormats();
+  private final AtomicInteger processed = new AtomicInteger(0);
   int nextBufferIndex = 0;
   private String desc = "Exporting all identifications.";
-  private final NumberFormats form = MZmineCore.getConfiguration().getExportFormats();
   // progress
   private int totalIds = 1;
-  private final AtomicInteger processed = new AtomicInteger(0);
 
   protected ExportAllIdsGraphicalTask(ParameterSet parameters, @Nullable MemoryMapStorage storage,
       @NotNull Instant moduleCallDate) {
@@ -120,9 +129,13 @@ public class ExportAllIdsGraphicalTask extends AbstractTask {
     exportShape = parameters.getValue(ExportAllIdsGraphicalParameters.exportShape);
     exportMobilogram = parameters.getValue(ExportAllIdsGraphicalParameters.exportMobilogram);
     exportImage = parameters.getValue(ExportAllIdsGraphicalParameters.exportImages);
-    exportLipidMatches = parameters.getValue(ExportAllIdsGraphicalParameters.exportLipidMatches);
-    exportSpectralLibMatches = parameters.getValue(
-        ExportAllIdsGraphicalParameters.exportSpectralLibMatches);
+
+    final Set<DataType<?>> exportTypes = Set.of(
+        parameters.getValue(ExportAllIdsGraphicalParameters.exportTypes));
+    exportLipidMatches = exportTypes.contains(DataTypes.get(LipidMatchListType.class));
+    exportSpectralLibMatches = exportTypes.contains(
+        DataTypes.get(SpectralLibraryMatchesType.class));
+    exportCompoundMatches = exportTypes.contains(DataTypes.get(CompoundDatabaseMatchesType.class));
     legendVisible = exportParameters.getEmbeddedParameterValue(
         GraphicsExportParameters.chartParameters).getValue(ExportChartThemeParameters.showLegends);
   }
@@ -183,7 +196,8 @@ public class ExportAllIdsGraphicalTask extends AbstractTask {
   }
 
   private void exportFeatureCharts(File flistFolder, FeatureListRow row) {
-    if (row.getSpectralLibraryMatches().isEmpty() && row.getLipidMatches().isEmpty()) {
+    if (row.getSpectralLibraryMatches().isEmpty() && row.getLipidMatches().isEmpty()
+        && row.getCompoundAnnotations().isEmpty()) {
       return;
     }
 
@@ -423,4 +437,5 @@ public class ExportAllIdsGraphicalTask extends AbstractTask {
       });
     }
   }
+
 }

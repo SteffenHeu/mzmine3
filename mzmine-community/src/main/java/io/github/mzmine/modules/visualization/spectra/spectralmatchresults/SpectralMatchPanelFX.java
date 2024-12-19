@@ -522,7 +522,7 @@ public class SpectralMatchPanelFX extends GridPane {
     // this is so unbelievably dirty
     // i'm so sorry ~SteffenHeu
     final JFrame[] frame = new JFrame[1];
-    logger.info("Creating dummy window for spectral match export...");
+    logger.finest("Creating dummy window for spectral match export...");
     SpectralMatchPanel[] swingPanel = new SpectralMatchPanel[1];
     SwingUtilities.invokeLater(() -> {
       frame[0] = new JFrame();
@@ -540,7 +540,7 @@ public class SpectralMatchPanelFX extends GridPane {
       swingPanel[0].exportToGraphics(format, file);
     }
 
-    logger.info("Disposing dummy window for spectral match export...");
+    logger.finest("Disposing dummy window for spectral match export...");
     SwingUtilities.invokeLater(() -> frame[0].dispose());
 
     // it works though, until we figure something out
@@ -557,7 +557,7 @@ public class SpectralMatchPanelFX extends GridPane {
     // this is so unbelievably dirty
     // i'm so sorry ~SteffenHeu
     AtomicReference<Dimension> dim = new AtomicReference<>();
-    logger.info("Creating dummy window for spectral match export...");
+    logger.finest("Creating dummy window for spectral match export...");
     SwingUtilities.invokeAndWait(() -> {
       final var frame = new JFrame();
       var swingPanel = new SpectralMatchPanel(hit);
@@ -568,7 +568,7 @@ public class SpectralMatchPanelFX extends GridPane {
       swingPanel.calculateAndSetSize();
       swingPanel.exportToGraphics(format, path);
       dim.set(swingPanel.getSize());
-      logger.info("Disposing dummy window for spectral match export...");
+      logger.finest("Disposing dummy window for spectral match export...");
       frame.dispose();
     });
 

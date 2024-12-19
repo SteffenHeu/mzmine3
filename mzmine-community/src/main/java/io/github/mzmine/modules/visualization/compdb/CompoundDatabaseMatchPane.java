@@ -36,6 +36,7 @@ import io.github.mzmine.datamodel.features.types.numbers.PrecursorMZType;
 import io.github.mzmine.datamodel.structures.MolecularStructure;
 import io.github.mzmine.modules.visualization.molstructure.Structure2DComponent;
 import java.awt.Toolkit;
+import java.io.File;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
@@ -140,4 +141,5 @@ public class CompoundDatabaseMatchPane extends BorderPane {
 
     return pane;
   }
+
 }

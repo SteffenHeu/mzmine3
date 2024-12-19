@@ -25,15 +25,22 @@
 
 package io.github.mzmine.modules.io.export_features_all_speclib_matches;
 
+import io.github.mzmine.datamodel.features.types.DataType;
+import io.github.mzmine.datamodel.features.types.DataTypes;
+import io.github.mzmine.datamodel.features.types.annotations.CompoundDatabaseMatchesType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
+import io.github.mzmine.datamodel.features.types.annotations.SpectralLibraryMatchesType;
 import io.github.mzmine.gui.chartbasics.graphicsexport.GraphicsExportParameters;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
+import io.github.mzmine.parameters.parametertypes.MultiChoiceParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.DirectoryParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
 import io.github.mzmine.parameters.parametertypes.submodules.ParameterSetParameter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class ExportAllIdsGraphicalParameters extends SimpleParameterSet {
 
@@ -59,10 +66,15 @@ public class ExportAllIdsGraphicalParameters extends SimpleParameterSet {
   public static final BooleanParameter exportImages = new BooleanParameter("Export feature images",
       "Exports the extracted ion image of for imaging features.", false);
 
-  public static final BooleanParameter exportLipidMatches = new BooleanParameter(
-      "Export lipid matches", "Exports the lipid matches MS2 plots.", false);
-  public static final BooleanParameter exportSpectralLibMatches = new BooleanParameter(
-      "Export spectral library matches", "Exports the spectral library mirror plots.", true);
+  public static final MultiChoiceParameter<DataType<?>> exportTypes = new MultiChoiceParameter<>(
+      "Export features with annotation",
+      "Select the annotations that qualify a feature to be exported.",
+      new DataType[]{DataTypes.get(SpectralLibraryMatchesType.class),
+          DataTypes.get(LipidMatchListType.class),
+          DataTypes.get(CompoundDatabaseMatchesType.class)},
+      new DataType[]{DataTypes.get(SpectralLibraryMatchesType.class),
+          DataTypes.get(LipidMatchListType.class),
+          DataTypes.get(CompoundDatabaseMatchesType.class)}, 1);
 
   public static final BooleanParameter exportPdf = new BooleanParameter("Export pdf", "", true);
 
@@ -75,12 +87,25 @@ public class ExportAllIdsGraphicalParameters extends SimpleParameterSet {
       new GraphicsExportParameters());
 
   public ExportAllIdsGraphicalParameters() {
-    super(flists, dir, numMatches, dpiScalingFactor, exportSpectralLibMatches, exportLipidMatches,
-        exportShape, exportMobilogram, exportImages, exportPdf, exportPng, export);
+    super(flists, dir, numMatches, dpiScalingFactor, exportTypes, exportShape, exportMobilogram,
+        exportImages, exportPdf, exportPng, export);
   }
 
   @Override
   public @NotNull IonMobilitySupport getIonMobilitySupport() {
     return IonMobilitySupport.SUPPORTED;
+  }
+
+  @Override
+  public int getVersion() {
+    return 2;
+  }
+
+  @Override
+  public @Nullable String getVersionMessage(int version) {
+    return switch (version) {
+      case 2 -> "In mzmine >= 4.4.3 the individual selection to export spectral library matches and lipids was combined into a single parameter.";
+      default -> null;
+    };
   }
 }
