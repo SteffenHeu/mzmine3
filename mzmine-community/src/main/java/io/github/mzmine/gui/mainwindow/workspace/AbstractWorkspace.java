@@ -98,6 +98,7 @@ import io.github.mzmine.modules.io.projectload.ProjectLoadModule;
 import io.github.mzmine.modules.io.projectsave.ProjectSaveAsModule;
 import io.github.mzmine.modules.io.projectsave.ProjectSaveModule;
 import io.github.mzmine.modules.io.spectraldbsubmit.batch.LibraryBatchGenerationModule;
+import io.github.mzmine.modules.tools.auto_parameters.AutoParametersModule;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardModule;
 import io.github.mzmine.modules.tools.isotopepatternpreview.IsotopePatternPreviewModule;
 import io.github.mzmine.modules.tools.qualityparameters.QualityParametersModule;
@@ -347,6 +348,7 @@ public abstract class AbstractWorkspace implements Workspace {
         MsMsQualityExportModule.class);
     addModuleMenuItems(menu, "timsTOF fleX", TimsTOFMaldiAcquisitionModule.class,
         SimsefImagingSchedulerModule.class);
+    addModuleMenuItems(menu, AutoParametersModule.class);
     return menu;
   }
 
