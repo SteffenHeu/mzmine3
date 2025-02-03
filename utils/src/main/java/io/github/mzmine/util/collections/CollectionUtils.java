@@ -37,6 +37,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -327,5 +328,47 @@ public class CollectionUtils {
 
   public static @NotNull <T> Collector<T, ?, ArrayList<T>> toArrayList() {
     return Collectors.toCollection(ArrayList::new);
+  }
+
+  /**
+   * @return True if all applications of the given function to object n of the given List results in
+   * a +1 increase compared to the n+1 object.
+   */
+  public static <T> boolean isConsecutive(List<T> list, ToIntFunction<T> indexExtractor) {
+    if (list.isEmpty() || list.size() == 1) {
+      return true;
+    }
+
+    final T first = list.getFirst();
+    int prevIndex = indexExtractor.applyAsInt(first);
+    for (int i = 1; i < list.size(); i++) {
+      final int nextInt = indexExtractor.applyAsInt(list.get(i));
+      if (prevIndex + 1 != nextInt) {
+        return false;
+      }
+      prevIndex = nextInt;
+    }
+    return true;
+  }
+
+  /**
+   * @return True if all applications of the given function to object n of the given List results in
+   * the same value for the n+1 object.
+   */
+  public static <T> boolean areAllEqual(List<T> list, ToIntFunction<T> indexExtractor) {
+    if (list.isEmpty() || list.size() == 1) {
+      return true;
+    }
+
+    final T first = list.getFirst();
+    int prevIndex = indexExtractor.applyAsInt(first);
+    for (int i = 1; i < list.size(); i++) {
+      final int nextInt = indexExtractor.applyAsInt(list.get(i));
+      if (prevIndex + 1 != nextInt) {
+        return false;
+      }
+      prevIndex = nextInt;
+    }
+    return true;
   }
 }

@@ -109,7 +109,7 @@ public interface SmoothingAlgorithm extends MZmineModule {
           ((ModifiableSpectra) originalSeries).getSpectraModifiable(), smoothedMobilogram);
     }
 
-    return (IonTimeSeries<? extends Scan>) originalSeries.copyAndReplace(storage, originalMzs,
+    return originalSeries.copyAndReplace(storage, originalMzs,
         newIntensities);
   }
 

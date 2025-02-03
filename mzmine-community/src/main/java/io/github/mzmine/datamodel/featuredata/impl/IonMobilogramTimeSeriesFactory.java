@@ -36,10 +36,12 @@ import io.github.mzmine.modules.io.projectload.CachedIMSFrame;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.ParsingUtils;
+import io.github.mzmine.util.collections.CollectionUtils;
 import java.lang.foreign.MemorySegment;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.events.XMLEvent;
@@ -50,6 +52,9 @@ import org.jetbrains.annotations.Nullable;
  * @author https://github.com/SteffenHeu
  */
 public class IonMobilogramTimeSeriesFactory {
+
+  private static final Logger logger = Logger.getLogger(
+      IonMobilogramTimeSeriesFactory.class.getName());
 
   private IonMobilogramTimeSeriesFactory() {
 
@@ -213,9 +218,9 @@ public class IonMobilogramTimeSeriesFactory {
         summedMobilogram);
   }
 
-  static MobilogramStorageResult storeMobilograms(SimpleIonMobilogramTimeSeries trace,
+  static StoredMobilograms storeMobilograms(SimpleIonMobilogramTimeSeries trace,
       @Nullable MemoryMapStorage storage, List<IonMobilitySeries> mobilograms) {
-    if(mobilograms.isEmpty()) {
+    if (mobilograms.isEmpty()) {
       return MobilogramStorageResult.EMPTY;
     }
 
@@ -237,21 +242,40 @@ public class IonMobilogramTimeSeriesFactory {
         spectra = mobilogram.getSpectra();
       }
 
-      storedMobilograms.add(
-          new StorableIonMobilitySeries(trace, offsets[i], mobilogram.getNumberOfValues(),
-              spectra));
+      if (CollectionUtils.isConsecutive(spectra, MobilityScan::getMobilityScanNumber)) {
+        storedMobilograms.add(new StorableConsecutiveIonMobilitySeries(trace, offsets[i],
+            mobilogram.getNumberOfValues(), spectra));
+      } else {
+        storedMobilograms.add(
+            new StorableComplexIonMobilitySeries(trace, offsets[i], mobilogram.getNumberOfValues(),
+                spectra));
+      }
     }
-    return new MobilogramStorageResult(storedMobilograms, stored[0], stored[1]);
+
+    if (storedMobilograms.stream().allMatch(StorableConsecutiveIonMobilitySeries.class::isInstance)
+        && CollectionUtils.areAllEqual(
+        (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
+        StorableConsecutiveIonMobilitySeries::getScanStartInclusive) && CollectionUtils.areAllEqual(
+        (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
+        StorableConsecutiveIonMobilitySeries::getScanEndInclusive)) {
+      logger.finest("Creating RectangularMobilogramStorageResult");
+      return new RectangularMobilogramStorageResult(
+          (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
+          trace, stored[0], stored[1]);
+    } else {
+      logger.finest("Creating MobilogramStorageResult");
+      return new MobilogramStorageResult(storedMobilograms, stored[0], stored[1]);
+    }
   }
 
   /**
    * This method only gets triggered if chromatograms are built, expanded and then resolved in rt.
    * When resolving in mobility dimension, the mobilograms are cut anyway.
    */
-  private static MobilogramStorageResult storeMobilogramsFromAlreadyStored(
+  private static StoredMobilograms storeMobilogramsFromAlreadyStored(
       SimpleIonMobilogramTimeSeries newTrace, MemoryMapStorage storage,
       List<StorableIonMobilitySeries> mobilograms) {
-    if(mobilograms.isEmpty()) {
+    if (mobilograms.isEmpty()) {
       return MobilogramStorageResult.EMPTY;
     }
 
@@ -264,7 +288,8 @@ public class IonMobilogramTimeSeriesFactory {
       }
     }
 
-    final SimpleIonMobilogramTimeSeries originalTrace = mobilograms.getFirst().getIonTrace();
+    final SimpleIonMobilogramTimeSeries originalTrace = (SimpleIonMobilogramTimeSeries) mobilograms.getFirst()
+        .getIonTrace();
     final int start = mobilograms.getFirst().getStorageOffset();
     final int lastValue =
         mobilograms.getLast().getStorageOffset() + mobilograms.getLast().getNumberOfValues();
@@ -272,16 +297,16 @@ public class IonMobilogramTimeSeriesFactory {
 
     int offsetCounter = 0;
     for (int i = 0; i < mobilograms.size(); i++) {
-      final StorableIonMobilitySeries stored = new StorableIonMobilitySeries(newTrace,
+      final StorableIonMobilitySeries stored = new StorableComplexIonMobilitySeries(newTrace,
           offsetCounter, mobilograms.get(i).getNumberOfValues(), mobilograms.get(i).getSpectra());
       offsetCounter += stored.getNumberOfValues();
       storedMobilograms.add(stored);
     }
 
     final MemorySegment intensityValues = StorageUtils.sliceDoubles(
-        originalTrace.mobilogramIntensityValues, start, lastValue);
-    final MemorySegment mzValues = StorageUtils.sliceDoubles(originalTrace.mobilogramMzValues,
-        start, lastValue);
+        originalTrace.mobilograms.storedIntensityValues(), start, lastValue);
+    final MemorySegment mzValues = StorageUtils.sliceDoubles(
+        originalTrace.mobilograms.storedMzValues(), start, lastValue);
 
 //     rudimentary test
 //    assert mobilograms.getLast().getIntensity(mobilograms.getLast().getNumberOfValues() - 1)

@@ -30,7 +30,7 @@ import java.util.List;
 
 /**
  * Package-private tag interface to access the original, modifiable spectra list of an {@link
- * SimpleIonMobilitySeries} when it is used to create an {@link StorableIonMobilitySeries}. The
+ * SimpleIonMobilitySeries} when it is used to create an {@link StorableComplexIonMobilitySeries}. The
  * generation of numerous immutable list wrappers is therefore circumvented in this package private
  * interface.
  *
