@@ -28,6 +28,7 @@ package io.github.mzmine.datamodel.featuredata.impl;
 import io.github.mzmine.datamodel.Frame;
 import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.MobilityScan;
+import io.github.mzmine.datamodel.MobilityType;
 import io.github.mzmine.datamodel.data_access.BinningMobilogramDataAccess;
 import io.github.mzmine.datamodel.featuredata.IonMobilitySeries;
 import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
@@ -40,7 +41,9 @@ import io.github.mzmine.util.collections.CollectionUtils;
 import java.lang.foreign.MemorySegment;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -314,5 +317,55 @@ public class IonMobilogramTimeSeriesFactory {
 //        StorageUtils.numDoubles(intensityValues) - 1);
 
     return new MobilogramStorageResult(storedMobilograms, mzValues, intensityValues);
+  }
+
+
+  public static List<IonMobilitySeries> makeRectangularAndConsecutive(
+      List<IonMobilitySeries> oldMobilograms) {
+    final MobilityType mobilityType = oldMobilograms.get(0).getSpectrum(0).getFrame()
+        .getMobilityType();
+
+    final int boundA = oldMobilograms.stream()
+        .map(m -> m.getNumberOfValues() > 0 ? m.getSpectrum(0).getMobilityScanNumber() : null)
+        .filter(Objects::nonNull).min(Comparator.comparingInt(Integer::intValue)).get();
+    final int boundB = oldMobilograms.stream().map(
+            m -> m.getNumberOfValues() > 0 ? m.getSpectrum(m.getNumberOfValues() - 1)
+                .getMobilityScanNumber() : null).filter(Objects::nonNull)
+        .max(Comparator.comparingInt(Integer::intValue)).get();
+
+    final List<IonMobilitySeries> newMobilograms = new ArrayList<>();
+
+    for (int i = 0; i < oldMobilograms.size(); i++) {
+      final IonMobilitySeries old = oldMobilograms.get(i);
+
+      final List<MobilityScan> oldSpectra = old.getSpectra();
+
+      final Frame frame = oldSpectra.getFirst().getFrame();
+      final List<MobilityScan> newMobilityScans = frame.getMobilityScans()
+          .subList(Math.min(boundA, boundB), Math.max(boundA + 1, boundB + 1));
+
+      int indexInNew = 0;
+      final double[] mzs = new double[newMobilityScans.size()];
+      final double[] intensities = new double[newMobilityScans.size()];
+
+      for (int j = 0; j < oldSpectra.size() && indexInNew < mzs.length; j++) {
+        final MobilityScan oldScan = oldSpectra.get(j);
+        while (oldScan.getMobilityScanNumber() != newMobilityScans.get(indexInNew)
+            .getMobilityScanNumber() && indexInNew < mzs.length) {
+          mzs[indexInNew] = 0;
+          intensities[indexInNew] = 0;
+          indexInNew++;
+        }
+        mzs[indexInNew] = old.getMZ(j);
+        intensities[indexInNew] = old.getIntensity(j);
+        indexInNew++;
+      }
+      if (indexInNew < mzs.length) {
+        Arrays.fill(mzs, indexInNew, mzs.length, 0d);
+        Arrays.fill(intensities, indexInNew, mzs.length, 0d);
+      }
+      newMobilograms.add(new SimpleIonMobilitySeries(null, mzs, intensities, newMobilityScans));
+    }
+    return newMobilograms;
   }
 }

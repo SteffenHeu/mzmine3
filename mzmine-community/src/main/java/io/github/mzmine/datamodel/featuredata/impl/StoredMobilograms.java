@@ -40,4 +40,6 @@ public interface StoredMobilograms {
   MemorySegment storedMzValues();
 
   MemorySegment storedIntensityValues();
+
+  IonMobilitySeries mobilogram(int index);
 }

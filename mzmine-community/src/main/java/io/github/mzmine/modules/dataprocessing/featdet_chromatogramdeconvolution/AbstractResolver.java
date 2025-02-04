@@ -141,8 +141,10 @@ public abstract class AbstractResolver implements Resolver {
           continue;
         }
 
-        resolved.add((T) IonMobilogramTimeSeriesFactory.of(storage, resolvedMobilograms,
-            getMobilogramDataAccess()));
+        final List<IonMobilitySeries> rectangular = IonMobilogramTimeSeriesFactory.makeRectangularAndConsecutive(
+            resolvedMobilograms);
+        resolved.add(
+            (T) IonMobilogramTimeSeriesFactory.of(storage, rectangular, getMobilogramDataAccess()));
       }
     } else {
       throw new IllegalStateException(

@@ -34,4 +34,8 @@ public record MobilogramStorageResult(List<IonMobilitySeries> storedMobilograms,
                                       MemorySegment storedIntensityValues) implements
     StoredMobilograms {
 
+  @Override
+  public IonMobilitySeries mobilogram(int index) {
+    return mobilogram(index);
+  }
 }

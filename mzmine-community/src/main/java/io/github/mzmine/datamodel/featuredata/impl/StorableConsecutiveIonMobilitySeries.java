@@ -146,6 +146,12 @@ public class StorableConsecutiveIonMobilitySeries implements StorableIonMobility
   }
 
   @Override
+  public MobilityScan getSpectrum(int index) {
+    return ionTrace.getSpectra().get(indexInTrace).getMobilityScans()
+        .get(scanStartInclusive + index);
+  }
+
+  @Override
   public IonSpectrumSeries<MobilityScan> copy(@Nullable MemoryMapStorage storage) {
     double[][] data = DataPointUtils.getDataPointsAsDoubleArray(getMZValueBuffer(),
         getIntensityValueBuffer());

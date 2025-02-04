@@ -364,7 +364,7 @@ public class CollectionUtils {
     int prevIndex = indexExtractor.applyAsInt(first);
     for (int i = 1; i < list.size(); i++) {
       final int nextInt = indexExtractor.applyAsInt(list.get(i));
-      if (prevIndex + 1 != nextInt) {
+      if (prevIndex != nextInt) {
         return false;
       }
       prevIndex = nextInt;

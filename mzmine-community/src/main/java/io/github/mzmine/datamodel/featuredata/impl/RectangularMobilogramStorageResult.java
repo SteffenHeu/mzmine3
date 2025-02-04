@@ -70,7 +70,7 @@ public class RectangularMobilogramStorageResult implements StoredMobilograms {
   public List<IonMobilitySeries> storedMobilograms() {
     final List<IonMobilitySeries> list = new ArrayList<>();
     for (int i = 0; i < storageOffsets.length; i++) {
-      list.add(getMobilogram(i));
+      list.add(mobilogram(i));
     }
     return list;
   }
@@ -85,7 +85,8 @@ public class RectangularMobilogramStorageResult implements StoredMobilograms {
     return intensityValuesSegment;
   }
 
-  public StorableIonMobilitySeries getMobilogram(int index) {
+  @Override
+  public StorableIonMobilitySeries mobilogram(int index) {
     final int numValues;
     if (index < storageOffsets.length - 2) {
       numValues = storageOffsets[index + 1] - storageOffsets[index];
@@ -96,4 +97,5 @@ public class RectangularMobilogramStorageResult implements StoredMobilograms {
         List.copyOf(ionTrace.getSpectrum(index).getMobilityScans()
             .subList(scanStartInclusive, scanEndInclusive + 1)));
   }
+
 }
