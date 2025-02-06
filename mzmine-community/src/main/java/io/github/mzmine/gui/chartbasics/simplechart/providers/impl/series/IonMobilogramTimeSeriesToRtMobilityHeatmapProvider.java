@@ -29,6 +29,10 @@ import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.MobilityScan;
 import io.github.mzmine.datamodel.featuredata.IonMobilitySeries;
 import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
+import io.github.mzmine.datamodel.featuredata.impl.SimpleIonMobilogramTimeSeries;
+import io.github.mzmine.datamodel.featuredata.impl.StorableComplexIonMobilitySeries;
+import io.github.mzmine.datamodel.featuredata.impl.StorableConsecutiveIonMobilitySeries;
+import io.github.mzmine.datamodel.featuredata.impl.StorableIonMobilitySeries;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScaleTransform;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.MassSpectrumProvider;
@@ -39,7 +43,10 @@ import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.FeatureUtils;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.beans.property.Property;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.renderer.PaintScale;
 
@@ -53,7 +60,8 @@ import org.jfree.chart.renderer.PaintScale;
 public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotXYZDataProvider,
     PaintScaleProvider, MassSpectrumProvider<MobilityScan> {
 
-  private final IonMobilogramTimeSeries data;
+  @NotNull
+  private IonMobilogramTimeSeries data;
   private final String seriesKey;
   private final javafx.scene.paint.Color color;
   private final boolean isUseSingleColorPaintScale;
@@ -66,6 +74,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
       throw new IllegalArgumentException("Cannot create IMS heatmap for non-IMS feature");
     }
     data = (IonMobilogramTimeSeries) f.getFeatureData();
+
     seriesKey = FeatureUtils.featureToString(f);
     color = f.getRawDataFile().getColor();
     isUseSingleColorPaintScale = false;
@@ -123,6 +132,23 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
 
   @Override
   public void computeValues(Property<TaskStatus> status) {
+
+    final List<IonMobilitySeries> mobilograms = data.getMobilograms();
+    final List<IonMobilitySeries> inMemory = new ArrayList<>();
+    if (mobilograms.stream().allMatch(StorableConsecutiveIonMobilitySeries.class::isInstance)) {
+      for (int i = 0; i < mobilograms.size(); i++) {
+        final StorableIonMobilitySeries mobilogram = (StorableIonMobilitySeries) mobilograms.get(i);
+        final StorableComplexIonMobilitySeries complex = new StorableComplexIonMobilitySeries(
+            (SimpleIonMobilogramTimeSeries) data, mobilogram.getStorageOffset(),
+            mobilogram.getNumberOfValues(), mobilogram.getSpectra());
+        inMemory.add(complex);
+      }
+      data = new SimpleIonMobilogramTimeSeries(data.getMZValueBuffer(),
+          data.getIntensityValueBuffer(), null, inMemory, data.getSpectra(),
+          data.getSummedMobilogram());
+    }
+
+
     numValues = 0;
     double max = Double.NEGATIVE_INFINITY;
     for (int i = 0; i < data.getNumberOfValues(); i++) {
@@ -135,8 +161,8 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
       javafx.scene.paint.Color base = javafx.scene.paint.Color.BLACK;
 //          MZmineCore.getConfiguration().isDarkMode() ? javafx.scene.paint.Color.BLACK
 //              : javafx.scene.paint.Color.WHITE;
-      paintScale = new SimpleColorPalette(base, color).toPaintScale(
-          PaintScaleTransform.LINEAR, Range.closed(0d, max));
+      paintScale = new SimpleColorPalette(base, color).toPaintScale(PaintScaleTransform.LINEAR,
+          Range.closed(1d, max));
     }
   }
 

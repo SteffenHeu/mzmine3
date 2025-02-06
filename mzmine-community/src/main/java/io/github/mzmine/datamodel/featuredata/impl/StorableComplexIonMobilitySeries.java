@@ -53,7 +53,7 @@ public class StorableComplexIonMobilitySeries implements ModifiableSpectra<Mobil
   protected final int numValues;
   protected final SimpleIonMobilogramTimeSeries ionTrace;
 
-  protected StorableComplexIonMobilitySeries(final SimpleIonMobilogramTimeSeries ionTrace,
+  public StorableComplexIonMobilitySeries(final SimpleIonMobilogramTimeSeries ionTrace,
       final int offset, final int numValues, @NotNull List<MobilityScan> scans) {
     if (numValues != scans.size()) {
       throw new IllegalArgumentException("numPoints and number of scans scans does not match.");

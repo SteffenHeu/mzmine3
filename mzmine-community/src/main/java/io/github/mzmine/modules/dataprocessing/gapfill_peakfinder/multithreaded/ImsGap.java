@@ -199,9 +199,10 @@ public class ImsGap extends Gap {
 
   @Override
   protected boolean addFeatureToRow() {
+    final List<IonMobilitySeries> rectangular = IonMobilogramTimeSeriesFactory.makeRectangularAndConsecutive(
+        (List<IonMobilitySeries>) (List<? extends IonMobilitySeries>) (List<? extends GapDataPoint>) bestPeakDataPoints);
     final IonMobilogramTimeSeries trace = IonMobilogramTimeSeriesFactory.of(
-        ((ModularFeatureList) featureListRow.getFeatureList()).getMemoryMapStorage(),
-        (List<IonMobilitySeries>) (List<? extends IonMobilitySeries>) (List<? extends GapDataPoint>) bestPeakDataPoints,
+        ((ModularFeatureList) featureListRow.getFeatureList()).getMemoryMapStorage(), rectangular,
         mobilogramBinning);
 
     ModularFeature f = new ModularFeature((ModularFeatureList) featureListRow.getFeatureList(),

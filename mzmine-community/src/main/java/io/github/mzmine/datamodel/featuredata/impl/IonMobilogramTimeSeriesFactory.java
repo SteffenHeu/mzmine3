@@ -260,12 +260,10 @@ public class IonMobilogramTimeSeriesFactory {
         StorableConsecutiveIonMobilitySeries::getScanStartInclusive) && CollectionUtils.areAllEqual(
         (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
         StorableConsecutiveIonMobilitySeries::getScanEndInclusive)) {
-      logger.finest("Creating RectangularMobilogramStorageResult");
       return new RectangularMobilogramStorageResult(
           (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
           trace, stored[0], stored[1]);
     } else {
-      logger.finest("Creating MobilogramStorageResult");
       return new MobilogramStorageResult(storedMobilograms, stored[0], stored[1]);
     }
   }
@@ -299,8 +297,16 @@ public class IonMobilogramTimeSeriesFactory {
 
     int offsetCounter = 0;
     for (int i = 0; i < mobilograms.size(); i++) {
-      final StorableIonMobilitySeries stored = new StorableComplexIonMobilitySeries(newTrace,
-          offsetCounter, mobilograms.get(i).getNumberOfValues(), mobilograms.get(i).getSpectra());
+      final StorableIonMobilitySeries oldMobilogram = mobilograms.get(i);
+      final StorableIonMobilitySeries stored;
+
+      if (oldMobilogram instanceof StorableConsecutiveIonMobilitySeries) {
+        stored = new StorableConsecutiveIonMobilitySeries(newTrace, offsetCounter,
+            oldMobilogram.getNumberOfValues(), oldMobilogram.getSpectra());
+      } else {
+        stored = new StorableComplexIonMobilitySeries(newTrace, offsetCounter,
+            oldMobilogram.getNumberOfValues(), oldMobilogram.getSpectra());
+      }
       offsetCounter += stored.getNumberOfValues();
       storedMobilograms.add(stored);
     }
@@ -315,7 +321,18 @@ public class IonMobilogramTimeSeriesFactory {
 //        == intensityValues.getAtIndex(OfDouble.JAVA_DOUBLE,
 //        StorageUtils.numDoubles(intensityValues) - 1);
 
-    return new MobilogramStorageResult(storedMobilograms, mzValues, intensityValues);
+    if (storedMobilograms.stream().allMatch(StorableConsecutiveIonMobilitySeries.class::isInstance)
+        && CollectionUtils.areAllEqual(
+        (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
+        StorableConsecutiveIonMobilitySeries::getScanStartInclusive) && CollectionUtils.areAllEqual(
+        (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
+        StorableConsecutiveIonMobilitySeries::getScanEndInclusive)) {
+      return new RectangularMobilogramStorageResult(
+          (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
+          newTrace, mzValues, intensityValues);
+    } else {
+      return new MobilogramStorageResult(storedMobilograms, mzValues, intensityValues);
+    }
   }
 
 
