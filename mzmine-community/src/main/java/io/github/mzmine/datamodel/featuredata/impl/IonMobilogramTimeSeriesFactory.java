@@ -234,7 +234,7 @@ public class IonMobilogramTimeSeriesFactory {
     final MemorySegment[] stored = StorageUtils.storeIonSeriesToSingleBuffer(storage, mobilograms,
         offsets);
 
-    List<IonMobilitySeries> storedMobilograms = new ArrayList<>();
+    List<StorableIonMobilitySeries> storedMobilograms = new ArrayList<>();
     for (int i = 0; i < offsets.length; i++) {
       IonMobilitySeries mobilogram = mobilograms.get(i);
       List<MobilityScan> spectra;
@@ -254,7 +254,7 @@ public class IonMobilogramTimeSeriesFactory {
       }
     }
 
-    if (storedMobilograms.stream().allMatch(StorableConsecutiveIonMobilitySeries.class::isInstance)
+    /*if (storedMobilograms.stream().allMatch(StorableConsecutiveIonMobilitySeries.class::isInstance)
         && CollectionUtils.areAllEqual(
         (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
         StorableConsecutiveIonMobilitySeries::getScanStartInclusive) && CollectionUtils.areAllEqual(
@@ -263,9 +263,10 @@ public class IonMobilogramTimeSeriesFactory {
       return new RectangularMobilogramStorageResult(
           (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
           trace, stored[0], stored[1]);
-    } else {
-      return new MobilogramStorageResult(storedMobilograms, stored[0], stored[1]);
-    }
+    } else {*/
+    return new MappedStoredMobilograms(storage, trace, stored[0], stored[1], offsets,
+        storedMobilograms);
+//    }
   }
 
   /**
@@ -293,7 +294,7 @@ public class IonMobilogramTimeSeriesFactory {
     final int start = mobilograms.getFirst().getStorageOffset();
     final int lastValue =
         mobilograms.getLast().getStorageOffset() + mobilograms.getLast().getNumberOfValues();
-    final List<IonMobilitySeries> storedMobilograms = new ArrayList<>();
+    final List<StorableIonMobilitySeries> storedMobilograms = new ArrayList<>();
 
     int offsetCounter = 0;
     for (int i = 0; i < mobilograms.size(); i++) {
@@ -321,7 +322,7 @@ public class IonMobilogramTimeSeriesFactory {
 //        == intensityValues.getAtIndex(OfDouble.JAVA_DOUBLE,
 //        StorageUtils.numDoubles(intensityValues) - 1);
 
-    if (storedMobilograms.stream().allMatch(StorableConsecutiveIonMobilitySeries.class::isInstance)
+   /* if (storedMobilograms.stream().allMatch(StorableConsecutiveIonMobilitySeries.class::isInstance)
         && CollectionUtils.areAllEqual(
         (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
         StorableConsecutiveIonMobilitySeries::getScanStartInclusive) && CollectionUtils.areAllEqual(
@@ -330,9 +331,11 @@ public class IonMobilogramTimeSeriesFactory {
       return new RectangularMobilogramStorageResult(
           (List<StorableConsecutiveIonMobilitySeries>) (List<? extends IonMobilitySeries>) storedMobilograms,
           newTrace, mzValues, intensityValues);
-    } else {
-      return new MobilogramStorageResult(storedMobilograms, mzValues, intensityValues);
-    }
+    } else {*/
+    return new MappedStoredMobilograms(storage, newTrace, mzValues, intensityValues,
+        storedMobilograms.stream().mapToInt(StorableIonMobilitySeries::getStorageOffset).toArray(),
+        storedMobilograms);
+//    }
   }
 
 
