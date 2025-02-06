@@ -28,7 +28,6 @@ package io.github.mzmine.datamodel.featuredata.impl;
 import io.github.mzmine.datamodel.Frame;
 import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.MobilityScan;
-import io.github.mzmine.datamodel.MobilityType;
 import io.github.mzmine.datamodel.data_access.BinningMobilogramDataAccess;
 import io.github.mzmine.datamodel.featuredata.IonMobilitySeries;
 import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
@@ -322,8 +321,6 @@ public class IonMobilogramTimeSeriesFactory {
 
   public static List<IonMobilitySeries> makeRectangularAndConsecutive(
       List<IonMobilitySeries> oldMobilograms) {
-    final MobilityType mobilityType = oldMobilograms.get(0).getSpectrum(0).getFrame()
-        .getMobilityType();
 
     final int boundA = oldMobilograms.stream()
         .map(m -> m.getNumberOfValues() > 0 ? m.getSpectrum(0).getMobilityScanNumber() : null)

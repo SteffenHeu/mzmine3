@@ -88,7 +88,7 @@ public class RectangularMobilogramStorageResult implements StoredMobilograms {
   @Override
   public StorableIonMobilitySeries mobilogram(int index) {
     final int numValues;
-    if (index < storageOffsets.length - 2) {
+    if (index <= storageOffsets.length - 2) {
       numValues = storageOffsets[index + 1] - storageOffsets[index];
     } else {
       numValues = (int) (StorageUtils.numDoubles(mzValuesSegment) - storageOffsets[index]);
@@ -97,5 +97,4 @@ public class RectangularMobilogramStorageResult implements StoredMobilograms {
         List.copyOf(ionTrace.getSpectrum(index).getMobilityScans()
             .subList(scanStartInclusive, scanEndInclusive + 1)));
   }
-
 }

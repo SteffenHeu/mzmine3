@@ -34,10 +34,10 @@ import io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScaleTransfo
 import io.github.mzmine.gui.chartbasics.simplechart.providers.MassSpectrumProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.PaintScaleProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.PlotXYZDataProvider;
+import io.github.mzmine.javafx.util.FxColorUtil;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.FeatureUtils;
 import io.github.mzmine.util.color.SimpleColorPalette;
-import io.github.mzmine.javafx.util.FxColorUtil;
 import java.awt.Color;
 import javafx.beans.property.Property;
 import org.jetbrains.annotations.Nullable;
@@ -125,7 +125,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
   public void computeValues(Property<TaskStatus> status) {
     numValues = 0;
     double max = Double.NEGATIVE_INFINITY;
-    for (int i = 0; i < data.getMobilograms().size(); i++) {
+    for (int i = 0; i < data.getNumberOfValues(); i++) {
       numValues += data.getMobilogram(i).getNumberOfValues();
       for (int j = 0; j < data.getMobilogram(i).getNumberOfValues(); j++) {
         max = Math.max(data.getMobilogram(i).getIntensity(j), max);
@@ -135,7 +135,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
       javafx.scene.paint.Color base = javafx.scene.paint.Color.BLACK;
 //          MZmineCore.getConfiguration().isDarkMode() ? javafx.scene.paint.Color.BLACK
 //              : javafx.scene.paint.Color.WHITE;
-      paintScale = new SimpleColorPalette(new javafx.scene.paint.Color[]{base, color}).toPaintScale(
+      paintScale = new SimpleColorPalette(base, color).toPaintScale(
           PaintScaleTransform.LINEAR, Range.closed(0d, max));
     }
   }
@@ -146,7 +146,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
       if (index >= mobilitySeries.getNumberOfValues()) {
         index -= mobilitySeries.getNumberOfValues();
       } else {
-        return mobilitySeries.getSpectra().get(index).getRetentionTime();
+        return mobilitySeries.getSpectrum(index).getRetentionTime();
       }
     }
     return 0;
