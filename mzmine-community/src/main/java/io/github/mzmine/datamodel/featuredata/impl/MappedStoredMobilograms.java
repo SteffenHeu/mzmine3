@@ -42,17 +42,17 @@ public class MappedStoredMobilograms implements StoredMobilograms {
   private final MemorySegment mzValuesSegment;
   private final MemorySegment intensityValuesSegment;
 
-  private final MemoryLayout mobilogramInfoLayout = MemoryLayout.structLayout(
+  private static final MemoryLayout mobilogramInfoLayout = MemoryLayout.structLayout(
       OfInt.JAVA_INT.withName("numValues"), OfInt.JAVA_INT.withName("storageOffset"),
       OfInt.JAVA_INT.withName("mobilityScanIndicesStart"),
       OfInt.JAVA_INT.withName("mobilityScanIndicesEnd"));
-  private final VarHandle numValues = mobilogramInfoLayout.varHandle(
+  private static final VarHandle numValues = mobilogramInfoLayout.varHandle(
       PathElement.groupElement("numValues"));
-  private final VarHandle storageOffset = mobilogramInfoLayout.varHandle(
+  private static final VarHandle storageOffset = mobilogramInfoLayout.varHandle(
       PathElement.groupElement("storageOffset"));
-  private final VarHandle scanIndicesStart = mobilogramInfoLayout.varHandle(
+  private static final VarHandle scanIndicesStart = mobilogramInfoLayout.varHandle(
       PathElement.groupElement("mobilityScanIndicesStart"));
-  private final VarHandle scanIndicesEnd = mobilogramInfoLayout.varHandle(
+  private static final VarHandle scanIndicesEnd = mobilogramInfoLayout.varHandle(
       PathElement.groupElement("mobilityScanIndicesEnd"));
 
   private final MemorySegment mobilogramData;
@@ -64,12 +64,12 @@ public class MappedStoredMobilograms implements StoredMobilograms {
     this.ionTrace = ionTrace;
     this.mzValuesSegment = mzValuesSegment;
     this.intensityValuesSegment = intensityValuesSegment;
-    mobilogramData = StorageUtils.allocateSegment(null, mobilogramInfoLayout,
+    mobilogramData = StorageUtils.allocateSegment(storage, mobilogramInfoLayout,
         storedMobilograms.size());
 
     final int numMobilityScanIndices = storedMobilograms.stream()
         .mapToInt(IonMobilitySeries::getNumberOfValues).sum();
-    mobilogramScanIndices = StorageUtils.allocateSegment(null, OfInt.JAVA_INT,
+    mobilogramScanIndices = StorageUtils.allocateSegment(storage, OfInt.JAVA_INT,
         numMobilityScanIndices);
     int scanIndicesOffset = 0;
 
@@ -108,11 +108,12 @@ public class MappedStoredMobilograms implements StoredMobilograms {
   @Override
   public IonMobilitySeries mobilogram(int index) {
     final long offset = mobilogramInfoLayout.byteSize() * index;
+    final MemorySegment sliced = mobilogramData.asSlice(offset, mobilogramInfoLayout);
 
-    final int num = (int) numValues.get(mobilogramData, offset);
-    final int storage = (int) storageOffset.get(mobilogramData, offset);
-    final int startIndex = (int) scanIndicesStart.get(mobilogramData, offset);
-    final int endIndex = (int) scanIndicesEnd.get(mobilogramData, offset);
+    final int num = (int) numValues.get(sliced, 0L);
+    final int storage = (int) storageOffset.get(sliced, 0L);
+    final int startIndex = (int) scanIndicesStart.get(sliced, 0L);
+    final int endIndex = (int) scanIndicesEnd.get(sliced, 0L);
 
     final Frame frame = ionTrace.getSpectrum(index);
     final List<MobilityScan> mobilityScans = IntStream.range(startIndex, endIndex)

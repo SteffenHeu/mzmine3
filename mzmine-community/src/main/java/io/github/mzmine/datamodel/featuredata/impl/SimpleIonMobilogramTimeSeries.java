@@ -51,6 +51,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import org.jetbrains.annotations.NotNull;
@@ -223,8 +224,8 @@ public class SimpleIonMobilogramTimeSeries implements IonMobilogramTimeSeries {
       return IonMobilogramTimeSeries.EMPTY;
     }
 
-    final List<IonMobilitySeries> mobilograms = this.mobilograms.storedMobilograms()
-        .subList(startIndexInclusive, endIndexExclusive);
+    final List<IonMobilitySeries> mobilograms = IntStream.range(startIndexInclusive,
+        endIndexExclusive).mapToObj(this::getMobilogram).toList();
     mobilogramBinning.setMobilogram(mobilograms);
 
     return new SimpleIonMobilogramTimeSeries(
