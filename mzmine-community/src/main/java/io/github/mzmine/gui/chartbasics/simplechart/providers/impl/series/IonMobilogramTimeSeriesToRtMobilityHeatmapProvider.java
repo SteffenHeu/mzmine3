@@ -29,10 +29,6 @@ import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.MobilityScan;
 import io.github.mzmine.datamodel.featuredata.IonMobilitySeries;
 import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
-import io.github.mzmine.datamodel.featuredata.impl.SimpleIonMobilogramTimeSeries;
-import io.github.mzmine.datamodel.featuredata.impl.StorableComplexIonMobilitySeries;
-import io.github.mzmine.datamodel.featuredata.impl.StorableConsecutiveIonMobilitySeries;
-import io.github.mzmine.datamodel.featuredata.impl.StorableIonMobilitySeries;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScaleTransform;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.MassSpectrumProvider;
@@ -68,12 +64,14 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
   int numValues = 0;
   private final double progress;
   private PaintScale paintScale = null;
+  private final List<IonMobilitySeries> mobilograms;
 
   public IonMobilogramTimeSeriesToRtMobilityHeatmapProvider(final ModularFeature f) {
     if (!(f.getFeatureData() instanceof IonMobilogramTimeSeries)) {
       throw new IllegalArgumentException("Cannot create IMS heatmap for non-IMS feature");
     }
     data = (IonMobilogramTimeSeries) f.getFeatureData();
+    mobilograms = new ArrayList<>();
 
     seriesKey = FeatureUtils.featureToString(f);
     color = f.getRawDataFile().getColor();
@@ -97,6 +95,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
     this.color = color;
     this.isUseSingleColorPaintScale = useSingleColorPaintScale;
     progress = 1d;
+    mobilograms = new ArrayList<>();
   }
 
   @Override
@@ -133,28 +132,14 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
   @Override
   public void computeValues(Property<TaskStatus> status) {
 
-    final List<IonMobilitySeries> mobilograms = data.getMobilograms();
-    final List<IonMobilitySeries> inMemory = new ArrayList<>();
-    if (mobilograms.stream().allMatch(StorableConsecutiveIonMobilitySeries.class::isInstance)) {
-      for (int i = 0; i < mobilograms.size(); i++) {
-        final StorableIonMobilitySeries mobilogram = (StorableIonMobilitySeries) mobilograms.get(i);
-        final StorableComplexIonMobilitySeries complex = new StorableComplexIonMobilitySeries(
-            (SimpleIonMobilogramTimeSeries) data, mobilogram.getStorageOffset(),
-            mobilogram.getNumberOfValues(), mobilogram.getSpectra());
-        inMemory.add(complex);
-      }
-      data = new SimpleIonMobilogramTimeSeries(data.getMZValueBuffer(),
-          data.getIntensityValueBuffer(), null, inMemory, data.getSpectra(),
-          data.getSummedMobilogram());
-    }
-
+    mobilograms.addAll(data.getMobilograms());
 
     numValues = 0;
     double max = Double.NEGATIVE_INFINITY;
     for (int i = 0; i < data.getNumberOfValues(); i++) {
-      numValues += data.getMobilogram(i).getNumberOfValues();
-      for (int j = 0; j < data.getMobilogram(i).getNumberOfValues(); j++) {
-        max = Math.max(data.getMobilogram(i).getIntensity(j), max);
+      numValues += mobilograms.get(i).getNumberOfValues();
+      for (int j = 0; j < mobilograms.get(i).getNumberOfValues(); j++) {
+        max = Math.max(mobilograms.get(i).getIntensity(j), max);
       }
     }
     if (isUseSingleColorPaintScale) {
@@ -168,7 +153,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
 
   @Override
   public double getDomainValue(int index) {
-    for (IonMobilitySeries mobilitySeries : data.getMobilograms()) {
+    for (IonMobilitySeries mobilitySeries : mobilograms) {
       if (index >= mobilitySeries.getNumberOfValues()) {
         index -= mobilitySeries.getNumberOfValues();
       } else {
@@ -180,7 +165,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
 
   @Override
   public double getRangeValue(int index) {
-    for (IonMobilitySeries mobilitySeries : data.getMobilograms()) {
+    for (IonMobilitySeries mobilitySeries : mobilograms) {
       if (index >= mobilitySeries.getNumberOfValues()) {
         index -= mobilitySeries.getNumberOfValues();
       } else {
@@ -202,7 +187,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
 
   @Override
   public double getZValue(int index) {
-    for (IonMobilitySeries mobilitySeries : data.getMobilograms()) {
+    for (IonMobilitySeries mobilitySeries : mobilograms) {
       if (index >= mobilitySeries.getNumberOfValues()) {
         index -= mobilitySeries.getNumberOfValues();
       } else {
@@ -227,7 +212,7 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
   @Nullable
   @Override
   public MobilityScan getSpectrum(int index) {
-    for (IonMobilitySeries mobilitySeries : data.getMobilograms()) {
+    for (IonMobilitySeries mobilitySeries : mobilograms) {
       if (index >= mobilitySeries.getNumberOfValues()) {
         index -= mobilitySeries.getNumberOfValues();
       } else {
@@ -236,6 +221,4 @@ public class IonMobilogramTimeSeriesToRtMobilityHeatmapProvider implements PlotX
     }
     return null;
   }
-
-
 }
