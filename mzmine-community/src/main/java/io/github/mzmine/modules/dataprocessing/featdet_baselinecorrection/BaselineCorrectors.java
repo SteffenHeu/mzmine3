@@ -26,6 +26,7 @@
 package io.github.mzmine.modules.dataprocessing.featdet_baselinecorrection;
 
 import io.github.mzmine.modules.dataprocessing.featdet_baselinecorrection.akimaspline.AkimaSplineCorrector;
+import io.github.mzmine.modules.dataprocessing.featdet_baselinecorrection.als.ALSBaselineCorrector;
 import io.github.mzmine.modules.dataprocessing.featdet_baselinecorrection.chang.ChangBaselineCorrector;
 import io.github.mzmine.modules.dataprocessing.featdet_baselinecorrection.divideddifference.DividedDifferenceCorrector;
 import io.github.mzmine.modules.dataprocessing.featdet_baselinecorrection.loess.LoessBaselineCorrector;
@@ -35,7 +36,7 @@ import io.github.mzmine.modules.dataprocessing.featdet_baselinecorrection.spline
 import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnum;
 
 public enum BaselineCorrectors implements ModuleOptionsEnum<BaselineCorrector> {
-  LOESS, SPLINE, AKIMA, DIVIDED_DIFFERENCE, NEVILLE, CHANG, POLYNOMIAL;
+  LOESS, SPLINE, AKIMA, DIVIDED_DIFFERENCE, NEVILLE, CHANG, POLYNOMIAL, ALS;
 
   @Override
   public Class<? extends BaselineCorrector> getModuleClass() {
@@ -47,6 +48,7 @@ public enum BaselineCorrectors implements ModuleOptionsEnum<BaselineCorrector> {
       case NEVILLE -> NevilleBaselineCorrector.class;
       case CHANG -> ChangBaselineCorrector.class;
       case POLYNOMIAL -> PolynomialBaselineCorrection.class;
+      case ALS -> ALSBaselineCorrector.class;
     };
   }
 
@@ -60,6 +62,7 @@ public enum BaselineCorrectors implements ModuleOptionsEnum<BaselineCorrector> {
       case NEVILLE -> "neville_corrector";
       case CHANG -> "chang_corrector";
       case POLYNOMIAL -> "polynomial_corrector";
+      case ALS -> "als_corrector";
     };
   }
 }

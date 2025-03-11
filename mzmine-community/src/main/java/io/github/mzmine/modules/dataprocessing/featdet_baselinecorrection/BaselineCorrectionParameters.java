@@ -50,7 +50,7 @@ public class BaselineCorrectionParameters extends SimpleParameterSet {
   public static final ModuleOptionsEnumComboParameter<BaselineCorrectors> correctionAlgorithm = new ModuleOptionsEnumComboParameter<>(
       "Baseline corrector", "Select the baseline correction algorithm.",
       new BaselineCorrectors[]{BaselineCorrectors.LOESS, BaselineCorrectors.POLYNOMIAL,
-          BaselineCorrectors.SPLINE}, BaselineCorrectors.LOESS);
+          BaselineCorrectors.SPLINE, BaselineCorrectors.ALS}, BaselineCorrectors.LOESS);
 
   public static final OriginalFeatureListHandlingParameter handleOriginal = new OriginalFeatureListHandlingParameter(
       false);
