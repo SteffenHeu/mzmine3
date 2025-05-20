@@ -31,8 +31,10 @@ import static io.github.mzmine.modules.tools.batchwizard.WizardPart.WORKFLOW;
 import static io.github.mzmine.modules.tools.batchwizard.builders.WizardBatchBuilder.getOrElse;
 import static io.github.mzmine.util.StringUtils.inQuotes;
 
+import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.mainwindow.SimpleTab;
 import io.github.mzmine.javafx.components.factories.FxButtons;
+import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.javafx.util.FxIconUtil;
 import io.github.mzmine.javafx.util.FxIcons;
@@ -47,6 +49,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.DataImportWizard
 import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
@@ -56,6 +59,7 @@ import io.github.mzmine.parameters.dialogs.ParameterSetupPane;
 import io.github.mzmine.parameters.parametertypes.absoluterelative.AbsoluteAndRelativeInt;
 import io.github.mzmine.parameters.parametertypes.filenames.LastFilesButton;
 import io.github.mzmine.util.ExitCode;
+import io.mzio.links.MzioMZmineLinks;
 import java.io.File;
 import java.text.MessageFormat;
 import java.time.LocalDate;
@@ -73,6 +77,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.CacheHint;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBase;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -87,7 +92,9 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -112,6 +119,7 @@ public class BatchWizardTab extends SimpleTab {
   private boolean listenersActive = true;
   private TabPane tabPane;
   private HBox schemaPane;
+  private final int helpButtonSize = 50;
 
   public BatchWizardTab() {
     super("mzwizard");
@@ -188,18 +196,30 @@ public class BatchWizardTab extends SimpleTab {
         .orElse(IonMobilityWizardParameterFactory.NO_IMS);
 
     filterComboBox(WizardPart.MS, WizardPartFilter.allow(ims.getMatchingMassSpectrometerPresets()));
+
+    // after import or applying a partial sequence (changing multiple steps at once) it is important to select the correct item
+    ensureComboBoxSelection();
+  }
+
+  private void ensureComboBoxSelection() {
+    // select the correct options
+    for (var preset : sequenceSteps) {
+      ComboBox<WizardStepParameters> combo = combos.get(preset.getPart());
+      if (combo != null) {
+        combo.getSelectionModel().select(preset);
+      }
+    }
   }
 
   private void filterWorkflows(WizardSequence sequenceSteps) {
-    final List<WizardStepParameters> availableWorkflows = new ArrayList<>();
-    ALL_PRESETS.get(WizardPart.WORKFLOW).forEach(workflow -> {
-      final WorkflowWizardParameterFactory workflowFactory = (WorkflowWizardParameterFactory) workflow.getFactory();
-      final Map<WizardPart, WizardPartFilter> workflowStepFilters = workflowFactory.getStepFilters();
-      workflowStepFilters.forEach((step, filter) -> sequenceSteps.get(step)
-          .filter(stepParam -> filter.accept(stepParam.getFactory()))
-          .ifPresent(_ -> availableWorkflows.add(workflow)));
-    });
-    var selected = setItemsToCombo(combos.get(WORKFLOW), availableWorkflows, false);
+    final List<WizardStepParameters> availableWorkflows = ALL_PRESETS.get(WizardPart.WORKFLOW)
+        .stream().filter(workflow -> {
+          if (workflow instanceof WorkflowWizardParameters workflowParams) {
+            return workflowParams.isApplicableToSteps(sequenceSteps);
+          }
+          return false;
+        }).toList();
+    var selected = setItemsToCombo(WORKFLOW, availableWorkflows, false);
     sequenceSteps.set(WORKFLOW, selected); // set the updated sequence
   }
 
@@ -217,7 +237,7 @@ public class BatchWizardTab extends SimpleTab {
     ObservableList<WizardStepParameters> currentPresets = combo.getItems();
     if (!currentPresets.equals(filteredPresets)) {
       // need to set new selection to workflow
-      var selected = setItemsToCombo(combo, filteredPresets, false);
+      var selected = setItemsToCombo(part, filteredPresets, false);
       sequenceSteps.set(part, selected);
 
       if (part == WizardPart.MS) {
@@ -235,16 +255,17 @@ public class BatchWizardTab extends SimpleTab {
     }
   }
 
-  private WizardStepParameters setItemsToCombo(final ComboBox<WizardStepParameters> combo,
+  private WizardStepParameters setItemsToCombo(final WizardPart part,
       final List<WizardStepParameters> newItems, boolean notifyListeners) {
+    final ComboBox<WizardStepParameters> combo = combos.get(part);
+
     boolean oldNotify = listenersActive;
     setListenersActive(notifyListeners);
     // keep selection or select first element if not available
     SingleSelectionModel<WizardStepParameters> selection = combo.getSelectionModel();
-    WizardStepParameters oldSelected = selection.getSelectedItem();
     // set new items
     combo.setItems(FXCollections.observableList(newItems));
-    selection.select(oldSelected);
+    sequenceSteps.get(part).ifPresentOrElse(selection::select, selection::clearSelection);
     if (selection.getSelectedIndex() < 0) {
       selection.selectFirst();
     }
@@ -304,10 +325,10 @@ public class BatchWizardTab extends SimpleTab {
     return spacer;
   }
 
-  private VBox createTopMenu() {
-    VBox vbox = new VBox(4);
-    vbox.setAlignment(Pos.CENTER);
-    VBox.setMargin(vbox, new Insets(5));
+  private Region createTopMenu() {
+    VBox controlSchemaPane = new VBox(4);
+    controlSchemaPane.setAlignment(Pos.CENTER);
+    VBox.setMargin(controlSchemaPane, new Insets(5));
 
     var topPane = new FlowPane(4, 4);
     topPane.setAlignment(Pos.CENTER);
@@ -319,7 +340,10 @@ public class BatchWizardTab extends SimpleTab {
     // LC/GC - IMS? - MS instrument, Apply defaults
     for (final WizardPart part : WizardPart.values()) {
       var presets = FXCollections.observableArrayList(ALL_PRESETS.get(part));
-      sequenceSteps.add(presets.get(0));
+      if (presets.isEmpty()) {
+        continue;
+      }
+      sequenceSteps.add(presets.getFirst());
       if (presets.size() == 1) {
         continue;
       }
@@ -358,8 +382,18 @@ public class BatchWizardTab extends SimpleTab {
 
     schemaPane = new HBox(0);
     schemaPane.setAlignment(Pos.CENTER);
-    vbox.getChildren().addAll(topPane, schemaPane);
-    return vbox;
+    // add a wrapper around the top pane with combo boxes and buttons so the help button does not overlap
+    final HBox topPaneWrapper = FxLayout.newHBox(new Insets(0, helpButtonSize, 0, helpButtonSize), topPane);
+    HBox.setHgrow(topPane, Priority.ALWAYS);
+    controlSchemaPane.getChildren().addAll(topPaneWrapper, schemaPane);
+
+    final ButtonBase help = FxIconUtil.newIconButton(FxIcons.QUESTIONMARK, 50,
+        "Open the mzwizard documentation", () -> DesktopService.getDesktop()
+            .openWebPage(MzioMZmineLinks.WIZARD_DOCUMENTATION.getUrl()));
+    final StackPane stackPane = new StackPane(controlSchemaPane, help);
+    StackPane.setAlignment(help, Pos.TOP_RIGHT);
+
+    return stackPane;
   }
 
   /**
@@ -394,6 +428,9 @@ public class BatchWizardTab extends SimpleTab {
   private void applyPartialSequence(final WizardSequence partialSequence) {
     setListenersActive(false);
 
+    // keep old parameters before applying sequence
+    updateAllParametersFromUi();
+
     // partialSequence might contain other instances of the presets (after loading)
     // need to apply all parameter changes to ALL_PRESETS
     WizardSequence correctPartialSequence = new WizardSequence();
@@ -409,15 +446,11 @@ public class BatchWizardTab extends SimpleTab {
     // keep current as default parameters
     sequenceSteps.apply(correctPartialSequence);
 
-    for (var preset : sequenceSteps) {
-      ComboBox<WizardStepParameters> combo = combos.get(preset.getPart());
-      if (combo != null) {
-        combo.getSelectionModel().select(preset);
-      }
-    }
-    setListenersActive(true);
-
+    // apply preset filters so that combos show the correct options
     createParameterPanes();
+
+    // now activate listeners again. Should be after changing the sequence and createParameterPanes
+    setListenersActive(true);
   }
 
   /**

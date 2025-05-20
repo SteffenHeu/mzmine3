@@ -42,6 +42,7 @@ import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.ModuleQuickSelectDialog;
+import io.github.mzmine.modules.dataanalysis.statsdashboard.StatsDasboardModule;
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.noiseamplitude.NoiseAmplitudeResolverModule;
@@ -89,10 +90,12 @@ import io.github.mzmine.modules.io.export_features_mztabm.MZTabmExportModule;
 import io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule;
 import io.github.mzmine.modules.io.export_features_sql.SQLExportModule;
 import io.github.mzmine.modules.io.export_features_venn.VennExportModule;
+import io.github.mzmine.modules.io.export_features_xml.ExportFeaturesDataModule;
 import io.github.mzmine.modules.io.export_library_analysis_csv.LibraryAnalysisCSVExportModule;
 import io.github.mzmine.modules.io.export_library_gnps_batch.GNPSLibraryBatchExportModule;
 import io.github.mzmine.modules.io.export_msmsquality.MsMsQualityExportModule;
 import io.github.mzmine.modules.io.export_network_graphml.NetworkGraphMlExportModule;
+import io.github.mzmine.modules.io.export_scans_modular.ExportScansFeatureModule;
 import io.github.mzmine.modules.io.import_feature_networks.ImportFeatureNetworksSimpleModule;
 import io.github.mzmine.modules.io.projectload.ProjectLoadModule;
 import io.github.mzmine.modules.io.projectsave.ProjectSaveAsModule;
@@ -105,6 +108,7 @@ import io.github.mzmine.modules.tools.qualityparameters.QualityParametersModule;
 import io.github.mzmine.modules.tools.timstofmaldiacq.TimsTOFMaldiAcquisitionModule;
 import io.github.mzmine.modules.tools.timstofmaldiacq.imaging.SimsefImagingSchedulerModule;
 import io.github.mzmine.modules.visualization.chromatogram.ChromatogramVisualizerModule;
+import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashboardModule;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberModule;
 import io.github.mzmine.modules.visualization.feat_histogram.FeatureHistogramPlotModule;
 import io.github.mzmine.modules.visualization.frames.FrameVisualizerModule;
@@ -264,14 +268,17 @@ public abstract class AbstractWorkspace implements Workspace {
     addModuleMenuItems(menu, "Graphics", ExportAllIdsGraphicalModule.class);
     addModuleMenuItems(menu, CSVExportModularModule.class, CompoundAnnotationsCSVExportModule.class,
         LegacyCSVExportModule.class, MZTabmExportModule.class, SQLExportModule.class,
-        AdapMspExportModule.class, AdapMgfExportModule.class, GnpsFbmnExportAndSubmitModule.class,
-        GnpsGcExportAndSubmitModule.class, SiriusExportModule.class,
+        // scans
+        ExportScansFeatureModule.class, AdapMspExportModule.class, AdapMgfExportModule.class,
+        GnpsFbmnExportAndSubmitModule.class, GnpsGcExportAndSubmitModule.class,
+        SiriusExportModule.class,
+        //
         ImportFeatureNetworksSimpleModule.class, ExportCorrAnnotationModule.class,
         NetworkGraphMlExportModule.class, FeatureMLExportModularModule.class,
-        CcsBaseExportModule.class);
+        CcsBaseExportModule.class, ExportFeaturesDataModule.class);
     addModuleMenuItems(menu, "Statistics", VennExportModule.class, MetaboAnalystExportModule.class);
     addModuleMenuItems(menu, "Libraries", LibraryBatchGenerationModule.class,
-        GNPSLibraryBatchExportModule.class);
+        GNPSLibraryBatchExportModule.class, ExportScansFeatureModule.class);
 
     return menu;
   }
@@ -332,6 +339,8 @@ public abstract class AbstractWorkspace implements Workspace {
     addSeparator(featureVis);
     addModuleMenuItems(featureVis, "Lipids", EquivalentCarbonNumberModule.class,
         LipidAnnotationSummaryModule.class);
+    addModuleMenuItems(featureVis, "Dashboards", IntegrationDashboardModule.class,
+        StatsDasboardModule.class);
     // end of feature visualization
     // back to main visualization menu
     addModuleMenuItems(menu, MSnTreeVisualizerModule.class);
@@ -380,6 +389,8 @@ public abstract class AbstractWorkspace implements Workspace {
     final Menu menu = new Menu("Help");
     addMenuItem(menu, "Open documentation", () -> MZmineCore.getDesktop()
         .openWebPage("https://mzmine.github.io/mzmine_documentation/"));
+    addMenuItem(menu, "Open quick start video", () -> DesktopService.getDesktop()
+        .openWebPage(MzioMZmineLinks.WIZARD_QUICKSTART_VIDEO.getUrl()));
     addMenuItem(menu, "Open landing page",
         () -> MZmineCore.getDesktop().addTab(new MZmineIntroductionTab()));
 
