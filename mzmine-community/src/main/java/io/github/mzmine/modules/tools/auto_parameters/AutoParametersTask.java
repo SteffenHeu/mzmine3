@@ -38,6 +38,8 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineRunnableModule;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetector;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectors;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.auto.AutoMassDetector;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.auto.AutoMassDetectorParameters;
 import io.github.mzmine.parameters.ParameterSet;
@@ -172,9 +174,10 @@ public class AutoParametersTask extends AbstractTask {
   }
 
   private void applyZeroIntensityMassDetection(List<Scan> assessedScans) {
-    final AutoMassDetector autoMassDetector = MZmineCore.getModuleInstance(AutoMassDetector.class);
-    ParameterSet autoMassDetectorParameters = new AutoMassDetectorParameters().cloneParameterSet();
+    final ParameterSet autoMassDetectorParameters = new AutoMassDetectorParameters().cloneParameterSet();
     autoMassDetectorParameters.setParameter(AutoMassDetectorParameters.noiseLevel, 0d);
+    final MassDetector autoMassDetector = MassDetectors.AUTO.createMassDetector(
+        autoMassDetectorParameters);
 
     for (Scan assessedScan : assessedScans) {
       assessedScan.addMassList(new SimpleMassList(getMemoryMapStorage(),
