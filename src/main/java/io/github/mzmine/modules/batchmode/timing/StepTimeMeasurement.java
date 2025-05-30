@@ -48,7 +48,7 @@ public record StepTimeMeasurement(int step, double secondsToFinish, String name,
         heap);
   }
 
-  static double getUsedMemoryGB() {
+  public static double getUsedMemoryGB() {
     final double GB = 1 << 30; // 1 GB
     final double totalMemGB = Runtime.getRuntime().totalMemory() / GB;
     return totalMemGB - Runtime.getRuntime().freeMemory() / GB;

@@ -40,6 +40,7 @@ import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.modules.batchmode.BatchTask;
+import io.github.mzmine.modules.batchmode.timing.StepTimeMeasurement;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.library_to_featurelist.SpectralLibraryToFeatureListModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.library_to_featurelist.SpectralLibraryToFeatureListParameters;
 import io.github.mzmine.modules.visualization.chromatogram.ChromatogramVisualizerModule;
@@ -909,6 +910,7 @@ public class MainWindowController {
     new Thread(() -> {
       logger.info("Freeing unused memory");
       System.gc();
+      logger.info("Used memory: " + StepTimeMeasurement.getUsedMemoryGB());
     }).start();
   }
 
