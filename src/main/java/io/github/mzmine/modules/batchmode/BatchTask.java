@@ -213,13 +213,6 @@ public class BatchTask extends AbstractTask {
     logger.info("Finished a batch of " + totalSteps + " steps");
     setStatus(TaskStatus.FINISHED);
     printBatchTimes(batchStart);
-    Duration duration = Duration.between(batchStart, Instant.now());
-
-    stepTimes.stream().map(StepTimeMeasurement::duration).reduce(Duration::plus).ifPresent(
-        allSum -> stepTimes.addFirst(
-            new StepTimeMeasurement(0, "Batch extra scheduling time", duration.minus(allSum))));
-
-    stepTimes.addFirst(new StepTimeMeasurement(0, getName(), duration));
   }
 
   private void printBatchTimes(final Instant batchStart) {
@@ -418,7 +411,8 @@ public class BatchTask extends AbstractTask {
       }
     }
     Duration duration = Duration.between(start, Instant.now());
-    stepTimes.add(new StepTimeMeasurement(stepNumber, method.getName(), duration));
+    System.gc();
+    stepTimes.add(new StepTimeMeasurement(stepNumber, method.getName(), duration, true));
 
     createdDataFiles = new ArrayList<>(project.getCurrentRawDataFiles());
     createdFeatureLists = new ArrayList<>(project.getCurrentFeatureLists());
