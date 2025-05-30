@@ -43,8 +43,8 @@ public record StepTimeMeasurement(int step, double secondsToFinish, String name,
 
   @Override
   public String toString() {
-    String heap = usedHeapGB == null ? "" : " (used heap: %s GB)".formatted(usedHeapGB);
-    return "Step\t%d\t%s\t%.3f%s".formatted(step + 1, name, secondsToFinish,
+    String heap = usedHeapGB == null ? "" : "%s".formatted(usedHeapGB);
+    return "Step\t%d\t%s\t%.3f\t%s".formatted(step + 1, name, secondsToFinish,
         heap);
   }
 
