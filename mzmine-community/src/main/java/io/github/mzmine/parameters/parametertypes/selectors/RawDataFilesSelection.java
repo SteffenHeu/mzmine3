@@ -228,13 +228,13 @@ public class RawDataFilesSelection implements Cloneable {
       RawDataFile[] files = getEvaluationResult();
       for (int i = 0; i < files.length; i++) {
         if (i > 0) {
-          str.append("\n");
+          str.append(", ");
         }
         str.append(files[i].getName());
       }
-      return str.toString();
+      return selectionType + ", " + str.toString();
     }
-    return "Evaluation not executed.";
+    return selectionType + ", Evaluation not executed.";
   }
 
   @Override

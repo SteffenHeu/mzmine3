@@ -202,17 +202,17 @@ public class FeatureListsSelection implements Cloneable {
     if (keepSelection) {
       newSelection.specificFeatureLists = specificFeatureLists;
       newSelection.batchLastFeatureLists = batchLastFeatureLists;
-      newSelection.evaluatedSelection = evaluatedSelection;
     }
+    newSelection.evaluatedSelection = evaluatedSelection;
     return newSelection;
   }
 
   public String toString() {
     if (evaluatedSelection != null) {
-      return Arrays.stream(evaluatedSelection).map(FeatureListPlaceholder::getName)
-          .collect(Collectors.joining("\n"));
+      return selectionType + ", " + Arrays.stream(evaluatedSelection)
+          .map(FeatureListPlaceholder::getName).collect(Collectors.joining(", "));
     }
-    return "Evaluation not executed.";
+    return selectionType + ", Evaluation not executed.";
   }
 
   @Override
