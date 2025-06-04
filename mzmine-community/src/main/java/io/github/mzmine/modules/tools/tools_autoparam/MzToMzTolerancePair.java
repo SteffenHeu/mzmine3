@@ -24,26 +24,9 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam;
 
-import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
-import java.util.Arrays;
-import java.util.List;
+import org.jetbrains.annotations.NotNull;
 
-public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featureStatistics) {
+public record MzToMzTolerancePair(double mz, @NotNull MZTolerance tolerance) {
 
-  public double[] getEdgeIntensities() {
-    return featureStatistics.stream()
-        .flatMapToDouble(stats -> Arrays.stream(stats.getNonZeroIsotopeEdgeIntensities()))
-        .toArray();
-  }
-
-  public double[] getIsotopePeakFwhms() {
-    return featureStatistics.stream()
-        .flatMapToDouble(stats -> Arrays.stream(stats.getBestIsotopesFWHMs())).toArray();
-  }
-
-  public MzToMzTolerancePair[] getBestTolerances() {
-    return featureStatistics.stream().map(stats -> new MzToMzTolerancePair(stats.getMz(), stats.getBestTolerance()))
-        .toArray(MzToMzTolerancePair[]::new);
-  }
 }

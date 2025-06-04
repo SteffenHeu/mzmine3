@@ -24,18 +24,94 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam;
 
+import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
+import io.github.mzmine.datamodel.features.Feature;
+import io.github.mzmine.datamodel.features.ModularFeature;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class FeatureStatistics {
 
-  final List<IsotopeEnvelope> envelopes;
-  final IsotopeEnvelope bestEnvelope;
-  final double highestPeakMz;
+  final List<FeatureWithIsotopeTraces> envelopes;
+  final FeatureWithIsotopeTraces bestEnvelope;
 
-  public FeatureStatistics(List<IsotopeEnvelope> envelopes, IsotopeEnvelope bestEnvelope,
-      double highestPeakMz) {
+  public FeatureStatistics(List<FeatureWithIsotopeTraces> envelopes) {
     this.envelopes = envelopes;
-    this.bestEnvelope = bestEnvelope;
-    this.highestPeakMz = highestPeakMz;
+    bestEnvelope = FeatureWithIsotopeTraces.getBest(envelopes);
+  }
+
+  /**
+   * @param isoSeries   the series to extract values from
+   * @param intensities a list to put the intensity values into
+   */
+  private static void extractFirstAndLastNonZeroIntensity(IonTimeSeries<? extends Scan> isoSeries,
+      DoubleArrayList intensities) {
+
+    // since we use the full series, we expect some zeros to be there. if there are no zeros,
+    // we are also not close to the noise level, so disregard those isotope traces
+
+    boolean previousPointZero = false;
+    int stoppedAtIndex = 0;
+    for (int i = 0; i < isoSeries.getNumberOfValues(); i++) {
+      if (previousPointZero) {
+        intensities.add(isoSeries.getIntensity(i));
+        stoppedAtIndex = i;
+        break;
+      }
+      if (Double.compare(isoSeries.getIntensity(i), 0d) <= 0) {
+        previousPointZero = true;
+      }
+    }
+
+    // only add the same point once, so we stop as soon as we reach the same index as we had before
+    previousPointZero = false;
+    for (int i = isoSeries.getNumberOfValues() - 1; i > 0 && i > stoppedAtIndex; i--) {
+      if (previousPointZero) {
+        intensities.add(isoSeries.getIntensity(i));
+        break;
+      }
+      if (Double.compare(isoSeries.getIntensity(i), 0d) <= 0) {
+        previousPointZero = true;
+      }
+    }
+  }
+
+  public MZTolerance getBestTolerance() {
+    return bestEnvelope.mzTolerance();
+  }
+
+  public double getMz() {
+    return bestEnvelope.mainFeature().getMZ();
+  }
+
+  public double[] getBestIsotopesFWHMs() {
+    return bestEnvelope.isotopeTraces().stream().map(Feature::getFWHM).filter(Objects::nonNull)
+        .mapToDouble(Float::doubleValue).toArray();
+  }
+
+  /**
+   * @return get the first and last non-zero intensities of the isotope peaks. may be used to
+   * estimate the noise level
+   */
+  public double[] getNonZeroIsotopeEdgeIntensities() {
+    final DoubleArrayList intensities = new DoubleArrayList();
+
+    for (ModularFeature iso : bestEnvelope.isotopeTraces()) {
+      final IonTimeSeries<? extends Scan> isoSeries = iso.getFeatureData();
+      extractFirstAndLastNonZeroIntensity(isoSeries, intensities);
+    }
+
+    return intensities.toDoubleArray();
+  }
+
+  public List<FeatureWithIsotopeTraces> getEnvelopes() {
+    return envelopes;
+  }
+
+  public FeatureWithIsotopeTraces getBestEnvelope() {
+    return bestEnvelope;
   }
 }

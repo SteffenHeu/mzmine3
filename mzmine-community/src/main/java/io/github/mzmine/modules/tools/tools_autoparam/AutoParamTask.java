@@ -27,7 +27,7 @@ package io.github.mzmine.modules.tools.tools_autoparam;
 import com.google.common.collect.Range;
 import com.google.common.collect.TreeRangeMap;
 import io.github.mzmine.datamodel.FeatureStatus;
-import io.github.mzmine.datamodel.MZmineProject;
+import io.github.mzmine.datamodel.MassList;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.data_access.EfficientDataAccess.ScanDataType;
@@ -36,42 +36,46 @@ import io.github.mzmine.datamodel.featuredata.impl.BuildingIonSeries;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.auto.AutoMassDetector;
-import io.github.mzmine.modules.impl.TaskPerRawDataFileModule;
 import io.github.mzmine.parameters.ParameterSet;
-import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
-import io.github.mzmine.parameters.parametertypes.submodules.ParameterSetParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractRawDataFileTask;
-import io.github.mzmine.taskcontrol.AbstractTask;
-import io.github.mzmine.taskcontrol.Task;
-import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.RangeUtils;
 import io.github.mzmine.util.collections.BinarySearch;
 import io.github.mzmine.util.collections.BinarySearch.DefaultTo;
 import io.github.mzmine.util.scans.SpectraMerging;
+import it.unimi.dsi.fastutil.doubles.Double2ObjectArrayMap;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.concurrent.atomic.AtomicInteger;
-import javafx.collections.ObservableList;
-import javax.validation.constraints.Null;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class AutoParamTask extends AbstractRawDataFileTask {
 
-  RawDataFile file;
-  MemoryMapStorage massListStorage;
+  private static final Logger logger = Logger.getLogger(AutoParamTask.class.getName());
+
+  private static final MZTolerance[] tolerances = new MZTolerance[]{new MZTolerance(0.0005, 2), //
+      new MZTolerance(0.001, 5), //
+      new MZTolerance(0.005, 15), //
+      new MZTolerance(0.008, 15), //
+      new MZTolerance(0.01, 20), //
+      new MZTolerance(0.015, 25), //
+      new MZTolerance(0.02, 25), //
+      new MZTolerance(0.05, 25) //
+  };
+
+  private final RawDataFile file;
 
   /**
    * @param storage        The {@link MemoryMapStorage} used to store results of this task (e.g.
@@ -80,10 +84,35 @@ public class AutoParamTask extends AbstractRawDataFileTask {
    * @param moduleCallDate the call date of module to order execution order
    * @param parameters
    * @param moduleClass
+   * @param raw
    */
   protected AutoParamTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
-      @NotNull ParameterSet parameters, @NotNull Class<? extends MZmineModule> moduleClass) {
+      @NotNull ParameterSet parameters, @NotNull Class<? extends MZmineModule> moduleClass,
+      @NotNull RawDataFile raw) {
     super(storage, moduleCallDate, parameters, moduleClass);
+    file = raw;
+  }
+
+  private static double[] getMainPeakMzs(List<Scan> scans) {
+    final MZTolerance oneMzTolerance = new MZTolerance(1, 0);
+    final TreeRangeMap<Double, MassList> mzScanMap = TreeRangeMap.create();
+    final List<MassList> intensitySortedScans = scans.stream().map(Scan::getMassList)
+        .filter(ml -> ml.getBasePeakMz() != null)
+        .sorted(Comparator.comparingDouble(MassList::getBasePeakMz).reversed()).toList();
+
+    for (MassList scan : intensitySortedScans) {
+      final double mz = scan.getBasePeakMz();
+      final MassList entry = mzScanMap.get(mz);
+      if (entry == null) {
+        final Range<Double> range = SpectraMerging.createNewNonOverlappingRange(mzScanMap,
+            oneMzTolerance.getToleranceRange(mz));
+        mzScanMap.put(range, scan);
+      }
+    }
+
+    final double[] basePeakMzs = mzScanMap.asMapOfRanges().entrySet().stream().map(Entry::getValue)
+        .mapToDouble(MassList::getBasePeakMz).toArray();
+    return basePeakMzs;
   }
 
   @Override
@@ -95,27 +124,67 @@ public class AutoParamTask extends AbstractRawDataFileTask {
   protected void process() {
     final ScanSelection scanSelection = new ScanSelection(1);
     final List<Scan> scans = scanSelection.getMatchingScans(file.getScans());
+    applyZeroIntensityMassDetection(scans);
 
-    final double[] basePeakMzs = getMainPeakMzs(scans);
-    final List<Range<Double>> mzRangesSorted = Arrays.stream(basePeakMzs).sorted()
-        .mapToObj(mz -> RangeUtils.rangeAround(mz, 1d)).toList();
+    final double[] basePeakMzs = Arrays.stream(getMainPeakMzs(scans)).sorted().toArray();
 
-    final List<ModularFeature> mainFeatures = getMainSignalFeatures(scans, mzRangesSorted);
+    final Double2ObjectArrayMap<List<FeatureWithIsotopeTraces>> mzsToIsotopeTraces = new Double2ObjectArrayMap<>();
 
-    for (ModularFeature mainPeak : mainFeatures) {
+    List<FeatureWithIsotopeTraces> featureWithIsotopeTraces = new ArrayList<>();
+    for (MZTolerance tolerance : tolerances) {
+      final List<Range<Double>> mzRangesSorted = Arrays.stream(basePeakMzs)
+          .mapToObj(tolerance::getToleranceRange).toList();
+      final List<ModularFeature> mainFeatures = getMainSignalFeatures(scans, mzRangesSorted);
 
+      for (ModularFeature feature : mainFeatures) {
+        final int initialMzIndex = BinarySearch.binarySearch(basePeakMzs, feature.getMZ(),
+            DefaultTo.CLOSEST_VALUE);
+        final double initialMz = basePeakMzs[initialMzIndex];
+        final FeatureWithIsotopeRanges withIsotopeRanges = FeatureWithIsotopeRanges.of(initialMz,
+            feature, tolerance);
+        if (withIsotopeRanges == null) {
+          continue;
+        }
+
+        final FeatureWithIsotopeTraces envelope = FeatureWithIsotopeTraces.of(initialMz, file,
+            tolerance, withIsotopeRanges, getMemoryMapStorage(), this);
+        if(envelope == null) {
+          logger.finest("No correlated isotopes found in file %s for m/z %.4f at a tolerance of %s".formatted(file.getName(), initialMz, tolerance.toString()));
+          continue;
+        }
+        featureWithIsotopeTraces.add(envelope);
+        final List<FeatureWithIsotopeTraces> mzResults = mzsToIsotopeTraces.computeIfAbsent(
+            initialMz, k -> new ArrayList<>());
+        mzResults.add(envelope);
+      }
     }
+
+    final List<FeatureStatistics> featureStats = mzsToIsotopeTraces.double2ObjectEntrySet().stream()
+        .map(e -> new FeatureStatistics(e.getValue())).toList();
+    final DataFileStatistics dataFileStats = new DataFileStatistics(file, featureStats);
+
+    final String tolStr = "mz\tabs\trel\n" + Arrays.stream(dataFileStats.getBestTolerances()).map(
+        pair -> "%.4f\t%.4f\t%.1f".formatted(pair.mz(), pair.tolerance().getMzTolerance(),
+            pair.tolerance().getPpmTolerance())).collect(Collectors.joining("\n"));
+    final String intensitiesStr = Arrays.stream(dataFileStats.getEdgeIntensities()).mapToObj(
+        "%f"::formatted).collect(Collectors.joining(","));
+    final String fwhmStr = Arrays.stream(dataFileStats.getIsotopePeakFwhms()).mapToObj(
+        "%f"::formatted).collect(Collectors.joining(","));
+    logger.finest("Tolerances for data file %s:".formatted(file.getName()));
+    logger.finest(tolStr);
+    logger.finest("Isotope edge intensities:");
+    logger.finest(intensitiesStr);
+    logger.finest("Isotope fwhms:");
+    logger.finest(fwhmStr);
   }
 
   /**
-   *
-   * @param scans The scans to search in
+   * @param scans          The scans to search in
    * @param mzRangesSorted the mz ranges to search in
    * @return A list of features of the given mz ranges capped at 5% of the maximum intensity
    */
   private @NotNull List<ModularFeature> getMainSignalFeatures(List<Scan> scans,
       List<Range<Double>> mzRangesSorted) {
-    applyZeroIntensityMassDetection(scans);
     final List<ModularFeature> mainPeaks = new ArrayList<>();
 
     final ExtractMzRangesIonSeriesFunction eicExtraction = new ExtractMzRangesIonSeriesFunction(
@@ -166,29 +235,8 @@ public class AutoParamTask extends AbstractRawDataFileTask {
   private void applyZeroIntensityMassDetection(List<Scan> scans) {
     final AutoMassDetector detector = new AutoMassDetector(0d);
     for (Scan scan : scans) {
-      scan.addMassList(new SimpleMassList(massListStorage, detector.getMassValues(scan)));
+      scan.addMassList(new SimpleMassList(getMemoryMapStorage(), detector.getMassValues(scan)));
     }
-  }
-
-  private static double[] getMainPeakMzs(List<Scan> scans) {
-    final MZTolerance oneMzTolerance = new MZTolerance(1, 0);
-    final TreeRangeMap<Double, Scan> mzScanMap = TreeRangeMap.create();
-    final List<Scan> intensitySortedScans = scans.stream().filter(s -> s.getBasePeakMz() != null)
-        .sorted(Comparator.comparingDouble(Scan::getBasePeakMz).reversed()).toList();
-
-    for (Scan scan : intensitySortedScans) {
-      final double mz = scan.getBasePeakMz();
-      final Scan entry = mzScanMap.get(mz);
-      if (entry == null) {
-        final Range<Double> range = SpectraMerging.createNewNonOverlappingRange(mzScanMap,
-            oneMzTolerance.getToleranceRange(mz));
-        mzScanMap.put(range, scan);
-      }
-    }
-
-    final double[] basePeakMzs = mzScanMap.asMapOfRanges().entrySet().stream().map(Entry::getValue)
-        .mapToDouble(Scan::getBasePeakMz).toArray();
-    return basePeakMzs;
   }
 
   @Override

@@ -24,26 +24,14 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam;
 
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
-import java.util.Arrays;
-import java.util.List;
+import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 
-public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featureStatistics) {
+public class AutoParamParameters extends SimpleParameterSet {
 
-  public double[] getEdgeIntensities() {
-    return featureStatistics.stream()
-        .flatMapToDouble(stats -> Arrays.stream(stats.getNonZeroIsotopeEdgeIntensities()))
-        .toArray();
-  }
+  public static final RawDataFilesParameter RAW_DATA_FILES = new RawDataFilesParameter();
 
-  public double[] getIsotopePeakFwhms() {
-    return featureStatistics.stream()
-        .flatMapToDouble(stats -> Arrays.stream(stats.getBestIsotopesFWHMs())).toArray();
-  }
-
-  public MzToMzTolerancePair[] getBestTolerances() {
-    return featureStatistics.stream().map(stats -> new MzToMzTolerancePair(stats.getMz(), stats.getBestTolerance()))
-        .toArray(MzToMzTolerancePair[]::new);
+  public AutoParamParameters() {
+    super(RAW_DATA_FILES);
   }
 }

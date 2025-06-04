@@ -24,26 +24,32 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam;
 
+import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
-import java.util.Arrays;
-import java.util.List;
+import io.github.mzmine.modules.MZmineModuleCategory;
+import io.github.mzmine.modules.impl.TaskPerRawDataFileModule;
+import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.taskcontrol.Task;
+import io.github.mzmine.util.MemoryMapStorage;
+import java.time.Instant;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featureStatistics) {
+public class AutoParamModule extends TaskPerRawDataFileModule {
 
-  public double[] getEdgeIntensities() {
-    return featureStatistics.stream()
-        .flatMapToDouble(stats -> Arrays.stream(stats.getNonZeroIsotopeEdgeIntensities()))
-        .toArray();
+  public AutoParamModule() {
+    super("Auto parameters", AutoParamParameters.class, MZmineModuleCategory.TOOLS, true, "");
   }
 
-  public double[] getIsotopePeakFwhms() {
-    return featureStatistics.stream()
-        .flatMapToDouble(stats -> Arrays.stream(stats.getBestIsotopesFWHMs())).toArray();
+  @Override
+  public @NotNull Task createTask(@NotNull MZmineProject project, @NotNull ParameterSet parameters,
+      @NotNull Instant moduleCallDate, @Nullable MemoryMapStorage storage,
+      @NotNull RawDataFile raw) {
+    return new AutoParamTask(storage, moduleCallDate, parameters, this.getClass(), raw);
   }
 
-  public MzToMzTolerancePair[] getBestTolerances() {
-    return featureStatistics.stream().map(stats -> new MzToMzTolerancePair(stats.getMz(), stats.getBestTolerance()))
-        .toArray(MzToMzTolerancePair[]::new);
+  @Override
+  public MemoryMapStorage get() {
+    return MemoryMapStorage.forMassList();
   }
 }

@@ -36,8 +36,8 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record BuildingIsotopeEnvelope(@NotNull ModularFeature mostIntenseIsotope,
-                                      @NotNull List<@NotNull Range<Double>> isotopeMzsSorted) {
+public record FeatureWithIsotopeRanges(double initialMz, @NotNull ModularFeature mostIntenseIsotope,
+                                       @NotNull List<@NotNull Range<Double>> isotopeMzsSorted) {
 
   private static final int MAX_ISOTOPES = 5;
 
@@ -47,8 +47,8 @@ public record BuildingIsotopeEnvelope(@NotNull ModularFeature mostIntenseIsotope
    * @return null if no potential isotope peaks were found in the given range
    */
   @Nullable
-  public static BuildingIsotopeEnvelope of(@NotNull ModularFeature mostIntenseIsotope,
-      MZTolerance maxTolerance) {
+  public static FeatureWithIsotopeRanges of(final double initialMz,
+      @NotNull ModularFeature mostIntenseIsotope, MZTolerance maxTolerance) {
     final Scan scan = mostIntenseIsotope.getRepresentativeScan();
     final double mainMz = mostIntenseIsotope.getMZ();
 
@@ -68,7 +68,7 @@ public record BuildingIsotopeEnvelope(@NotNull ModularFeature mostIntenseIsotope
       return null;
     }
 
-    return new BuildingIsotopeEnvelope(mostIntenseIsotope,
+    return new FeatureWithIsotopeRanges(initialMz, mostIntenseIsotope,
         isotopePeaks.stream().map(dp -> maxTolerance.getToleranceRange(dp.getMZ())).toList());
   }
 }

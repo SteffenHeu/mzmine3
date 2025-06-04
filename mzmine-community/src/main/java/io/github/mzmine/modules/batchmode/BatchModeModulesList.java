@@ -161,6 +161,7 @@ import io.github.mzmine.modules.tools.output_compare_csv.CompareModularCsvModule
 import io.github.mzmine.modules.tools.qualityparameters.QualityParametersModule;
 import io.github.mzmine.modules.tools.timstofmaldiacq.TimsTOFMaldiAcquisitionModule;
 import io.github.mzmine.modules.tools.timstofmaldiacq.imaging.SimsefImagingSchedulerModule;
+import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
 import io.github.mzmine.modules.visualization.chromatogram.ChromatogramVisualizerModule;
 import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashboardModule;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberModule;
@@ -474,7 +475,8 @@ public class BatchModeModulesList {
           StatsDasboardModule.class, //
           ExternalRowHtmlVisualizerModule.class, //
           PCAModule.class, //
-          VolcanoPlotModule.class //
+          VolcanoPlotModule.class, //
+          AutoParamModule.class //
 
 //      , CodingDemoModule.class // only test purpose
       ));
