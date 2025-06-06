@@ -40,7 +40,7 @@ import java.util.stream.IntStream;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.apache.commons.math3.linear.RealVector;
 
-record RsdFilter(double maxCvPercent, AbundanceMeasure abundanceMeasure, List<RawDataFile> cvFiles,
+public record RsdFilter(double maxCvPercent, AbundanceMeasure abundanceMeasure, List<RawDataFile> cvFiles,
                  boolean keepUndetected) {
 
   public RsdFilter(MetadataGroupSelection metadataGrouping, double maxCv,

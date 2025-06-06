@@ -24,6 +24,7 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam;
 
+import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.FeatureStatus;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
@@ -38,6 +39,7 @@ import io.github.mzmine.modules.dataprocessing.group_metacorrelate.correlation.F
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.Task;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.RangeUtils;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -95,10 +97,12 @@ public record FeatureWithIsotopeTraces(double initialMz, @NotNull MZTolerance mz
             new ModularFeature((ModularFeatureList) envelope.mostIntenseIsotope().getFeatureList(),
                 file, isotopeSeries, FeatureStatus.DETECTED));
         correlations.add(corrData.getPearsonR());
+      } else {
+        break;
       }
     }
 
-    if(allIsotopeSeries.isEmpty()) {
+    if (allIsotopeSeries.isEmpty()) {
       return null;
     }
 
@@ -112,6 +116,7 @@ public record FeatureWithIsotopeTraces(double initialMz, @NotNull MZTolerance mz
       return null;
     }
 
+    int bestNum = 0;
     double bestScore = 0;
     FeatureWithIsotopeTraces best = null;
 
@@ -124,12 +129,21 @@ public record FeatureWithIsotopeTraces(double initialMz, @NotNull MZTolerance mz
     // could think of a better way to score in the future
     for (FeatureWithIsotopeTraces featureWithIsoTraces : envelopes) {
       final double accumulatedCorr = Arrays.stream(featureWithIsoTraces.isotopeCorr()).sum();
-      if (accumulatedCorr > bestScore) {
+      if (accumulatedCorr > bestScore && bestNum < featureWithIsoTraces.isotopeTraces().size()) {
         bestScore = accumulatedCorr;
         best = featureWithIsoTraces;
+        bestNum = featureWithIsoTraces.isotopeTraces().size();
       }
     }
 
     return best;
+  }
+
+  public int getNumberOfLowestIsotopeDataPoints() {
+    final ModularFeature isotope = isotopeTraces.getLast();
+    final Float fwhm = isotope.getFWHM();
+    final Range<Float> range = RangeUtils.rangeAround(isotope.getRT(), (float)2.5 * fwhm);
+    return (int) isotope.getFeatureData().getSpectra().stream()
+        .filter(s -> range.contains(s.getRetentionTime())).count();
   }
 }

@@ -114,4 +114,9 @@ public class FeatureStatistics {
   public FeatureWithIsotopeTraces getBestEnvelope() {
     return bestEnvelope;
   }
+
+  @Override
+  public String toString() {
+    return "m/z %.4f, RT %.2f min".formatted(getMz(), getBestEnvelope().mainFeature().getRT());
+  }
 }

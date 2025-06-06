@@ -134,6 +134,10 @@ public class StatisticUtils {
     return result;
   }
 
+  /**
+   *
+   * @return colums = features, rows = raw files
+   */
   public static RealMatrix createDatasetFromRows(List<FeatureListRow> rows,
       List<RawDataFile> allFiles, AbundanceMeasure measure) {
 

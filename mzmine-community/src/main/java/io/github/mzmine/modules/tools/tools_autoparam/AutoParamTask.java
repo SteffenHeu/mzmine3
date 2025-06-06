@@ -76,6 +76,7 @@ public class AutoParamTask extends AbstractRawDataFileTask {
   };
 
   private final RawDataFile file;
+  private DataFileStatistics dataFileStats;
 
   /**
    * @param storage        The {@link MemoryMapStorage} used to store results of this task (e.g.
@@ -86,7 +87,7 @@ public class AutoParamTask extends AbstractRawDataFileTask {
    * @param moduleClass
    * @param raw
    */
-  protected AutoParamTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
+  public AutoParamTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
       @NotNull ParameterSet parameters, @NotNull Class<? extends MZmineModule> moduleClass,
       @NotNull RawDataFile raw) {
     super(storage, moduleCallDate, parameters, moduleClass);
@@ -134,7 +135,8 @@ public class AutoParamTask extends AbstractRawDataFileTask {
     for (MZTolerance tolerance : tolerances) {
       final List<Range<Double>> mzRangesSorted = Arrays.stream(basePeakMzs)
           .mapToObj(tolerance::getToleranceRange).toList();
-      final List<ModularFeature> mainFeatures = getMainSignalFeatures(scans, mzRangesSorted);
+      final List<ModularFeature> mainFeatures = getMainSignalFeatures(scans, mzRangesSorted,
+          basePeakMzs);
 
       for (ModularFeature feature : mainFeatures) {
         final int initialMzIndex = BinarySearch.binarySearch(basePeakMzs, feature.getMZ(),
@@ -148,8 +150,10 @@ public class AutoParamTask extends AbstractRawDataFileTask {
 
         final FeatureWithIsotopeTraces envelope = FeatureWithIsotopeTraces.of(initialMz, file,
             tolerance, withIsotopeRanges, getMemoryMapStorage(), this);
-        if(envelope == null) {
-          logger.finest("No correlated isotopes found in file %s for m/z %.4f at a tolerance of %s".formatted(file.getName(), initialMz, tolerance.toString()));
+        if (envelope == null) {
+          logger.finest(
+              "No correlated isotopes found in file %s for m/z %.4f at a tolerance of %s".formatted(
+                  file.getName(), initialMz, tolerance.toString()));
           continue;
         }
         featureWithIsotopeTraces.add(envelope);
@@ -160,31 +164,40 @@ public class AutoParamTask extends AbstractRawDataFileTask {
     }
 
     final List<FeatureStatistics> featureStats = mzsToIsotopeTraces.double2ObjectEntrySet().stream()
-        .map(e -> new FeatureStatistics(e.getValue())).toList();
-    final DataFileStatistics dataFileStats = new DataFileStatistics(file, featureStats);
+        .map(e -> new FeatureStatistics(e.getValue()))
+        .sorted(Comparator.comparingDouble(FeatureStatistics::getMz)).toList();
+    dataFileStats = new DataFileStatistics(file, featureStats);
 
     final String tolStr = "mz\tabs\trel\n" + Arrays.stream(dataFileStats.getBestTolerances()).map(
         pair -> "%.4f\t%.4f\t%.1f".formatted(pair.mz(), pair.tolerance().getMzTolerance(),
             pair.tolerance().getPpmTolerance())).collect(Collectors.joining("\n"));
-    final String intensitiesStr = Arrays.stream(dataFileStats.getEdgeIntensities()).mapToObj(
-        "%f"::formatted).collect(Collectors.joining(","));
-    final String fwhmStr = Arrays.stream(dataFileStats.getIsotopePeakFwhms()).mapToObj(
-        "%f"::formatted).collect(Collectors.joining(","));
+    final String intensitiesStr = Arrays.stream(dataFileStats.getEdgeIntensities())
+        .mapToObj("%f"::formatted).collect(Collectors.joining(","));
+    final String fwhmStr = Arrays.stream(dataFileStats.getIsotopePeakFwhms())
+        .mapToObj("%f"::formatted).collect(Collectors.joining(","));
+    final String numIsoDpStr = Arrays.stream(dataFileStats.getNumberOfLowestIsotopeDataPoints())
+        .mapToObj(Integer::toString).collect(Collectors.joining(", "));
     logger.finest("Tolerances for data file %s:".formatted(file.getName()));
     logger.finest(tolStr);
     logger.finest("Isotope edge intensities:");
     logger.finest(intensitiesStr);
     logger.finest("Isotope fwhms:");
     logger.finest(fwhmStr);
+    logger.finest("Combined tolerances: " + dataFileStats.getMzToleranceForIsotopes());
+    logger.finest("Number of isotope dp: " + numIsoDpStr);
+
+//    MZmineCore.getDesktop()
+//        .addTab(new SimpleTab("Auto param", new AutoParametersPane(dataFileStats)));
   }
 
   /**
    * @param scans          The scans to search in
    * @param mzRangesSorted the mz ranges to search in
+   * @param basePeakMzs
    * @return A list of features of the given mz ranges capped at 5% of the maximum intensity
    */
   private @NotNull List<ModularFeature> getMainSignalFeatures(List<Scan> scans,
-      List<Range<Double>> mzRangesSorted) {
+      List<Range<Double>> mzRangesSorted, final double[] basePeakMzs) {
     final List<ModularFeature> mainPeaks = new ArrayList<>();
 
     final ExtractMzRangesIonSeriesFunction eicExtraction = new ExtractMzRangesIonSeriesFunction(
@@ -192,9 +205,11 @@ public class AutoParamTask extends AbstractRawDataFileTask {
     final @NotNull BuildingIonSeries[] ionSeries = eicExtraction.get();
     final ModularFeatureList dummyFlist = FeatureList.createDummy();
 
-    for (BuildingIonSeries buildingSeries : ionSeries) {
+    for (int j = 0; j < ionSeries.length; j++) {
+      final BuildingIonSeries buildingSeries = ionSeries[j];
       final IonTimeSeries<? extends Scan> fullChromatogram = buildingSeries.toIonTimeSeriesWithLeadingAndTrailingZero(
           getMemoryMapStorage(), scans);
+
       final ModularFeature fullFeature = new ModularFeature(dummyFlist, file, fullChromatogram,
           FeatureStatus.DETECTED);
 
@@ -216,15 +231,18 @@ public class AutoParamTask extends AbstractRawDataFileTask {
         i--;
       }
       final int leftEdge = i;
+      final int maxEnlargement = Math.min(leftEdge,
+          fullChromatogram.getNumberOfValues() - rightEdge);
+      final int enlargement = Math.min(maxEnlargement, (int) ((rightEdge - leftEdge) * 0.3));
 
       final IonTimeSeries<? extends Scan> peak = fullChromatogram.subSeries(getMemoryMapStorage(),
-          leftEdge, rightEdge);
+          leftEdge - enlargement, rightEdge + enlargement);
       final ModularFeature mainFeature = new ModularFeature(dummyFlist, file, peak,
           FeatureStatus.DETECTED);
 
       // dont use features with long peaks that may just be chromatographic noise
       if (RangeUtils.rangeLength(mainFeature.getRawDataPointsRTRange())
-          > RangeUtils.rangeLength(file.getDataRTRange()) * 0.1) {
+          > RangeUtils.rangeLength(file.getDataRTRange()) * 0.15) {
         continue;
       }
       mainPeaks.add(mainFeature);
@@ -242,5 +260,14 @@ public class AutoParamTask extends AbstractRawDataFileTask {
   @Override
   public String getTaskDescription() {
     return "";
+  }
+
+  public DataFileStatistics get() {
+    return dataFileStats;
+  }
+
+  public DataFileStatistics runAndGet() {
+    run();
+    return get();
   }
 }

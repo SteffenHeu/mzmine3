@@ -24,8 +24,12 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam;
 
+import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
+import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
+import java.util.List;
 
 public class AutoParamParameters extends SimpleParameterSet {
 
@@ -33,5 +37,12 @@ public class AutoParamParameters extends SimpleParameterSet {
 
   public AutoParamParameters() {
     super(RAW_DATA_FILES);
+  }
+
+  public static ParameterSet of(List<RawDataFile> files) {
+    final ParameterSet parameterSet = new AutoParamParameters().cloneParameterSet();
+    parameterSet.setParameter(RAW_DATA_FILES,
+        new RawDataFilesSelection(files.toArray(RawDataFile[]::new)));
+    return parameterSet;
   }
 }

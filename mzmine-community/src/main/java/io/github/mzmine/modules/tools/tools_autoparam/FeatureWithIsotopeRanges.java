@@ -54,7 +54,7 @@ public record FeatureWithIsotopeRanges(double initialMz, @NotNull ModularFeature
 
     final List<DataPoint> isotopePeaks = new ArrayList<>();
 
-    for (int i = 0; i < MAX_ISOTOPES; i++) {
+    for (int i = 1; i < MAX_ISOTOPES; i++) {
       final DataPoint basePeak = ScanUtils.findBasePeak(scan, maxTolerance.getToleranceRange(
           mainMz + i * IsotopePatternCalculator.THIRTHEEN_C_DISTANCE));
       if (basePeak == null) {

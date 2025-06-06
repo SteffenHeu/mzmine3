@@ -222,6 +222,8 @@ dependencies {
     implementation "com.github.yannrichet:JMathPlot:1.0.1"
     implementation "de.jensd:fontawesomefx-fontawesome:4.7.0-9.1.2"
 
+    implementation "org.moeaframework:moeaframework:5.0"
+
     // jackson for json parsing
     implementation(libs.bundles.jackson)
     // the defacto standard parser in jackson?

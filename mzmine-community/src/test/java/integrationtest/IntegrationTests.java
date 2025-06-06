@@ -25,7 +25,20 @@
 
 package integrationtest;
 
+import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
+import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
+import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
+import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizationUtils;
+import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
+import java.io.IOException;
+import java.time.Instant;
+import java.util.List;
 import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -36,6 +49,15 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.moeaframework.algorithm.AbstractAlgorithm;
+import org.moeaframework.algorithm.MOEAD;
+import org.moeaframework.algorithm.NSGAII;
+import org.moeaframework.algorithm.NSGAIII;
+import org.moeaframework.analysis.plot.ImageFileType;
+import org.moeaframework.analysis.plot.Plot;
+import org.moeaframework.core.population.NondominatedPopulation;
+import org.moeaframework.util.format.TableFormat;
+import org.moeaframework.util.weights.WeightGenerator;
 import testutils.MZmineTestUtil;
 
 @ExtendWith(MockitoExtension.class)
@@ -218,5 +240,45 @@ public class IntegrationTests {
             "dia_pasef_local.mzbatch").tempDir(tempDir).build()
         .runBatchGetCheckResults("rawdatafiles/integration_tests/diaPASEF/expected_results.csv")
         .size());
+  }
+
+  @Test
+  void testOptimisation() throws IOException {
+    final File tempDir = new File("D:\\mzminetemp");
+
+    final WorkflowDdaWizardParameters workflowParam = new WorkflowDdaWizardParameters(false, false,
+        null, false, false, false);
+    final File[] files = {new File(
+        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_03.mzML"),
+        new File(
+            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_04.mzML"),
+        new File(
+            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_05.mzML"),
+        new File(
+            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_06.mzML"),
+        new File(
+            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_07.mzML"),
+        new File(
+            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_08.mzML")};
+
+    final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files);
+    final MemoryMapStorage storage = MemoryMapStorage.forRawDataFile();
+    final List<DataFileStatistics> stats = importedFiles.stream().map(
+        file -> new AutoParamTask(storage, Instant.now(), AutoParamParameters.of(importedFiles),
+            AutoParamModule.class, file)).parallel().map(AutoParamTask::runAndGet).toList();
+    stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
+
+    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(
+        MassSpectrometerWizardParameterFactory.Orbitrap, workflowParam, stats);
+
+    final AbstractAlgorithm optimizer = new NSGAII(problem);
+
+    optimizer.run(10);
+    optimizer.getResult().display(TableFormat.CSV);
+    final NondominatedPopulation result = optimizer.getResult();
+    new Plot().add(optimizer.getName(), result).save(new File("C:\\Users\\Steffen\\Desktop\\image.png"), ImageFileType.PNG, 700, 600);
+
+    logger.info(
+        optimizer.getName() + " ran " + optimizer.getNumberOfEvaluations() + " evaluations");
   }
 }

@@ -25,6 +25,7 @@
 package io.github.mzmine.modules.tools.tools_autoparam;
 
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.Arrays;
 import java.util.List;
@@ -42,8 +43,28 @@ public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featu
         .flatMapToDouble(stats -> Arrays.stream(stats.getBestIsotopesFWHMs())).toArray();
   }
 
+  public int[] getNumberOfLowestIsotopeDataPoints() {
+    return featureStatistics.stream()
+        .mapToInt(fs -> fs.getBestEnvelope().getNumberOfLowestIsotopeDataPoints()).toArray();
+  }
+
   public MzToMzTolerancePair[] getBestTolerances() {
-    return featureStatistics.stream().map(stats -> new MzToMzTolerancePair(stats.getMz(), stats.getBestTolerance()))
+    return featureStatistics.stream()
+        .map(stats -> new MzToMzTolerancePair(stats.getMz(), stats.getBestTolerance()))
         .toArray(MzToMzTolerancePair[]::new);
+  }
+
+  public MZTolerance getMzToleranceForIsotopes() {
+    MZTolerance harmonizedTolerance = null;
+    for (FeatureStatistics stats : featureStatistics) {
+      harmonizedTolerance = MZTolerance.enlargeByDominatingTolerance(harmonizedTolerance,
+          stats.getBestEnvelope().isotopeTraces().getLast());
+    }
+    return harmonizedTolerance;
+  }
+
+  public double[] getLowestIsotopeHeights() {
+    return featureStatistics().stream().map(FeatureStatistics::getBestEnvelope)
+        .map(fwi -> fwi.isotopeTraces().getLast()).mapToDouble(Feature::getHeight).toArray();
   }
 }
