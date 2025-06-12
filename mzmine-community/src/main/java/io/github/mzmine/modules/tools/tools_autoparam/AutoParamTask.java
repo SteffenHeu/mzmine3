@@ -37,6 +37,9 @@ import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
+import io.github.mzmine.gui.DesktopService;
+import io.github.mzmine.gui.mainwindow.SimpleTab;
+import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.auto.AutoMassDetector;
@@ -186,8 +189,10 @@ public class AutoParamTask extends AbstractRawDataFileTask {
     logger.finest("Combined tolerances: " + dataFileStats.getMzToleranceForIsotopes());
     logger.finest("Number of isotope dp: " + numIsoDpStr);
 
-//    MZmineCore.getDesktop()
-//        .addTab(new SimpleTab("Auto param", new AutoParametersPane(dataFileStats)));
+    if(DesktopService.isGUI()) {
+      MZmineCore.getDesktop()
+          .addTab(new SimpleTab("Auto param", new AutoParametersPane(dataFileStats)));
+    }
   }
 
   /**

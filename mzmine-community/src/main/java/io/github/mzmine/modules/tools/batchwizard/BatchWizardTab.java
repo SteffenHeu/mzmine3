@@ -54,16 +54,22 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInt
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchOptimizationMainTask;
+import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.dialogs.ParameterSetupPane;
 import io.github.mzmine.parameters.parametertypes.absoluterelative.AbsoluteAndRelativeInt;
 import io.github.mzmine.parameters.parametertypes.filenames.LastFilesButton;
+import io.github.mzmine.taskcontrol.TaskService;
 import io.github.mzmine.util.ExitCode;
+import io.github.mzmine.util.MemoryMapStorage;
 import io.mzio.links.MzioMZmineLinks;
 import java.io.File;
 import java.text.MessageFormat;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -375,10 +381,11 @@ public class BatchWizardTab extends SimpleTab {
         this::createBatch);
     Button save = FxButtons.createSaveButton("Save presets", this::saveLocalWizardSequence);
     Button load = FxButtons.createLoadButton("Load presets", this::chooseAndLoadLocalSequence);
+    Button optimize = FxButtons.createButton("Optimize sequence", this::runOptimizer);
 
     topPane.getChildren()
         .addAll(createSpacer(), new Label("="), createSpacer(), createBatch, save, load,
-            localPresetsButton);
+            localPresetsButton, optimize);
 
     schemaPane = new HBox(0);
     schemaPane.setAlignment(Pos.CENTER);
@@ -394,6 +401,19 @@ public class BatchWizardTab extends SimpleTab {
     StackPane.setAlignment(help, Pos.TOP_RIGHT);
 
     return stackPane;
+  }
+
+  private void runOptimizer() {
+    updateAllParametersFromUi();
+    final WizardStepParameters importParam = sequenceSteps.get(DATA_IMPORT).get();
+    final File[] qcFiles = Arrays.stream(
+            importParam.getParameter(DataImportWizardParameters.fileNames).getValue())
+        .filter(f -> SampleType.ofString(f.getName()) == SampleType.QC).limit(10)
+        .toArray(File[]::new);
+
+    final BatchOptimizationMainTask optimizer = new BatchOptimizationMainTask(
+        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, this);
+    TaskService.getController().addTask(optimizer);
   }
 
   /**
@@ -425,7 +445,7 @@ public class BatchWizardTab extends SimpleTab {
   /**
    * @param partialSequence might contain some or all steps of the workflow
    */
-  private void applyPartialSequence(final WizardSequence partialSequence) {
+  public void applyPartialSequence(final WizardSequence partialSequence) {
     setListenersActive(false);
 
     // keep old parameters before applying sequence

@@ -64,7 +64,6 @@ import java.util.Comparator;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import javax.validation.constraints.Null;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -75,7 +74,7 @@ import org.moeaframework.problem.AbstractProblem;
 
 public class LcMsOptimizationProblem extends AbstractProblem {
 
-  private static final int NUM_OBJECTIVES = 3;
+  private static final int NUM_OBJECTIVES = 4;
   private static final int NUM_PARAM = 6;
 
   private final MassSpectrometerWizardParameterFactory msType;
@@ -191,28 +190,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   @Override
   public void evaluate(Solution solution) {
 
-    final WizardSequence wizardSequence = new WizardSequence();
-
-    final WizardStepParameters dataParam = DataImportWizardParameterFactory.Data.create();
-    final WizardStepParameters lcParam = IonInterfaceWizardParameterFactory.HPLC.create();
-    final WizardStepParameters filterParam = FilterWizardParameterFactory.Filters.create();
-    filterParam.setParameter(FilterWizardParameters.goodPeaksOnly, true);
-    final WizardStepParameters imsParam = IonMobilityWizardParameterFactory.NO_IMS.create();
-    final WizardStepParameters msParam = msType.create();
-    final WizardStepParameters annotationParam = AnnotationWizardParameterFactory.Annotation.create();
-
-    wizardSequence.add(dataParam);
-    wizardSequence.add(lcParam);
-    wizardSequence.add(filterParam);
-    wizardSequence.add(imsParam);
-    wizardSequence.add(msParam);
-    wizardSequence.add(annotationParam);
-    wizardSequence.add(workflowParam);
-
-    for (ParameterSolution parameter : createParameters()) {
-      parameter.setToParameters()
-          .accept(wizardSequence.get(parameter.part()).get(), solution, parameter.index());
-    }
+    final WizardSequence wizardSequence = createWizardSequenceFromSolution(solution);
 
     final BatchQueue optimizedQueue = workflowParam.getFactory().getBatchBuilder(wizardSequence)
         .createQueue();
@@ -241,15 +219,18 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     final FeatureList newest = project.getCurrentFeatureLists().stream()
         .max(Comparator.comparing(f -> f.getName().length())).get();
+    final int maxFeatures = newest.getNumberOfRows() * newest.getNumberOfRawDataFiles();
+    final long numFeatures = newest.streamFeatures().count();
 
     calculateAndWriteRsdResult(0, solution, newest);
     calculateAndWriteFeaturesWithIsotopes(1, solution, newest);
     final long numDoublePeaks = newest.streamFeatures(true)
         .map(f -> f.get(RtQualitySummaryType.class)).filter(summary -> summary != null
             && summary.classification() == PeakShapeClassification.DOUBLE_GAUSSIAN).count();
-    solution.setObjectiveValue(2, numDoublePeaks);
+    solution.setObjectiveValue(2, (double) numDoublePeaks / numFeatures);
 //    solution.setObjectiveValue(2, newest.getNumberOfRows());
     calculateAndSetRsds(solution, newest);
+    solution.setObjectiveValue(3, (double) numFeatures / maxFeatures);
 
     if (target != null) {
       final List<FeatureListRow> rows = newest.getRowsCopy();
@@ -259,6 +240,32 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     }
 
     project.removeFeatureLists(project.getCurrentFeatureLists());
+  }
+
+  public @NotNull WizardSequence createWizardSequenceFromSolution(Solution solution) {
+    final WizardSequence wizardSequence = new WizardSequence();
+
+    final WizardStepParameters dataParam = DataImportWizardParameterFactory.Data.create();
+    final WizardStepParameters lcParam = IonInterfaceWizardParameterFactory.HPLC.create();
+    final WizardStepParameters filterParam = FilterWizardParameterFactory.Filters.create();
+    filterParam.setParameter(FilterWizardParameters.goodPeaksOnly, true);
+    final WizardStepParameters imsParam = IonMobilityWizardParameterFactory.NO_IMS.create();
+    final WizardStepParameters msParam = msType.create();
+    final WizardStepParameters annotationParam = AnnotationWizardParameterFactory.Annotation.create();
+
+    wizardSequence.add(dataParam);
+    wizardSequence.add(lcParam);
+    wizardSequence.add(filterParam);
+    wizardSequence.add(imsParam);
+    wizardSequence.add(msParam);
+    wizardSequence.add(annotationParam);
+    wizardSequence.add(workflowParam);
+
+    for (ParameterSolution parameter : createParameters()) {
+      parameter.setToParameters()
+          .accept(wizardSequence.get(parameter.part()).get(), solution, parameter.index());
+    }
+    return wizardSequence;
   }
 
   @Override
@@ -272,7 +279,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     solution.setObjective(0, new Maximize("Rows below RSD threshold"));
     solution.setObjective(1, new Maximize("Features with isotopes"));
-    solution.setObjective(2, new Minimize("Features with double peaks"));
+    solution.setObjective(2, new Minimize("Double peak ratio"));
+    solution.setObjective(3, new Maximize("Fill ratio"));
 //    solution.setObjective(2, new Maximize("Number of rows"));
 
     if (target != null) {
