@@ -27,16 +27,15 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.util.color.SimpleColorPalette;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.paint.Color;
-import javafx.util.Callback;
 import org.moeaframework.core.Solution;
+import org.moeaframework.core.objective.Objective;
 import org.moeaframework.core.population.NondominatedPopulation;
 
 public record ObjectiveWrapper(String name, int index, Color color) {
@@ -45,8 +44,12 @@ public record ObjectiveWrapper(String name, int index, Color color) {
     final Solution solution = result.get(0);
     final List<ObjectiveWrapper> objectives = new ArrayList<>();
     for (int i = 0; i < solution.getNumberOfObjectives(); i++) {
-      objectives.add(new ObjectiveWrapper(solution.getObjective(i).getName(), i,
-          ConfigService.getDefaultColorPalette().getPositiveColor()));
+      Objective obj = solution.getObjective(i);
+
+      final SimpleColorPalette palette = ConfigService.getDefaultColorPalette();
+      final Color color = obj.getName().equals("Double peak ratio") ? palette.getNegativeColor()
+          : palette.getPositiveColor();
+      objectives.add(new ObjectiveWrapper(solution.getObjective(i).getName(), i, color));
     }
     return objectives;
   }
@@ -56,8 +59,7 @@ public record ObjectiveWrapper(String name, int index, Color color) {
         new DecimalFormat("0.###"), ColumnAlignment.RIGHT,
         s -> new ReadOnlyDoubleWrapper(s.getObjectiveValue(index())));
 
-    column.setCellFactory(
-        _ -> new BarTableCell(color, new DecimalFormat("0.###")));
+    column.setCellFactory(_ -> new BarTableCell(color, new DecimalFormat("0.###")));
 
     return column;
   }

@@ -26,10 +26,18 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 
 import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.components.factories.TableColumns;
+import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.util.FxIcons;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.FXCollections;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
@@ -40,8 +48,14 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
+import org.moeaframework.core.variable.BinaryIntegerVariable;
+import org.moeaframework.core.variable.RealVariable;
+import org.moeaframework.core.variable.Variable;
 
 public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationResultModel> {
+
+  private final NumberFormat threeDecimals = new DecimalFormat("0.###");
+  private final NumberFormat noDecimals = new DecimalFormat("0");
 
   private final Runnable onAcceptPressed;
   @Nullable
@@ -59,6 +73,29 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     final TableView<Solution> solutionTable = new TableView<>();
     model.resultProperty().subscribe(result -> {
       if (solutionTable.getColumns().isEmpty()) {
+        final Solution solution = result.get(0);
+        for (int i = 0; i < solution.getNumberOfVariables(); i++) {
+          final Variable variable = solution.getVariable(i);
+          final int finalI = i;
+          switch (variable) {
+            case RealVariable v -> {
+              final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
+                  threeDecimals, ColumnAlignment.RIGHT, s -> new ReadOnlyDoubleWrapper(
+                      ((RealVariable) s.getVariable(finalI)).getValue()));
+              solutionTable.getColumns().add(col);
+            }
+            case BinaryIntegerVariable v -> {
+              final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
+                  noDecimals, ColumnAlignment.RIGHT, s -> new ReadOnlyIntegerWrapper(
+                      ((BinaryIntegerVariable) s.getVariable(finalI)).getValue()));
+              solutionTable.getColumns().add(col);
+            }
+            default -> {
+
+            }
+          }
+        }
+
         final List<ObjectiveWrapper> wrappers = ObjectiveWrapper.extract(result);
         for (ObjectiveWrapper wrapper : wrappers) {
           final TableColumn<Solution, Number> col = wrapper.createColumn();

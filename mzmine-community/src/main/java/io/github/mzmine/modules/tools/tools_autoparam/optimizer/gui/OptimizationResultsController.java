@@ -27,6 +27,7 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardTab;
+import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
 import javafx.stage.Stage;
@@ -59,6 +60,8 @@ public class OptimizationResultsController extends FxController<OptimizationResu
   public void applyToWizardSequence() {
     final WizardSequence sequence = optimization.createWizardSequenceFromSolution(
         model.getSelectedSolution());
+
+    sequence.get(WizardPart.DATA_IMPORT).ifPresent(sequence::remove);
     wizardTab.applyPartialSequence(sequence);
   }
 }
