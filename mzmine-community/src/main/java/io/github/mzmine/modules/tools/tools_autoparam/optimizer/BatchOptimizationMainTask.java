@@ -25,12 +25,10 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.gui.mainwindow.SimpleTab;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardTab;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
@@ -38,9 +36,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui.OptimizationResultsController;
 import io.github.mzmine.taskcontrol.AbstractTask;
-import io.github.mzmine.taskcontrol.Task;
 import io.github.mzmine.taskcontrol.TaskStatus;
-import io.github.mzmine.taskcontrol.TaskStatusListener;
 import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
 import java.time.Instant;
@@ -94,9 +90,6 @@ public class BatchOptimizationMainTask extends AbstractTask {
   public void run() {
     setStatus(TaskStatus.PROCESSING);
 
-    final WorkflowDdaWizardParameters workflowParam = new WorkflowDdaWizardParameters(false, false,
-        null, false, false, false);
-
     final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files);
     final List<DataFileStatistics> stats = importedFiles.stream().map(
             file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
@@ -105,7 +98,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
     final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(
-        MassSpectrometerWizardParameterFactory.Orbitrap, workflowParam, stats);
+        MassSpectrometerWizardParameterFactory.Orbitrap, tab.getSequence(), stats);
 
     optimizer = new NSGAII(problem);
 

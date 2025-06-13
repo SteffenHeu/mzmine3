@@ -40,11 +40,16 @@ import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModul
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RsdFilter;
 import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.MultiThreadPeakFinderModule;
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.corrgrouping.CorrelateGroupingModule;
+import io.github.mzmine.modules.dataprocessing.group_spectral_networking.MainSpectralNetworkingModule;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
+import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule;
+import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.DataImportWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.AnnotationWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.DataImportWizardParameterFactory;
@@ -52,6 +57,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.Filter
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
@@ -78,21 +84,22 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private static final int NUM_PARAM = 6;
 
   private final MassSpectrometerWizardParameterFactory msType;
-  private final WorkflowWizardParameters workflowParam;
   private final @Nullable List<DataFileStatistics> stats;
   private final @NotNull File[] files;
   private final ParameterSolutionBuilder builder;
   @Nullable
   private final List<FeatureRecord> target;
+  private final WizardSequence initialSequence;
 
   public LcMsOptimizationProblem(MassSpectrometerWizardParameterFactory msType,
-      WorkflowWizardParameters workflowParam, @NotNull List<@NotNull DataFileStatistics> stats) {
+      @NotNull final WizardSequence initialSequence,
+      @NotNull List<@NotNull DataFileStatistics> stats) {
 
     target = statsToTargetList(stats);
 
     super(NUM_PARAM, NUM_OBJECTIVES + (stats != null ? 1 : 0));
     this.msType = msType;
-    this.workflowParam = workflowParam;
+    this.initialSequence = initialSequence;
     this.stats = stats;
     files = stats.stream().map(DataFileStatistics::file).map(RawDataFile::getAbsoluteFilePath)
         .toArray(File[]::new);
@@ -101,14 +108,14 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   }
 
   public LcMsOptimizationProblem(@NotNull MassSpectrometerWizardParameterFactory msType,
-      WorkflowWizardParameters workflowParam, @NotNull File @NotNull [] files,
+      @NotNull final WizardSequence initialSequence, @NotNull File @NotNull [] files,
       @Nullable List<DataFileStatistics> stats) {
 
     target = statsToTargetList(stats);
 
     super(NUM_PARAM, NUM_OBJECTIVES + (stats != null ? 1 : 0));
     this.msType = msType;
-    this.workflowParam = workflowParam;
+    this.initialSequence = initialSequence;
     this.stats = stats;
     this.files = files;
 
@@ -192,8 +199,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     final WizardSequence wizardSequence = createWizardSequenceFromSolution(solution);
 
-    final BatchQueue optimizedQueue = workflowParam.getFactory().getBatchBuilder(wizardSequence)
-        .createQueue();
+    final BatchQueue optimizedQueue = ((WorkflowWizardParameterFactory) wizardSequence.get(
+        WizardPart.WORKFLOW).get().getFactory()).getBatchBuilder(wizardSequence).createQueue();
 
     // gap filling screws with the optimized feature detection
     // also remove other unnecessary steps
@@ -202,11 +209,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     optimizedQueue.removeIf(step -> step.getModule() instanceof CorrelateGroupingModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof IonNetworkingModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof LipidAnnotationModule);
+    optimizedQueue.removeIf(step -> step.getModule() instanceof SpectralLibrarySearchModule);
+    optimizedQueue.removeIf(step -> step.getModule() instanceof MainSpectralNetworkingModule);
 
     // use the current project, so we dont import files on every iteration
     final MZmineProject project = ProjectService.getProject();
-    final BatchTask batchTask = BatchModeModule.runBatchQueue(optimizedQueue, project,
-        stats.stream().map(stats -> stats.file().getAbsoluteFilePath()).toArray(File[]::new), null,
+    final BatchTask batchTask = BatchModeModule.runBatchQueue(optimizedQueue, project, files, null,
         null, null, Instant.now());
 
     while (!batchTask.isFinished() && !batchTask.isCanceled()) {
@@ -228,7 +236,6 @@ public class LcMsOptimizationProblem extends AbstractProblem {
         .map(f -> f.get(RtQualitySummaryType.class)).filter(summary -> summary != null
             && summary.classification() == PeakShapeClassification.DOUBLE_GAUSSIAN).count();
     solution.setObjectiveValue(2, (double) numDoublePeaks / numFeatures);
-//    solution.setObjectiveValue(2, newest.getNumberOfRows());
     calculateAndSetRsds(solution, newest);
     solution.setObjectiveValue(3, (double) numFeatures / maxFeatures);
 
@@ -243,15 +250,24 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   }
 
   public @NotNull WizardSequence createWizardSequenceFromSolution(Solution solution) {
+
     final WizardSequence wizardSequence = new WizardSequence();
 
-    final WizardStepParameters dataParam = DataImportWizardParameterFactory.Data.create();
-    final WizardStepParameters lcParam = IonInterfaceWizardParameterFactory.HPLC.create();
-    final WizardStepParameters filterParam = FilterWizardParameterFactory.Filters.create();
+    final WizardStepParameters dataParam = initialSequence.get(WizardPart.DATA_IMPORT).get()
+        .getFactory().create();
+    final WizardStepParameters lcParam = initialSequence.get(WizardPart.ION_INTERFACE).get()
+        .getFactory().create();
+    final WizardStepParameters filterParam = initialSequence.get(WizardPart.FILTER).get()
+        .getFactory().create();
     filterParam.setParameter(FilterWizardParameters.goodPeaksOnly, true);
-    final WizardStepParameters imsParam = IonMobilityWizardParameterFactory.NO_IMS.create();
-    final WizardStepParameters msParam = msType.create();
-    final WizardStepParameters annotationParam = AnnotationWizardParameterFactory.Annotation.create();
+    final WizardStepParameters imsParam = initialSequence.get(WizardPart.IMS).get().getFactory()
+        .create();
+    final WizardStepParameters msParam = initialSequence.get(WizardPart.MS).get().getFactory()
+        .create();
+    final WizardStepParameters annotationParam = initialSequence.get(WizardPart.ANNOTATION).get()
+        .getFactory().create();
+    final WizardStepParameters workflowParam = initialSequence.get(WizardPart.WORKFLOW).get()
+        .getFactory().create();
 
     wizardSequence.add(dataParam);
     wizardSequence.add(lcParam);
@@ -261,10 +277,15 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     wizardSequence.add(annotationParam);
     wizardSequence.add(workflowParam);
 
+//    dataParam.setParameter(DataImportWizardParameters.fileNames, files);
+
     for (ParameterSolution parameter : createParameters()) {
       parameter.setToParameters()
           .accept(wizardSequence.get(parameter.part()).get(), solution, parameter.index());
     }
+
+    workflowParam.setParameter(WorkflowDdaWizardParameters.exportPath, false);
+
     return wizardSequence;
   }
 

@@ -577,4 +577,8 @@ public class BatchWizardTab extends SimpleTab {
   public void setListenersActive(final boolean listenersActive) {
     this.listenersActive = listenersActive;
   }
+
+  public WizardSequence getSequence() {
+    return sequenceSteps;
+  }
 }

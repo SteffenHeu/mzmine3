@@ -67,4 +67,5 @@ public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featu
     return featureStatistics().stream().map(FeatureStatistics::getBestEnvelope)
         .map(fwi -> fwi.isotopeTraces().getLast()).mapToDouble(Feature::getHeight).toArray();
   }
+
 }
