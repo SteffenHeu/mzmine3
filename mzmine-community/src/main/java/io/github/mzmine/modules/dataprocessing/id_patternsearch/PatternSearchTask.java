@@ -66,13 +66,12 @@ public class PatternSearchTask extends AbstractFeatureListTask {
   private static final Logger logger = Logger.getLogger(PatternSearchTask.class.getName());
 
   private final FeatureList flist;
-  private final SpectralSimilarityFunction similarityFunction = new WeightedCosineSpectralSimilarity(
-      WeightedCosineSpectralSimilarityParameters.of(Weights.INTENSITY, 0.7,
-          HandleUnmatchedSignalOptions.KEEP_LIBRARY_SIGNALS));
+  private final SpectralSimilarityFunction similarityFunction;
 //  private final @NotNull MZTolerance interScanMergingTolerance;
   private final @NotNull MZTolerance matchingTolerance;
-  private SpectrumOption spectrumOption = SpectrumOption.MERGED_FWHM;
+  private final double minScore;
   private final File libraryFile;
+  private final Integer minMatchedSignals;
   private AutoLibraryParser parser;
 
   /**
@@ -91,8 +90,14 @@ public class PatternSearchTask extends AbstractFeatureListTask {
     this.flist = flist;
     totalItems = flist.getNumberOfRows();
     libraryFile = parameters.getValue(PatternSearchParameters.libraryFile);
+    minMatchedSignals = parameters.getValue(PatternSearchParameters.minMatchedPatternSignals);
 //    interScanMergingTolerance = parameters.getValue(PatternSearchParameters.ms1MergingTolerance);
     matchingTolerance = parameters.getValue(PatternSearchParameters.isotopeMatchingTolerance);
+    minScore = parameters.getValue(PatternSearchParameters.minScore);
+
+    similarityFunction = new WeightedCosineSpectralSimilarity(
+        WeightedCosineSpectralSimilarityParameters.of(Weights.INTENSITY, minScore,
+            HandleUnmatchedSignalOptions.KEEP_LIBRARY_SIGNALS));
   }
 
   @Override
@@ -126,7 +131,7 @@ public class PatternSearchTask extends AbstractFeatureListTask {
           }
 
           final SpectralSimilarity similarity = similarityFunction.getSimilarity(matchingTolerance,
-              shiftedDataPoints.length, shiftedDataPoints,
+              Math.min(minMatchedSignals, shiftedDataPoints.length), shiftedDataPoints,
               ScanUtils.extractDataPoints(featureSpectrum));
 
           if (similarity != null) {

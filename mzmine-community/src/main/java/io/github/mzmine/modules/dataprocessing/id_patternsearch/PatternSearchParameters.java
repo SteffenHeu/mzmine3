@@ -29,6 +29,7 @@ import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
+import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileSelectionType;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
@@ -49,11 +50,17 @@ public class PatternSearchParameters extends SimpleParameterSet {
   public static final DoubleParameter minScore = new DoubleParameter("Minimum score",
       "Minimum required score.", ConfigService.getGuiFormats().scoreFormat(), 0.9, 0d, 1d);
 
+  public static final IntegerParameter minMatchedPatternSignals = new IntegerParameter(
+      "Minimum matched pattern signals",
+      "Define how much of the signals of the isotope pattern must be found in the correlated spectra.",
+      3);
+
   public static final MZToleranceParameter isotopeMatchingTolerance = new MZToleranceParameter(
       "Pattern matching tolerance", "Tolerance to match the tolerance to the pattern.", 0.002, 2);
 
   public PatternSearchParameters() {
-    super(flists, libraryFile, minScore /*, ms1MergingTolerance*/, isotopeMatchingTolerance);
+    super(flists, libraryFile, minScore /*, ms1MergingTolerance*/, minMatchedPatternSignals,
+        isotopeMatchingTolerance);
   }
 
   @Override
