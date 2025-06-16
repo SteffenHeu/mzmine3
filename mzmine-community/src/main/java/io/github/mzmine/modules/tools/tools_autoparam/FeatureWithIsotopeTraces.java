@@ -44,6 +44,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -142,8 +143,12 @@ public record FeatureWithIsotopeTraces(double initialMz, @NotNull MZTolerance mz
   public int getNumberOfLowestIsotopeDataPoints() {
     final ModularFeature isotope = isotopeTraces.getLast();
     final Float fwhm = isotope.getFWHM();
-    final Range<Float> range = RangeUtils.rangeAround(isotope.getRT(), (float)2.5 * fwhm);
+    final Range<Float> range = RangeUtils.rangeAround(isotope.getRT(), (float) 2.5 * fwhm);
     return (int) isotope.getFeatureData().getSpectra().stream()
         .filter(s -> range.contains(s.getRetentionTime())).count();
+  }
+
+  public Stream<ModularFeature> streamFeatures() {
+    return Stream.concat(Stream.of(mainFeature), isotopeTraces.stream());
   }
 }

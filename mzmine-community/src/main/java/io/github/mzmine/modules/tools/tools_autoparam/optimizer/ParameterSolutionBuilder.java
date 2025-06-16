@@ -49,7 +49,7 @@ import org.moeaframework.core.variable.RealVariable;
 public class ParameterSolutionBuilder {
 
   private static final Logger logger = Logger.getLogger(ParameterSolutionBuilder.class.getName());
-  private static final MZTolerance[] ALL_TOLERANCE_OPTIONS = new MZTolerance[]{ //
+  public static final MZTolerance[] ALL_TOLERANCE_OPTIONS = new MZTolerance[]{ //
       new MZTolerance(0.0005, 2), //
       new MZTolerance(0.001, 5), //
       new MZTolerance(0.003, 7), //

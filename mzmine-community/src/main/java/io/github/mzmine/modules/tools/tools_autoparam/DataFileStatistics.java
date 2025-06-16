@@ -26,9 +26,11 @@ package io.github.mzmine.modules.tools.tools_autoparam;
 
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.Feature;
+import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 
 public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featureStatistics) {
 
@@ -67,5 +69,4 @@ public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featu
     return featureStatistics().stream().map(FeatureStatistics::getBestEnvelope)
         .map(fwi -> fwi.isotopeTraces().getLast()).mapToDouble(Feature::getHeight).toArray();
   }
-
 }

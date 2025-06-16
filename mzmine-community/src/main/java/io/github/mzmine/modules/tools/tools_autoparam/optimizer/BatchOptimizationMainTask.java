@@ -29,7 +29,6 @@ import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardTab;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
@@ -97,8 +96,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
         .map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
-    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(
-        MassSpectrometerWizardParameterFactory.Orbitrap, tab.getSequence(), stats);
+    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(tab.getSequence(), stats);
 
     optimizer = new NSGAII(problem);
 

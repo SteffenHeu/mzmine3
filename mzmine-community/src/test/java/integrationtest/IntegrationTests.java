@@ -26,8 +26,16 @@
 package integrationtest;
 
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.AnnotationWizardParameterFactory;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.DataImportWizardParameterFactory;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.FilterWizardParameterFactory;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.workflows.WorkflowDDA;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
@@ -50,14 +58,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.moeaframework.algorithm.AbstractAlgorithm;
-import org.moeaframework.algorithm.MOEAD;
 import org.moeaframework.algorithm.NSGAII;
-import org.moeaframework.algorithm.NSGAIII;
 import org.moeaframework.analysis.plot.ImageFileType;
 import org.moeaframework.analysis.plot.Plot;
 import org.moeaframework.core.population.NondominatedPopulation;
 import org.moeaframework.util.format.TableFormat;
-import org.moeaframework.util.weights.WeightGenerator;
 import testutils.MZmineTestUtil;
 
 @ExtendWith(MockitoExtension.class)
@@ -268,15 +273,24 @@ public class IntegrationTests {
             AutoParamModule.class, file)).parallel().map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
-    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(
-        MassSpectrometerWizardParameterFactory.Orbitrap, workflowParam, stats);
+    final WizardSequence sequence = new WizardSequence();
+    sequence.add(DataImportWizardParameterFactory.Data.create());
+    sequence.add(IonInterfaceWizardParameterFactory.HPLC.create());
+    sequence.add(IonMobilityWizardParameterFactory.NO_IMS.create());
+    sequence.add(FilterWizardParameterFactory.Filters.create());
+    sequence.add(MassSpectrometerWizardParameterFactory.Orbitrap.create());
+    sequence.add(AnnotationWizardParameterFactory.Annotation.create());
+    sequence.add(new WorkflowDDA().create());
+
+    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(sequence, stats);
 
     final AbstractAlgorithm optimizer = new NSGAII(problem);
 
     optimizer.run(10);
     optimizer.getResult().display(TableFormat.CSV);
     final NondominatedPopulation result = optimizer.getResult();
-    new Plot().add(optimizer.getName(), result).save(new File("C:\\Users\\Steffen\\Desktop\\image.png"), ImageFileType.PNG, 700, 600);
+    new Plot().add(optimizer.getName(), result)
+        .save(new File("C:\\Users\\Steffen\\Desktop\\image.png"), ImageFileType.PNG, 700, 600);
 
     logger.info(
         optimizer.getName() + " ran " + optimizer.getNumberOfEvaluations() + " evaluations");

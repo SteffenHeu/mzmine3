@@ -122,10 +122,10 @@ public class BatchWizardTab extends SimpleTab {
   private final Map<WizardStepParameters, @NotNull ParameterSetupPane> paramPaneMap = new HashMap<>();
   private final Map<WizardPart, ComboBox<WizardStepParameters>> combos = new HashMap<>();
   private final LastFilesButton localPresetsButton;
+  private final int helpButtonSize = 50;
   private boolean listenersActive = true;
   private TabPane tabPane;
   private HBox schemaPane;
-  private final int helpButtonSize = 50;
 
   public BatchWizardTab() {
     super("mzwizard");
@@ -381,7 +381,8 @@ public class BatchWizardTab extends SimpleTab {
         this::createBatch);
     Button save = FxButtons.createSaveButton("Save presets", this::saveLocalWizardSequence);
     Button load = FxButtons.createLoadButton("Load presets", this::chooseAndLoadLocalSequence);
-    Button optimize = FxButtons.createButton("Optimize sequence", this::runOptimizer);
+    Button optimize = FxButtons.createButton("Optimize sequence", FxIcons.GRAPH_UP, null,
+        this::runOptimizer);
 
     topPane.getChildren()
         .addAll(createSpacer(), new Label("="), createSpacer(), createBatch, save, load,
@@ -390,7 +391,8 @@ public class BatchWizardTab extends SimpleTab {
     schemaPane = new HBox(0);
     schemaPane.setAlignment(Pos.CENTER);
     // add a wrapper around the top pane with combo boxes and buttons so the help button does not overlap
-    final HBox topPaneWrapper = FxLayout.newHBox(new Insets(0, helpButtonSize, 0, helpButtonSize), topPane);
+    final HBox topPaneWrapper = FxLayout.newHBox(new Insets(0, helpButtonSize, 0, helpButtonSize),
+        topPane);
     HBox.setHgrow(topPane, Priority.ALWAYS);
     controlSchemaPane.getChildren().addAll(topPaneWrapper, schemaPane);
 

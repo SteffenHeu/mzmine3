@@ -29,6 +29,7 @@ import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.shapeclassification.RtQualitySummaryType;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.BatchQueue;
@@ -46,22 +47,22 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.Lip
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.DataImportWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowWizardParameters;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.AnnotationWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.DataImportWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.FilterWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.project.ProjectService;
+import io.github.mzmine.taskcontrol.AbstractSimpleToolTask;
+import io.github.mzmine.taskcontrol.SimpleCalculationTask;
+import io.github.mzmine.taskcontrol.SimpleRunnableTask;
 import io.github.mzmine.util.MathUtils;
 import java.io.File;
 import java.time.Instant;
@@ -83,7 +84,6 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private static final int NUM_OBJECTIVES = 4;
   private static final int NUM_PARAM = 6;
 
-  private final MassSpectrometerWizardParameterFactory msType;
   private final @Nullable List<DataFileStatistics> stats;
   private final @NotNull File[] files;
   private final ParameterSolutionBuilder builder;
@@ -91,18 +91,28 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final List<FeatureRecord> target;
   private final WizardSequence initialSequence;
 
-  public LcMsOptimizationProblem(MassSpectrometerWizardParameterFactory msType,
-      @NotNull final WizardSequence initialSequence,
+  private final @Nullable MZTolerance mzSampleToSampleTolerance;
+  private final @Nullable RTTolerance rtSampleToSampleTolerance;
+
+
+  public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats) {
 
     target = statsToTargetList(stats);
 
     super(NUM_PARAM, NUM_OBJECTIVES + (stats != null ? 1 : 0));
-    this.msType = msType;
     this.initialSequence = initialSequence;
     this.stats = stats;
     files = stats.stream().map(DataFileStatistics::file).map(RawDataFile::getAbsoluteFilePath)
         .toArray(File[]::new);
+
+    final ModularFeatureList aligned = OptimizationUtils.alignBenchmarkFeatures(stats, null,
+        new SimpleRunnableTask(() -> {
+        }));
+    mzSampleToSampleTolerance = OptimizationUtils.extractSampleToSampleMzTolerances(aligned,
+        (int) (files.length * 0.8), 0.8f);
+    rtSampleToSampleTolerance = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
+        (int) (files.length * 0.8), 0.8f);
 
     builder = new ParameterSolutionBuilder(stats, null);
   }
@@ -114,12 +124,13 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     target = statsToTargetList(stats);
 
     super(NUM_PARAM, NUM_OBJECTIVES + (stats != null ? 1 : 0));
-    this.msType = msType;
     this.initialSequence = initialSequence;
     this.stats = stats;
     this.files = files;
 
     builder = new ParameterSolutionBuilder(stats, msType.getDefaultMassDetector());
+    mzSampleToSampleTolerance = null;
+    rtSampleToSampleTolerance = null;
   }
 
   private static @Nullable List<FeatureRecord> statsToTargetList(
@@ -285,6 +296,15 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     }
 
     workflowParam.setParameter(WorkflowDdaWizardParameters.exportPath, false);
+
+    if (mzSampleToSampleTolerance != null) {
+      msParam.setParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance,
+          mzSampleToSampleTolerance);
+    }
+    if (rtSampleToSampleTolerance != null) {
+      lcParam.setParameter(IonInterfaceHplcWizardParameters.interSampleRTTolerance,
+          rtSampleToSampleTolerance);
+    }
 
     return wizardSequence;
   }
