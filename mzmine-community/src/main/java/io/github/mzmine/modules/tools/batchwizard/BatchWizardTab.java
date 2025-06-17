@@ -63,6 +63,7 @@ import io.github.mzmine.parameters.parametertypes.filenames.LastFilesButton;
 import io.github.mzmine.taskcontrol.TaskService;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.collections.CollectionUtils;
 import io.mzio.links.MzioMZmineLinks;
 import java.io.File;
 import java.text.MessageFormat;
@@ -408,10 +409,15 @@ public class BatchWizardTab extends SimpleTab {
   private void runOptimizer() {
     updateAllParametersFromUi();
     final WizardStepParameters importParam = sequenceSteps.get(DATA_IMPORT).get();
-    final File[] qcFiles = Arrays.stream(
-            importParam.getParameter(DataImportWizardParameters.fileNames).getValue())
+    final @NotNull File[] allFiles = importParam.getParameter(DataImportWizardParameters.fileNames)
+        .getValue();
+    File[] qcFiles = Arrays.stream(allFiles)
         .filter(f -> SampleType.ofString(f.getName()) == SampleType.QC).limit(10)
         .toArray(File[]::new);
+
+    if (qcFiles.length == 0) {
+      qcFiles = CollectionUtils.selectRandomElements(List.of(allFiles), 10).toArray(File[]::new);
+    }
 
     final BatchOptimizationMainTask optimizer = new BatchOptimizationMainTask(
         MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, this);

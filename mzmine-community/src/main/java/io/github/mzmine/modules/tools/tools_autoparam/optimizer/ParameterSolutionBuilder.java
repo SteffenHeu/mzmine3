@@ -191,6 +191,12 @@ public class ParameterSolutionBuilder {
         () -> new BinaryIntegerVariable("Min consecutive", (int) minMinDp, (int) maxMinDp));
   }
 
+//  public @NotNull ParameterSolution buildTopToEdgeSolution(int index) {
+//    return new DoubleParameterSolution(index, WizardPart.,
+//        IonInterfaceHplcWizardParameters.minNumberOfDataPoints,
+//        () -> new RealVariable("Top-to-Edge", 1.2, 4));
+//  }
+
   public @NotNull ParameterSolution buildMs1NoiseSolution(int index) {
     final Supplier<RealVariable> var = switch (massDetectorType) {
       case FACTOR_OF_LOWEST_SIGNAL -> () -> new RealVariable("MS1 noise level", 3, 15);

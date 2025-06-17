@@ -25,6 +25,7 @@
 
 package io.github.mzmine.util.collections;
 
+import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collector;
@@ -417,4 +419,21 @@ public class CollectionUtils {
 //    logger.fine("NEED TO USE NEW ARRAYLIST FOR FRAMES");
     return subRegion;
   }
+
+  public static <T> List<T> selectRandomElements(List<T> list, int num) {
+    final Random rand = new Random();
+    final List<T> copy = new ArrayList<>(list);
+    final List<T> result = new ArrayList<>(num);
+
+    while (result.size() < num && !copy.isEmpty()) {
+      int randomIndex = rand.nextInt(copy.size());
+      T randomElement = copy.get(randomIndex);
+      result.add(randomElement);
+      copy.remove(randomIndex);
+    }
+
+    return result;
+  }
+
+
 }
