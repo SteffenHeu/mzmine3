@@ -55,6 +55,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMob
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchOptimizationMainTask;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.dialogs.ParameterSetupPane;
@@ -419,8 +420,14 @@ public class BatchWizardTab extends SimpleTab {
       qcFiles = CollectionUtils.selectRandomElements(List.of(allFiles), 10).toArray(File[]::new);
     }
 
+    final OptimizerParameters optimizerParam = new OptimizerParameters();
+    final ExitCode exitCode = optimizerParam.showSetupDialog(true);
+    if (exitCode != ExitCode.OK) {
+      return;
+    }
+
     final BatchOptimizationMainTask optimizer = new BatchOptimizationMainTask(
-        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, this);
+        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, this, optimizerParam);
     TaskService.getController().addTask(optimizer);
   }
 

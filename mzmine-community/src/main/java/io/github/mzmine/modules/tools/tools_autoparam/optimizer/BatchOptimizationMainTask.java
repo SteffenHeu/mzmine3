@@ -34,6 +34,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui.OptimizationResultsController;
+import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.MemoryMapStorage;
@@ -57,15 +58,17 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
   private final File[] files;
   private final BatchWizardTab tab;
+  private final ParameterSet params;
 
   @Nullable
   private AbstractAlgorithm optimizer;
 
   public BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
-      @NotNull Instant moduleCallDate, File[] files, BatchWizardTab tab) {
+      @NotNull Instant moduleCallDate, File[] files, BatchWizardTab tab, ParameterSet params) {
     super(storage, moduleCallDate);
     this.files = files;
     this.tab = tab;
+    this.params = params;
 
     addTaskStatusListener((_, newStatus, _) -> {
       if(newStatus == TaskStatus.CANCELED && optimizer != null) {
@@ -96,11 +99,12 @@ public class BatchOptimizationMainTask extends AbstractTask {
         .map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
-    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(tab.getSequence(), stats);
+    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(tab.getSequence(), stats, params);
 
     optimizer = new NSGAII(problem);
 
-    optimizer.run(MAX_EVALUATIONS);
+    final int iterations = params.getValue(OptimizerParameters.iterations);
+    optimizer.run(iterations);
 
     final NondominatedPopulation result = optimizer.getResult();
 
@@ -119,6 +123,4 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     setStatus(TaskStatus.FINISHED);
   }
-
-
 }

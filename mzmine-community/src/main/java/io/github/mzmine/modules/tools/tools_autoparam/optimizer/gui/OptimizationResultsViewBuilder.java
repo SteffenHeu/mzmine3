@@ -29,11 +29,14 @@ import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.util.FxIcons;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionBuilder;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.TableColumn;
@@ -80,10 +83,19 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
               solutionTable.getColumns().add(col);
             }
             case BinaryIntegerVariable v -> {
-              final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
-                  noDecimals, ColumnAlignment.RIGHT, s -> new ReadOnlyIntegerWrapper(
-                      ((BinaryIntegerVariable) s.getVariable(finalI)).getValue()));
-              solutionTable.getColumns().add(col);
+              if (v.getName().equals("MZ tolerance option")) {
+                final TableColumn<Solution, String> col = TableColumns.createColumn(v.getName(),
+                    120, 200, ColumnAlignment.RIGHT, String::compareTo,
+                    s -> new ReadOnlyStringWrapper(
+                        ParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[((BinaryIntegerVariable) s.getVariable(
+                            finalI)).getValue()].toString()));
+                solutionTable.getColumns().add(col);
+              } else {
+                final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(),
+                    120, noDecimals, ColumnAlignment.RIGHT, s -> new ReadOnlyIntegerWrapper(
+                        ((BinaryIntegerVariable) s.getVariable(finalI)).getValue()));
+                solutionTable.getColumns().add(col);
+              }
             }
             default -> {
 

@@ -62,6 +62,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
         model.getSelectedSolution());
 
     sequence.get(WizardPart.DATA_IMPORT).ifPresent(sequence::remove);
+    wizardTab.getTabPane().getSelectionModel().select(wizardTab);
     wizardTab.applyPartialSequence(sequence);
   }
 }

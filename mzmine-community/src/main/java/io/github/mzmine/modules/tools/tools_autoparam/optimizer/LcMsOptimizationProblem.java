@@ -24,6 +24,7 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import com.opencsv.exceptions.CsvException;
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
@@ -31,6 +32,9 @@ import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.shapeclassification.RtQualitySummaryType;
+import io.github.mzmine.datamodel.features.types.numbers.MZType;
+import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
+import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.modules.batchmode.BatchTask;
@@ -57,20 +61,28 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.Workfl
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
+import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.AbstractSimpleToolTask;
 import io.github.mzmine.taskcontrol.SimpleCalculationTask;
 import io.github.mzmine.taskcontrol.SimpleRunnableTask;
+import io.github.mzmine.util.CSVParsingUtils;
 import io.github.mzmine.util.MathUtils;
+import io.github.mzmine.util.io.CSVUtils;
 import java.io.File;
+import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+import javafx.beans.property.SimpleStringProperty;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -81,8 +93,13 @@ import org.moeaframework.problem.AbstractProblem;
 
 public class LcMsOptimizationProblem extends AbstractProblem {
 
-  private static final int NUM_OBJECTIVES = 4;
   private static final int NUM_PARAM = 6;
+  private final boolean maximizeNumBenchmark;
+  private final boolean maximizeCv20;
+  private final boolean maximizeFeaturesWithIsos;
+  private final boolean minimizeDoublePeaks;
+  private final boolean additionalTargets;
+  private final boolean maximizeFillRatio;
 
   private final @Nullable List<DataFileStatistics> stats;
   private final @NotNull File[] files;
@@ -96,11 +113,19 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
 
   public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
-      @NotNull List<@NotNull DataFileStatistics> stats) {
+      @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param) {
 
-    target = statsToTargetList(stats);
+    target = statsToTargetList(stats, param);
+    maximizeNumBenchmark = param.getValue(OptimizerParameters.maximizeNumberOfBenchmarkFeatures);
+    maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
+    maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
+    minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
+    maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
+    additionalTargets = param.getValue(OptimizerParameters.benchmarkFeaturesFile) && param.getValue(
+        OptimizerParameters.benchmarkFeatureTypes);
 
-    super(NUM_PARAM, NUM_OBJECTIVES + (stats != null ? 1 : 0));
+    super(NUM_PARAM, calculateNumberOfObjectives(param, stats));
+
     this.initialSequence = initialSequence;
     this.stats = stats;
     files = stats.stream().map(DataFileStatistics::file).map(RawDataFile::getAbsoluteFilePath)
@@ -119,11 +144,18 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
   public LcMsOptimizationProblem(@NotNull MassSpectrometerWizardParameterFactory msType,
       @NotNull final WizardSequence initialSequence, @NotNull File @NotNull [] files,
-      @Nullable List<DataFileStatistics> stats) {
+      @Nullable List<DataFileStatistics> stats, @NotNull final ParameterSet param) {
 
-    target = statsToTargetList(stats);
+    target = statsToTargetList(stats, param);
+    maximizeNumBenchmark = param.getValue(OptimizerParameters.maximizeNumberOfBenchmarkFeatures);
+    maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
+    maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
+    minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
+    additionalTargets = param.getValue(OptimizerParameters.benchmarkFeaturesFile) && param.getValue(
+        OptimizerParameters.benchmarkFeatureTypes);
+    maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
 
-    super(NUM_PARAM, NUM_OBJECTIVES + (stats != null ? 1 : 0));
+    super(NUM_PARAM, calculateNumberOfObjectives(param, stats));
     this.initialSequence = initialSequence;
     this.stats = stats;
     this.files = files;
@@ -134,17 +166,75 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   }
 
   private static @Nullable List<FeatureRecord> statsToTargetList(
-      @Nullable List<@NotNull DataFileStatistics> stats) {
+      @Nullable List<@NotNull DataFileStatistics> stats, ParameterSet param) {
     if (stats == null) {
       return null;
     }
 
-    return stats.stream().map(DataFileStatistics::featureStatistics).flatMap(List::stream)
+    final List<FeatureRecord> featureRecordsFromFile = extractFeatureRecordsFromFile(stats, param);
+
+
+    featureRecordsFromFile.addAll(stats.stream().map(DataFileStatistics::featureStatistics).flatMap(List::stream)
         // only use isotope traces, not the main isotopes
         .map(FeatureStatistics::getBestEnvelope).map(FeatureWithIsotopeTraces::isotopeTraces)
         .flatMap(List::stream).map(
             fwi -> new FeatureRecord(fwi.getRawDataFile(), fwi.getMZ(), fwi.getRT(),
-                fwi.getMobility())).toList();
+                fwi.getMobility())).toList());
+    return featureRecordsFromFile;
+  }
+
+  private static @NotNull List<FeatureRecord> extractFeatureRecordsFromFile(
+      @NotNull List<@NotNull DataFileStatistics> stats, ParameterSet param) {
+    final boolean useFeatureTypes = param.getValue(OptimizerParameters.benchmarkFeatureTypes);
+    final boolean useBenchmarkFiles = param.getValue(OptimizerParameters.benchmarkFeaturesFile);
+
+    List<FeatureRecord> featureRecordsFromFile = new ArrayList<>();
+    assert useFeatureTypes && useBenchmarkFiles || (!useBenchmarkFiles && !useFeatureTypes);
+    if (useBenchmarkFiles && useFeatureTypes) {
+      final File benchmarkFile = param.getEmbeddedParameterValue(
+          OptimizerParameters.benchmarkFeaturesFile);
+      final List<ImportType> types = param.getEmbeddedParameterValue(
+          OptimizerParameters.benchmarkFeatureTypes);
+
+      final Character separator = CSVParsingUtils.autoDetermineSeparator(benchmarkFile);
+      final SimpleStringProperty errorMessage = new SimpleStringProperty();
+      try {
+        final List<String[]> csvData = CSVParsingUtils.readData(benchmarkFile,
+            separator.toString());
+
+        final List<ImportType> lineIds = CSVParsingUtils.findLineIds(types, csvData.getFirst(),
+            errorMessage);
+
+        int mzId = 0;
+        int rtId = 0;
+        Integer mobilityId = null;
+        for (ImportType lineId : lineIds) {
+          switch (lineId.getDataType()) {
+            case MZType _ -> mzId = lineId.getColumnIndex();
+            case RTType _ -> rtId = lineId.getColumnIndex();
+            case MobilityType _ -> mobilityId = lineId.getColumnIndex();
+            default -> {
+            }
+          }
+        }
+
+        for (int i = 1; i < csvData.size(); i++) {
+          final double mz = Double.parseDouble(csvData.get(i)[mzId]);
+          final float rt = Float.parseFloat(csvData.get(i)[rtId]);
+          if (mobilityId != null) {
+            final float mobility = Float.parseFloat(csvData.get(i)[mobilityId]);
+            featureRecordsFromFile.addAll(stats.stream().map(DataFileStatistics::file)
+                .map(f -> new FeatureRecord(f, mz, rt, mobility)).toList());
+          } else {
+            featureRecordsFromFile.addAll(stats.stream().map(DataFileStatistics::file)
+                .map(f -> new FeatureRecord(f, mz, rt, null)).toList());
+          }
+        }
+      } catch (IOException | CsvException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return featureRecordsFromFile;
   }
 
   private static void calculateAndWriteRsdResult(int index, Solution solution, FeatureList newest) {
@@ -180,6 +270,21 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     solution.setAttribute("Average RSD", stats.getAverage());
     solution.setAttribute("Max RSD", stats.getMax());
     solution.setAttribute("Min RSD", stats.getMin());
+  }
+
+  static int calculateNumberOfObjectives(ParameterSet param, List<DataFileStatistics> stats) {
+    var maximizeNumBenchmark = param.getValue(
+        OptimizerParameters.maximizeNumberOfBenchmarkFeatures);
+    var maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
+    var maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
+    var minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
+    var additionalTargets =
+        param.getValue(OptimizerParameters.benchmarkFeaturesFile) && param.getValue(
+            OptimizerParameters.benchmarkFeatureTypes);
+    var maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
+    return (int) Stream.of(maximizeNumBenchmark, maximizeCv20, maximizeFeaturesWithIsos,
+            minimizeDoublePeaks, maximizeFillRatio, (additionalTargets && stats != null))
+        .filter(Boolean::booleanValue).count();
   }
 
   private List<ParameterSolution> createParameters() {
@@ -241,21 +346,32 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final int maxFeatures = newest.getNumberOfRows() * newest.getNumberOfRawDataFiles();
     final long numFeatures = newest.streamFeatures().count();
 
-    calculateAndWriteRsdResult(0, solution, newest);
-    calculateAndWriteFeaturesWithIsotopes(1, solution, newest);
-    final long numDoublePeaks = newest.streamFeatures(true)
-        .map(f -> f.get(RtQualitySummaryType.class)).filter(summary -> summary != null
-            && summary.classification() == PeakShapeClassification.DOUBLE_GAUSSIAN).count();
-    solution.setObjectiveValue(2, (double) numDoublePeaks / numFeatures);
-    calculateAndSetRsds(solution, newest);
-    solution.setObjectiveValue(3, (double) numFeatures / maxFeatures);
+    int objectiveIndex = 0;
+    if (maximizeCv20) {
+      calculateAndWriteRsdResult(objectiveIndex++, solution, newest);
+    }
+    if (maximizeFeaturesWithIsos) {
+      calculateAndWriteFeaturesWithIsotopes(objectiveIndex++, solution, newest);
+    }
+    if (minimizeDoublePeaks) {
+      final long numDoublePeaks = newest.streamFeatures(true)
+          .map(f -> f.get(RtQualitySummaryType.class)).filter(summary -> summary != null
+              && summary.classification() == PeakShapeClassification.DOUBLE_GAUSSIAN).count();
+      solution.setObjectiveValue(objectiveIndex++, (double) numDoublePeaks / numFeatures);
+    }
 
-    if (target != null) {
+    if (maximizeFillRatio) {
+      solution.setObjectiveValue(objectiveIndex++, (double) numFeatures / maxFeatures);
+    }
+
+    if (maximizeNumBenchmark && target != null) {
       final List<FeatureListRow> rows = newest.getRowsCopy();
       rows.sort(Comparator.comparing(FeatureListRow::getAverageMZ));
       final long foundTargets = target.stream().parallel().filter(r -> r.isPresent(rows)).count();
-      solution.setObjectiveValue(getNumberOfObjectives() - 1, foundTargets);
+      solution.setObjectiveValue(objectiveIndex++, foundTargets);
     }
+
+    calculateAndSetRsds(solution, newest);
 
     project.removeFeatureLists(project.getCurrentFeatureLists());
   }
@@ -318,14 +434,21 @@ public class LcMsOptimizationProblem extends AbstractProblem {
       solution.setVariable(parameter.index(), parameter.variable().get());
     }
 
-    solution.setObjective(0, new Maximize("Rows below RSD threshold"));
-    solution.setObjective(1, new Maximize("Features with isotopes"));
-    solution.setObjective(2, new Minimize("Double peak ratio"));
-    solution.setObjective(3, new Maximize("Fill ratio"));
-//    solution.setObjective(2, new Maximize("Number of rows"));
-
-    if (target != null) {
-      solution.setObjective(getNumberOfObjectives() - 1, new Maximize("Found targets"));
+    int objectiveIndex = 0;
+    if (maximizeCv20) {
+      solution.setObjective(objectiveIndex++, new Maximize("Rows below RSD threshold"));
+    }
+    if (maximizeFeaturesWithIsos) {
+      solution.setObjective(objectiveIndex++, new Maximize("Features with isotopes"));
+    }
+    if (minimizeDoublePeaks) {
+      solution.setObjective(objectiveIndex++, new Minimize("Double peak ratio"));
+    }
+    if (maximizeFillRatio) {
+      solution.setObjective(objectiveIndex++, new Maximize("Fill ratio"));
+    }
+    if (target != null && maximizeNumBenchmark) {
+      solution.setObjective(objectiveIndex++, new Maximize("Found targets"));
     }
     return solution;
   }
