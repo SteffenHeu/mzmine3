@@ -43,15 +43,29 @@ import java.util.List;
 public class OptimizerParameters extends SimpleParameterSet {
 
   public static final BooleanParameter maximizeCv20 = new BooleanParameter(
-      "Maximize rows with RSD < 20", "", true);
+      "Maximize rows with RSD < 20",
+      "Attempts to maximize the number of rows that have an area RSD of < 20%", true);
   public static final BooleanParameter maximizeFeaturesWithIsotopes = new BooleanParameter(
-      "Maximize features with isotopes", "", true);
+      "Maximize features with isotopes",
+      "Attempts to maximize the number of features that have an isotope pattern assigned to them.",
+      true);
   public static final BooleanParameter minimizeDoublePeaks = new BooleanParameter(
-      "Minimize number of double peaks", "", true);
+      "Minimize number of double peaks",
+      "Minimizes the number of features that are classified as being a double peak.", true);
   public static final BooleanParameter maximizeNumberOfBenchmarkFeatures = new BooleanParameter(
-      "Maximize number of benchmark features", "", true);
+      "Maximize number of benchmark features", """
+      Maximizes the number of benchmark features. Benchmark features are classified as two-fold:
+      1. All data files are searched for their base peak m/z (=most intense signal in a scan). 
+         A chromatogram is build for each base peak and cut at 5% relative height. The RT range is 
+         then increased by 3*the FWHM of the peak. Additionally, the 13C isotopes are extracted in
+         the same RT range and used, if they have a correlation factor > 90%.
+      2. Additional benchmark features may be user defined by the file given below.""", true);
   public static final BooleanParameter maximizeRowFillRatio = new BooleanParameter(
-      "Maximize fill ratio", "", true);
+      "Maximize fill ratio", """
+      Calculates how "full" the feature table is.
+      Multiplies the number of rows by the number of samples to calculate the theoretical maximum.
+      Then checks how many features were actually detected and divides it by the maximum.
+      """, true);
   public static final OptionalParameter<ImportTypeParameter> benchmarkFeatureTypes = new OptionalParameter<>(
       new ImportTypeParameter("Benchmark feature csv column names", "",
           List.of(new ImportType(true, "mz", new MZType()),
