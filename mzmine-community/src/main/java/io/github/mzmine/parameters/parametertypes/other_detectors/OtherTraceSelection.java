@@ -44,11 +44,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Element;
 
-public record OtherTraceSelection(@Nullable ChromatogramType chromatogramType,
-                                  @Nullable String rangeUnitFilter,
-                                  @Nullable String rangeLabelFilter,
-                                  @Nullable String descriptionFilter,
-                                  @NotNull OtherRawOrProcessed rawOrProcessed) {
+public final class OtherTraceSelection {
 
   private static final Logger logger = Logger.getLogger(OtherTraceSelection.class.getName());
 
@@ -58,15 +54,28 @@ public record OtherTraceSelection(@Nullable ChromatogramType chromatogramType,
   private static final String XML_DESCRIPTION_FILTER_ATTR = "descriptionFilter";
   private static final String XML_RAW_OR_PROCESSED_ATTR = "rawOrProcessed";
 
+  private final @Nullable ChromatogramType chromatogramType;
+  private final @Nullable String rangeUnitFilter;
+  private final @Nullable String rangeLabelFilter;
+  private final @Nullable String descriptionFilter;
+  private final @NotNull OtherRawOrProcessed rawOrProcessed;
+
+  private final @Nullable String rangeUnitRegex;
+  private final @Nullable String rangeLabelRegex;
+  private final @Nullable String descriptionRegex;
+
   public OtherTraceSelection(@Nullable ChromatogramType chromatogramType,
       @Nullable String rangeUnitFilter, @Nullable String rangeLabelFilter,
       @Nullable String descriptionFilter, @NotNull OtherRawOrProcessed rawOrProcessed) {
     this.chromatogramType = chromatogramType;
-    this.rangeUnitFilter =
+    this.rangeUnitFilter = rangeUnitFilter;
+    this.rangeUnitRegex =
         rangeUnitFilter != null ? TextUtils.createRegexFromWildcards(rangeUnitFilter) : null;
-    this.rangeLabelFilter =
+    this.rangeLabelFilter = rangeLabelFilter;
+    this.rangeLabelRegex =
         rangeLabelFilter != null ? TextUtils.createRegexFromWildcards(rangeLabelFilter) : null;
-    this.descriptionFilter =
+    this.descriptionFilter = descriptionFilter;
+    this.descriptionRegex =
         descriptionFilter != null ? TextUtils.createRegexFromWildcards(descriptionFilter) : null;
     this.rawOrProcessed = rawOrProcessed;
   }
@@ -115,7 +124,7 @@ public record OtherTraceSelection(@Nullable ChromatogramType chromatogramType,
 
   public Stream<OtherFeature> streamMatchingTraces(OtherTimeSeriesData otherTimeSeriesData) {
     // make sure everything matches. if not, the stream will simply be empty.
-    if(!matchesTimeSeriesData(otherTimeSeriesData)) {
+    if (!matchesTimeSeriesData(otherTimeSeriesData)) {
       return Stream.empty();
     }
     return rawOrProcessed.streamMatching(otherTimeSeriesData);
@@ -146,10 +155,10 @@ public record OtherTraceSelection(@Nullable ChromatogramType chromatogramType,
 
   private boolean matchesTimeSeriesData(OtherTimeSeriesData obj) {
     return Objects.nonNull(obj) && (chromatogramType == null
-        || obj.getChromatogramType() == chromatogramType) && (rangeUnitFilter == null
-        || obj.getTimeSeriesRangeUnit().matches(rangeUnitFilter)) && (rangeLabelFilter == null
-        || obj.getTimeSeriesRangeLabel().matches(rangeLabelFilter)) && (descriptionFilter == null
-        || obj.getOtherDataFile().getDescription().matches(descriptionFilter));
+        || obj.getChromatogramType() == chromatogramType) && (rangeUnitRegex == null
+        || obj.getTimeSeriesRangeUnit().matches(rangeUnitRegex)) && (rangeLabelRegex == null
+        || obj.getTimeSeriesRangeLabel().matches(rangeLabelRegex)) && (descriptionRegex == null
+        || obj.getOtherDataFile().getDescription().matches(descriptionRegex));
   }
 
   /**
@@ -198,4 +207,46 @@ public record OtherTraceSelection(@Nullable ChromatogramType chromatogramType,
     return new OtherTraceSelection(chromatogramType, rangeUnitFilter, rangeLabelFilter,
         descriptionFilter, rawOrProcessed);
   }
+
+  public @Nullable ChromatogramType chromatogramType() {
+    return chromatogramType;
+  }
+
+  public @Nullable String rangeUnitFilter() {
+    return rangeUnitFilter;
+  }
+
+  public @Nullable String rangeLabelFilter() {
+    return rangeLabelFilter;
+  }
+
+  public @Nullable String descriptionFilter() {
+    return descriptionFilter;
+  }
+
+  public @NotNull OtherRawOrProcessed rawOrProcessed() {
+    return rawOrProcessed;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == this) {
+      return true;
+    }
+    if (obj == null || obj.getClass() != this.getClass()) {
+      return false;
+    }
+    var that = (OtherTraceSelection) obj;
+    return Objects.equals(this.chromatogramType, that.chromatogramType) && Objects.equals(this.rangeUnitFilter,
+        that.rangeUnitFilter) && Objects.equals(this.rangeLabelFilter,
+        that.rangeLabelFilter) && Objects.equals(this.descriptionFilter, that.descriptionFilter)
+        && Objects.equals(this.rawOrProcessed, that.rawOrProcessed);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(chromatogramType, rangeUnitFilter, rangeLabelFilter, descriptionFilter,
+        rawOrProcessed);
+  }
+
 }

@@ -122,7 +122,7 @@ public class OtherTraceSelectionComponent extends VBox implements
     final ChromatogramType chrom = chromType.get().toChromatogramType();
     final String uf = StringUtils.isBlank(rangeUnitFilter.get()) ? null : rangeUnitFilter.get();
     final String lf = StringUtils.isBlank(rangeLabelFilter.get()) ? null : rangeLabelFilter.get();
-    final String desc = StringUtils.isBlank(rangeLabelFilter.get()) ? null : rangeLabelFilter.get();
+    final String desc = StringUtils.isBlank(descriptionFilter.get()) ? null : descriptionFilter.get();
     final OtherRawOrProcessed raw = rawOrProcessed.get();
 
     return new OtherTraceSelection(chrom, uf, lf, desc, raw);
