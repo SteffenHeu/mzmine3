@@ -35,6 +35,7 @@ import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.scene.control.TableColumn;
 import javafx.scene.paint.Color;
 import org.moeaframework.core.Solution;
+import org.moeaframework.core.objective.Minimize;
 import org.moeaframework.core.objective.Objective;
 import org.moeaframework.core.population.NondominatedPopulation;
 
@@ -47,7 +48,7 @@ public record ObjectiveWrapper(String name, int index, Color color) {
       Objective obj = solution.getObjective(i);
 
       final SimpleColorPalette palette = ConfigService.getDefaultColorPalette();
-      final Color color = obj.getName().equals("Double peak ratio") ? palette.getNegativeColor()
+      final Color color = obj instanceof Minimize ? palette.getNegativeColor()
           : palette.getPositiveColor();
       objectives.add(new ObjectiveWrapper(solution.getObjective(i).getName(), i, color));
     }

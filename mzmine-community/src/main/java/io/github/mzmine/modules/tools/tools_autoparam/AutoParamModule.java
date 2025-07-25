@@ -45,7 +45,7 @@ public class AutoParamModule extends TaskPerRawDataFileModule {
   public @NotNull Task createTask(@NotNull MZmineProject project, @NotNull ParameterSet parameters,
       @NotNull Instant moduleCallDate, @Nullable MemoryMapStorage storage,
       @NotNull RawDataFile raw) {
-    return new AutoParamTask(storage, moduleCallDate, parameters, this.getClass(), raw);
+    return new AutoParamTask(storage, moduleCallDate, parameters, this.getClass(), raw, null);
   }
 
   @Override

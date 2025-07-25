@@ -93,9 +93,12 @@ public class BatchOptimizationMainTask extends AbstractTask {
     setStatus(TaskStatus.PROCESSING);
 
     final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files);
+    final List<FeatureRecord> benchmarkFeatures = LcMsOptimizationProblem.extractFeatureRecordsFromFile(
+        null, params);
+
     final List<DataFileStatistics> stats = importedFiles.stream().map(
             file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
-                AutoParamParameters.of(importedFiles), AutoParamModule.class, file)).parallel()
+                AutoParamParameters.of(importedFiles), AutoParamModule.class, file, benchmarkFeatures)).parallel()
         .map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 

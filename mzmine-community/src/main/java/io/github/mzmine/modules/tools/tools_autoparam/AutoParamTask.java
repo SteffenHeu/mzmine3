@@ -43,6 +43,7 @@ import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.auto.AutoMassDetector;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.FeatureRecord;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -78,7 +79,18 @@ public class AutoParamTask extends AbstractRawDataFileTask {
       new MZTolerance(0.05, 25) //
   };
 
+  /**
+   * for matching {@link #additionalFeatures} to the base peak mzs.
+   */
+  private final MZTolerance referenceMatchingTol = new MZTolerance(0.01, 20);
+
   private final RawDataFile file;
+
+  /**
+   * externally provided list of ions that shall be searched for. (also searches for isotopes)
+   */
+  @Nullable
+  private final List<FeatureRecord> additionalFeatures;
   private DataFileStatistics dataFileStats;
 
   /**
@@ -92,30 +104,45 @@ public class AutoParamTask extends AbstractRawDataFileTask {
    */
   public AutoParamTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
       @NotNull ParameterSet parameters, @NotNull Class<? extends MZmineModule> moduleClass,
-      @NotNull RawDataFile raw) {
+      @NotNull RawDataFile raw, final @Nullable List<FeatureRecord> additionalFeatures) {
     super(storage, moduleCallDate, parameters, moduleClass);
     file = raw;
+    this.additionalFeatures = additionalFeatures.stream()
+        .sorted(Comparator.comparingDouble(FeatureRecord::mz)).toList();
   }
 
-  private static double[] getMainPeakMzs(List<Scan> scans) {
+  private static double[] getMainPeakMzs(List<Scan> scans,
+      final @Nullable List<FeatureRecord> additionalFeatures) {
     final MZTolerance oneMzTolerance = new MZTolerance(1, 0);
-    final TreeRangeMap<Double, MassList> mzScanMap = TreeRangeMap.create();
+    final TreeRangeMap<Double, Double> mzScanMap = TreeRangeMap.create();
+
+    if (additionalFeatures != null) {
+      for (double mz : additionalFeatures.stream().mapToDouble(FeatureRecord::mz).toArray()) {
+        final Double entry = mzScanMap.get(mz);
+        if (entry == null) {
+          final Range<Double> range = SpectraMerging.createNewNonOverlappingRange(mzScanMap,
+              oneMzTolerance.getToleranceRange(mz));
+          mzScanMap.put(range, mz);
+        }
+      }
+    }
+
     final List<MassList> intensitySortedScans = scans.stream().map(Scan::getMassList)
         .filter(ml -> ml.getBasePeakMz() != null)
         .sorted(Comparator.comparingDouble(MassList::getBasePeakMz).reversed()).toList();
 
     for (MassList scan : intensitySortedScans) {
       final double mz = scan.getBasePeakMz();
-      final MassList entry = mzScanMap.get(mz);
+      final Double entry = mzScanMap.get(mz);
       if (entry == null) {
         final Range<Double> range = SpectraMerging.createNewNonOverlappingRange(mzScanMap,
             oneMzTolerance.getToleranceRange(mz));
-        mzScanMap.put(range, scan);
+        mzScanMap.put(range, mz);
       }
     }
 
-    final double[] basePeakMzs = mzScanMap.asMapOfRanges().entrySet().stream().map(Entry::getValue)
-        .mapToDouble(MassList::getBasePeakMz).toArray();
+    final double[] basePeakMzs = mzScanMap.asMapOfRanges().values().stream().mapToDouble(v -> v)
+        .toArray();
     return basePeakMzs;
   }
 
@@ -130,7 +157,8 @@ public class AutoParamTask extends AbstractRawDataFileTask {
     final List<Scan> scans = scanSelection.getMatchingScans(file.getScans());
     applyZeroIntensityMassDetection(scans);
 
-    final double[] basePeakMzs = Arrays.stream(getMainPeakMzs(scans)).sorted().toArray();
+    final double[] basePeakMzs = Arrays.stream(getMainPeakMzs(scans, additionalFeatures)).sorted()
+        .toArray();
 
     final Double2ObjectArrayMap<List<FeatureWithIsotopeTraces>> mzsToIsotopeTraces = new Double2ObjectArrayMap<>();
 
@@ -139,7 +167,7 @@ public class AutoParamTask extends AbstractRawDataFileTask {
       final List<Range<Double>> mzRangesSorted = Arrays.stream(basePeakMzs)
           .mapToObj(tolerance::getToleranceRange).toList();
       final List<ModularFeature> mainFeatures = getMainSignalFeatures(scans, mzRangesSorted,
-          basePeakMzs);
+          additionalFeatures);
 
       for (ModularFeature feature : mainFeatures) {
         final int initialMzIndex = BinarySearch.binarySearch(basePeakMzs, feature.getMZ(),
@@ -189,20 +217,20 @@ public class AutoParamTask extends AbstractRawDataFileTask {
     logger.finest("Combined tolerances: " + dataFileStats.getMzToleranceForIsotopes());
     logger.finest("Number of isotope dp: " + numIsoDpStr);
 
-    if(DesktopService.isGUI()) {
+    if (DesktopService.isGUI()) {
       MZmineCore.getDesktop()
           .addTab(new SimpleTab("Auto param", new AutoParametersPane(dataFileStats)));
     }
   }
 
   /**
-   * @param scans          The scans to search in
-   * @param mzRangesSorted the mz ranges to search in
-   * @param basePeakMzs
+   * @param scans              The scans to search in
+   * @param mzRangesSorted     the mz ranges to search in
+   * @param additionalFeatures
    * @return A list of features of the given mz ranges capped at 5% of the maximum intensity
    */
   private @NotNull List<ModularFeature> getMainSignalFeatures(List<Scan> scans,
-      List<Range<Double>> mzRangesSorted, final double[] basePeakMzs) {
+      List<Range<Double>> mzRangesSorted, @Nullable List<FeatureRecord> additionalFeatures) {
     final List<ModularFeature> mainPeaks = new ArrayList<>();
 
     final ExtractMzRangesIonSeriesFunction eicExtraction = new ExtractMzRangesIonSeriesFunction(
@@ -218,11 +246,25 @@ public class AutoParamTask extends AbstractRawDataFileTask {
       final ModularFeature fullFeature = new ModularFeature(dummyFlist, file, fullChromatogram,
           FeatureStatus.DETECTED);
 
-      final float rt = fullFeature.getRT();
+      // check if it was an externally provided feature and if yes, use that as main RT and search from there
+      final float rt;
+      if (additionalFeatures != null) {
+        final int index = BinarySearch.binarySearch(fullFeature.getMZ(), DefaultTo.CLOSEST_VALUE, 0,
+            additionalFeatures.size(), i -> additionalFeatures.get(i).mz());
+        if (referenceMatchingTol.checkWithinTolerance(additionalFeatures.get(index).mz(),
+            fullFeature.getMZ())) {
+          rt = additionalFeatures.get(index).rt();
+        } else {
+          rt = fullFeature.getRT();
+        }
+      } else {
+        rt = fullFeature.getRT();
+      }
+
       final int mostIntenseIndex = BinarySearch.binarySearch(rt, DefaultTo.CLOSEST_VALUE, 0,
           fullChromatogram.getNumberOfValues(),
           i -> fullChromatogram.getSpectrum(i).getRetentionTime());
-      final float highest = fullFeature.getHeight();
+      final float highest = (float) fullFeature.getFeatureData().getIntensity(mostIntenseIndex);
       final float edgeIntensity = highest * 0.05f;
 
       int i = mostIntenseIndex;
@@ -239,13 +281,18 @@ public class AutoParamTask extends AbstractRawDataFileTask {
       final int maxEnlargement = Math.min(leftEdge,
           fullChromatogram.getNumberOfValues() - rightEdge);
       final int enlargement = Math.min(maxEnlargement, (int) ((rightEdge - leftEdge) * 0.3));
+      if (Math.abs(rightEdge - leftEdge) < 5) {
+        // feature was not detected in this case
+        continue;
+      }
 
       final IonTimeSeries<? extends Scan> peak = fullChromatogram.subSeries(getMemoryMapStorage(),
           leftEdge - enlargement, rightEdge + enlargement);
+
       final ModularFeature mainFeature = new ModularFeature(dummyFlist, file, peak,
           FeatureStatus.DETECTED);
 
-      // dont use features with long peaks that may just be chromatographic noise
+      // don't use features with long peaks that may just be chromatographic noise
       if (RangeUtils.rangeLength(mainFeature.getRawDataPointsRTRange())
           > RangeUtils.rangeLength(file.getDataRTRange()) * 0.15) {
         continue;
