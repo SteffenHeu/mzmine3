@@ -35,11 +35,12 @@ import io.github.mzmine.datamodel.features.types.annotations.shapeclassification
 import io.github.mzmine.datamodel.features.types.numbers.MZType;
 import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
+import io.github.mzmine.datamodel.statistics.FeaturesDataTable;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.modules.batchmode.BatchTask;
 import io.github.mzmine.modules.dataanalysis.utils.StatisticUtils;
-import io.github.mzmine.modules.dataanalysis.utils.imputation.ZeroImputer;
+import io.github.mzmine.modules.dataanalysis.utils.imputation.ImputationFunctions;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakShapeClassification;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RsdFilter;
@@ -63,6 +64,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.ImportType;
+import io.github.mzmine.parameters.parametertypes.statistics.AbundanceDataTablePreparationConfig;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.project.ProjectService;
@@ -80,7 +82,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import javafx.beans.property.SimpleStringProperty;
-import org.apache.commons.math3.linear.RealMatrix;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
@@ -229,18 +230,18 @@ public class LcMsOptimizationProblem extends AbstractProblem {
           final float rt = Float.parseFloat(csvData.get(i)[rtId]);
           if (mobilityId != null) {
             final float mobility = Float.parseFloat(csvData.get(i)[mobilityId]);
-            if(stats != null) {
+            if (stats != null) {
               featureRecordsFromFile.addAll(stats.stream().map(DataFileStatistics::file)
                   .map(f -> new FeatureRecord(f, mz, rt, mobility)).toList());
             } else {
-              featureRecordsFromFile.add(new FeatureRecord(null , mz, rt, mobility));
+              featureRecordsFromFile.add(new FeatureRecord(null, mz, rt, mobility));
             }
           } else {
-            if(stats != null) {
+            if (stats != null) {
               featureRecordsFromFile.addAll(stats.stream().map(DataFileStatistics::file)
                   .map(f -> new FeatureRecord(f, mz, rt, null)).toList());
             } else {
-              featureRecordsFromFile.add(new FeatureRecord(null , mz, rt, null));
+              featureRecordsFromFile.add(new FeatureRecord(null, mz, rt, null));
             }
           }
         }
@@ -251,11 +252,14 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     return featureRecordsFromFile;
   }
 
-  private static void calculateAndWriteRsdResult(int index, Solution solution, FeatureList newest) {
-    final RsdFilter rsdFilter = new RsdFilter(0.2, AbundanceMeasure.Area, newest.getRawDataFiles(),
-        false);
-    final long matchingRows = newest.stream().map(rsdFilter::matches).filter(Boolean::booleanValue)
-        .count();
+  private static void calculateAndWriteRsdResult(int index, Solution solution, FeatureList newest, @NotNull final FeaturesDataTable dataTable) {
+
+    final RsdFilter rsdFilter = new RsdFilter(dataTable, 0, 0.2, false);
+
+    final long matchingRows = newest.stream().map(row -> {
+      final int id = rsdFilter.dataTable().getFeatureIndex(row);
+      return rsdFilter.matches(row, id);
+    }).filter(Boolean::booleanValue).count();
     solution.setObjectiveValue(index, (double) matchingRows);
   }
 
@@ -266,14 +270,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     solution.setObjectiveValue(index, featuresWithIsotopes);
   }
 
-  private static void calculateAndSetRsds(Solution solution, FeatureList newest) {
-    final RealMatrix datasetFromRows = StatisticUtils.createDatasetFromRows(newest.getRows(),
-        newest.getRawDataFiles(), AbundanceMeasure.Area);
-    StatisticUtils.imputeMissingValues(datasetFromRows, true, new ZeroImputer());
+  private static void calculateAndSetRsds(Solution solution, FeatureList newest,
+      FeaturesDataTable dataTable) {
 
-    final double[] rsds = new double[datasetFromRows.getColumnDimension()];
-    for (int i = 0; i < datasetFromRows.getColumnDimension(); i++) {
-      final double[] abundances = datasetFromRows.getColumn(i);
+    final double[] rsds = new double[newest.getNumberOfRows()];
+    for (int i = 0; i < newest.getNumberOfRows(); i++) {
+      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
       final double rsd = MathUtils.calcRelativeStd(abundances);
       rsds[i] = rsd;
     }
@@ -294,8 +296,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     var minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
     var maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
     final int numObjectives = (int) Stream.of(maximizeCv20, maximizeFeaturesWithIsos,
-            minimizeDoublePeaks, maximizeFillRatio, maximizeNumBenchmark && stats != null).filter(Boolean::booleanValue)
-        .count();
+            minimizeDoublePeaks, maximizeFillRatio, maximizeNumBenchmark && stats != null)
+        .filter(Boolean::booleanValue).count();
     return numObjectives;
   }
 
@@ -358,9 +360,14 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final int maxFeatures = newest.getNumberOfRows() * newest.getNumberOfRawDataFiles();
     final long numFeatures = newest.streamFeatures().count();
 
+    final var config = new AbundanceDataTablePreparationConfig(AbundanceMeasure.Area,
+        ImputationFunctions.Zero);
+    final FeaturesDataTable dataTable = StatisticUtils.extractAbundancesPrepareData(
+        newest.getRows(), newest.getRawDataFiles(), config);
+
     int objectiveIndex = 0;
     if (maximizeCv20) {
-      calculateAndWriteRsdResult(objectiveIndex++, solution, newest);
+      calculateAndWriteRsdResult(objectiveIndex++, solution, newest, dataTable);
     }
     if (maximizeFeaturesWithIsos) {
       calculateAndWriteFeaturesWithIsotopes(objectiveIndex++, solution, newest);
@@ -383,7 +390,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
       solution.setObjectiveValue(objectiveIndex++, foundTargets);
     }
 
-    calculateAndSetRsds(solution, newest);
+    calculateAndSetRsds(solution, newest, dataTable);
 
     project.removeFeatureLists(project.getCurrentFeatureLists());
   }

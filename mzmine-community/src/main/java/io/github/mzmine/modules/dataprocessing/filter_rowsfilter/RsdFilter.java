@@ -37,7 +37,7 @@ import io.github.mzmine.util.MathUtils;
  *                         selected
  * @param keepUndetected
  */
-record RsdFilter(FeaturesDataTable dataTable, double maxMissingValues, double maxCvPercent,
+public record RsdFilter(FeaturesDataTable dataTable, double maxMissingValues, double maxCvPercent,
                  boolean keepUndetected) {
 
   /**

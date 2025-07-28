@@ -251,7 +251,7 @@ public class AutoParamTask extends AbstractRawDataFileTask {
       if (additionalFeatures != null) {
         final int index = BinarySearch.binarySearch(fullFeature.getMZ(), DefaultTo.CLOSEST_VALUE, 0,
             additionalFeatures.size(), i -> additionalFeatures.get(i).mz());
-        if (referenceMatchingTol.checkWithinTolerance(additionalFeatures.get(index).mz(),
+        if (index >= 0 && referenceMatchingTol.checkWithinTolerance(additionalFeatures.get(index).mz(),
             fullFeature.getMZ())) {
           rt = additionalFeatures.get(index).rt();
         } else {
