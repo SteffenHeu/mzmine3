@@ -249,4 +249,29 @@ public final class OtherTraceSelection {
         rawOrProcessed);
   }
 
+  public OtherTraceSelection withChromatogramType(@Nullable ChromatogramType chromatogramType) {
+    return new OtherTraceSelection(chromatogramType, rangeUnitFilter, rangeLabelFilter,
+        descriptionFilter, rawOrProcessed);
+  }
+
+  public OtherTraceSelection withRangeUnitFilter(@Nullable String rangeUnitFilter) {
+    return new OtherTraceSelection(chromatogramType, rangeUnitFilter, rangeLabelFilter,
+        descriptionFilter, rawOrProcessed);
+  }
+
+  public OtherTraceSelection withRangeLabelFilter(@Nullable String rangeLabelFilter) {
+    return new OtherTraceSelection(chromatogramType, rangeUnitFilter, rangeLabelFilter,
+        descriptionFilter, rawOrProcessed);
+  }
+
+  public OtherTraceSelection withDescriptionFilter(@Nullable String descriptionFilter) {
+    return new OtherTraceSelection(chromatogramType, rangeUnitFilter, rangeLabelFilter,
+        descriptionFilter, rawOrProcessed);
+  }
+
+  public OtherTraceSelection withRawOrProcessed(@NotNull OtherRawOrProcessed rawOrProcessed) {
+    return new OtherTraceSelection(chromatogramType, rangeUnitFilter, rangeLabelFilter,
+        descriptionFilter, rawOrProcessed);
+  }
+
 }
