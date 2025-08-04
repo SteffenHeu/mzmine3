@@ -125,9 +125,10 @@ public class DIAImsMsMsInfoImpl implements IonMobilityMsMsInfo {
     return fragmentFrame;
   }
 
+  @Nullable
   @Override
   public Range<Integer> getSpectrumNumberRange() {
-    return spectrumNumberRange != null ? spectrumNumberRange.guava() : null;
+    return SimpleRange.guavaOrNull(spectrumNumberRange);
   }
 
   @Override
@@ -147,7 +148,7 @@ public class DIAImsMsMsInfoImpl implements IonMobilityMsMsInfo {
 
   @Override
   public @Nullable Range<Double> getIsolationWindow() {
-    return isolationWindow != null ? isolationWindow.guava() : null;
+    return SimpleRange.guavaOrNull(isolationWindow);
   }
 
   @Override

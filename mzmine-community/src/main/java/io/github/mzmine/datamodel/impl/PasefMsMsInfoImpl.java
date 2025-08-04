@@ -163,6 +163,7 @@ public class PasefMsMsInfoImpl implements PasefMsMsInfo {
     return precursorMz;
   }
 
+  @Nullable
   @Override
   public Range<Integer> getSpectrumNumberRange() {
     return SimpleRange.guavaOrNull(spectrumNumberRange);

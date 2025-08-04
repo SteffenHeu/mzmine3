@@ -34,9 +34,11 @@ public interface IonMobilityMsMsInfo extends MsMsInfo {
   String XML_SPECTRUM_NUMBER_RANGE_ATTR = "spectrumnumberrange";
 
   /**
-   * @return The range of spectra numbers in this frame where this precursor was fragmented in.
+   * @return The range of spectra numbers in this frame where this precursor was fragmented in or
+   * null if no range was present in the raw data. This may indicate that this info describes the
+   * whole frame.
    */
-  Range<Integer> getSpectrumNumberRange();
+  @Nullable Range<Integer> getSpectrumNumberRange();
 
   @Nullable
   default Range<Float> getMobilityRange() {
