@@ -28,6 +28,7 @@ import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
@@ -58,9 +59,12 @@ public class PatternSearchParameters extends SimpleParameterSet {
   public static final MZToleranceParameter isotopeMatchingTolerance = new MZToleranceParameter(
       "Pattern matching tolerance", "Tolerance to match the tolerance to the pattern.", 0.002, 2);
 
+  public static final AdvancedParametersParameter<PatternSearchAdvancedParameters> advanced = new AdvancedParametersParameter<>(
+      new PatternSearchAdvancedParameters());
+
   public PatternSearchParameters() {
     super(flists, libraryFile, minScore /*, ms1MergingTolerance*/, minMatchedPatternSignals,
-        isotopeMatchingTolerance);
+        isotopeMatchingTolerance, advanced);
   }
 
   @Override

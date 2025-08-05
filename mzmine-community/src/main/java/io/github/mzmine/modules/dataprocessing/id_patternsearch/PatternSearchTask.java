@@ -35,6 +35,7 @@ import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractFeatureListTask;
+import io.github.mzmine.util.FeatureListUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.scans.ScanUtils;
 import io.github.mzmine.util.scans.similarity.HandleUnmatchedSignalOptions;
@@ -64,14 +65,17 @@ import org.jetbrains.annotations.Nullable;
 public class PatternSearchTask extends AbstractFeatureListTask {
 
   private static final Logger logger = Logger.getLogger(PatternSearchTask.class.getName());
-
-  private final FeatureList flist;
   private final SpectralSimilarityFunction similarityFunction;
-//  private final @NotNull MZTolerance interScanMergingTolerance;
+  //  private final @NotNull MZTolerance interScanMergingTolerance;
   private final @NotNull MZTolerance matchingTolerance;
   private final double minScore;
   private final File libraryFile;
   private final Integer minMatchedSignals;
+  private final String suffix;
+  private final boolean weightWithExplainedIntensity;
+  @NotNull
+  private final MZmineProject project;
+  private FeatureList flist;
   private AutoLibraryParser parser;
 
   /**
@@ -88,6 +92,7 @@ public class PatternSearchTask extends AbstractFeatureListTask {
       FeatureList flist, @NotNull MZmineProject project) {
     super(storage, moduleCallDate, parameters, moduleClass);
     this.flist = flist;
+    this.project = project;
     totalItems = flist.getNumberOfRows();
     libraryFile = parameters.getValue(PatternSearchParameters.libraryFile);
     minMatchedSignals = parameters.getValue(PatternSearchParameters.minMatchedPatternSignals);
@@ -98,6 +103,31 @@ public class PatternSearchTask extends AbstractFeatureListTask {
     similarityFunction = new WeightedCosineSpectralSimilarity(
         WeightedCosineSpectralSimilarityParameters.of(Weights.INTENSITY, minScore,
             HandleUnmatchedSignalOptions.KEEP_LIBRARY_SIGNALS));
+
+    final boolean advancedSelected = parameters.getValue(PatternSearchParameters.advanced);
+    final ParameterSet advancedParam =
+        advancedSelected ? parameters.getEmbeddedParameterValue(PatternSearchParameters.advanced)
+            : null;
+    weightWithExplainedIntensity = advancedSelected && advancedParam.getValue(
+        PatternSearchAdvancedParameters.weightWithExplainedIntensity);
+
+    suffix = advancedParam.getEmbeddedParameterValueIfSelectedOrElse(
+        PatternSearchAdvancedParameters.newFlistWithSuffix, null);
+  }
+
+  private static List<DataPoint[]> getAlignedDataPoints(SpectralSimilarity similarity) {
+    final DataPoint[][] alignedDp = similarity.getAlignedDataPoints();
+
+    final DataPoint[] library = alignedDp[0];
+    final DataPoint[] query = alignedDp[1];
+
+    final List<DataPoint[]> paired = new ArrayList<>();
+
+    for (int i = 0; i < library.length; i++) {
+      paired.add(new DataPoint[]{library[i], query[i]});
+    }
+
+    return paired;
   }
 
   @Override
@@ -110,6 +140,10 @@ public class PatternSearchTask extends AbstractFeatureListTask {
 
     final SpectralLibrary library = importLibrary(libraryFile);
     final List<SpectralLibraryEntry> entries = library.getEntries();
+
+    if (suffix != null) {
+      flist = FeatureListUtils.createCopy(flist, suffix, getMemoryMapStorage(), true);
+    }
 
     for (final FeatureListRow row : flist.getRowsCopy()) {
 
@@ -130,11 +164,21 @@ public class PatternSearchTask extends AbstractFeatureListTask {
             shiftedDataPoints[i] = new SimpleDataPoint(mzValue + feature.getMZ(), intensityValue);
           }
 
-          final SpectralSimilarity similarity = similarityFunction.getSimilarity(matchingTolerance,
+          SpectralSimilarity similarity = similarityFunction.getSimilarity(matchingTolerance,
               Math.min(minMatchedSignals, shiftedDataPoints.length), shiftedDataPoints,
               ScanUtils.extractDataPoints(featureSpectrum));
 
           if (similarity != null) {
+            if (weightWithExplainedIntensity) { // re-weight score
+              SpectralSimilarity newSimilarity = new SpectralSimilarity(
+                  similarity.getFunctionName(),
+                  similarity.getScore() * similarity.getExplainedLibraryIntensity(),
+                  similarity.getOverlap(), similarity.getLibrary(), similarity.getQuery(),
+                  getAlignedDataPoints(similarity));
+
+              similarity = newSimilarity;
+            }
+
             final SpectralDBEntry matchedEntry = new SpectralDBEntry(getMemoryMapStorage(),
                 Arrays.stream(shiftedDataPoints).mapToDouble(DataPoint::getMZ).toArray(),
                 Arrays.stream(shiftedDataPoints).mapToDouble(DataPoint::getIntensity).toArray(),
@@ -150,6 +194,10 @@ public class PatternSearchTask extends AbstractFeatureListTask {
       row.setSpectralLibraryMatch(annotations.stream()
           .sorted(Comparator.comparingDouble(SpectralDBAnnotation::getScore).reversed()).toList());
       incrementFinishedItems();
+    }
+
+    if (suffix != null) {
+      project.addFeatureList(flist);
     }
   }
 
