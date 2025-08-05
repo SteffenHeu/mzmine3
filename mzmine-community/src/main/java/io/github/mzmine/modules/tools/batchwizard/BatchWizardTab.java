@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.tools.batchwizard;
 
+import static io.github.mzmine.modules.tools.batchwizard.WizardPart.DATA_IMPORT;
 import static io.github.mzmine.modules.tools.batchwizard.WizardPart.WORKFLOW;
 
 import io.github.mzmine.gui.DesktopService;
@@ -41,6 +42,7 @@ import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.modules.tools.batchwizard.io.LocalWizardSequenceFile;
 import io.github.mzmine.modules.tools.batchwizard.io.WizardSequenceIOUtils;
 import io.github.mzmine.modules.tools.batchwizard.io.WizardSequenceSaveModule;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.DataImportWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowWizardParameters;

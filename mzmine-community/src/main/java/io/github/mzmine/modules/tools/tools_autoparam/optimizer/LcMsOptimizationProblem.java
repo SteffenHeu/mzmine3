@@ -44,6 +44,7 @@ import io.github.mzmine.modules.dataanalysis.utils.imputation.ImputationFunction
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakShapeClassification;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RsdFilter;
+import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RsdFilterParameters;
 import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.MultiThreadPeakFinderModule;
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.corrgrouping.CorrelateGroupingModule;
 import io.github.mzmine.modules.dataprocessing.group_spectral_networking.MainSpectralNetworkingModule;
@@ -62,12 +63,16 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.Workfl
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
+import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
+import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.ImportType;
+import io.github.mzmine.parameters.parametertypes.metadata.MetadataGroupSelection;
 import io.github.mzmine.parameters.parametertypes.statistics.AbundanceDataTablePreparationConfig;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.project.ProjectService;
+import io.github.mzmine.taskcontrol.AbstractRawDataFileTask;
 import io.github.mzmine.taskcontrol.SimpleRunnableTask;
 import io.github.mzmine.util.CSVParsingUtils;
 import io.github.mzmine.util.MathUtils;
@@ -252,9 +257,13 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     return featureRecordsFromFile;
   }
 
-  private static void calculateAndWriteRsdResult(int index, Solution solution, FeatureList newest, @NotNull final FeaturesDataTable dataTable) {
+  private static void calculateAndWriteRsdResult(int index, Solution solution, FeatureList newest) {
 
-    final RsdFilter rsdFilter = new RsdFilter(dataTable, 0, 0.2, false);
+    RsdFilterParameters param = (RsdFilterParameters) new RsdFilterParameters().cloneParameterSet();
+    param.setAll(AbundanceMeasure.Area, ImputationFunctions.Zero, 0.2, 0.2, false,
+        new MetadataGroupSelection(MetadataColumn.SAMPLE_TYPE_HEADER, SampleType.QC.toString()));
+
+    final RsdFilter rsdFilter = param.createFilter(newest.getRows(), newest.getRawDataFiles());
 
     final long matchingRows = newest.stream().map(row -> {
       final int id = rsdFilter.dataTable().getFeatureIndex(row);
@@ -367,7 +376,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     int objectiveIndex = 0;
     if (maximizeCv20) {
-      calculateAndWriteRsdResult(objectiveIndex++, solution, newest, dataTable);
+      calculateAndWriteRsdResult(objectiveIndex++, solution, newest);
     }
     if (maximizeFeaturesWithIsos) {
       calculateAndWriteFeaturesWithIsotopes(objectiveIndex++, solution, newest);

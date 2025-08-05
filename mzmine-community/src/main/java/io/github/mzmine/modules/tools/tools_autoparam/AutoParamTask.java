@@ -243,6 +243,10 @@ public class AutoParamTask extends AbstractRawDataFileTask {
       final IonTimeSeries<? extends Scan> fullChromatogram = buildingSeries.toIonTimeSeriesWithLeadingAndTrailingZero(
           getMemoryMapStorage(), scans);
 
+      if(fullChromatogram.getNumberOfValues() < 1) {
+        continue;
+      }
+
       final ModularFeature fullFeature = new ModularFeature(dummyFlist, file, fullChromatogram,
           FeatureStatus.DETECTED);
 
