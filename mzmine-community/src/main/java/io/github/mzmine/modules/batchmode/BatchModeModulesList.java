@@ -277,7 +277,6 @@ public class BatchModeModulesList {
           IonMobilityTraceBuilderModule.class, //
           RecursiveIMSBuilderModule.class, //
           ImageBuilderModule.class, //
-          MsnFeatureDetectionModule.class, //
           TargetedFeatureDetectionModule.class, //
 //      ADAPHierarchicalClusteringModule.class, //
 //      ADAPMultivariateCurveResolutionModule.class, //

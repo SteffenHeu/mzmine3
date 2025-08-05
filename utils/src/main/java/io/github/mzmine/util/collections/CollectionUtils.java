@@ -446,6 +446,12 @@ public class CollectionUtils {
     return subRegion;
   }
 
+  public static <T> List<T> findDuplicates(List<T> items) {
+    Set<T> uniques = new HashSet<>();
+    return items.stream().filter(item -> !uniques.add(item)).toList();
+  }
+
+
   public static <T> List<T> selectRandomElements(List<T> list, int num) {
     final Random rand = new Random();
     final List<T> copy = new ArrayList<>(list);
