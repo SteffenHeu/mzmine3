@@ -168,24 +168,32 @@ public class PatternSearchTask extends AbstractFeatureListTask {
               Math.min(minMatchedSignals, shiftedDataPoints.length), shiftedDataPoints,
               ScanUtils.extractDataPoints(featureSpectrum));
 
-          if (similarity != null) {
-            if (weightWithExplainedIntensity) { // re-weight score
-              similarity = new SpectralSimilarity(
-                  similarity.getFunctionName(),
-                  similarity.getScore() * similarity.getExplainedLibraryIntensity(),
-                  similarity.getOverlap(), similarity.getLibrary(), similarity.getQuery(),
-                  getAlignedDataPoints(similarity));
-            }
-
-            final SpectralDBEntry matchedEntry = new SpectralDBEntry(getMemoryMapStorage(),
-                Arrays.stream(shiftedDataPoints).mapToDouble(DataPoint::getMZ).toArray(),
-                Arrays.stream(shiftedDataPoints).mapToDouble(DataPoint::getIntensity).toArray(),
-                entry.getFields(), entry.getLibrary());
-
-            annotations.add(
-                new SpectralDBAnnotation(matchedEntry, similarity, featureSpectrum, null, null,
-                    null));
+          if (similarity == null) {
+            continue;
           }
+
+          if (weightWithExplainedIntensity && similarity.getScore() * similarity.getExplainedLibraryIntensity() >= minScore) { // re-weight score
+            similarity = new SpectralSimilarity(
+                similarity.getFunctionName(),
+                similarity.getScore() * similarity.getExplainedLibraryIntensity(),
+                similarity.getOverlap(), similarity.getLibrary(), similarity.getQuery(),
+                getAlignedDataPoints(similarity));
+          } else {
+            similarity = null;
+          }
+
+          if(similarity == null) {
+            continue;
+          }
+
+          final SpectralDBEntry matchedEntry = new SpectralDBEntry(getMemoryMapStorage(),
+              Arrays.stream(shiftedDataPoints).mapToDouble(DataPoint::getMZ).toArray(),
+              Arrays.stream(shiftedDataPoints).mapToDouble(DataPoint::getIntensity).toArray(),
+              entry.getFields(), entry.getLibrary());
+
+          annotations.add(
+              new SpectralDBAnnotation(matchedEntry, similarity, featureSpectrum, null, null,
+                  null));
         }
       }
 
