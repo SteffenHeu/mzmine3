@@ -27,6 +27,7 @@ package io.github.mzmine.modules.dataprocessing.id_patternsearch;
 import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
@@ -37,6 +38,7 @@ import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParamete
 import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParameter;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.files.ExtensionFilters;
+import java.util.Map;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.Nullable;
 
@@ -75,5 +77,13 @@ public class PatternSearchParameters extends SimpleParameterSet {
         The pattern is specified in a spectral library. Each signal in the spectral library is shifted by the m/z of \
         the specific feature. If a match is achieved, the match is added as a spectral library match.
         To pair correlated MS1 signals, use the DIA correlation and set the scan filter to MS1."""));
+  }
+
+  @Override
+  public void handleLoadedParameters(Map<String, Parameter<?>> loadedParams, int loadedVersion) {
+    super.handleLoadedParameters(loadedParams, loadedVersion);
+    if(loadedParams.containsKey("Advanced")) {
+      setParameter(advanced, false);
+    }
   }
 }

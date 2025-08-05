@@ -170,13 +170,11 @@ public class PatternSearchTask extends AbstractFeatureListTask {
 
           if (similarity != null) {
             if (weightWithExplainedIntensity) { // re-weight score
-              SpectralSimilarity newSimilarity = new SpectralSimilarity(
+              similarity = new SpectralSimilarity(
                   similarity.getFunctionName(),
                   similarity.getScore() * similarity.getExplainedLibraryIntensity(),
                   similarity.getOverlap(), similarity.getLibrary(), similarity.getQuery(),
                   getAlignedDataPoints(similarity));
-
-              similarity = newSimilarity;
             }
 
             final SpectralDBEntry matchedEntry = new SpectralDBEntry(getMemoryMapStorage(),
