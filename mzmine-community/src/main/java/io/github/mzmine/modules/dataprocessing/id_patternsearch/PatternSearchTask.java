@@ -33,6 +33,7 @@ import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.impl.SimpleDataPoint;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractFeatureListTask;
 import io.github.mzmine.util.FeatureListUtils;
@@ -104,14 +105,10 @@ public class PatternSearchTask extends AbstractFeatureListTask {
         WeightedCosineSpectralSimilarityParameters.of(Weights.INTENSITY, minScore,
             HandleUnmatchedSignalOptions.KEEP_LIBRARY_SIGNALS));
 
-    final boolean advancedSelected = parameters.getValue(PatternSearchParameters.advanced);
-    final ParameterSet advancedParam =
-        advancedSelected ? parameters.getEmbeddedParameterValue(PatternSearchParameters.advanced)
-            : null;
-    weightWithExplainedIntensity = advancedSelected && advancedParam.getValue(
-        PatternSearchAdvancedParameters.weightWithExplainedIntensity);
-
-    suffix = advancedParam.getEmbeddedParameterValueIfSelectedOrElse(
+    final AdvancedParametersParameter<PatternSearchAdvancedParameters> advancedParam = parameters.getParameter(PatternSearchParameters.advanced);
+    weightWithExplainedIntensity = advancedParam.getValueOrDefault(
+        PatternSearchAdvancedParameters.weightWithExplainedIntensity, false);
+    suffix = advancedParam.getValueOrDefault(
         PatternSearchAdvancedParameters.newFlistWithSuffix, null);
   }
 
@@ -172,17 +169,19 @@ public class PatternSearchTask extends AbstractFeatureListTask {
             continue;
           }
 
-          if (weightWithExplainedIntensity && similarity.getScore() * similarity.getExplainedLibraryIntensity() >= minScore) { // re-weight score
-            similarity = new SpectralSimilarity(
-                similarity.getFunctionName(),
-                similarity.getScore() * similarity.getExplainedLibraryIntensity(),
-                similarity.getOverlap(), similarity.getLibrary(), similarity.getQuery(),
-                getAlignedDataPoints(similarity));
-          } else {
-            similarity = null;
+          if (weightWithExplainedIntensity) {
+            if (similarity.getScore() * similarity.getExplainedLibraryIntensity()
+                >= minScore) { // re-weight score
+              similarity = new SpectralSimilarity(similarity.getFunctionName(),
+                  similarity.getScore() * similarity.getExplainedLibraryIntensity(),
+                  similarity.getOverlap(), similarity.getLibrary(), similarity.getQuery(),
+                  getAlignedDataPoints(similarity));
+            } else {
+              similarity = null;
+            }
           }
 
-          if(similarity == null) {
+          if (similarity == null) {
             continue;
           }
 
