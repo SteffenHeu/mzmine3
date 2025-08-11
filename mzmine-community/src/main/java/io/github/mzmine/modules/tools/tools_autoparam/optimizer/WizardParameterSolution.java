@@ -27,17 +27,14 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.parameters.UserParameter;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.function.TriConsumer;
 import org.moeaframework.core.Solution;
-import org.moeaframework.core.constraint.Constraint;
 import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
 
-public sealed interface ParameterSolution {
+public sealed interface WizardParameterSolution {
 
   int index();
 
@@ -47,23 +44,24 @@ public sealed interface ParameterSolution {
 
   Supplier<? extends Variable> variable();
 
-  record IntegerParameterSolution(int index, WizardPart part,
-                                  TriConsumer<WizardStepParameters, Solution, Integer> setToParameters,
-                                  Supplier<BinaryIntegerVariable> variable) implements
-      ParameterSolution {
+  record IntegerWizardParameterSolution(int index, WizardPart part,
+                                        TriConsumer<WizardStepParameters, Solution, Integer> setToParameters,
+                                        Supplier<BinaryIntegerVariable> variable) implements
+      WizardParameterSolution {
 
-    public IntegerParameterSolution(int index, WizardPart part, UserParameter param,
+    public IntegerWizardParameterSolution(int index, WizardPart part, UserParameter param,
         Supplier<BinaryIntegerVariable> variable) {
       this(index, part, (set, solution, id) -> set.setParameter(param,
           BinaryIntegerVariable.getInt(solution.getVariable(id))), variable);
     }
   }
 
-  record DoubleParameterSolution(int index, WizardPart part,
-                                 TriConsumer<WizardStepParameters, Solution, Integer> setToParameters,
-                                 Supplier<RealVariable> variable) implements ParameterSolution {
+  record DoubleWizardParameterSolution(int index, WizardPart part,
+                                       TriConsumer<WizardStepParameters, Solution, Integer> setToParameters,
+                                       Supplier<RealVariable> variable) implements
+      WizardParameterSolution {
 
-    public DoubleParameterSolution(int index, WizardPart part, UserParameter param,
+    public DoubleWizardParameterSolution(int index, WizardPart part, UserParameter param,
         Supplier<RealVariable> variable) {
       this(index, part, (set, solution, id) -> set.setParameter(param,
           RealVariable.getReal(solution.getVariable(id))), variable);

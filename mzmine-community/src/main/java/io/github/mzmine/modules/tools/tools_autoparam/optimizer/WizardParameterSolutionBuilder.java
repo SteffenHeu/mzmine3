@@ -31,8 +31,8 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWiza
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.custom_parameters.WizardMassDetectorNoiseLevels;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolution.DoubleParameterSolution;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolution.IntegerParameterSolution;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolution.DoubleWizardParameterSolution;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolution.IntegerWizardParameterSolution;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance.Unit;
@@ -46,9 +46,9 @@ import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
 
-public class ParameterSolutionBuilder {
+public class WizardParameterSolutionBuilder {
 
-  private static final Logger logger = Logger.getLogger(ParameterSolutionBuilder.class.getName());
+  private static final Logger logger = Logger.getLogger(WizardParameterSolutionBuilder.class.getName());
   public static final MZTolerance[] ALL_TOLERANCE_OPTIONS = new MZTolerance[]{ //
       new MZTolerance(0.0005, 2), //
       new MZTolerance(0.001, 5), //
@@ -74,7 +74,7 @@ public class ParameterSolutionBuilder {
   private @NotNull
   final MassDetectorWizardOptions massDetectorType;
 
-  public ParameterSolutionBuilder(final @Nullable List<DataFileStatistics> dataFileStatistics,
+  public WizardParameterSolutionBuilder(final @Nullable List<DataFileStatistics> dataFileStatistics,
       @Nullable MassDetectorWizardOptions massDetectorType) {
     this.stats = dataFileStatistics;
 
@@ -153,15 +153,15 @@ public class ParameterSolutionBuilder {
     logger.info("FWHM range: " + minFwhm + ", " + maxFwhm);
   }
 
-  public @NotNull ParameterSolution buildMinHeightSolution(int index) {
-    ParameterSolution minHeight = new DoubleParameterSolution(index, WizardPart.MS,
+  public @NotNull WizardParameterSolution buildMinHeightSolution(int index) {
+    WizardParameterSolution minHeight = new DoubleWizardParameterSolution(index, WizardPart.MS,
         MassSpectrometerWizardParameters.minimumFeatureHeight,
         () -> new RealVariable("Min height", minMinHeight, maxMinHeight));
     return minHeight;
   }
 
-  public @NotNull ParameterSolution buildScanToScanToleranceSolution(int index) {
-    ParameterSolution scanToScanTolerance = new IntegerParameterSolution(index, WizardPart.MS,
+  public @NotNull WizardParameterSolution buildScanToScanToleranceSolution(int index) {
+    WizardParameterSolution scanToScanTolerance = new IntegerWizardParameterSolution(index, WizardPart.MS,
         (stepParam, sol, id) -> stepParam.setParameter(
             MassSpectrometerWizardParameters.scanToScanMzTolerance,
             availableTolerances[BinaryIntegerVariable.getInt(sol.getVariable(id))]),
@@ -169,8 +169,8 @@ public class ParameterSolutionBuilder {
     return scanToScanTolerance;
   }
 
-  public @NotNull ParameterSolution buildFwhmSolution(int index) {
-    return new DoubleParameterSolution(index, WizardPart.ION_INTERFACE,
+  public @NotNull WizardParameterSolution buildFwhmSolution(int index) {
+    return new DoubleWizardParameterSolution(index, WizardPart.ION_INTERFACE,
         (param, sol, id) -> param.setParameter(
             IonInterfaceHplcWizardParameters.approximateChromatographicFWHM,
             new RTTolerance((float) RealVariable.getReal(sol.getVariable(id)), Unit.MINUTES)),
@@ -178,33 +178,33 @@ public class ParameterSolutionBuilder {
   }
 
 
-  public @NotNull ParameterSolution buildMaxPeaksSolution(int index) {
-    ParameterSolution maxPeaks = new IntegerParameterSolution(index, WizardPart.ION_INTERFACE,
+  public @NotNull WizardParameterSolution buildMaxPeaksSolution(int index) {
+    WizardParameterSolution maxPeaks = new IntegerWizardParameterSolution(index, WizardPart.ION_INTERFACE,
         IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram,
         () -> new BinaryIntegerVariable("Max peaks", 5, 100));
     return maxPeaks;
   }
 
-  public @NotNull ParameterSolution buildMinConsecutiveSolution(int index) {
-    return new IntegerParameterSolution(index, WizardPart.ION_INTERFACE,
+  public @NotNull WizardParameterSolution buildMinConsecutiveSolution(int index) {
+    return new IntegerWizardParameterSolution(index, WizardPart.ION_INTERFACE,
         IonInterfaceHplcWizardParameters.minNumberOfDataPoints,
         () -> new BinaryIntegerVariable("Min consecutive", (int) minMinDp, (int) maxMinDp));
   }
 
-//  public @NotNull ParameterSolution buildTopToEdgeSolution(int index) {
-//    return new DoubleParameterSolution(index, WizardPart.,
+//  public @NotNull WizardParameterSolution buildTopToEdgeSolution(int index) {
+//    return new DoubleWizardParameterSolution(index, WizardPart.,
 //        IonInterfaceHplcWizardParameters.minNumberOfDataPoints,
 //        () -> new RealVariable("Top-to-Edge", 1.2, 4));
 //  }
 
-  public @NotNull ParameterSolution buildMs1NoiseSolution(int index) {
+  public @NotNull WizardParameterSolution buildMs1NoiseSolution(int index) {
     final Supplier<RealVariable> var = switch (massDetectorType) {
       case FACTOR_OF_LOWEST_SIGNAL -> () -> new RealVariable("MS1 noise level", 3, 15);
       case ABSOLUTE_NOISE_LEVEL ->
           () -> new RealVariable("MS1 noise level", minNoiseLevel, maxNoiseLevel);
     };
 
-    return new DoubleParameterSolution(index, WizardPart.MS, (stepParam, solution, id) -> {
+    return new DoubleWizardParameterSolution(index, WizardPart.MS, (stepParam, solution, id) -> {
       stepParam.setParameter(MassSpectrometerWizardParameters.massDetectorOption,
           new WizardMassDetectorNoiseLevels(massDetectorType,
               RealVariable.getReal(solution.getVariable(id)),

@@ -72,7 +72,6 @@ import io.github.mzmine.parameters.parametertypes.statistics.AbundanceDataTableP
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.project.ProjectService;
-import io.github.mzmine.taskcontrol.AbstractRawDataFileTask;
 import io.github.mzmine.taskcontrol.SimpleRunnableTask;
 import io.github.mzmine.util.CSVParsingUtils;
 import io.github.mzmine.util.MathUtils;
@@ -105,7 +104,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
   private final @Nullable List<DataFileStatistics> stats;
   private final @NotNull File[] files;
-  private final ParameterSolutionBuilder builder;
+  private final WizardParameterSolutionBuilder builder;
   @Nullable
   private final List<FeatureRecord> target;
   private final WizardSequence initialSequence;
@@ -139,7 +138,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     rtSampleToSampleTolerance = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
         (int) (files.length * 0.8), 0.8f);
 
-    builder = new ParameterSolutionBuilder(stats, null);
+    builder = new WizardParameterSolutionBuilder(stats, null);
   }
 
   public LcMsOptimizationProblem(@NotNull MassSpectrometerWizardParameterFactory msType,
@@ -158,7 +157,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     this.stats = stats;
     this.files = files;
 
-    builder = new ParameterSolutionBuilder(stats, msType.getDefaultMassDetector());
+    builder = new WizardParameterSolutionBuilder(stats, msType.getDefaultMassDetector());
     mzSampleToSampleTolerance = null;
     rtSampleToSampleTolerance = null;
   }
@@ -310,18 +309,18 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     return numObjectives;
   }
 
-  private List<ParameterSolution> createParameters() {
+  private List<WizardParameterSolution> createParameters() {
 
     int index = 0;
 
-    final ParameterSolution ms1Noise = builder.buildMs1NoiseSolution(index++);
-    final ParameterSolution scanToScanTolerance = builder.buildScanToScanToleranceSolution(index++);
-    final ParameterSolution minHeight = builder.buildMinHeightSolution(index++);
-    final ParameterSolution minConsecutive = builder.buildMinConsecutiveSolution(index++);
-    final ParameterSolution maxPeaks = builder.buildMaxPeaksSolution(index++);
-    final ParameterSolution fwhm = builder.buildFwhmSolution(index++);
+    final WizardParameterSolution ms1Noise = builder.buildMs1NoiseSolution(index++);
+    final WizardParameterSolution scanToScanTolerance = builder.buildScanToScanToleranceSolution(index++);
+    final WizardParameterSolution minHeight = builder.buildMinHeightSolution(index++);
+    final WizardParameterSolution minConsecutive = builder.buildMinConsecutiveSolution(index++);
+    final WizardParameterSolution maxPeaks = builder.buildMaxPeaksSolution(index++);
+    final WizardParameterSolution fwhm = builder.buildFwhmSolution(index++);
 
-    final List<ParameterSolution> param = List.of(ms1Noise, scanToScanTolerance, minHeight,
+    final List<WizardParameterSolution> param = List.of(ms1Noise, scanToScanTolerance, minHeight,
         minConsecutive, maxPeaks, fwhm);
 
     if (param.size() != NUM_PARAM) {
@@ -434,7 +433,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
 //    dataParam.setParameter(DataImportWizardParameters.fileNames, files);
 
-    for (ParameterSolution parameter : createParameters()) {
+    for (WizardParameterSolution parameter : createParameters()) {
       parameter.setToParameters()
           .accept(wizardSequence.get(parameter.part()).get(), solution, parameter.index());
     }
@@ -458,7 +457,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     final Solution solution = new Solution(getNumberOfVariables(), getNumberOfObjectives());
 
-    for (ParameterSolution parameter : createParameters()) {
+    for (WizardParameterSolution parameter : createParameters()) {
       solution.setVariable(parameter.index(), parameter.variable().get());
     }
 

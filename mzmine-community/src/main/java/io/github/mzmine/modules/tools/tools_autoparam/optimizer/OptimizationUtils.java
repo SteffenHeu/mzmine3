@@ -64,7 +64,6 @@ import java.util.Comparator;
 import java.util.DoubleSummaryStatistics;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -160,7 +159,7 @@ public class OptimizationUtils {
       final double maxDeviation = Math.max(Math.abs(mzStats.getMax() - mz),
           Math.abs(mz - mzStats.getMin()));
 
-      for (final MZTolerance tol : ParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS) {
+      for (final MZTolerance tol : WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS) {
         if (tol.getMzToleranceForMass(mz) > maxDeviation) {
           final AtomicInteger counter = toleranceCounter.computeIfAbsent(tol,
               _ -> new AtomicInteger(0));

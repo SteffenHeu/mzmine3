@@ -29,10 +29,9 @@ import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.util.FxIcons;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionBuilder;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Comparator;
 import java.util.List;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
@@ -87,7 +86,7 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
                 final TableColumn<Solution, String> col = TableColumns.createColumn(v.getName(),
                     120, 200, ColumnAlignment.RIGHT, String::compareTo,
                     s -> new ReadOnlyStringWrapper(
-                        ParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[((BinaryIntegerVariable) s.getVariable(
+                        WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[((BinaryIntegerVariable) s.getVariable(
                             finalI)).getValue()].toString()));
                 solutionTable.getColumns().add(col);
               } else {
