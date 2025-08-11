@@ -38,7 +38,7 @@ import org.jetbrains.annotations.Nullable;
 public record ModuleParameterPostSetter<V>(@NotNull MZmineProcessingModule module, @NotNull UserParameter<V, ?> parameter,
                                            @Nullable V valueToSet, @NotNull ModuleSelectionRule rule) {
 
-  boolean apply(BatchQueue q) {
+  public boolean apply(BatchQueue q) {
     List<String> errorMessages = new ArrayList<>();
     final List<? extends @NotNull MZmineProcessingStep<?>> steps = rule.getSteps(q);
     for (MZmineProcessingStep<?> step : steps) {
