@@ -32,14 +32,12 @@ import org.jetbrains.annotations.NotNull;
 
 public final class FirstModule implements ModuleSelectionRule {
 
-  private final Class<? extends MZmineProcessingModule> module;
-
-  public FirstModule(Class<? extends MZmineProcessingModule> module) {
-    this.module = module;
+  public FirstModule() {
   }
 
   @Override
-  public @NotNull List<@NotNull ? extends MZmineProcessingStep<?>> getSteps(BatchQueue q) {
+  public @NotNull List<@NotNull ? extends MZmineProcessingStep<?>> getSteps(BatchQueue q,
+      @NotNull Class<? extends MZmineProcessingModule> module) {
     return q.stream().filter(s -> module.isInstance(s.getModule())).findFirst().map(List::of)
         .orElse(List.of());
   }

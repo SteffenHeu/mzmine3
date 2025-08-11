@@ -33,14 +33,12 @@ import org.jetbrains.annotations.NotNull;
 
 public final class AllModules implements ModuleSelectionRule {
 
-  private final Class<? extends MZmineProcessingModule> module;
-
-  public AllModules(Class<? extends MZmineProcessingModule> module) {
-    this.module = module;
+  public AllModules() {
   }
 
   @Override
-  public @NotNull List<? extends @NotNull MZmineProcessingStep<?>> getSteps(BatchQueue q) {
+  public @NotNull List<? extends @NotNull MZmineProcessingStep<?>> getSteps(BatchQueue q,
+      @NotNull Class<? extends MZmineProcessingModule> module) {
     final List<MZmineProcessingStep<?>> result = new ArrayList<>();
     for (int i = 0; i < q.size(); i--) {
       final MZmineProcessingStep<MZmineProcessingModule> s = q.get(i);

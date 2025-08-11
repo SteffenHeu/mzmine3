@@ -35,12 +35,12 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public record ModuleParameterPostSetter<V>(@NotNull MZmineProcessingModule module, @NotNull UserParameter<V, ?> parameter,
+public record ModuleParameterPostSetter<V>(@NotNull Class<? extends MZmineProcessingModule> module, @NotNull UserParameter<V, ?> parameter,
                                            @Nullable V valueToSet, @NotNull ModuleSelectionRule rule) {
 
   public boolean apply(BatchQueue q) {
     List<String> errorMessages = new ArrayList<>();
-    final List<? extends @NotNull MZmineProcessingStep<?>> steps = rule.getSteps(q);
+    final List<? extends @NotNull MZmineProcessingStep<?>> steps = rule.getSteps(q, module);
     for (MZmineProcessingStep<?> step : steps) {
       final ParameterSet parameterSet = step.getParameterSet();
       if (parameterSet == null) {

@@ -24,6 +24,7 @@
 
 package io.github.mzmine.modules.tools.batchwizard.postsetter;
 
+import io.github.mzmine.modules.MZmineProcessingModule;
 import io.github.mzmine.modules.MZmineProcessingStep;
 import io.github.mzmine.modules.batchmode.BatchQueue;
 import java.util.List;
@@ -31,7 +32,7 @@ import org.jetbrains.annotations.NotNull;
 
 public sealed interface ModuleSelectionRule permits FirstModule, LastModule, AllModules {
 
-  @NotNull
-  List<? extends @NotNull MZmineProcessingStep<?>> getSteps(BatchQueue q);
+  @NotNull List<? extends @NotNull MZmineProcessingStep<?>> getSteps(BatchQueue q,
+      @NotNull Class<? extends MZmineProcessingModule> module);
 
 }
