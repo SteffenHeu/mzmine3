@@ -41,6 +41,7 @@ import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.modules.batchmode.BatchTask;
 import io.github.mzmine.modules.dataanalysis.utils.StatisticUtils;
 import io.github.mzmine.modules.dataanalysis.utils.imputation.ImputationFunctions;
+import io.github.mzmine.modules.dataprocessing.filter_duplicatefilter.DuplicateFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakShapeClassification;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RsdFilter;
@@ -95,14 +96,13 @@ import org.moeaframework.problem.AbstractProblem;
 
 public class LcMsOptimizationProblem extends AbstractProblem {
 
-  private static final int NUM_PARAM = 6;
+  private static final int NUM_PARAM = 7;
   private final boolean maximizeNumBenchmark;
   private final boolean maximizeCv20;
   private final boolean maximizeFeaturesWithIsos;
   private final boolean minimizeDoublePeaks;
   private final boolean maximizeFillRatio;
 
-  private final @Nullable List<DataFileStatistics> stats;
   private final @NotNull File[] files;
   private final WizardParameterSolutionBuilder builder;
   @Nullable
@@ -111,6 +111,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
   private final @Nullable MZTolerance mzSampleToSampleTolerance;
   private final @Nullable RTTolerance rtSampleToSampleTolerance;
+  private final int numWizardParam;
+  private final int numBatchParam;
 
 
   public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
@@ -126,7 +128,6 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     super(NUM_PARAM, calculateNumberOfObjectives(param, stats));
 
     this.initialSequence = initialSequence;
-    this.stats = stats;
     files = stats.stream().map(DataFileStatistics::file).map(RawDataFile::getAbsoluteFilePath)
         .toArray(File[]::new);
 
@@ -139,45 +140,15 @@ public class LcMsOptimizationProblem extends AbstractProblem {
         (int) (files.length * 0.8), 0.8f);
 
     builder = new WizardParameterSolutionBuilder(stats, null);
-  }
 
-  public LcMsOptimizationProblem(@NotNull MassSpectrometerWizardParameterFactory msType,
-      @NotNull final WizardSequence initialSequence, @NotNull File @NotNull [] files,
-      @Nullable List<DataFileStatistics> stats, @NotNull final ParameterSet param) {
+    numWizardParam = createWizardParameters().size();
+    numBatchParam = createBatchParameters().size();
 
-    target = statsToTargetList(stats);
-    maximizeNumBenchmark = param.getValue(OptimizerParameters.maximizeNumberOfBenchmarkFeatures);
-    maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
-    maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
-    minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
-    maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
-
-    super(NUM_PARAM, calculateNumberOfObjectives(param, stats));
-    this.initialSequence = initialSequence;
-    this.stats = stats;
-    this.files = files;
-
-    builder = new WizardParameterSolutionBuilder(stats, msType.getDefaultMassDetector());
-    mzSampleToSampleTolerance = null;
-    rtSampleToSampleTolerance = null;
-  }
-
-  private static @Nullable List<FeatureRecord> statsAndExternalToTargetList(
-      @Nullable List<@NotNull DataFileStatistics> stats, ParameterSet param) {
-    if (stats == null) {
-      return null;
+    if (numWizardParam + numBatchParam != NUM_PARAM) {
+      throw new IllegalStateException(
+          "Number of parameters does not match: Wizard: %d, Batch: %d, but total is: %d".formatted(
+              numWizardParam, numBatchParam, NUM_PARAM));
     }
-
-    final List<FeatureRecord> featureRecordsFromFile = extractFeatureRecordsFromFile(stats, param);
-
-    featureRecordsFromFile.addAll(
-        stats.stream().map(DataFileStatistics::featureStatistics).flatMap(List::stream)
-            // only use isotope traces, not the main isotopes
-            .map(FeatureStatistics::getBestEnvelope).map(FeatureWithIsotopeTraces::isotopeTraces)
-            .flatMap(List::stream).map(
-                fwi -> new FeatureRecord(fwi.getRawDataFile(), fwi.getMZ(), fwi.getRT(),
-                    fwi.getMobility())).toList());
-    return featureRecordsFromFile;
   }
 
   private static @Nullable List<FeatureRecord> statsToTargetList(
@@ -309,25 +280,42 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     return numObjectives;
   }
 
-  private List<WizardParameterSolution> createParameters() {
+  private List<WizardParameterSolution> createWizardParameters() {
 
     int index = 0;
 
     final WizardParameterSolution ms1Noise = builder.buildMs1NoiseSolution(index++);
-    final WizardParameterSolution scanToScanTolerance = builder.buildScanToScanToleranceSolution(index++);
+    final WizardParameterSolution scanToScanTolerance = builder.buildScanToScanToleranceSolution(
+        index++);
     final WizardParameterSolution minHeight = builder.buildMinHeightSolution(index++);
     final WizardParameterSolution minConsecutive = builder.buildMinConsecutiveSolution(index++);
-    final WizardParameterSolution maxPeaks = builder.buildMaxPeaksSolution(index++);
+//    final WizardParameterSolution maxPeaks = builder.buildMaxPeaksSolution(index++);
     final WizardParameterSolution fwhm = builder.buildFwhmSolution(index++);
 
     final List<WizardParameterSolution> param = List.of(ms1Noise, scanToScanTolerance, minHeight,
-        minConsecutive, maxPeaks, fwhm);
+        minConsecutive, /*maxPeaks,*/ fwhm);
 
-    if (param.size() != NUM_PARAM) {
+    /*if (param.size() + numBatchParam != NUM_PARAM) {
       throw new IllegalArgumentException(
           "Number of created parameters (%d) does not match expected number (%d).".formatted(
               param.size(), NUM_PARAM));
-    }
+    }*/
+
+    return param;
+  }
+
+  private List<BatchParameterSolution> createBatchParameters() {
+    int index = numWizardParam;
+
+    final List<BatchParameterSolution> param = new ArrayList<>();
+    param.add(BatchParameterSolutionBuilder.buildTopToEdgeRatio(index++));
+    param.add(BatchParameterSolutionBuilder.buildChromThreshold(index++));
+
+    /*if (param.size() + numWizardParam != NUM_PARAM) {
+      throw new IllegalArgumentException(
+          "Number of created parameters (%d) does not match expected number (%d).".formatted(
+              param.size(), NUM_PARAM));
+    }*/
 
     return param;
   }
@@ -340,6 +328,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final BatchQueue optimizedQueue = ((WorkflowWizardParameterFactory) wizardSequence.get(
         WizardPart.WORKFLOW).get().getFactory()).getBatchBuilder(wizardSequence).createQueue();
 
+    final List<BatchParameterSolution> batchParameters = createBatchParameters();
+
+    for (BatchParameterSolution bp : batchParameters) {
+      bp.setToQueue().accept(optimizedQueue, solution, bp.index());
+    }
+
     // gap filling screws with the optimized feature detection
     // also remove other unnecessary steps
     optimizedQueue.removeIf(step -> step.getModule() instanceof MultiThreadPeakFinderModule);
@@ -349,6 +343,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     optimizedQueue.removeIf(step -> step.getModule() instanceof LipidAnnotationModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof SpectralLibrarySearchModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof MainSpectralNetworkingModule);
+//    optimizedQueue.removeIf(step -> step.getModule() instanceof DuplicateFilterModule);
 
     // use the current project, so we dont import files on every iteration
     final MZmineProject project = ProjectService.getProject();
@@ -357,7 +352,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     while (!batchTask.isFinished() && !batchTask.isCanceled()) {
       try {
-        TimeUnit.MILLISECONDS.sleep(500);
+        TimeUnit.MILLISECONDS.sleep(200);
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
@@ -433,7 +428,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
 //    dataParam.setParameter(DataImportWizardParameters.fileNames, files);
 
-    for (WizardParameterSolution parameter : createParameters()) {
+    for (WizardParameterSolution parameter : createWizardParameters()) {
       parameter.setToParameters()
           .accept(wizardSequence.get(parameter.part()).get(), solution, parameter.index());
     }
@@ -457,8 +452,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     final Solution solution = new Solution(getNumberOfVariables(), getNumberOfObjectives());
 
-    for (WizardParameterSolution parameter : createParameters()) {
+    for (WizardParameterSolution parameter : createWizardParameters()) {
       solution.setVariable(parameter.index(), parameter.variable().get());
+    }
+
+    for (BatchParameterSolution bp : createBatchParameters()) {
+      solution.setVariable(bp.index(), bp.variable().get());
     }
 
     int objectiveIndex = 0;
