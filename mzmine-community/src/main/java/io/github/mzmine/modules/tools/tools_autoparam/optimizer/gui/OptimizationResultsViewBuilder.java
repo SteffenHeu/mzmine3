@@ -55,13 +55,15 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
   private final NumberFormat noDecimals = new DecimalFormat("0");
 
   private final Runnable onAcceptPressed;
+  private final Runnable openInBatch;
   @Nullable
   private final Stage stage;
 
-  protected OptimizationResultsViewBuilder(OptimizationResultModel model, Runnable onAcceptPressed,
+  protected OptimizationResultsViewBuilder(OptimizationResultModel model, Runnable onAcceptPressed, Runnable openInBatch,
       @Nullable final Stage stage) {
     super(model);
     this.onAcceptPressed = onAcceptPressed;
+    this.openInBatch = openInBatch;
     this.stage = stage;
   }
 
@@ -118,10 +120,13 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     BorderPane borderPane = new BorderPane();
     borderPane.setCenter(solutionTable);
 
-    final Button acceptButton = FxButtons.createButton("Accept", FxIcons.CHECK_CIRCLE, null,
+    final Button acceptButton = FxButtons.createButton("Apply to wizard", FxIcons.CHECK_CIRCLE, null,
         onAcceptPressed);
+    final Button batchButton = FxButtons.createButton("Open in batch", FxIcons.BATCH, null,
+        openInBatch);
+
     ButtonBar buttonBar = new ButtonBar();
-    buttonBar.getButtons().add(acceptButton);
+    buttonBar.getButtons().addAll(batchButton, acceptButton);
     borderPane.setBottom(buttonBar);
 
     if (stage != null) {

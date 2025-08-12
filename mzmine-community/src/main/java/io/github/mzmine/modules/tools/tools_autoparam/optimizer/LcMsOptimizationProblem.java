@@ -328,11 +328,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final BatchQueue optimizedQueue = ((WorkflowWizardParameterFactory) wizardSequence.get(
         WizardPart.WORKFLOW).get().getFactory()).getBatchBuilder(wizardSequence).createQueue();
 
-    final List<BatchParameterSolution> batchParameters = createBatchParameters();
-
-    for (BatchParameterSolution bp : batchParameters) {
-      bp.setToQueue().accept(optimizedQueue, solution, bp.index());
-    }
+    applySolutionParametersToBatch(solution, optimizedQueue);
 
     // gap filling screws with the optimized feature detection
     // also remove other unnecessary steps
@@ -396,6 +392,13 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     calculateAndSetRsds(solution, newest, dataTable);
 
     project.removeFeatureLists(project.getCurrentFeatureLists());
+  }
+
+  public void applySolutionParametersToBatch(Solution solution, BatchQueue optimizedQueue) {
+    final List<BatchParameterSolution> batchParameters = createBatchParameters();
+    for (BatchParameterSolution bp : batchParameters) {
+      bp.setToQueue().accept(optimizedQueue, solution, bp.index());
+    }
   }
 
   public @NotNull WizardSequence createWizardSequenceFromSolution(Solution solution) {
