@@ -126,4 +126,8 @@ public class FitterTest {
         List.of(new AsymmetricGaussianPeak()));
     Assertions.assertNull(fitQuality);
   }
+
+  public void testPeaks() {
+
+  }
 }
