@@ -98,15 +98,15 @@ public class BatchOptimizationMainTask extends AbstractTask {
         null, params);
 
     final List<DataFileStatistics> stats = importedFiles.stream().map(
-        file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
-                AutoParamParameters.of(importedFiles), AutoParamModule.class, file, benchmarkFeatures)).parallel()
-        .map(AutoParamTask::runAndGet).toList();
+            file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
+                AutoParamParameters.of(importedFiles), AutoParamModule.class, file, benchmarkFeatures))
+        .parallel().map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
     final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(tab.getSequence(), stats,
         params);
 
-    optimizer = new NSGAII(problem);
+    optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
 
     final int iterations = params.getValue(OptimizerParameters.iterations);
     optimizer.run(iterations);

@@ -85,12 +85,15 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static final IntegerParameter iterations = new IntegerParameter("Iterations",
       "Number of iterations during optimization.", 100, 100, 10_000);
 
+  public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
+      "Optimizer", "", OptimizerOptions.values(), OptimizerOptions.MOEAD);
+
   public static final ParameterSetParameter<OptimizerParameterParameters> paramToOptimize = new ParameterSetParameter<>(
       "Parameters to optimize", "", new OptimizerParameterParameters());
 
   public OptimizerParameters() {
     super(maximizeCv20, maximizeFeaturesWithIsotopes, minimizeDoublePeaks, maximizeRowFillRatio,
-        maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes, benchmarkFeaturesFile, iterations,
+        maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
         paramToOptimize);
   }
 

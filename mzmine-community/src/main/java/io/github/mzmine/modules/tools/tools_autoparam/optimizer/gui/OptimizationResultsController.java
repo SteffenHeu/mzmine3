@@ -28,9 +28,13 @@ import static io.github.mzmine.modules.tools.batchwizard.WizardPart.WORKFLOW;
 
 import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.MZmineGUI;
+import io.github.mzmine.javafx.components.factories.FxTexts;
+import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
+import io.github.mzmine.javafx.util.FxFileChooser;
+import io.github.mzmine.javafx.util.FxFileChooser.FileSelectionType;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.BatchModeParameters;
@@ -42,13 +46,19 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParame
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
 import io.github.mzmine.util.ExitCode;
+import io.github.mzmine.util.files.ExtensionFilters;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.moeaframework.core.Solution;
 import org.moeaframework.core.population.NondominatedPopulation;
+import org.moeaframework.util.format.TableFormat;
 
 public class OptimizationResultsController extends FxController<OptimizationResultModel> {
 
@@ -69,7 +79,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
   @Override
   protected @NotNull FxViewBuilder<OptimizationResultModel> getViewBuilder() {
-    return new OptimizationResultsViewBuilder(this.model, this::applyToWizardSequence, this::openInBatch, stage);
+    return new OptimizationResultsViewBuilder(this.model, this::applyToWizardSequence, this::openInBatch, this::exportSolutions, stage);
   }
 
   public void applyToWizardSequence() {
@@ -123,5 +133,27 @@ public class OptimizationResultsController extends FxController<OptimizationResu
     } catch (Exception e) {
       DialogLoggerUtil.showErrorDialog("Cannot create batch", e.getMessage());
     }
+  }
+
+  private void exportSolutions() {
+
+    final NondominatedPopulation result = model.getResult();
+    if (result == null) {
+      return;
+    }
+
+    FxThread.runLater(() -> {
+      final File file = FxFileChooser.openSelectDialog(FileSelectionType.SAVE,
+          List.of(ExtensionFilters.CSV), null, "Export solutions");
+      if(file == null) {
+        return;
+      }
+      try {
+        result.asTabularData().save(TableFormat.CSV, file);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+
   }
 }

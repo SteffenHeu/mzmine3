@@ -56,14 +56,16 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
 
   private final Runnable onAcceptPressed;
   private final Runnable openInBatch;
+  private final Runnable onExportPressed;
   @Nullable
   private final Stage stage;
 
-  protected OptimizationResultsViewBuilder(OptimizationResultModel model, Runnable onAcceptPressed, Runnable openInBatch,
+  protected OptimizationResultsViewBuilder(OptimizationResultModel model, Runnable onAcceptPressed, Runnable openInBatch, Runnable onExportPressed,
       @Nullable final Stage stage) {
     super(model);
     this.onAcceptPressed = onAcceptPressed;
     this.openInBatch = openInBatch;
+    this.onExportPressed = onExportPressed;
     this.stage = stage;
   }
 
@@ -124,9 +126,11 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
         onAcceptPressed);
     final Button batchButton = FxButtons.createButton("Open in batch", FxIcons.BATCH, null,
         openInBatch);
+    final Button exportButton = FxButtons.createButton("Export to .csv", FxIcons.FILE, null,
+        onExportPressed);
 
     ButtonBar buttonBar = new ButtonBar();
-    buttonBar.getButtons().addAll(batchButton, acceptButton);
+    buttonBar.getButtons().addAll(exportButton, batchButton, acceptButton);
     borderPane.setBottom(buttonBar);
 
     if (stage != null) {
