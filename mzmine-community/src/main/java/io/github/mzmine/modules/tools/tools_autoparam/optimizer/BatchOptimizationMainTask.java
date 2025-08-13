@@ -58,20 +58,21 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
   private final File[] files;
   private final BatchWizardTab tab;
-  private final ParameterSet params;
+  private final OptimizerParameters params;
 
   @Nullable
   private AbstractAlgorithm optimizer;
 
   public BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
-      @NotNull Instant moduleCallDate, File[] files, BatchWizardTab tab, ParameterSet params) {
+      @NotNull Instant moduleCallDate, File[] files, BatchWizardTab tab,
+      OptimizerParameters params) {
     super(storage, moduleCallDate);
     this.files = files;
     this.tab = tab;
     this.params = params;
 
     addTaskStatusListener((_, newStatus, _) -> {
-      if(newStatus == TaskStatus.CANCELED && optimizer != null) {
+      if (newStatus == TaskStatus.CANCELED && optimizer != null) {
         optimizer.terminate();
       }
     });
@@ -97,12 +98,13 @@ public class BatchOptimizationMainTask extends AbstractTask {
         null, params);
 
     final List<DataFileStatistics> stats = importedFiles.stream().map(
-            file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
+        file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
                 AutoParamParameters.of(importedFiles), AutoParamModule.class, file, benchmarkFeatures)).parallel()
         .map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
-    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(tab.getSequence(), stats, params);
+    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(tab.getSequence(), stats,
+        params);
 
     optimizer = new NSGAII(problem);
 
@@ -113,8 +115,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     FxThread.runLater(() -> {
       Stage stage = new Stage();
-      final OptimizationResultsController controller = new OptimizationResultsController(
-          tab, problem, result, stage);
+      final OptimizationResultsController controller = new OptimizationResultsController(tab,
+          problem, result, stage);
       final Region region = controller.buildView();
       stage.setTitle("Optimization Results");
       stage.initOwner(MZmineCore.getDesktop().getMainWindow());

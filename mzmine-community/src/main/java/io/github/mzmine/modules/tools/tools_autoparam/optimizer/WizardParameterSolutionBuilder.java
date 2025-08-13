@@ -25,6 +25,7 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.datamodel.IMSRawDataFile;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
@@ -36,6 +37,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterS
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance.Unit;
+import io.github.mzmine.taskcontrol.SimpleRunnableTask;
 import io.github.mzmine.util.MathUtils;
 import java.util.Arrays;
 import java.util.List;
@@ -48,7 +50,6 @@ import org.moeaframework.core.variable.RealVariable;
 
 public class WizardParameterSolutionBuilder {
 
-  private static final Logger logger = Logger.getLogger(WizardParameterSolutionBuilder.class.getName());
   public static final MZTolerance[] ALL_TOLERANCE_OPTIONS = new MZTolerance[]{ //
       new MZTolerance(0.0005, 2), //
       new MZTolerance(0.001, 5), //
@@ -59,7 +60,8 @@ public class WizardParameterSolutionBuilder {
       new MZTolerance(0.015, 25), //
       new MZTolerance(0.02, 25), //
       new MZTolerance(0.05, 25)}; //
-
+  private static final Logger logger = Logger.getLogger(
+      WizardParameterSolutionBuilder.class.getName());
   private final MZTolerance[] availableTolerances;
 
   private final @Nullable List<DataFileStatistics> stats;
@@ -71,6 +73,8 @@ public class WizardParameterSolutionBuilder {
   private final double maxNoiseLevel;
   private final double minMinHeight;
   private final double maxMinHeight;
+  private final double minRtSampleToSampleTol;
+  private final double maxRtSampleToSampleTol;
   private @NotNull
   final MassDetectorWizardOptions massDetectorType;
 
@@ -123,6 +127,14 @@ public class WizardParameterSolutionBuilder {
       minMinHeight = MathUtils.calcQuantileSorted(array, 0.05);
       maxMinHeight = MathUtils.calcQuantileSorted(array, 0.95);
 
+      final ModularFeatureList aligned = OptimizationUtils.alignBenchmarkFeatures(stats, null,
+          new SimpleRunnableTask(() -> {
+          }));
+      minRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
+          (int) (stats.size() * 0.8), 0.0f).getTolerance();
+      maxRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
+          (int) (stats.size() * 0.8), 1f).getTolerance();
+
     } else {
 
       minFwhm = 0.005;
@@ -139,6 +151,8 @@ public class WizardParameterSolutionBuilder {
       };
       minMinHeight = 100;
       maxMinHeight = 1E8;
+      minRtSampleToSampleTol = 0.01;
+      maxRtSampleToSampleTol = 0.2;
     }
 
     availableTolerances = switch (this.massDetectorType) {
@@ -151,6 +165,8 @@ public class WizardParameterSolutionBuilder {
     logger.info("Minimum height range: " + minMinHeight + ", " + maxMinHeight);
     logger.info("Minimum data points range: " + minMinDp + ", " + maxMinDp);
     logger.info("FWHM range: " + minFwhm + ", " + maxFwhm);
+    logger.info(
+        "Rt inter sample tol range: " + minRtSampleToSampleTol + ", " + maxRtSampleToSampleTol);
   }
 
   public @NotNull WizardParameterSolution buildMinHeightSolution(int index) {
@@ -161,10 +177,10 @@ public class WizardParameterSolutionBuilder {
   }
 
   public @NotNull WizardParameterSolution buildScanToScanToleranceSolution(int index) {
-    WizardParameterSolution scanToScanTolerance = new IntegerWizardParameterSolution(index, WizardPart.MS,
-        (stepParam, sol, id) -> stepParam.setParameter(
-            MassSpectrometerWizardParameters.scanToScanMzTolerance,
-            availableTolerances[BinaryIntegerVariable.getInt(sol.getVariable(id))]),
+    WizardParameterSolution scanToScanTolerance = new IntegerWizardParameterSolution(index,
+        WizardPart.MS, (stepParam, sol, id) -> stepParam.setParameter(
+        MassSpectrometerWizardParameters.scanToScanMzTolerance,
+        availableTolerances[BinaryIntegerVariable.getInt(sol.getVariable(id))]),
         () -> new BinaryIntegerVariable("MZ tolerance option", 0, availableTolerances.length - 1));
     return scanToScanTolerance;
   }
@@ -179,8 +195,8 @@ public class WizardParameterSolutionBuilder {
 
 
   public @NotNull WizardParameterSolution buildMaxPeaksSolution(int index) {
-    WizardParameterSolution maxPeaks = new IntegerWizardParameterSolution(index, WizardPart.ION_INTERFACE,
-        IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram,
+    WizardParameterSolution maxPeaks = new IntegerWizardParameterSolution(index,
+        WizardPart.ION_INTERFACE, IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram,
         () -> new BinaryIntegerVariable("Max peaks", 5, 100));
     return maxPeaks;
   }
@@ -214,5 +230,15 @@ public class WizardParameterSolutionBuilder {
 
   public @NotNull MassDetectorWizardOptions getMassDetectorType() {
     return massDetectorType;
+  }
+
+  public @NotNull WizardParameterSolution buildSampleToSampleRtTolSolution(int index) {
+    return new DoubleWizardParameterSolution(index, WizardPart.ION_INTERFACE,
+        (param, solution, id) -> {
+          param.setParameter(IonInterfaceHplcWizardParameters.interSampleRTTolerance,
+              new RTTolerance((float) ((RealVariable) solution.getVariable(id)).getValue(),
+                  Unit.MINUTES));
+        }, () -> new RealVariable("Inter sample RT tolerance", minRtSampleToSampleTol,
+        maxRtSampleToSampleTol));
   }
 }

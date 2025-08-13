@@ -35,6 +35,7 @@ import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.javafx.util.FxIconUtil;
 import io.github.mzmine.javafx.util.FxIcons;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.BatchModeParameters;
@@ -51,6 +52,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMob
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchOptimizationMainTask;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerModule;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.parameters.ParameterUtils;
@@ -415,7 +417,8 @@ public class BatchWizardTab extends SimpleTab {
       qcFiles = CollectionUtils.selectRandomElements(List.of(allFiles), 10).toArray(File[]::new);
     }
 
-    final OptimizerParameters optimizerParam = new OptimizerParameters();
+    final OptimizerParameters optimizerParam = (OptimizerParameters) ConfigService.getConfiguration().getModuleParameters(
+        OptimizerModule.class);
     final ExitCode exitCode = optimizerParam.showSetupDialog(true);
     if (exitCode != ExitCode.OK) {
       return;

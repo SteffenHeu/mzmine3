@@ -41,7 +41,6 @@ import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.modules.batchmode.BatchTask;
 import io.github.mzmine.modules.dataanalysis.utils.StatisticUtils;
 import io.github.mzmine.modules.dataanalysis.utils.imputation.ImputationFunctions;
-import io.github.mzmine.modules.dataprocessing.filter_duplicatefilter.DuplicateFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakShapeClassification;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RsdFilter;
@@ -59,7 +58,6 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplc
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
@@ -96,12 +94,14 @@ import org.moeaframework.problem.AbstractProblem;
 
 public class LcMsOptimizationProblem extends AbstractProblem {
 
-  private static final int NUM_PARAM = 7;
+  private final int NUM_PARAM;
   private final boolean maximizeNumBenchmark;
   private final boolean maximizeCv20;
   private final boolean maximizeFeaturesWithIsos;
   private final boolean minimizeDoublePeaks;
   private final boolean maximizeFillRatio;
+  private final OptimizerParameterParameters paramToOptimize;
+
 
   private final @NotNull File[] files;
   private final WizardParameterSolutionBuilder builder;
@@ -124,8 +124,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
     minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
     maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
+    paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
 
-    super(NUM_PARAM, calculateNumberOfObjectives(param, stats));
+    super(param.getValue(OptimizerParameters.paramToOptimize).getNumSelected(),
+        calculateNumberOfObjectives(param, stats));
+
+    this.NUM_PARAM = paramToOptimize.getNumSelected();
 
     this.initialSequence = initialSequence;
     files = stats.stream().map(DataFileStatistics::file).map(RawDataFile::getAbsoluteFilePath)
@@ -283,23 +287,26 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private List<WizardParameterSolution> createWizardParameters() {
 
     int index = 0;
+    final List<WizardParameterSolution> param = new ArrayList<>();
 
-    final WizardParameterSolution ms1Noise = builder.buildMs1NoiseSolution(index++);
-    final WizardParameterSolution scanToScanTolerance = builder.buildScanToScanToleranceSolution(
-        index++);
-    final WizardParameterSolution minHeight = builder.buildMinHeightSolution(index++);
-    final WizardParameterSolution minConsecutive = builder.buildMinConsecutiveSolution(index++);
-//    final WizardParameterSolution maxPeaks = builder.buildMaxPeaksSolution(index++);
-    final WizardParameterSolution fwhm = builder.buildFwhmSolution(index++);
-
-    final List<WizardParameterSolution> param = List.of(ms1Noise, scanToScanTolerance, minHeight,
-        minConsecutive, /*maxPeaks,*/ fwhm);
-
-    /*if (param.size() + numBatchParam != NUM_PARAM) {
-      throw new IllegalArgumentException(
-          "Number of created parameters (%d) does not match expected number (%d).".formatted(
-              param.size(), NUM_PARAM));
-    }*/
+    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeNoiseLevel)) {
+      param.add(builder.buildMs1NoiseSolution(index++));
+    }
+    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeScanToScanMzTolerance)) {
+      param.add(builder.buildScanToScanToleranceSolution(index++));
+    }
+    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeMinHeight)) {
+      param.add(builder.buildMinHeightSolution(index++));
+    }
+    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeMinConsecutive)) {
+      param.add(builder.buildMinConsecutiveSolution(index++));
+    }
+    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeFWHM)) {
+      param.add(builder.buildFwhmSolution(index++));
+    }
+    if(paramToOptimize.getValue(OptimizerParameterParameters.optimizeRtSampleToSample)) {
+      param.add(builder.buildSampleToSampleRtTolSolution(index++));
+    }
 
     return param;
   }
@@ -308,14 +315,13 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     int index = numWizardParam;
 
     final List<BatchParameterSolution> param = new ArrayList<>();
-    param.add(BatchParameterSolutionBuilder.buildTopToEdgeRatio(index++));
-    param.add(BatchParameterSolutionBuilder.buildChromThreshold(index++));
 
-    /*if (param.size() + numWizardParam != NUM_PARAM) {
-      throw new IllegalArgumentException(
-          "Number of created parameters (%d) does not match expected number (%d).".formatted(
-              param.size(), NUM_PARAM));
-    }*/
+    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeTopEdge)) {
+      param.add(BatchParameterSolutionBuilder.buildTopToEdgeRatio(index++));
+    }
+    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeChromThreshold)) {
+      param.add(BatchParameterSolutionBuilder.buildChromThreshold(index++));
+    }
 
     return param;
   }
@@ -442,7 +448,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
       msParam.setParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance,
           mzSampleToSampleTolerance);
     }
-    if (rtSampleToSampleTolerance != null) {
+    if (rtSampleToSampleTolerance != null && !paramToOptimize.getValue(
+        OptimizerParameterParameters.optimizeRtSampleToSample)) {
       lcParam.setParameter(IonInterfaceHplcWizardParameters.interSampleRTTolerance,
           rtSampleToSampleTolerance);
     }
