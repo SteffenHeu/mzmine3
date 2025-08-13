@@ -68,7 +68,7 @@ public class PeakFitterUtils {
       final FitQuality thisFit = peakModel.performFit(pointList);
       if (bestFit == null) {
         bestFit = thisFit;
-      } else if (thisFit != null && bestFit.rSquared() < thisFit.rSquared()) {
+      } else if (thisFit != null && bestFit.fitScore() < thisFit.fitScore()) {
         bestFit = thisFit;
       }
     }

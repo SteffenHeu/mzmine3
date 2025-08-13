@@ -276,7 +276,7 @@ public class IntegrationTests {
     final MemoryMapStorage storage = MemoryMapStorage.forRawDataFile();
     final List<DataFileStatistics> stats = importedFiles.stream().map(
         file -> new AutoParamTask(storage, Instant.now(), AutoParamParameters.of(importedFiles),
-            AutoParamModule.class, file)).parallel().map(AutoParamTask::runAndGet).toList();
+            AutoParamModule.class, file, List.of())).parallel().map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
     final WizardSequence sequence = new WizardSequence();

@@ -46,10 +46,11 @@ public enum PeakShapeClassification implements UniqueIdSupplier {
   public double getPenaltyFactor() {
     return switch (this) {
       case GAUSSIAN -> 1.0;
-      case FRONTING_GAUSSIAN, TAILING_GAUSSIAN -> 0.98d;
-      case DOUBLE_GAUSSIAN -> 0.965d;
+      case FRONTING_GAUSSIAN, TAILING_GAUSSIAN -> 0.992d;
+      case DOUBLE_GAUSSIAN -> 0.98d;
     };
   }
+
 
   @Override
   public String toString() {
