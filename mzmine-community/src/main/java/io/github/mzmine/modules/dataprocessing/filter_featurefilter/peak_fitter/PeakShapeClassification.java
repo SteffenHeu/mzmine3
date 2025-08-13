@@ -51,7 +51,6 @@ public enum PeakShapeClassification implements UniqueIdSupplier {
     };
   }
 
-
   @Override
   public String toString() {
     return switch (this) {

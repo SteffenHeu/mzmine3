@@ -24,14 +24,21 @@
 
 package util;
 
+import com.opencsv.exceptions.CsvException;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.AsymmetricGaussianPeak;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.FitQuality;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.GaussianDoublePeak;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.GaussianPeak;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakFitterUtils;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakShapeClassification;
+import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.SimpleSpectralArrays;
+import io.github.mzmine.util.CSVParsingUtils;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -119,8 +126,8 @@ public class FitterTest {
 
   @Test
   void testThreeDataPoints() {
-    double[] x = new double[] {1, 2, 3};
-    double[] y = new double[] {1, 3, 2};
+    double[] x = new double[]{1, 2, 3};
+    double[] y = new double[]{1, 3, 2};
 
     final FitQuality fitQuality = PeakFitterUtils.fitPeakModels(x, y,
         List.of(new AsymmetricGaussianPeak()));
@@ -128,6 +135,41 @@ public class FitterTest {
   }
 
   public void testPeaks() {
+    final File basePath = new File(
+        "C:\\Users\\Steffen\\git\\mzmine3\\mzmine-community\\src\\test\\resources\\peak_profiles");
+    final File doublePeaksPath = new File(basePath, "double_peak");
+    final File frontingPeaksPath = new File(basePath, "fronting_peak");
+    final File tailingPeaksPath = new File(basePath, "tailing_peak");
+    final File gaussianPeaksPath = new File(basePath, "gaussian_peak");
 
+    final List<double[][]> doublePeaks = readPeaks(doublePeaksPath);
+    final List<double[][]> frontingPeaks = readPeaks(frontingPeaksPath);
+    final List<double[][]> tailingPeaks = readPeaks(tailingPeaksPath);
+    final List<double[][]> gaussianPeaks = readPeaks(gaussianPeaksPath);
+
+
+    for (double[][] doublePeak : doublePeaks) {
+      final FitQuality fitQuality = PeakFitterUtils.fitPeakModels(doublePeak[0], doublePeak[1],
+          List.of(new GaussianPeak(), new GaussianDoublePeak(), new AsymmetricGaussianPeak()));
+    }
+  }
+
+  private static @NotNull List<double[][]> readPeaks(File peaksPath) {
+    final List<double[][]> peaks = new ArrayList<>();
+    for (File file : peaksPath.listFiles()) {
+      try {
+        final List<String[]> strings = CSVParsingUtils.readData(file, "\t");
+        double[] x = new double[strings.size() - 1];
+        double[] y = new double[strings.size() - 1];
+        for (int i = 1; i < strings.size(); i++) {
+          x[i-1] = Double.parseDouble(strings.get(i)[0]);
+          y[i-1] = Double.parseDouble(strings.get(i)[1]);
+        }
+        peaks.add(new double[][] {x, y});
+      } catch (IOException | NumberFormatException | CsvException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return peaks;
   }
 }
