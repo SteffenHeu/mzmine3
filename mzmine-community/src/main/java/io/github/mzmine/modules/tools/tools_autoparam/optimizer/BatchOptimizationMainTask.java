@@ -57,6 +57,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private static final Logger logger = Logger.getLogger(BatchOptimizationMainTask.class.getName());
 
   private final File[] files;
+  @Nullable
+  private final File metadata;
   private final BatchWizardTab tab;
   private final OptimizerParameters params;
 
@@ -64,10 +66,11 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private AbstractAlgorithm optimizer;
 
   public BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
-      @NotNull Instant moduleCallDate, File[] files, BatchWizardTab tab,
-      OptimizerParameters params) {
+      @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata, @NotNull BatchWizardTab tab,
+      @NotNull OptimizerParameters params) {
     super(storage, moduleCallDate);
     this.files = files;
+    this.metadata = metadata;
     this.tab = tab;
     this.params = params;
 
@@ -93,7 +96,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
   public void run() {
     setStatus(TaskStatus.PROCESSING);
 
-    final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files);
+    final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, metadata);
     final List<FeatureRecord> benchmarkFeatures = LcMsOptimizationProblem.extractFeatureRecordsFromFile(
         null, params);
 

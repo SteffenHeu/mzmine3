@@ -78,9 +78,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class OptimizationUtils {
 
-  public static List<RawDataFile> importFilesBlocking(File[] filesToImport) {
+  public static List<RawDataFile> importFilesBlocking(File[] filesToImport, @Nullable File metadata) {
     final ParameterSet importParam = AllSpectralDataImportParameters.create(true, filesToImport,
-        null, null);
+        metadata, null);
     final List<Task> tasks = new ArrayList<>();
     final MZmineProject project = ProjectService.getProject();
     MZmineCore.getModuleInstance(AllSpectralDataImportModule.class)

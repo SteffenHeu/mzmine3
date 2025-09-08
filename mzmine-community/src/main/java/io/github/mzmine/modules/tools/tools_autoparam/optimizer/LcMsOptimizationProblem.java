@@ -42,6 +42,7 @@ import io.github.mzmine.modules.batchmode.BatchTask;
 import io.github.mzmine.modules.dataanalysis.utils.StatisticUtils;
 import io.github.mzmine.modules.dataanalysis.utils.imputation.ImputationFunctions;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakShapeClassification;
+import io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RsdFilter;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RsdFilterParameters;
@@ -113,7 +114,6 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final @Nullable RTTolerance rtSampleToSampleTolerance;
   private final int numWizardParam;
   private final int numBatchParam;
-
 
   public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param) {
@@ -231,18 +231,19 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     return featureRecordsFromFile;
   }
 
-  private static void calculateAndWriteRsdResult(int index, Solution solution, FeatureList newest) {
+  private static void calculateAndWriteRsdResult(int index, Solution solution, FeatureList newest,
+      FeaturesDataTable dataTable) {
 
-    RsdFilterParameters param = (RsdFilterParameters) new RsdFilterParameters().cloneParameterSet();
-    param.setAll(AbundanceMeasure.Area, ImputationFunctions.Zero, 0.2, 0.2, false,
-        new MetadataGroupSelection(MetadataColumn.SAMPLE_TYPE_HEADER, SampleType.QC.toString()));
+    // dont use rsd filter here, because we just use all data files here. they may not be of a specific sample type.
+    long matchingRows = 0;
+    for (int i = 0; i < newest.getNumberOfRows(); i++) {
+      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
+      final double rsd = MathUtils.calcRelativeStd(abundances);
+      if (rsd <= 0.2) {
+        matchingRows++;
+      }
+    }
 
-    final RsdFilter rsdFilter = param.createFilter(newest.getRows(), newest.getRawDataFiles());
-
-    final long matchingRows = newest.stream().map(row -> {
-      final int id = rsdFilter.dataTable().getFeatureIndex(row);
-      return rsdFilter.matches(row, id);
-    }).filter(Boolean::booleanValue).count();
     solution.setObjectiveValue(index, (double) matchingRows);
   }
 
@@ -253,6 +254,10 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     solution.setObjectiveValue(index, featuresWithIsotopes);
   }
 
+  /**
+   * Only set as additional metrics, not used for evaluation. see
+   * {@link #calculateAndWriteRsdResult(int, Solution, FeatureList, FeaturesDataTable)} instead.
+   */
   private static void calculateAndSetRsds(Solution solution, FeatureList newest,
       FeaturesDataTable dataTable) {
 
@@ -304,7 +309,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeFWHM)) {
       param.add(builder.buildFwhmSolution(index++));
     }
-    if(paramToOptimize.getValue(OptimizerParameterParameters.optimizeRtSampleToSample)) {
+    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeRtSampleToSample)) {
       param.add(builder.buildSampleToSampleRtTolSolution(index++));
     }
 
@@ -345,6 +350,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     optimizedQueue.removeIf(step -> step.getModule() instanceof LipidAnnotationModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof SpectralLibrarySearchModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof MainSpectralNetworkingModule);
+    optimizedQueue.removeIf(step -> step.getModule() instanceof IsotopeGrouperModule);
 //    optimizedQueue.removeIf(step -> step.getModule() instanceof DuplicateFilterModule);
 
     // use the current project, so we dont import files on every iteration
@@ -372,7 +378,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     int objectiveIndex = 0;
     if (maximizeCv20) {
-      calculateAndWriteRsdResult(objectiveIndex++, solution, newest);
+      calculateAndWriteRsdResult(objectiveIndex++, solution, newest, dataTable);
     }
     if (maximizeFeaturesWithIsos) {
       calculateAndWriteFeaturesWithIsotopes(objectiveIndex++, solution, newest);

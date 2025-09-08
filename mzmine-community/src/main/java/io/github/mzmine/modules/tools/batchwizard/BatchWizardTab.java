@@ -417,15 +417,19 @@ public class BatchWizardTab extends SimpleTab {
       qcFiles = CollectionUtils.selectRandomElements(List.of(allFiles), 10).toArray(File[]::new);
     }
 
-    final OptimizerParameters optimizerParam = (OptimizerParameters) ConfigService.getConfiguration().getModuleParameters(
-        OptimizerModule.class);
+    final var metadataFile = importParam.getOptionalValue(DataImportWizardParameters.metadataFile)
+        .orElse(null);
+
+    final OptimizerParameters optimizerParam = (OptimizerParameters) ConfigService.getConfiguration()
+        .getModuleParameters(OptimizerModule.class);
     final ExitCode exitCode = optimizerParam.showSetupDialog(true);
     if (exitCode != ExitCode.OK) {
       return;
     }
 
     final BatchOptimizationMainTask optimizer = new BatchOptimizationMainTask(
-        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, this, optimizerParam);
+        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, metadataFile, this,
+        optimizerParam);
     TaskService.getController().addTask(optimizer);
   }
 
