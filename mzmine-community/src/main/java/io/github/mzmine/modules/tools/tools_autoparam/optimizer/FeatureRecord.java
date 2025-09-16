@@ -43,7 +43,8 @@ import java.util.Comparator;
 import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
-public record FeatureRecord(RawDataFile file, double mz, float rt, @Nullable Float mobility) {
+public record FeatureRecord(@Nullable RawDataFile file, double mz, float rt,
+                            @Nullable Float mobility) {
 
   private static final MZTolerance mzTol = new MZTolerance(0.01, 0);
   private static final RTTolerance rtTol = new RTTolerance(0.08f, Unit.MINUTES);
@@ -54,7 +55,15 @@ public record FeatureRecord(RawDataFile file, double mz, float rt, @Nullable Flo
   }
 
   public boolean isPresent(List<FeatureListRow> mzSortedRows) {
+    return getBestMatch(mzSortedRows) != null;
+  }
 
+  public int getNumMatches(List<FeatureListRow> mzSortedRows) {
+    final FeatureListRow best = getBestMatch(mzSortedRows);
+    return best != null ? best.getNumberOfFeatures() : 0;
+  }
+
+  private @Nullable FeatureListRow getBestMatch(List<FeatureListRow> mzSortedRows) {
     final Range<Double> mzRange = mzTol.getToleranceRange(mz);
     final Range<Float> rtRange = rtTol.getToleranceRange(rt);
     final Range<Float> mobRange = mobility != null ? mobTol.getToleranceRange(mobility) : null;
@@ -74,11 +83,11 @@ public record FeatureRecord(RawDataFile file, double mz, float rt, @Nullable Flo
       final double score = FeatureListUtils.getAlignmentScore(row.getAverageMZ(),
           row.getAverageRT(), row.getAverageMobility(), row.getAverageCCS(), mzRange, rtRange,
           mobRange, null, 1, 1, 1, 1);
-      if (score > bestScore && row.getFeature(file) != null) {
+      if (score > bestScore && (file == null || row.getFeature(file) != null)) {
         bestScore = score;
         best = row;
       }
     }
-    return best != null;
+    return best;
   }
 }

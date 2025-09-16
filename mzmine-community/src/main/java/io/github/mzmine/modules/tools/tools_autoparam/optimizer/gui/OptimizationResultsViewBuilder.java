@@ -30,9 +30,12 @@ import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.util.FxIcons;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
+import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Objects;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
@@ -60,8 +63,8 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
   @Nullable
   private final Stage stage;
 
-  protected OptimizationResultsViewBuilder(OptimizationResultModel model, Runnable onAcceptPressed, Runnable openInBatch, Runnable onExportPressed,
-      @Nullable final Stage stage) {
+  protected OptimizationResultsViewBuilder(OptimizationResultModel model, Runnable onAcceptPressed,
+      Runnable openInBatch, Runnable onExportPressed, @Nullable final Stage stage) {
     super(model);
     this.onAcceptPressed = onAcceptPressed;
     this.openInBatch = openInBatch;
@@ -111,6 +114,17 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
           final TableColumn<Solution, Number> col = wrapper.createColumn();
           solutionTable.getColumns().add(col);
         }
+
+        for (Entry<String, Serializable> attributeEntry : solution.getAttributes().entrySet()) {
+          final String attribute = attributeEntry.getKey();
+          if(attribute.toLowerCase().equals("penalty")) {
+            continue;
+          }
+          final TableColumn<Solution, String> col = TableColumns.createColumn(attribute, 120,
+              s -> new ReadOnlyStringWrapper(
+                  Objects.requireNonNullElse(s.getAttribute(attribute), "").toString()));
+          solutionTable.getColumns().add(col);
+        }
       }
 
       solutionTable.getItems().setAll(result.asList());
@@ -122,8 +136,8 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     BorderPane borderPane = new BorderPane();
     borderPane.setCenter(solutionTable);
 
-    final Button acceptButton = FxButtons.createButton("Apply to wizard", FxIcons.CHECK_CIRCLE, null,
-        onAcceptPressed);
+    final Button acceptButton = FxButtons.createButton("Apply to wizard", FxIcons.CHECK_CIRCLE,
+        null, onAcceptPressed);
     final Button batchButton = FxButtons.createButton("Open in batch", FxIcons.BATCH, null,
         openInBatch);
     final Button exportButton = FxButtons.createButton("Export to .csv", FxIcons.FILE, null,

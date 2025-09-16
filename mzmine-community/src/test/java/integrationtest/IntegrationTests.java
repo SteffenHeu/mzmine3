@@ -255,10 +255,7 @@ public class IntegrationTests {
 
   @Test
   void testOptimisation() throws IOException {
-    final File tempDir = new File("D:\\mzminetemp");
 
-    final WorkflowDdaWizardParameters workflowParam = new WorkflowDdaWizardParameters(false, false,
-        null, false, false, false);
     final File[] files = {new File(
         "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_03.mzML"),
         new File(
@@ -272,7 +269,7 @@ public class IntegrationTests {
         new File(
             "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_08.mzML")};
 
-    final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files);
+    final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, null);
     final MemoryMapStorage storage = MemoryMapStorage.forRawDataFile();
     final List<DataFileStatistics> stats = importedFiles.stream().map(
         file -> new AutoParamTask(storage, Instant.now(), AutoParamParameters.of(importedFiles),

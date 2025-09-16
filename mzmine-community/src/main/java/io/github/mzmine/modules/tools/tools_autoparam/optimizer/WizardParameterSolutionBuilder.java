@@ -193,7 +193,6 @@ public class WizardParameterSolutionBuilder {
         () -> new RealVariable("FWHM", minFwhm, maxFwhm));
   }
 
-
   public @NotNull WizardParameterSolution buildMaxPeaksSolution(int index) {
     WizardParameterSolution maxPeaks = new IntegerWizardParameterSolution(index,
         WizardPart.ION_INTERFACE, IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram,

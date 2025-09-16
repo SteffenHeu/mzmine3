@@ -103,7 +103,6 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final boolean maximizeFillRatio;
   private final OptimizerParameterParameters paramToOptimize;
 
-
   private final @NotNull File[] files;
   private final WizardParameterSolutionBuilder builder;
   @Nullable
@@ -114,10 +113,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final @Nullable RTTolerance rtSampleToSampleTolerance;
   private final int numWizardParam;
   private final int numBatchParam;
+  private final @Nullable List<FeatureRecord> fileOnlyBenchmarkFeatures;
 
   public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param) {
 
+    fileOnlyBenchmarkFeatures = LcMsOptimizationProblem.extractFeatureRecordsFromFile(null, param);
     target = statsToTargetList(stats);
     maximizeNumBenchmark = param.getValue(OptimizerParameters.maximizeNumberOfBenchmarkFeatures);
     maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
@@ -394,14 +395,20 @@ public class LcMsOptimizationProblem extends AbstractProblem {
       solution.setObjectiveValue(objectiveIndex++, (double) numFeatures / maxFeatures);
     }
 
+    final List<FeatureListRow> rows = newest.getRowsCopy();
+    rows.sort(Comparator.comparing(FeatureListRow::getAverageMZ));
     if (maximizeNumBenchmark && target != null) {
-      final List<FeatureListRow> rows = newest.getRowsCopy();
-      rows.sort(Comparator.comparing(FeatureListRow::getAverageMZ));
       final long foundTargets = target.stream().parallel().filter(r -> r.isPresent(rows)).count();
       solution.setObjectiveValue(objectiveIndex++, foundTargets);
     }
 
-    calculateAndSetRsds(solution, newest, dataTable);
+//    calculateAndSetRsds(solution, newest, dataTable);
+    // for tracking only as attribute
+    if (fileOnlyBenchmarkFeatures != null) {
+      solution.setAttribute("Target features",
+          fileOnlyBenchmarkFeatures.stream().parallel().mapToLong(r -> r.getNumMatches(rows))
+              .sum());
+    }
 
     project.removeFeatureLists(project.getCurrentFeatureLists());
   }
