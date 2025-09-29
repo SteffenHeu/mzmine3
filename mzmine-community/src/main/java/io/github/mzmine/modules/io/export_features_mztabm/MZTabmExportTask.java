@@ -103,6 +103,9 @@ public class MZTabmExportTask extends AbstractTask {
   //modify in case mzTab-M specification is updated
   private final Integer DEFAULT_INTEGER_VALUE = 1000;
   private final Double DEFAULT_DOUBLE_VALUE = 1000.00;
+  List<IOptColumnMappingBuilder> feature_mzList;
+  List<IOptColumnMappingBuilder> feature_rtList;
+  List<IOptColumnMappingBuilder> feature_heightList;
   private int processedRows = 0, totalRows = 0;
   private String plNamePattern = "{}";
   private FeatureList featureList;
@@ -110,11 +113,10 @@ public class MZTabmExportTask extends AbstractTask {
   private SmallMoleculeSummary sm;
   private SmallMoleculeFeature smf;
   private List<GlobalOptColumnMappingBuilder> globalOptColumns;
-  List<IOptColumnMappingBuilder> feature_mzList;
-  List<IOptColumnMappingBuilder> feature_rtList;
-  List<IOptColumnMappingBuilder> feature_heightList;
   private int columnCount;
-  private NumberFormat formatter;
+
+  //Set up US decimal number formatting
+  private NumberFormat formatter = new DecimalFormat("#.######");
 
 
   MZTabmExportTask(MZmineProject project, FeatureList featureList, ParameterSet parameters,
@@ -179,13 +181,33 @@ public class MZTabmExportTask extends AbstractTask {
     mtd.addCvItem(
         new CV().id(1).label("MS").fullName("PSI-MS controlled vocabulary").version("4.1.108")
             .uri("https://raw.githubusercontent.com/HUPO-PSI/psi-ms-CV/master/psi-ms.obo"));
-    mtd.addCvItem(new CV().id(2).label("MS")
+    mtd.addCvItem(new CV().id(2).label("PRIDE")
         .fullName("PRIDE PRoteomics IDEntifications (PRIDE) database controlled vocabulary")
         .version("17.11.2022").uri("http://purl.obolibrary.org/obo/pride_cv.obo"));
     mtd.addDatabaseItem(new Database().id(1).prefix("mzmdb")
         .version(SemverVersionReader.getMZmineVersion().toString()).uri("https://mzmine.github.io/")
         .param(new Parameter().name("mzmine database")));
     return mtd;
+  }
+
+  private static void setSMEparameters(SmallMoleculeEvidence sme, int i,
+      FeatureListRow featureListRow) {
+    sme.setSmeId(i + 1);
+
+    sme.setMsLevel(new Parameter().cvLabel("MS").cvAccession("MS:1000511").name("ms level").value(
+        String.valueOf(featureListRow.getBestFeature().getRepresentativeScan().getMSLevel())));
+    sme.setEvidenceInputId(String.valueOf(i + 1));
+    sme.setRank(1);
+  }
+
+  private static String orNull(@Nullable String value) {
+    if (value == null) {
+      return "null";
+    }
+    if (value.isBlank()) {
+      return "null";
+    }
+    return value;
   }
 
   @Override
@@ -219,9 +241,6 @@ public class MZTabmExportTask extends AbstractTask {
       cleanupFilename(curFile, substitute);
 
       MzTab mzTabFile = new MzTab();
-
-      //Set up US decimal number formatting
-      formatter = new DecimalFormat("#.######");
 
       //Metadata
       mtd = generateMetadata(featureList);
@@ -371,8 +390,8 @@ public class MZTabmExportTask extends AbstractTask {
       }
 
       mzTabFile.metadata(mtd);
-      MzTabWriter writer = new MzTabValidatingWriter();
-//      MzTabWriter writer = new MzTabNonValidatingWriter();
+//      MzTabWriter writer = new MzTabValidatingWriter();
+      MzTabWriter writer = new MzTabNonValidatingWriter();
       writer.write(curFile.toPath(), mzTabFile);
     } catch (Exception e) {
       e.printStackTrace();
@@ -401,8 +420,7 @@ public class MZTabmExportTask extends AbstractTask {
 
     sm.addOptItem(feature_mzList.get(dataFileCount - 1).build(featureMZ));
     sm.addOptItem(feature_rtList.get(dataFileCount - 1).build(featureRT));
-    sm.addOptItem(
-        feature_heightList.get(dataFileCount - 1).build(featureHeight.formatted(formatter)));
+    sm.addOptItem(feature_heightList.get(dataFileCount - 1).build(featureHeight));
 
     Integer featureCharge = feature.getCharge();
     if (smf.getCharge() == null) {
@@ -453,16 +471,6 @@ public class MZTabmExportTask extends AbstractTask {
       sme.setCharge(rowCharge);
     }
     assignMissingMandatoryFields(sme);
-  }
-
-  private static void setSMEparameters(SmallMoleculeEvidence sme, int i,
-      FeatureListRow featureListRow) {
-    sme.setSmeId(i + 1);
-
-    sme.setMsLevel(new Parameter().cvLabel("MS").cvAccession("MS:1000511").name("ms level").value(
-        String.valueOf(featureListRow.getBestFeature().getRepresentativeScan().getMSLevel())));
-    sme.setEvidenceInputId(String.valueOf(i + 1));
-    sme.setRank(1);
   }
 
   private void assignMissingMandatoryFields(SmallMoleculeEvidence sme) {
@@ -646,7 +654,7 @@ public class MZTabmExportTask extends AbstractTask {
     for (MetadataColumn<?> column : metadata.getColumns()) {
       final String title = column.getTitle(); // todo check how mztab works. seems odd to not use the column title
       final Object value = metadata.getValue(column, file);
-      if(value == null) {
+      if (value == null) {
         return;
       }
       final List<RawDataFile> filesList = svhash.computeIfAbsent(String.valueOf(value),
