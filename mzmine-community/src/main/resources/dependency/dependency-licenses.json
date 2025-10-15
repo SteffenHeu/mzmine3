@@ -3010,7 +3010,7 @@
         },
         {
             "moduleName": "org.keycloak:keycloak-adapter-core",
-            "moduleVersion": "24.0.1",
+            "moduleVersion": "24.0.3",
             "moduleUrls": [
                 "http://www.jboss.org"
             ],
@@ -3027,7 +3027,7 @@
         },
         {
             "moduleName": "org.keycloak:keycloak-adapter-spi",
-            "moduleVersion": "24.0.1",
+            "moduleVersion": "24.0.3",
             "moduleUrls": [
                 "http://www.jboss.org"
             ],
@@ -3044,7 +3044,7 @@
         },
         {
             "moduleName": "org.keycloak:keycloak-common",
-            "moduleVersion": "24.0.1",
+            "moduleVersion": "24.0.3",
             "moduleUrls": [
                 "http://www.jboss.org"
             ],
@@ -3061,7 +3061,7 @@
         },
         {
             "moduleName": "org.keycloak:keycloak-core",
-            "moduleVersion": "24.0.1",
+            "moduleVersion": "24.0.3",
             "moduleUrls": [
                 "http://www.jboss.org"
             ],
@@ -3078,7 +3078,7 @@
         },
         {
             "moduleName": "org.keycloak:keycloak-crypto-default",
-            "moduleVersion": "24.0.1",
+            "moduleVersion": "24.0.3",
             "moduleLicenses": [
                 {
                     "moduleLicense": "Apache License, Version 2.0",
@@ -3092,7 +3092,7 @@
         },
         {
             "moduleName": "org.keycloak:keycloak-installed-adapter",
-            "moduleVersion": "24.0.1",
+            "moduleVersion": "24.0.3",
             "moduleLicenses": [
                 {
                     "moduleLicense": "Apache License, Version 2.0",
@@ -3106,7 +3106,7 @@
         },
         {
             "moduleName": "org.keycloak:keycloak-server-spi",
-            "moduleVersion": "24.0.1",
+            "moduleVersion": "24.0.3",
             "moduleLicenses": [
                 {
                     "moduleLicense": "Apache License, Version 2.0",
@@ -3120,7 +3120,7 @@
         },
         {
             "moduleName": "org.keycloak:keycloak-server-spi-private",
-            "moduleVersion": "24.0.1",
+            "moduleVersion": "24.0.3",
             "moduleLicenses": [
                 {
                     "moduleLicense": "Apache License, Version 2.0",

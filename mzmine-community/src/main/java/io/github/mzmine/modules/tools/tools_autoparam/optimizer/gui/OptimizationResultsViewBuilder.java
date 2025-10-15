@@ -60,15 +60,17 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
   private final Runnable onAcceptPressed;
   private final Runnable openInBatch;
   private final Runnable onExportPressed;
+  private final Runnable quickRun;
   @Nullable
   private final Stage stage;
 
   protected OptimizationResultsViewBuilder(OptimizationResultModel model, Runnable onAcceptPressed,
-      Runnable openInBatch, Runnable onExportPressed, @Nullable final Stage stage) {
+      Runnable openInBatch, Runnable onExportPressed, Runnable quickRun, @Nullable final Stage stage) {
     super(model);
     this.onAcceptPressed = onAcceptPressed;
     this.openInBatch = openInBatch;
     this.onExportPressed = onExportPressed;
+    this.quickRun = quickRun;
     this.stage = stage;
   }
 
@@ -77,6 +79,10 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     final TableView<Solution> solutionTable = new TableView<>();
     model.resultProperty().subscribe(result -> {
       if (solutionTable.getColumns().isEmpty()) {
+        TableColumn<Solution, Number> indexCol = TableColumns.createColumn("Index", 50,
+            s -> new ReadOnlyIntegerWrapper(model.resultProperty().get().asList().indexOf(s)));
+        solutionTable.getColumns().add(indexCol);
+
         final Solution solution = result.get(0);
         for (int i = 0; i < solution.getNumberOfVariables(); i++) {
           final Variable variable = solution.getVariable(i);
@@ -117,7 +123,7 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
 
         for (Entry<String, Serializable> attributeEntry : solution.getAttributes().entrySet()) {
           final String attribute = attributeEntry.getKey();
-          if(attribute.toLowerCase().equals("penalty")) {
+          if (attribute.toLowerCase().equals("penalty")) {
             continue;
           }
           final TableColumn<Solution, String> col = TableColumns.createColumn(attribute, 120,
@@ -142,9 +148,11 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
         openInBatch);
     final Button exportButton = FxButtons.createButton("Export to .csv", FxIcons.FILE, null,
         onExportPressed);
+    final Button quickRunButton = FxButtons.createButton("Quick run & annotate", FxIcons.BATCH, null,
+        quickRun);
 
     ButtonBar buttonBar = new ButtonBar();
-    buttonBar.getButtons().addAll(exportButton, batchButton, acceptButton);
+    buttonBar.getButtons().addAll(exportButton, batchButton, quickRunButton, acceptButton);
     borderPane.setBottom(buttonBar);
 
     if (stage != null) {

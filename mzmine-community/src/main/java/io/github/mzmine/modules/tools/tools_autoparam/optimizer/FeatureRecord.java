@@ -63,7 +63,7 @@ public record FeatureRecord(@Nullable RawDataFile file, double mz, float rt,
     return best != null ? best.getNumberOfFeatures() : 0;
   }
 
-  private @Nullable FeatureListRow getBestMatch(List<FeatureListRow> mzSortedRows) {
+  public @Nullable FeatureListRow getBestMatch(List<FeatureListRow> mzSortedRows) {
     final Range<Double> mzRange = mzTol.getToleranceRange(mz);
     final Range<Float> rtRange = rtTol.getToleranceRange(rt);
     final Range<Float> mobRange = mobility != null ? mobTol.getToleranceRange(mobility) : null;

@@ -76,6 +76,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.scene.control.Alert.AlertType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Batch mode task
@@ -595,5 +596,13 @@ public class BatchTask extends AbstractTask {
 
   public BatchQueue getQueueCopy() {
     return queue.clone();
+  }
+
+  @Nullable
+  public List<FeatureList> getLatestCreatedFeatureLists() {
+    if(createdFeatureLists != null && !createdFeatureLists.isEmpty()) {
+      return createdFeatureLists;
+    }
+    return previousCreatedFeatureLists;
   }
 }

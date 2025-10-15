@@ -409,6 +409,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
           fileOnlyBenchmarkFeatures.stream().parallel().mapToLong(r -> r.getNumMatches(rows))
               .sum());
     }
+    solution.setAttribute("Total features", newest.streamFeatures().count());
 
     project.removeFeatureLists(project.getCurrentFeatureLists());
   }
@@ -500,5 +501,13 @@ public class LcMsOptimizationProblem extends AbstractProblem {
       solution.setObjective(objectiveIndex++, new Maximize("Found targets"));
     }
     return solution;
+  }
+
+  public @Nullable List<FeatureRecord> getAllTargets() {
+    return target;
+  }
+
+  public @Nullable List<FeatureRecord> getFileOnlyBenchmarkFeatures() {
+    return fileOnlyBenchmarkFeatures;
   }
 }
