@@ -497,6 +497,9 @@ public class FeatureCorrelationUtil {
         return null;
       }
 
+      /**
+       * [0][] is rts, [1][] is intensities
+       */
       double[][] f1, f2;
 
       // f1 should be the "longer" feature
@@ -540,10 +543,10 @@ public class FeatureCorrelationUtil {
       int i1 = maxIndexOfA;
       int i2 = maxIndexInB;
       while (i1 >= 0 && i2 >= 0) {
-        double s1 = f1[0][i1];
-        double s2 = f2[0][i2];
+        double rt1 = f1[0][i1];
+        double rt2 = f2[0][i2];
         // add point, if not break
-        if (Double.compare(s1, s2) == 0 && intensities1[i1] >= noiseLevelShapeCorr
+        if (Double.compare(rt1, rt2) == 0 && intensities1[i1] >= noiseLevelShapeCorr
             && intensities2[i2] >= noiseLevelShapeCorr) {
           corrData.add(new double[]{intensities1[i1], intensities2[i2]});
         } else {
@@ -564,10 +567,10 @@ public class FeatureCorrelationUtil {
       i1 = maxIndexOfA + 1;
       i2 = maxIndexInB + 1;
       while (i1 < f1[0].length && i2 < f2[0].length) {
-        double s1 = f1[0][i1];
-        double s2 = f2[0][i2];
+        double rt1 = f1[0][i1];
+        double rt2 = f2[0][i2];
         // add point, if not break
-        if (Double.compare(s1, s2) == 0 && intensities1[i1] >= noiseLevelShapeCorr
+        if (Double.compare(rt1, rt2) == 0 && intensities1[i1] >= noiseLevelShapeCorr
             && intensities2[i2] >= noiseLevelShapeCorr) {
           corrData.add(new double[]{intensities1[i1], intensities2[i2]});
         } else {

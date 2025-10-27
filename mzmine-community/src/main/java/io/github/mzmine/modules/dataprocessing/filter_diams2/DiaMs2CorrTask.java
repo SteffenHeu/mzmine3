@@ -96,7 +96,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -401,7 +400,8 @@ public class DiaMs2CorrTask extends AbstractTask {
           .toArray(ValueLayout.JAVA_DOUBLE);
 
       final CorrelationData correlationData = DIA.corrFeatureShape(ms1Rts, ms1Intensities, rts,
-          ms2Intensity, minCorrPoints, 2, minMs2Intensity / 5);
+          ms2Intensity, minCorrPoints, minCorrPoints < 5 ? 1 : 2,
+          0); // use 0 as noise level, since the ms1 points are already prefiltered to the correlation threshold.
       if (correlationData == null || !correlationData.isValid()
           || correlationData.getPearsonR() < minPearson) {
         continue;

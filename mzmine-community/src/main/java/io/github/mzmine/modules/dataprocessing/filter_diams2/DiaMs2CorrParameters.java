@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_diams2;
 
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
@@ -52,16 +53,16 @@ public class DiaMs2CorrParameters extends SimpleParameterSet {
   public static final DoubleParameter minMs1Intensity = new DoubleParameter(
       "Minimum feature intensity",
       "The minimum MS1 intensity of a feature to be considered to build a pseudo MS2 spectrum.",
-      MZmineCore.getConfiguration().getIntensityFormat(), 5E3);
+      ConfigService.getConfiguration().getIntensityFormat(), 5E3);
 
   public static final DoubleParameter minMs2Intensity = new DoubleParameter(
       "Minimum fragment intensity", "Minimum intensity of fragment ions to be considered.",
-      MZmineCore.getConfiguration().getIntensityFormat(), 1E3);
+      ConfigService.getConfiguration().getIntensityFormat(), 1E3);
 
   public static final IntegerParameter numCorrPoints = new IntegerParameter(
       "Number of correlated points",
       "The number of points to be correlated in MS1 and MS2 features.\n"
-          + "Depends on cycle time and chromatographic resolution.", 5);
+          + "Depends on cycle time and chromatographic resolution.", 5, 3, Integer.MAX_VALUE);
 
   public static final DoubleParameter minPearson = new DoubleParameter(
       "Minimum pearson correlation",
