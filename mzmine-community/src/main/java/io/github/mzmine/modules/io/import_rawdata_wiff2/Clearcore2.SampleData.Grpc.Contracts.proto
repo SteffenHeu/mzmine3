@@ -1,0 +1,705 @@
+syntax = "proto3";
+option csharp_namespace = "Clearcore2.SampleData.DataAccessApi.V002";
+
+option java_package = "io.github.mzmine.modules.io.import_rawdata_wiff2.api";
+option java_multiple_files = true; // Optional, but often useful for cleaner output
+
+package Clearcore2.SampleData.DataAccessApi.V002;
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/struct.proto";
+
+message Empty{}
+
+// descriptions of the source file
+message SourceFile {
+	// Name of the source file, without 
+	// reference to location (either URI or local path).
+	string Name = 1;
+	// An identifier for this file.
+	string Id = 2;
+	// URI-formatted location where the file was retrieved.
+	string Location = 3;
+}
+
+// adc channels descriptions
+message AdcChannelsDescriptions
+{
+	// provides the mapping to the user defined names of the ADC channels
+	map<int32, string> Names = 1;
+	// additional user defined attributes that describe ADC channels
+	repeated ControlledVocabularyParameter Attributes = 2;
+}
+
+//MS:1000235 Total ion chromatogram
+message ExperimentTic{
+	// The id of the experiment used to acquire this Tic
+	string ExperimentId = 1;
+	// The sample identifier 
+	string SampleId =2;
+	// the actual binary data. 
+	// Usually, there will be at least 2 collections ( Xs and Ys ) 
+	repeated BinaryData Data =3;	
+}
+
+message ExperimentCycles{
+	// The id of the experiment used to retrieve the list of cycles
+	string ExperimentId = 1;
+	// The sample identifier 
+	string SampleId = 2;
+	// the actual binary data
+	// There will be 2 collections ( Retention Times and Cycles )
+	repeated BinaryData Data = 3;	
+}
+
+// Rack/plate/vial information.
+message AutosamplerInfo
+{
+	// Returns the rack position (or null if never set).
+	string Rack = 1;
+	// Returns the plate position (or null if never set).
+	string Plate = 2;
+	// Returns the vial position (or null if never set).
+	string Vial = 3;
+	// Gets the injection volume. 
+	double InjectionVolume = 4;
+}
+
+// standard parameter from controlled vocabulary
+message ControlledVocabularyParameter{
+    //The accession number of the referred-to 
+	// term in the named resource (e.g.: MS:000012).
+	string Accession=1;
+	// The actual name for the parameter, from
+	// the referred-to controlled vocabulary. This should be 
+	// the preferred name associated with the specified accession
+	// number.
+	string Name = 2;
+	// the value
+	string Value = 3;
+}
+
+// m/z bounds of a mass spectrometer scan window
+message ScanWindow{
+    // Scan window lower limit
+	// see MS:1000501 for details
+	double Start = 1;
+	// Scan window upper limit
+	// see MS:1000500 for details
+	double End = 2;
+	// In most of the cases will be MS:1000040
+	string UnitAccession = 3; 
+}
+// Isolation window parameter.
+message IsolationWindow{
+	// The extent of the isolation window in m/z below the 
+	// isolation window target m/z. The lower and upper 
+	// offsets may be asymmetric about the target m/z.
+	// see MS:1000828 
+	double LowerOffset = 1;
+	// The extent of the isolation window in m/z above the isolation 
+	// window target m/z. The lower and upper offsets may be 
+	// asymmetric about the target m/z.
+	// see MS:1000829
+	double UpperOffset = 2;
+	// The primary or reference m/z about which the isolation 
+	// window is defined. 
+	// see  MS:1000827
+	double IsolationWindowTarget = 3;
+	// In most of the cases will be MS:1000040 m/z
+	string UnitAccession = 4; 
+}
+message CollisionEnergy{
+	// Collision energy at the start of the collision energy ramp. see MS_1002013
+	double CollisionEnergyRampStart = 1;
+	// Collision energy at the end of the collision energy ramp. see MS_1002014
+	double CollisionEnergyRampEnd = 2;
+}
+// The method of precursor ion selection and activation
+message Precursor{
+	// Isolation window parameter. None for MS, 1 for MSMS, 2 for MSMSMS
+	IsolationWindow IsolationWindow = 1;
+	// MS_1000044 Fragmentation method used for dissociation or fragmentation 
+	// Usually MS:1000422 beam-type collision-induced dissociation
+	ControlledVocabularyParameter DissociationMethod = 2;
+	// collision energy attribute
+	CollisionEnergy CollisionEnergy = 6;
+	// The charge state of the ion, single or multiple and positive or negatively charged MS_1000041
+	int32 PrecursorChargeState = 8;
+}
+// configuration of mass
+message MassRangeConfiguration{
+    // Selection window properties that are associated with a value
+	// MS:1000549
+	ScanWindow SelectionWindow = 1;
+	//Isolation window properties
+	ScanWindow IsolationWindow = 2;
+}
+
+// Correspond to a single, consecutive and coherent set of scans
+// on an instrument
+message Experiment{
+	enum FRAGMENTATION_MODE {
+		None = 0;
+		// CID Fragmentation Mode
+		CID = 1;
+		// EAD Fragmentation Mode
+		EAD = 2;
+		// EAD Conventional Trapping Fragmentation Mode
+		EAD_Conventional_Trapping = 3;
+	}
+
+	// A unique identifier for this experiment
+	string Id =1;
+	// The sample identifier to which the experiment belongs
+	string SampleId = 2;
+	// Stages of ms achieved in a multi stage mass spectrometry 
+	// experiment.
+	// see MS:1000511
+	int32 MsLevel = 3;
+	// if true then Polarity of all of the scans is positive (MS:1000130) 
+	// otherwise the polarity of all of the scans in this experiment 
+	// is negative (MS:1000130).
+	bool IsPositivePolarityScan = 4;
+	// usually TOF data has only one item in this collection
+	repeated MassRangeConfiguration MassRanges = 5;
+	// if true then data is stored in the Centroid format, otherwise - in the Profile
+	bool IsDataInCentroidFormat = 6;
+	// Returns the scan type of the experiment 
+	string ScanType = 7;
+	// TOF Fragmentation Mode (additional detailed parameter in current data file version)
+	FRAGMENTATION_MODE FragmentationMode = 8;
+	// TOF Electron KE (EAD Mode)
+	google.protobuf.DoubleValue ElectronKe = 9;
+	// TOF Zeno mode
+	google.protobuf.BoolValue ZenoMode = 10;
+}
+
+// Correspond to a single, consecutive and 
+// coherent set of scans on an instrument.
+message Sample{
+    // A unique identifier for this sample
+	string Id =1;
+	// descriptions of the source files this sample 
+	// was generated or derived from
+	repeated SourceFile Sources = 2 ;
+	//Sample start datetime in the utc format aligned to the 
+	// ISO 8601 using round trip format specifier
+	// see https://docs.microsoft.com/en-us/dotnet/standard/base-types/standard-date-and-time-format-strings#Roundtrip for documentation
+	// for example: 6/15/2009 1:45:30 PM (Utc) == 2009-06-15T13:45:30.0000000Z
+	string StartTimestamp = 4;
+	// if true , then the sample data is missing/invalid/corrupted
+	bool IsCorrupted = 5;
+	// Returns the user-defined sample ID.
+	string UserSampleId = 6;
+	// Comment left by user
+	string SampleComment = 7;
+	//Gets or sets the name of the user who acquired the sample.
+	string UserName = 8;
+	//  Gets or sets the name of the acquisition method used to acquire the data.
+	string AcquisitionMethodName  = 9 ;
+	// if true then the sample was designed to acquire DAD wavelength chromatogram
+	bool SupportsSpectrumModeWavelengthChromatogram = 10;
+	// if true then the sample was designed to acquire channel mode wavelength chromatogram
+	bool SupportsChannelModeWavelengthChromatogram = 11;
+	// A reference string relevant to the sample under study. See (MS:1000002)
+	string SampleName = 12;
+	// Rack/plate/vial information.
+	AutosamplerInfo AutoSamplerInformation  = 13;
+	// Designates the type of the sample from Quantitation point of view
+	enum QuantitationSampleType{
+		// Sample is Unknown, which is normal sample of unknown concentration.
+		Unknown = 0;
+		// The sample concentration is known. These samples are used for the creation of calibration curve.
+		Standard = 1;
+		// The sample concentration is known. These samples are used to check the accuracy of the calibration but do not influence its actual construction
+		QualityControl = 2;
+		// These are generally samples containing the internal standard compounds, if used, but no analytes, and which have been through the normal sample preparation procedure.
+		Blank = 3;
+		// The same with neither internal standards nor analytes
+		DoubleBlank = 4;
+		// These are double blanks that have not been through the normal sample work-up procedure
+		Solvent = 5;
+	}
+	// Sample type from quantitation point of view
+	QuantitationSampleType QuantSampleType = 14;
+	// descriptions of the Instruments for this sample 
+	repeated InstrumentDetail InstrumentDetails = 15;
+}
+// Gets the sections for the sample information.
+message SampleInfoSection {
+	// Section name.
+	string Name = 1;
+	// Get the paragraphs.
+	repeated Paragraph Paragraphs = 2;
+}
+// Gets the paragraph information.
+message Paragraph {
+	// Paragraph name.
+	string Name = 1;
+	// Gets the list of parameters.
+	repeated Parameter Parameters = 2;
+	// Get the table Parameters.
+	repeated Table Tables = 3;
+}
+// Gets the table of parameter information.
+message Table {
+	// Get the Parameters.
+	repeated Parameter Parameters = 1;
+	// Get the table parameters.
+	repeated Parameter Columns = 2;
+}
+// Corresponds to a single scan XIC
+message ScanXic {
+	/// The id of the experiment used to acquire this Scan XIC
+	string ExperimentId = 1;
+	/// The sample to which this Scan XIC belongs
+	string SampleId = 2;
+	/// X Axis - Time 
+	repeated double XValues = 3;
+	/// Y Axis - Intensity
+	repeated double YValues = 4;
+	/// the mass range
+	MassRange MassRange = 5;
+	///  the range of the cycles 
+	CycleRange CycleRange = 6;
+	///  the range of the time 
+	TimeRange TimeRange = 7;
+}
+
+// Corresponds to a single MRM XIC
+message MrmXic {
+	/// The id of the experiment used to acquire this Scan XIC
+	string ExperimentId = 1;
+	/// The sample to which this Scan XIC belongs
+	string SampleId = 2;
+	/// X Axis - Time 
+	repeated double XValues = 3;
+	/// Y Axis - Intensity
+	repeated double YValues = 4;
+	/// the mass index
+	int32 MassIndex = 5;
+	///  the range of the cycles 
+	CycleRange CycleRange = 6;
+	///  the range of the time 
+	TimeRange TimeRange = 7;
+}
+
+// Corresponds to a single BPC
+message Bpc {
+	/// The id of the experiment used to acquire this BPC
+	string ExperimentId = 1;
+	/// The sample to which this BPC belongs
+	string SampleId = 2;
+	/// X Axis - Time 
+	repeated double XValues = 3;
+	/// Y Axis - Intensity
+	repeated double YValues = 4;
+	/// the mass range
+	MassRange MassRange = 5;
+	///  the range of the time 
+	TimeRange TimeRange = 7;
+}
+
+// Scan or acquisition from original raw file 
+// used to create this peak list, as specified in sourceFile.
+message BinaryData{
+       // attributes describing the values
+	   // for example: the following will be provided
+	   // MS:1000523 64-bit float
+	   // MS:1000514 m/z array OR MS:1000515 intensity array
+	   // optional MS:1000574 zlib compression
+	    repeated ControlledVocabularyParameter Attributes=1;
+		// the values in a binary format 
+		bytes Values = 2;
+}
+
+// The structure that captures the generation of a peak list 
+// (including the underlying acquisitions). Also describes some 
+// of the parameters for the mass spectrometer for a given 
+// acquisition (or list of acquisitions).
+message Spectrum{
+	// the Id of the spectrum
+	string Id = 1 ;
+	// The id of the experiment used to acquire this spectrum
+	string ExperimentId = 2;
+	// The sample identifier 
+	string SampleId =3;
+	// The time that an analyzer started a scan, relative 
+	// to the start of the MS run.
+	// see also 
+	// MS:1000016 for the description 
+	// Units of Measure  UO:0000031 - minute
+	double ScanStartTime =4;	
+	// the actual binary data. 
+	// Usually, there will be at least 2 collections ( Xs and Ys ) 
+	repeated BinaryData Data =5;
+	//
+	Precursor Precursor = 6;
+	
+}
+// represents signals that was acquired in ADC or DAD-channel mode configuration 
+message WavelengthSpectrum{
+	// the Id of the spectrum
+	string Id = 1 ;
+	// The sample identifier 
+	string SampleId =3;
+	// The time that an analyzer started a scan, relative 
+	// to the start of the MS run.
+	// see also 
+	// MS:1000016 for the description 
+	// Units of Measure  UO:0000031 - minute
+	double ScanStartTime =4;	
+	// the actual binary data. 
+	// Usually, there will be at least 2 collections ( Xs and Ys ) 
+	repeated BinaryData Data =5;
+	// The name of the channel
+	string Name = 6;
+
+}
+
+message GetExperimentTicRequest{ 
+	// the id of the sample
+	string SampleId = 1;
+	// the id of the experiment
+	string ExperimentId = 2;
+}
+
+// List of all cycles in an experiment for a given sample
+message GetExperimentCyclesRequest{
+	// The id of the experiment for which to retrieve the list of cycles
+	string ExperimentId = 1;
+	// The sample identifier 
+	string SampleId = 2;
+}
+
+// provides a list of samples
+message ListSamplesRequest{
+	// Absolute path to the wiff file
+	string AbsolutePathToWiffFile =1 ;
+	// if true then response will not include corrupted samples, if any
+	bool SkipCorrupted = 2;
+	// List of samples to read from the file.
+	repeated string SampleIDs = 3;
+}
+
+// represents the request to extract the stream of sample info parameters.
+message GetSampleInfoRequest {
+	// the id of the sample
+	string SampleId = 1;
+}
+
+// represents the request to extract the stream of experiment descriptors
+message GetExperimentsRequest{
+	// the id of the sample 
+	string SampleId = 1;
+	// indicates whether the experiment's detailed parameters should be read. This is a more intensive form of data inquiry which can incur a performance penalty.
+	bool ReadDetailedParameters = 2;
+}
+
+message GetScanXicRequest {
+	// the id of the sample 
+	string SampleId = 1;
+	/// the id of the experiment
+	string ExperimentId = 2;
+	/// the list of mass ranges
+	repeated MassRange MassRanges = 3;
+	/// the range of cycles
+	CycleRange CycleRange = 4;
+	/// the range of the time
+	TimeRange TimeRange = 5;
+}
+
+// represents the request to extract the stream of MRM xic descriptors
+message GetMrmXicRequest {
+	// the id of the sample 
+	string SampleId = 1;
+	/// the id of the experiment
+	string ExperimentId = 2;
+	/// the list of mass indices
+	repeated int32 MassIndexes = 3;
+	/// the range of cycles
+	CycleRange CycleRange = 4;
+	/// the range of the time
+	TimeRange TimeRange = 5;
+}
+
+// Designates the time range window that is used for sub-selection of the information
+message TimeRange{
+	// represent retention time relative to the start of the sample. 
+	double Start  = 1;
+	// represent retention time relative to the start of the sample. 
+	double End    = 2 ;
+}
+// Designates the cycle range window that is used for sub-selection of the information
+message CycleRange{
+	// represent retention time relative to the start of the sample. 
+	int32 Start  = 1;
+	// represent retention time relative to the start of the sample. 
+	int32 End    = 2 ;
+}
+// Designates the mass range window that is used for sub-selection of the information
+message MassRange{
+	// represent retention time relative to the start of the sample. 
+	double Start  = 1;
+	// represent retention time relative to the start of the sample. 
+	double End    = 2 ;
+}
+
+//This option specifies which peak metric should be returned as the y-values when centroiding
+enum CentroidOptions{
+	        //Sum of intensities for points above 50% of peak height.
+			IntensitySumAbove50Percent=0;
+		    //Peak area.
+			Area=1;
+			//Peak height above baseline.
+			Height=2;
+			//Peak intensity (includes baseline offset).
+			Intensity=3;
+            //Sum of intensities for all points across peak.
+            TotalIntensitySum=4;
+		
+}
+
+
+// represents the request to extract stream of spectra for specific experiment
+message GetSpectraRequest{
+	// This is a time window for sub selecting a subset of information 
+	TimeRange Range = 1;
+	// the id of the sample
+	string SampleId = 2;
+	// the id of the experiment
+	string ExperimentId = 3;
+	// if true then the data is returned in the Centroid format (i.e. it will be processed using spectral peaks finder)
+	bool ConvertToCentroid =4;
+	// if the value is greater than 0 process the data to add framing zeros 
+	//(data will be processed - this operation incurs overhead)
+	// default 1
+	int32 AddFramingZeros = 5;
+	//This flag when set to false will set the framing zeros to one
+	bool OverrideAddFramingZerosDefaultValue = 6;
+	//This metric specifies which peak metric should be returned as the y-values when centroiding.
+	optional CentroidOptions CentroidOption =7;
+}
+
+// represents the request to extract the ADC channels data or data acquired in channel mode DAD 
+message GetWavelengthSpectraRequest{
+	// The window of time used for signal acquisition. If not present, then the open window is assumed
+	TimeRange Range = 1;
+	// the target sample id
+	string SampleId = 2;
+	// is requesting channel mode data
+	bool IsRequestingChannelModeData = 3;
+	// the id of the experiment
+	int32 ExperimentId = 4;
+}
+
+//  the request to return information to support reading directly from a scan file
+message GetExperimentScanRecordsRequest{
+	// the target sample id
+	string SampleId = 1;
+	// the id of the experiment or use -1 to stream all experiments.
+	string ExperimentId = 2;
+	//return offsets target before header
+	bool RawScanOffsets = 3;
+}
+
+// represents the request to retrieve the metadata associated with the ADC channels of the sample
+message GetAdcChannelDescriptionsRequest{
+	// the id of the sample that contains ADC channels data
+	string SampleId = 1;
+}
+
+// represents the request to retrieve the channel traces of the sample
+message GetChannelTracesRequest{
+	// the id of the sample that contains ADC channels data
+	string SampleId = 1;
+}
+//  the information to support reading directly for a scan file
+message ExperimentScanRecordsResponse{
+	// the target sample id
+	string SampleId = 1;
+	// the id of the experiment 
+	string ExperimentId = 2;
+	// will be NULL for Non-Tof DataFormat, must be present for Tof Data 
+	TofInstrumentParameters TofInstrumentParameters = 3;	
+	//scan records
+	repeated ScanRecordInfo Scans = 4;	
+}
+
+message TofInstrumentParameters{
+	//the number of detector time bins which were summed to generate a single (time, intensity) data point.
+	int32 TimeBinsToSum = 1;
+	//resolution of the TDC. This value will be 0 if there is no scan data in an experiment.
+	double TdcResolution = 2;
+}
+//Bin to Mz Calibration per Cycle
+message TofCalibrationParameters{
+	//Slope of linear function
+	double Slope = 1;
+	//Delay of linear function
+	double Delay =2;	
+}
+
+message ScanRecordInfo{
+	//offset relative to the start of the binary scan file. Only valid when length is not 0.
+	int64 Offset = 1;
+	//length of the data. If the data length is 0 then the record should not be used for reading.
+	int32 Length = 2;
+	//Must be present for Tof scan and will be NULL for Non-Tof Scans
+	TofCalibrationParameters TofCalibration= 3;
+	// Precursor Mass encapsulates ParentMz and ParentChargeState
+	double PrecursorMass = 4;
+	//retention time of this scan
+	double RetentionTime =5;
+}
+
+// Instrument information.
+message InstrumentDetail
+{
+	// Returns the type of instrument 
+	// MassSpectrometer = 0
+	// Autosampler = 1
+	// ColumnOven = 2
+	// ADConverter = 3
+	// Valve = 4
+	// SyringePump = 5
+	// IntegratedSystem = 6
+	// Detector = 7
+	// LCPump = 8  
+	int32  DeviceType = 1;
+	// Returns the instrument device model name.
+	string DeviceModelName = 2;
+	// Gets the instrument serial number. 
+	string SerialNumber = 3;
+}
+
+//Channel Trace information
+message ChannelTrace
+{
+	/// The ID of the channel.
+	string Id =1;
+	//Channel Name.
+	string Name = 2;
+	/// Trace Type.
+	string TraceType =3;
+	/// Sample identifier.
+	string SampleId =4;
+	/// X Axis - Time in Minutes.
+	repeated double XValues = 5;
+	/// Y Axis - Intensity.
+	repeated double YValues = 6;
+}
+
+// MsMethod information
+message MsMethod{
+	// returns the source Parameters
+	repeated Parameter SourceParameters = 1;
+	// returns the experiment information 
+	repeated MsMethodExperiment Experiments = 2;
+}
+
+// Parameter information.
+message Parameter
+{
+	// returns name of the parameter
+	string  Name = 1;
+	// returns the unit of the parameter
+	string Unit = 2;
+	// gets the values of the parameter
+	repeated google.protobuf.Value Values = 3;
+	// gets the type of the parameter
+	ParameterType Type = 4;
+	// gets the key of the parameter
+	string Key = 5;
+}
+
+// Enum to hold the type.
+  enum ParameterType {
+    // field type unknown.
+    Unknown = 0;
+    // field type double.
+    Double = 1;
+	// field type integer.
+    Int32 = 2;
+    // field type bool.
+    Boolean = 3;
+    // field type string.
+    String = 4;
+	// field type datetime.
+    DateTime = 5;
+  }
+
+// MsMethod Experiment information.
+message MsMethodExperiment
+{
+	// returns name of the parameter
+	string  Name = 1;
+	// returns the parameters for this experiment
+	repeated Parameter Parameters = 2;
+	// returns the sub experiments for this experiment
+	repeated MsMethodExperiment Experiments = 3;
+}
+
+// MsMethod Parameters request.
+message GetMsMethodParametersRequest{
+	// the id of the sample 
+	string SampleId = 1;
+}
+
+// LcMethod Parameters request.
+message GetLcMethodParametersRequest{
+	// the id of the sample 
+	string SampleId = 1;
+}
+
+message GetBpcRequest {
+	// the id of the sample 
+	string SampleId = 1;
+	// the period of the sample
+	int32 Period = 2;
+	// the id of the experiment
+	string ExperimentId = 3;
+	// the mass ranges
+	MassRange MassRanges = 4;
+	// the range of the time
+	TimeRange TimeRange = 5;
+}
+
+// Serves as an access point to extract information from SCIEX data files
+service DataProvider{
+	// retrieves the stream of samples signals of the specific sample
+	rpc GetSamplesDescriptions(ListSamplesRequest) returns (stream Sample){}
+	// retrieves the stream of experiments descriptors of the specific sample
+	rpc GetExperiments(GetExperimentsRequest) returns (stream Experiment);
+	// retrieves the stream of spectra of the specific sample
+	rpc GetSpectra(GetSpectraRequest) returns (stream Spectrum);
+	// retrieves the stream of wavelength signals of the specific sample
+	rpc GetWavelengthSpectra(GetWavelengthSpectraRequest) returns (stream WavelengthSpectrum);
+	/* Retrieves the Meta Data associated with the ADC channels of the sample.
+	* Returns: if no adc data is available then an empty dictionary will be returned.
+	* Notice:  please don't assume sequential ids of the channels
+	*/
+	rpc GetAdcChannelDescriptions(GetAdcChannelDescriptionsRequest) returns (AdcChannelsDescriptions);
+	// Closing the file handles and releases the memory allocated for the caches and metadata for all samples in that file 
+	rpc CloseFile (SourceFile) returns (Empty);
+	// request for experiment TIC
+	rpc GetExperimentTic(GetExperimentTicRequest) returns (ExperimentTic);
+	// retrives the list of all cycles in an experiment for the given sample
+	rpc GetExperimentCycles(GetExperimentCyclesRequest) returns (ExperimentCycles);
+	// request to get absolute pointers from the beginning of the scan file
+	rpc GetExperimentScanRecords (GetExperimentScanRecordsRequest) returns (stream ExperimentScanRecordsResponse);
+	// retrieves the stream of scan XIC descriptors of the specific sample and experiment
+	rpc GetScanXics(GetScanXicRequest) returns (stream ScanXic);
+	// retrieves the stream of MRM XIC descriptors of the specific sample and experiment
+	rpc GetMrmXics(GetMrmXicRequest) returns (stream MrmXic);
+	//retrieves the channel traces of the specific Sample
+	rpc GetChannelTraces(GetChannelTracesRequest) returns (stream ChannelTrace);
+	// retrieves ms method parameters of the specific sample and experiment
+	rpc GetMsMethodParameters(GetMsMethodParametersRequest) returns (stream MsMethod);
+	// retrieves the stream of sample information parameters of the specific sample.
+	rpc GetSampleInfoParameters(GetSampleInfoRequest) returns (stream SampleInfoSection);
+	// retrieves the stream of BPC descriptors of the specific sample and experiment
+	rpc GetBpcs(GetBpcRequest) returns (stream Bpc);
+	// retrieves lc method parameters of the specific sample and experiment
+	rpc GetLcMethodParameters(GetLcMethodParametersRequest) returns (stream SampleInfoSection);
+}

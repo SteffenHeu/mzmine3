@@ -221,6 +221,7 @@ dependencies {
     // the defacto standard parser in jackson?
     implementation(libs.woodstox.core)
     implementation(libs.aalto.xml)
+    implementation(libs.protobuf)
 
     // sirius api
     implementation(libs.sirius.api)
