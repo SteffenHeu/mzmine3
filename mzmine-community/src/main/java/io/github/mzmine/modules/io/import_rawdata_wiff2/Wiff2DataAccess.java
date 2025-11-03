@@ -27,22 +27,22 @@ public class Wiff2DataAccess implements AutoCloseable {
 
   private final ManagedChannel channel;
   private final DataProviderBlockingStub dataProvider;
-//  private final Process server;
+  private final Process server;
 
   public Wiff2DataAccess(@NotNull final File file) throws IOException {
 
-//    final File dataAccessExe = FileAndPathUtil.resolveInExternalToolsDir(
-//        "sciex_wiff2/Server-win10-x64/Clearcore2.SampleData.DataAccessApi.exe");
-//    ProcessBuilder b = new ProcessBuilder(dataAccessExe.getAbsolutePath(),
-//        "--console");
-//    server = b.start();
+    final File dataAccessExe = FileAndPathUtil.resolveInExternalToolsDir(
+        "sciex_wiff2/Server-win10-x64/Clearcore2.SampleData.DataAccessApi.exe");
+    ProcessBuilder b = new ProcessBuilder(dataAccessExe.getAbsolutePath(),
+        "--console");
+    server = b.start();
 
     ManagedChannel tempChannel = null;
     int tryCount = 0;
     while (tempChannel == null) {
       try {
         TimeUnit.MILLISECONDS.sleep(1000);
-        tempChannel = ManagedChannelBuilder.forAddress("127.0.0.1", 50051).usePlaintext()
+        tempChannel = ManagedChannelBuilder.forAddress("0.0.0.0", 50051).usePlaintext()
             .keepAliveTimeout(90, TimeUnit.SECONDS).maxInboundMessageSize(1024 * 1024 * 5)
             .maxRetryAttempts(3).build();
         break;
