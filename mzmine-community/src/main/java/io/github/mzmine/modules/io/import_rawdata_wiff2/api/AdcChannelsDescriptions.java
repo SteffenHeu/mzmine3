@@ -37,11 +37,11 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor;
   }
 
   @SuppressWarnings({"rawtypes"})
-  @java.lang.Override
+  @Override
   protected com.google.protobuf.MapFieldReflectionAccessor internalGetMapFieldReflection(
       int number) {
     switch (number) {
@@ -52,21 +52,21 @@ private static final long serialVersionUID = 0L;
             "Invalid map field number: " + number);
     }
   }
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions.Builder.class);
+            AdcChannelsDescriptions.class, Builder.class);
   }
 
   public static final int NAMES_FIELD_NUMBER = 1;
   private static final class NamesDefaultEntryHolder {
     static final com.google.protobuf.MapEntry<
-        java.lang.Integer, java.lang.String> defaultEntry =
+        Integer, String> defaultEntry =
             com.google.protobuf.MapEntry
-            .<java.lang.Integer, java.lang.String>newDefaultInstance(
-                io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_NamesEntry_descriptor, 
+            .<Integer, String>newDefaultInstance(
+                Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_NamesEntry_descriptor,
                 com.google.protobuf.WireFormat.FieldType.INT32,
                 0,
                 com.google.protobuf.WireFormat.FieldType.STRING,
@@ -74,8 +74,8 @@ private static final long serialVersionUID = 0L;
   }
   @SuppressWarnings("serial")
   private com.google.protobuf.MapField<
-      java.lang.Integer, java.lang.String> names_;
-  private com.google.protobuf.MapField<java.lang.Integer, java.lang.String>
+      Integer, String> names_;
+  private com.google.protobuf.MapField<Integer, String>
   internalGetNames() {
     if (names_ == null) {
       return com.google.protobuf.MapField.emptyMapField(
@@ -93,7 +93,7 @@ private static final long serialVersionUID = 0L;
    *
    * <code>map&lt;int32, string&gt; Names = 1;</code>
    */
-  @java.lang.Override
+  @Override
   public boolean containsNames(
       int key) {
 
@@ -102,9 +102,9 @@ private static final long serialVersionUID = 0L;
   /**
    * Use {@link #getNamesMap()} instead.
    */
-  @java.lang.Override
-  @java.lang.Deprecated
-  public java.util.Map<java.lang.Integer, java.lang.String> getNames() {
+  @Override
+  @Deprecated
+  public java.util.Map<Integer, String> getNames() {
     return getNamesMap();
   }
   /**
@@ -114,8 +114,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>map&lt;int32, string&gt; Names = 1;</code>
    */
-  @java.lang.Override
-  public java.util.Map<java.lang.Integer, java.lang.String> getNamesMap() {
+  @Override
+  public java.util.Map<Integer, String> getNamesMap() {
     return internalGetNames().getMap();
   }
   /**
@@ -125,14 +125,14 @@ private static final long serialVersionUID = 0L;
    *
    * <code>map&lt;int32, string&gt; Names = 1;</code>
    */
-  @java.lang.Override
+  @Override
   public /* nullable */
-java.lang.String getNamesOrDefault(
+String getNamesOrDefault(
       int key,
       /* nullable */
-java.lang.String defaultValue) {
+String defaultValue) {
 
-    java.util.Map<java.lang.Integer, java.lang.String> map =
+    java.util.Map<Integer, String> map =
         internalGetNames().getMap();
     return map.containsKey(key) ? map.get(key) : defaultValue;
   }
@@ -143,21 +143,21 @@ java.lang.String defaultValue) {
    *
    * <code>map&lt;int32, string&gt; Names = 1;</code>
    */
-  @java.lang.Override
-  public java.lang.String getNamesOrThrow(
+  @Override
+  public String getNamesOrThrow(
       int key) {
 
-    java.util.Map<java.lang.Integer, java.lang.String> map =
+    java.util.Map<Integer, String> map =
         internalGetNames().getMap();
     if (!map.containsKey(key)) {
-      throw new java.lang.IllegalArgumentException();
+      throw new IllegalArgumentException();
     }
     return map.get(key);
   }
 
   public static final int ATTRIBUTES_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
-  private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> attributes_;
+  private java.util.List<ControlledVocabularyParameter> attributes_;
   /**
    * <pre>
    * additional user defined attributes that describe ADC channels
@@ -165,8 +165,8 @@ java.lang.String defaultValue) {
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  @java.lang.Override
-  public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> getAttributesList() {
+  @Override
+  public java.util.List<ControlledVocabularyParameter> getAttributesList() {
     return attributes_;
   }
   /**
@@ -176,8 +176,8 @@ java.lang.String defaultValue) {
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  @java.lang.Override
-  public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+  @Override
+  public java.util.List<? extends ControlledVocabularyParameterOrBuilder>
       getAttributesOrBuilderList() {
     return attributes_;
   }
@@ -188,7 +188,7 @@ java.lang.String defaultValue) {
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  @java.lang.Override
+  @Override
   public int getAttributesCount() {
     return attributes_.size();
   }
@@ -199,8 +199,8 @@ java.lang.String defaultValue) {
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getAttributes(int index) {
+  @Override
+  public ControlledVocabularyParameter getAttributes(int index) {
     return attributes_.get(index);
   }
   /**
@@ -210,14 +210,14 @@ java.lang.String defaultValue) {
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
+  @Override
+  public ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
       int index) {
     return attributes_.get(index);
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -227,7 +227,7 @@ java.lang.String defaultValue) {
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     com.google.protobuf.GeneratedMessage
@@ -242,15 +242,15 @@ java.lang.String defaultValue) {
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
 
     size = 0;
-    for (java.util.Map.Entry<java.lang.Integer, java.lang.String> entry
+    for (java.util.Map.Entry<Integer, String> entry
          : internalGetNames().getMap().entrySet()) {
-      com.google.protobuf.MapEntry<java.lang.Integer, java.lang.String>
+      com.google.protobuf.MapEntry<Integer, String>
       names__ = NamesDefaultEntryHolder.defaultEntry.newBuilderForType()
           .setKey(entry.getKey())
           .setValue(entry.getValue())
@@ -267,15 +267,15 @@ java.lang.String defaultValue) {
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions)) {
+    if (!(obj instanceof AdcChannelsDescriptions)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions) obj;
+    AdcChannelsDescriptions other = (AdcChannelsDescriptions) obj;
 
     if (!internalGetNames().equals(
         other.internalGetNames())) return false;
@@ -285,7 +285,7 @@ java.lang.String defaultValue) {
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -305,44 +305,44 @@ java.lang.String defaultValue) {
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(
+  public static AdcChannelsDescriptions parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(
+  public static AdcChannelsDescriptions parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(
+  public static AdcChannelsDescriptions parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(
+  public static AdcChannelsDescriptions parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(byte[] data)
+  public static AdcChannelsDescriptions parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(
+  public static AdcChannelsDescriptions parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(java.io.InputStream input)
+  public static AdcChannelsDescriptions parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(
+  public static AdcChannelsDescriptions parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -350,26 +350,26 @@ java.lang.String defaultValue) {
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseDelimitedFrom(java.io.InputStream input)
+  public static AdcChannelsDescriptions parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseDelimitedFrom(
+  public static AdcChannelsDescriptions parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(
+  public static AdcChannelsDescriptions parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions parseFrom(
+  public static AdcChannelsDescriptions parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -377,23 +377,23 @@ java.lang.String defaultValue) {
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions prototype) {
+  public static Builder newBuilder(AdcChannelsDescriptions prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -407,10 +407,10 @@ java.lang.String defaultValue) {
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.AdcChannelsDescriptions)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptionsOrBuilder {
+      AdcChannelsDescriptionsOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor;
     }
 
     @SuppressWarnings({"rawtypes"})
@@ -435,12 +435,12 @@ java.lang.String defaultValue) {
               "Invalid map field number: " + number);
       }
     }
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions.Builder.class);
+              AdcChannelsDescriptions.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions.newBuilder()
@@ -449,11 +449,11 @@ java.lang.String defaultValue) {
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
 
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -468,36 +468,36 @@ java.lang.String defaultValue) {
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions.getDefaultInstance();
+    @Override
+    public AdcChannelsDescriptions getDefaultInstanceForType() {
+      return AdcChannelsDescriptions.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions result = buildPartial();
+    @Override
+    public AdcChannelsDescriptions build() {
+      AdcChannelsDescriptions result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions(this);
+    @Override
+    public AdcChannelsDescriptions buildPartial() {
+      AdcChannelsDescriptions result = new AdcChannelsDescriptions(this);
       buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartialRepeatedFields(io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions result) {
+    private void buildPartialRepeatedFields(AdcChannelsDescriptions result) {
       if (attributesBuilder_ == null) {
         if (((bitField0_ & 0x00000002) != 0)) {
           attributes_ = java.util.Collections.unmodifiableList(attributes_);
@@ -509,7 +509,7 @@ java.lang.String defaultValue) {
       }
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions result) {
+    private void buildPartial0(AdcChannelsDescriptions result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.names_ = internalGetNames();
@@ -517,18 +517,18 @@ java.lang.String defaultValue) {
       }
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions)other);
+      if (other instanceof AdcChannelsDescriptions) {
+        return mergeFrom((AdcChannelsDescriptions)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions.getDefaultInstance()) return this;
+    public Builder mergeFrom(AdcChannelsDescriptions other) {
+      if (other == AdcChannelsDescriptions.getDefaultInstance()) return this;
       internalGetMutableNames().mergeFrom(
           other.internalGetNames());
       bitField0_ |= 0x00000001;
@@ -563,18 +563,18 @@ java.lang.String defaultValue) {
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -585,7 +585,7 @@ java.lang.String defaultValue) {
               done = true;
               break;
             case 10: {
-              com.google.protobuf.MapEntry<java.lang.Integer, java.lang.String>
+              com.google.protobuf.MapEntry<Integer, String>
               names__ = input.readMessage(
                   NamesDefaultEntryHolder.defaultEntry.getParserForType(), extensionRegistry);
               internalGetMutableNames().getMutableMap().put(
@@ -594,9 +594,9 @@ java.lang.String defaultValue) {
               break;
             } // case 10
             case 18: {
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter m =
+              ControlledVocabularyParameter m =
                   input.readMessage(
-                      io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.parser(),
+                      ControlledVocabularyParameter.parser(),
                       extensionRegistry);
               if (attributesBuilder_ == null) {
                 ensureAttributesIsMutable();
@@ -624,8 +624,8 @@ java.lang.String defaultValue) {
     private int bitField0_;
 
     private com.google.protobuf.MapField<
-        java.lang.Integer, java.lang.String> names_;
-    private com.google.protobuf.MapField<java.lang.Integer, java.lang.String>
+        Integer, String> names_;
+    private com.google.protobuf.MapField<Integer, String>
         internalGetNames() {
       if (names_ == null) {
         return com.google.protobuf.MapField.emptyMapField(
@@ -633,7 +633,7 @@ java.lang.String defaultValue) {
       }
       return names_;
     }
-    private com.google.protobuf.MapField<java.lang.Integer, java.lang.String>
+    private com.google.protobuf.MapField<Integer, String>
         internalGetMutableNames() {
       if (names_ == null) {
         names_ = com.google.protobuf.MapField.newMapField(
@@ -656,7 +656,7 @@ java.lang.String defaultValue) {
      *
      * <code>map&lt;int32, string&gt; Names = 1;</code>
      */
-    @java.lang.Override
+    @Override
     public boolean containsNames(
         int key) {
 
@@ -665,9 +665,9 @@ java.lang.String defaultValue) {
     /**
      * Use {@link #getNamesMap()} instead.
      */
-    @java.lang.Override
-    @java.lang.Deprecated
-    public java.util.Map<java.lang.Integer, java.lang.String> getNames() {
+    @Override
+    @Deprecated
+    public java.util.Map<Integer, String> getNames() {
       return getNamesMap();
     }
     /**
@@ -677,8 +677,8 @@ java.lang.String defaultValue) {
      *
      * <code>map&lt;int32, string&gt; Names = 1;</code>
      */
-    @java.lang.Override
-    public java.util.Map<java.lang.Integer, java.lang.String> getNamesMap() {
+    @Override
+    public java.util.Map<Integer, String> getNamesMap() {
       return internalGetNames().getMap();
     }
     /**
@@ -688,14 +688,14 @@ java.lang.String defaultValue) {
      *
      * <code>map&lt;int32, string&gt; Names = 1;</code>
      */
-    @java.lang.Override
+    @Override
     public /* nullable */
-java.lang.String getNamesOrDefault(
+String getNamesOrDefault(
         int key,
         /* nullable */
-java.lang.String defaultValue) {
+String defaultValue) {
 
-      java.util.Map<java.lang.Integer, java.lang.String> map =
+      java.util.Map<Integer, String> map =
           internalGetNames().getMap();
       return map.containsKey(key) ? map.get(key) : defaultValue;
     }
@@ -706,14 +706,14 @@ java.lang.String defaultValue) {
      *
      * <code>map&lt;int32, string&gt; Names = 1;</code>
      */
-    @java.lang.Override
-    public java.lang.String getNamesOrThrow(
+    @Override
+    public String getNamesOrThrow(
         int key) {
 
-      java.util.Map<java.lang.Integer, java.lang.String> map =
+      java.util.Map<Integer, String> map =
           internalGetNames().getMap();
       if (!map.containsKey(key)) {
-        throw new java.lang.IllegalArgumentException();
+        throw new IllegalArgumentException();
       }
       return map.get(key);
     }
@@ -740,8 +740,8 @@ java.lang.String defaultValue) {
     /**
      * Use alternate mutation accessors instead.
      */
-    @java.lang.Deprecated
-    public java.util.Map<java.lang.Integer, java.lang.String>
+    @Deprecated
+    public java.util.Map<Integer, String>
         getMutableNames() {
       bitField0_ |= 0x00000001;
       return internalGetMutableNames().getMutableMap();
@@ -755,7 +755,7 @@ java.lang.String defaultValue) {
      */
     public Builder putNames(
         int key,
-        java.lang.String value) {
+        String value) {
 
       if (value == null) { throw new NullPointerException("map value"); }
       internalGetMutableNames().getMutableMap()
@@ -771,24 +771,24 @@ java.lang.String defaultValue) {
      * <code>map&lt;int32, string&gt; Names = 1;</code>
      */
     public Builder putAllNames(
-        java.util.Map<java.lang.Integer, java.lang.String> values) {
+        java.util.Map<Integer, String> values) {
       internalGetMutableNames().getMutableMap()
           .putAll(values);
       bitField0_ |= 0x00000001;
       return this;
     }
 
-    private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> attributes_ =
+    private java.util.List<ControlledVocabularyParameter> attributes_ =
       java.util.Collections.emptyList();
     private void ensureAttributesIsMutable() {
       if (!((bitField0_ & 0x00000002) != 0)) {
-        attributes_ = new java.util.ArrayList<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter>(attributes_);
+        attributes_ = new java.util.ArrayList<ControlledVocabularyParameter>(attributes_);
         bitField0_ |= 0x00000002;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> attributesBuilder_;
+        ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder> attributesBuilder_;
 
     /**
      * <pre>
@@ -797,7 +797,7 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> getAttributesList() {
+    public java.util.List<ControlledVocabularyParameter> getAttributesList() {
       if (attributesBuilder_ == null) {
         return java.util.Collections.unmodifiableList(attributes_);
       } else {
@@ -825,7 +825,7 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getAttributes(int index) {
+    public ControlledVocabularyParameter getAttributes(int index) {
       if (attributesBuilder_ == null) {
         return attributes_.get(index);
       } else {
@@ -840,7 +840,7 @@ java.lang.String defaultValue) {
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
     public Builder setAttributes(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter value) {
+        int index, ControlledVocabularyParameter value) {
       if (attributesBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -861,7 +861,7 @@ java.lang.String defaultValue) {
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
     public Builder setAttributes(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder builderForValue) {
+        int index, ControlledVocabularyParameter.Builder builderForValue) {
       if (attributesBuilder_ == null) {
         ensureAttributesIsMutable();
         attributes_.set(index, builderForValue.build());
@@ -878,7 +878,7 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public Builder addAttributes(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter value) {
+    public Builder addAttributes(ControlledVocabularyParameter value) {
       if (attributesBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -899,7 +899,7 @@ java.lang.String defaultValue) {
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
     public Builder addAttributes(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter value) {
+        int index, ControlledVocabularyParameter value) {
       if (attributesBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -920,7 +920,7 @@ java.lang.String defaultValue) {
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
     public Builder addAttributes(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder builderForValue) {
+        ControlledVocabularyParameter.Builder builderForValue) {
       if (attributesBuilder_ == null) {
         ensureAttributesIsMutable();
         attributes_.add(builderForValue.build());
@@ -938,7 +938,7 @@ java.lang.String defaultValue) {
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
     public Builder addAttributes(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder builderForValue) {
+        int index, ControlledVocabularyParameter.Builder builderForValue) {
       if (attributesBuilder_ == null) {
         ensureAttributesIsMutable();
         attributes_.add(index, builderForValue.build());
@@ -956,7 +956,7 @@ java.lang.String defaultValue) {
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
     public Builder addAllAttributes(
-        java.lang.Iterable<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> values) {
+        Iterable<? extends ControlledVocabularyParameter> values) {
       if (attributesBuilder_ == null) {
         ensureAttributesIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -1008,7 +1008,7 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder getAttributesBuilder(
+    public ControlledVocabularyParameter.Builder getAttributesBuilder(
         int index) {
       return internalGetAttributesFieldBuilder().getBuilder(index);
     }
@@ -1019,7 +1019,7 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
+    public ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
         int index) {
       if (attributesBuilder_ == null) {
         return attributes_.get(index);  } else {
@@ -1033,7 +1033,7 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+    public java.util.List<? extends ControlledVocabularyParameterOrBuilder>
          getAttributesOrBuilderList() {
       if (attributesBuilder_ != null) {
         return attributesBuilder_.getMessageOrBuilderList();
@@ -1048,9 +1048,9 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder addAttributesBuilder() {
+    public ControlledVocabularyParameter.Builder addAttributesBuilder() {
       return internalGetAttributesFieldBuilder().addBuilder(
-          io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance());
+          ControlledVocabularyParameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -1059,10 +1059,10 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder addAttributesBuilder(
+    public ControlledVocabularyParameter.Builder addAttributesBuilder(
         int index) {
       return internalGetAttributesFieldBuilder().addBuilder(
-          index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance());
+          index, ControlledVocabularyParameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -1071,16 +1071,16 @@ java.lang.String defaultValue) {
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder> 
+    public java.util.List<ControlledVocabularyParameter.Builder>
          getAttributesBuilderList() {
       return internalGetAttributesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+        ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder>
         internalGetAttributesFieldBuilder() {
       if (attributesBuilder_ == null) {
         attributesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder>(
+            ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder>(
                 attributes_,
                 ((bitField0_ & 0x00000002) != 0),
                 getParentForChildren(),
@@ -1094,18 +1094,18 @@ java.lang.String defaultValue) {
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.AdcChannelsDescriptions)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions DEFAULT_INSTANCE;
+  private static final AdcChannelsDescriptions DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions();
+    DEFAULT_INSTANCE = new AdcChannelsDescriptions();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions getDefaultInstance() {
+  public static AdcChannelsDescriptions getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<AdcChannelsDescriptions>
       PARSER = new com.google.protobuf.AbstractParser<AdcChannelsDescriptions>() {
-    @java.lang.Override
+    @Override
     public AdcChannelsDescriptions parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -1129,13 +1129,13 @@ java.lang.String defaultValue) {
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<AdcChannelsDescriptions> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.AdcChannelsDescriptions getDefaultInstanceForType() {
+  @Override
+  public AdcChannelsDescriptions getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

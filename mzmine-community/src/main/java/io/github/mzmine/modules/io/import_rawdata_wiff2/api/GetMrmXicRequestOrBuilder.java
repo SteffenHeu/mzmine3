@@ -18,7 +18,7 @@ public interface GetMrmXicRequestOrBuilder extends
    * <code>string SampleId = 1;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * the id of the sample 
@@ -38,7 +38,7 @@ public interface GetMrmXicRequestOrBuilder extends
    * <code>string ExperimentId = 2;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * &#47; the id of the experiment
@@ -58,7 +58,7 @@ public interface GetMrmXicRequestOrBuilder extends
    * <code>repeated int32 MassIndexes = 3;</code>
    * @return A list containing the massIndexes.
    */
-  java.util.List<java.lang.Integer> getMassIndexesList();
+  java.util.List<Integer> getMassIndexesList();
   /**
    * <pre>
    * &#47; the list of mass indices
@@ -96,7 +96,7 @@ public interface GetMrmXicRequestOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CycleRange CycleRange = 4;</code>
    * @return The cycleRange.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.CycleRange getCycleRange();
+  CycleRange getCycleRange();
   /**
    * <pre>
    * &#47; the range of cycles
@@ -104,7 +104,7 @@ public interface GetMrmXicRequestOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CycleRange CycleRange = 4;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.CycleRangeOrBuilder getCycleRangeOrBuilder();
+  CycleRangeOrBuilder getCycleRangeOrBuilder();
 
   /**
    * <pre>
@@ -123,7 +123,7 @@ public interface GetMrmXicRequestOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
    * @return The timeRange.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange getTimeRange();
+  TimeRange getTimeRange();
   /**
    * <pre>
    * &#47; the range of the time
@@ -131,5 +131,5 @@ public interface GetMrmXicRequestOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder getTimeRangeOrBuilder();
+  TimeRangeOrBuilder getTimeRangeOrBuilder();
 }

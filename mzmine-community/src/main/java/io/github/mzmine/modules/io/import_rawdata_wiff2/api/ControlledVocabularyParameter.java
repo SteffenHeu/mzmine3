@@ -39,20 +39,20 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder.class);
+            ControlledVocabularyParameter.class, Builder.class);
   }
 
   public static final int ACCESSION_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object accession_ = "";
+  private volatile Object accession_ = "";
   /**
    * <pre>
    * The accession number of the referred-to 
@@ -62,15 +62,15 @@ private static final long serialVersionUID = 0L;
    * <code>string Accession = 1;</code>
    * @return The accession.
    */
-  @java.lang.Override
-  public java.lang.String getAccession() {
-    java.lang.Object ref = accession_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getAccession() {
+    Object ref = accession_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       accession_ = s;
       return s;
     }
@@ -84,14 +84,14 @@ private static final long serialVersionUID = 0L;
    * <code>string Accession = 1;</code>
    * @return The bytes for accession.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getAccessionBytes() {
-    java.lang.Object ref = accession_;
-    if (ref instanceof java.lang.String) {
+    Object ref = accession_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       accession_ = b;
       return b;
     } else {
@@ -101,7 +101,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int NAME_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object name_ = "";
+  private volatile Object name_ = "";
   /**
    * <pre>
    * The actual name for the parameter, from
@@ -113,15 +113,15 @@ private static final long serialVersionUID = 0L;
    * <code>string Name = 2;</code>
    * @return The name.
    */
-  @java.lang.Override
-  public java.lang.String getName() {
-    java.lang.Object ref = name_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getName() {
+    Object ref = name_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       name_ = s;
       return s;
     }
@@ -137,14 +137,14 @@ private static final long serialVersionUID = 0L;
    * <code>string Name = 2;</code>
    * @return The bytes for name.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getNameBytes() {
-    java.lang.Object ref = name_;
-    if (ref instanceof java.lang.String) {
+    Object ref = name_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       name_ = b;
       return b;
     } else {
@@ -154,7 +154,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int VALUE_FIELD_NUMBER = 3;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object value_ = "";
+  private volatile Object value_ = "";
   /**
    * <pre>
    * the value
@@ -163,15 +163,15 @@ private static final long serialVersionUID = 0L;
    * <code>string Value = 3;</code>
    * @return The value.
    */
-  @java.lang.Override
-  public java.lang.String getValue() {
-    java.lang.Object ref = value_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getValue() {
+    Object ref = value_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       value_ = s;
       return s;
     }
@@ -184,14 +184,14 @@ private static final long serialVersionUID = 0L;
    * <code>string Value = 3;</code>
    * @return The bytes for value.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getValueBytes() {
-    java.lang.Object ref = value_;
-    if (ref instanceof java.lang.String) {
+    Object ref = value_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       value_ = b;
       return b;
     } else {
@@ -200,7 +200,7 @@ private static final long serialVersionUID = 0L;
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -210,7 +210,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(accession_)) {
@@ -225,7 +225,7 @@ private static final long serialVersionUID = 0L;
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -245,15 +245,15 @@ private static final long serialVersionUID = 0L;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter)) {
+    if (!(obj instanceof ControlledVocabularyParameter)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter) obj;
+    ControlledVocabularyParameter other = (ControlledVocabularyParameter) obj;
 
     if (!getAccession()
         .equals(other.getAccession())) return false;
@@ -265,7 +265,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -283,44 +283,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(
+  public static ControlledVocabularyParameter parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(
+  public static ControlledVocabularyParameter parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(
+  public static ControlledVocabularyParameter parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(
+  public static ControlledVocabularyParameter parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(byte[] data)
+  public static ControlledVocabularyParameter parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(
+  public static ControlledVocabularyParameter parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(java.io.InputStream input)
+  public static ControlledVocabularyParameter parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(
+  public static ControlledVocabularyParameter parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -328,26 +328,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseDelimitedFrom(java.io.InputStream input)
+  public static ControlledVocabularyParameter parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseDelimitedFrom(
+  public static ControlledVocabularyParameter parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(
+  public static ControlledVocabularyParameter parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter parseFrom(
+  public static ControlledVocabularyParameter parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -355,23 +355,23 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter prototype) {
+  public static Builder newBuilder(ControlledVocabularyParameter prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -385,18 +385,18 @@ private static final long serialVersionUID = 0L;
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder {
+      ControlledVocabularyParameterOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder.class);
+              ControlledVocabularyParameter.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.newBuilder()
@@ -405,11 +405,11 @@ private static final long serialVersionUID = 0L;
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
 
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -419,35 +419,35 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance();
+    @Override
+    public ControlledVocabularyParameter getDefaultInstanceForType() {
+      return ControlledVocabularyParameter.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter result = buildPartial();
+    @Override
+    public ControlledVocabularyParameter build() {
+      ControlledVocabularyParameter result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter(this);
+    @Override
+    public ControlledVocabularyParameter buildPartial() {
+      ControlledVocabularyParameter result = new ControlledVocabularyParameter(this);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter result) {
+    private void buildPartial0(ControlledVocabularyParameter result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.accession_ = accession_;
@@ -460,18 +460,18 @@ private static final long serialVersionUID = 0L;
       }
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter)other);
+      if (other instanceof ControlledVocabularyParameter) {
+        return mergeFrom((ControlledVocabularyParameter)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance()) return this;
+    public Builder mergeFrom(ControlledVocabularyParameter other) {
+      if (other == ControlledVocabularyParameter.getDefaultInstance()) return this;
       if (!other.getAccession().isEmpty()) {
         accession_ = other.accession_;
         bitField0_ |= 0x00000001;
@@ -492,18 +492,18 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -545,7 +545,7 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.lang.Object accession_ = "";
+    private Object accession_ = "";
     /**
      * <pre>
      * The accession number of the referred-to 
@@ -555,16 +555,16 @@ private static final long serialVersionUID = 0L;
      * <code>string Accession = 1;</code>
      * @return The accession.
      */
-    public java.lang.String getAccession() {
-      java.lang.Object ref = accession_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getAccession() {
+      Object ref = accession_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         accession_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -578,11 +578,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getAccessionBytes() {
-      java.lang.Object ref = accession_;
+      Object ref = accession_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         accession_ = b;
         return b;
       } else {
@@ -600,7 +600,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setAccession(
-        java.lang.String value) {
+        String value) {
       if (value == null) { throw new NullPointerException(); }
       accession_ = value;
       bitField0_ |= 0x00000001;
@@ -642,7 +642,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object name_ = "";
+    private Object name_ = "";
     /**
      * <pre>
      * The actual name for the parameter, from
@@ -654,16 +654,16 @@ private static final long serialVersionUID = 0L;
      * <code>string Name = 2;</code>
      * @return The name.
      */
-    public java.lang.String getName() {
-      java.lang.Object ref = name_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getName() {
+      Object ref = name_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         name_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -679,11 +679,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getNameBytes() {
-      java.lang.Object ref = name_;
+      Object ref = name_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         name_ = b;
         return b;
       } else {
@@ -703,7 +703,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setName(
-        java.lang.String value) {
+        String value) {
       if (value == null) { throw new NullPointerException(); }
       name_ = value;
       bitField0_ |= 0x00000002;
@@ -749,7 +749,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object value_ = "";
+    private Object value_ = "";
     /**
      * <pre>
      * the value
@@ -758,16 +758,16 @@ private static final long serialVersionUID = 0L;
      * <code>string Value = 3;</code>
      * @return The value.
      */
-    public java.lang.String getValue() {
-      java.lang.Object ref = value_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getValue() {
+      Object ref = value_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         value_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -780,11 +780,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getValueBytes() {
-      java.lang.Object ref = value_;
+      Object ref = value_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         value_ = b;
         return b;
       } else {
@@ -801,7 +801,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setValue(
-        java.lang.String value) {
+        String value) {
       if (value == null) { throw new NullPointerException(); }
       value_ = value;
       bitField0_ |= 0x00000004;
@@ -845,18 +845,18 @@ private static final long serialVersionUID = 0L;
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter DEFAULT_INSTANCE;
+  private static final ControlledVocabularyParameter DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter();
+    DEFAULT_INSTANCE = new ControlledVocabularyParameter();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getDefaultInstance() {
+  public static ControlledVocabularyParameter getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<ControlledVocabularyParameter>
       PARSER = new com.google.protobuf.AbstractParser<ControlledVocabularyParameter>() {
-    @java.lang.Override
+    @Override
     public ControlledVocabularyParameter parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -880,13 +880,13 @@ private static final long serialVersionUID = 0L;
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<ControlledVocabularyParameter> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getDefaultInstanceForType() {
+  @Override
+  public ControlledVocabularyParameter getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

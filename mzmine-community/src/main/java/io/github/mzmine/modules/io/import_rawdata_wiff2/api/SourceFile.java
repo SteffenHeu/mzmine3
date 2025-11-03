@@ -39,20 +39,20 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile.Builder.class);
+            SourceFile.class, Builder.class);
   }
 
   public static final int NAME_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object name_ = "";
+  private volatile Object name_ = "";
   /**
    * <pre>
    * Name of the source file, without 
@@ -62,15 +62,15 @@ private static final long serialVersionUID = 0L;
    * <code>string Name = 1;</code>
    * @return The name.
    */
-  @java.lang.Override
-  public java.lang.String getName() {
-    java.lang.Object ref = name_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getName() {
+    Object ref = name_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       name_ = s;
       return s;
     }
@@ -84,14 +84,14 @@ private static final long serialVersionUID = 0L;
    * <code>string Name = 1;</code>
    * @return The bytes for name.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getNameBytes() {
-    java.lang.Object ref = name_;
-    if (ref instanceof java.lang.String) {
+    Object ref = name_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       name_ = b;
       return b;
     } else {
@@ -101,7 +101,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int ID_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object id_ = "";
+  private volatile Object id_ = "";
   /**
    * <pre>
    * An identifier for this file.
@@ -110,15 +110,15 @@ private static final long serialVersionUID = 0L;
    * <code>string Id = 2;</code>
    * @return The id.
    */
-  @java.lang.Override
-  public java.lang.String getId() {
-    java.lang.Object ref = id_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getId() {
+    Object ref = id_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       id_ = s;
       return s;
     }
@@ -131,14 +131,14 @@ private static final long serialVersionUID = 0L;
    * <code>string Id = 2;</code>
    * @return The bytes for id.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getIdBytes() {
-    java.lang.Object ref = id_;
-    if (ref instanceof java.lang.String) {
+    Object ref = id_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       id_ = b;
       return b;
     } else {
@@ -148,7 +148,7 @@ private static final long serialVersionUID = 0L;
 
   public static final int LOCATION_FIELD_NUMBER = 3;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object location_ = "";
+  private volatile Object location_ = "";
   /**
    * <pre>
    * URI-formatted location where the file was retrieved.
@@ -157,15 +157,15 @@ private static final long serialVersionUID = 0L;
    * <code>string Location = 3;</code>
    * @return The location.
    */
-  @java.lang.Override
-  public java.lang.String getLocation() {
-    java.lang.Object ref = location_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getLocation() {
+    Object ref = location_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       location_ = s;
       return s;
     }
@@ -178,14 +178,14 @@ private static final long serialVersionUID = 0L;
    * <code>string Location = 3;</code>
    * @return The bytes for location.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getLocationBytes() {
-    java.lang.Object ref = location_;
-    if (ref instanceof java.lang.String) {
+    Object ref = location_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       location_ = b;
       return b;
     } else {
@@ -194,7 +194,7 @@ private static final long serialVersionUID = 0L;
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -204,7 +204,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(name_)) {
@@ -219,7 +219,7 @@ private static final long serialVersionUID = 0L;
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -239,15 +239,15 @@ private static final long serialVersionUID = 0L;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile)) {
+    if (!(obj instanceof SourceFile)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile) obj;
+    SourceFile other = (SourceFile) obj;
 
     if (!getName()
         .equals(other.getName())) return false;
@@ -259,7 +259,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -277,44 +277,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(
+  public static SourceFile parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(
+  public static SourceFile parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(
+  public static SourceFile parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(
+  public static SourceFile parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(byte[] data)
+  public static SourceFile parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(
+  public static SourceFile parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(java.io.InputStream input)
+  public static SourceFile parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(
+  public static SourceFile parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -322,26 +322,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseDelimitedFrom(java.io.InputStream input)
+  public static SourceFile parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseDelimitedFrom(
+  public static SourceFile parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(
+  public static SourceFile parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile parseFrom(
+  public static SourceFile parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -349,23 +349,23 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile prototype) {
+  public static Builder newBuilder(SourceFile prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -379,18 +379,18 @@ private static final long serialVersionUID = 0L;
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.SourceFile)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFileOrBuilder {
+      SourceFileOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile.Builder.class);
+              SourceFile.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile.newBuilder()
@@ -399,11 +399,11 @@ private static final long serialVersionUID = 0L;
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
 
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -413,35 +413,35 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile.getDefaultInstance();
+    @Override
+    public SourceFile getDefaultInstanceForType() {
+      return SourceFile.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile result = buildPartial();
+    @Override
+    public SourceFile build() {
+      SourceFile result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile(this);
+    @Override
+    public SourceFile buildPartial() {
+      SourceFile result = new SourceFile(this);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile result) {
+    private void buildPartial0(SourceFile result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.name_ = name_;
@@ -454,18 +454,18 @@ private static final long serialVersionUID = 0L;
       }
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile)other);
+      if (other instanceof SourceFile) {
+        return mergeFrom((SourceFile)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile.getDefaultInstance()) return this;
+    public Builder mergeFrom(SourceFile other) {
+      if (other == SourceFile.getDefaultInstance()) return this;
       if (!other.getName().isEmpty()) {
         name_ = other.name_;
         bitField0_ |= 0x00000001;
@@ -486,18 +486,18 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -539,7 +539,7 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.lang.Object name_ = "";
+    private Object name_ = "";
     /**
      * <pre>
      * Name of the source file, without 
@@ -549,16 +549,16 @@ private static final long serialVersionUID = 0L;
      * <code>string Name = 1;</code>
      * @return The name.
      */
-    public java.lang.String getName() {
-      java.lang.Object ref = name_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getName() {
+      Object ref = name_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         name_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -572,11 +572,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getNameBytes() {
-      java.lang.Object ref = name_;
+      Object ref = name_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         name_ = b;
         return b;
       } else {
@@ -594,7 +594,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setName(
-        java.lang.String value) {
+        String value) {
       if (value == null) { throw new NullPointerException(); }
       name_ = value;
       bitField0_ |= 0x00000001;
@@ -636,7 +636,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object id_ = "";
+    private Object id_ = "";
     /**
      * <pre>
      * An identifier for this file.
@@ -645,16 +645,16 @@ private static final long serialVersionUID = 0L;
      * <code>string Id = 2;</code>
      * @return The id.
      */
-    public java.lang.String getId() {
-      java.lang.Object ref = id_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getId() {
+      Object ref = id_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         id_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -667,11 +667,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getIdBytes() {
-      java.lang.Object ref = id_;
+      Object ref = id_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         id_ = b;
         return b;
       } else {
@@ -688,7 +688,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setId(
-        java.lang.String value) {
+        String value) {
       if (value == null) { throw new NullPointerException(); }
       id_ = value;
       bitField0_ |= 0x00000002;
@@ -728,7 +728,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object location_ = "";
+    private Object location_ = "";
     /**
      * <pre>
      * URI-formatted location where the file was retrieved.
@@ -737,16 +737,16 @@ private static final long serialVersionUID = 0L;
      * <code>string Location = 3;</code>
      * @return The location.
      */
-    public java.lang.String getLocation() {
-      java.lang.Object ref = location_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getLocation() {
+      Object ref = location_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         location_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -759,11 +759,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getLocationBytes() {
-      java.lang.Object ref = location_;
+      Object ref = location_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         location_ = b;
         return b;
       } else {
@@ -780,7 +780,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setLocation(
-        java.lang.String value) {
+        String value) {
       if (value == null) { throw new NullPointerException(); }
       location_ = value;
       bitField0_ |= 0x00000004;
@@ -824,18 +824,18 @@ private static final long serialVersionUID = 0L;
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.SourceFile)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile DEFAULT_INSTANCE;
+  private static final SourceFile DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile();
+    DEFAULT_INSTANCE = new SourceFile();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile getDefaultInstance() {
+  public static SourceFile getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<SourceFile>
       PARSER = new com.google.protobuf.AbstractParser<SourceFile>() {
-    @java.lang.Override
+    @Override
     public SourceFile parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -859,13 +859,13 @@ private static final long serialVersionUID = 0L;
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<SourceFile> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile getDefaultInstanceForType() {
+  @Override
+  public SourceFile getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

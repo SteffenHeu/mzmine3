@@ -18,7 +18,7 @@ public interface SampleOrBuilder extends
    * <code>string Id = 1;</code>
    * @return The id.
    */
-  java.lang.String getId();
+  String getId();
   /**
    * <pre>
    * A unique identifier for this sample
@@ -38,7 +38,7 @@ public interface SampleOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.SourceFile Sources = 2;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile> 
+  java.util.List<SourceFile>
       getSourcesList();
   /**
    * <pre>
@@ -48,7 +48,7 @@ public interface SampleOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.SourceFile Sources = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile getSources(int index);
+  SourceFile getSources(int index);
   /**
    * <pre>
    * descriptions of the source files this sample 
@@ -66,7 +66,7 @@ public interface SampleOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.SourceFile Sources = 2;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFileOrBuilder> 
+  java.util.List<? extends SourceFileOrBuilder>
       getSourcesOrBuilderList();
   /**
    * <pre>
@@ -76,7 +76,7 @@ public interface SampleOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.SourceFile Sources = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFileOrBuilder getSourcesOrBuilder(
+  SourceFileOrBuilder getSourcesOrBuilder(
       int index);
 
   /**
@@ -90,7 +90,7 @@ public interface SampleOrBuilder extends
    * <code>string StartTimestamp = 4;</code>
    * @return The startTimestamp.
    */
-  java.lang.String getStartTimestamp();
+  String getStartTimestamp();
   /**
    * <pre>
    * Sample start datetime in the utc format aligned to the 
@@ -123,7 +123,7 @@ public interface SampleOrBuilder extends
    * <code>string UserSampleId = 6;</code>
    * @return The userSampleId.
    */
-  java.lang.String getUserSampleId();
+  String getUserSampleId();
   /**
    * <pre>
    * Returns the user-defined sample ID.
@@ -143,7 +143,7 @@ public interface SampleOrBuilder extends
    * <code>string SampleComment = 7;</code>
    * @return The sampleComment.
    */
-  java.lang.String getSampleComment();
+  String getSampleComment();
   /**
    * <pre>
    * Comment left by user
@@ -163,7 +163,7 @@ public interface SampleOrBuilder extends
    * <code>string UserName = 8;</code>
    * @return The userName.
    */
-  java.lang.String getUserName();
+  String getUserName();
   /**
    * <pre>
    * Gets or sets the name of the user who acquired the sample.
@@ -183,7 +183,7 @@ public interface SampleOrBuilder extends
    * <code>string AcquisitionMethodName = 9;</code>
    * @return The acquisitionMethodName.
    */
-  java.lang.String getAcquisitionMethodName();
+  String getAcquisitionMethodName();
   /**
    * <pre>
    * Gets or sets the name of the acquisition method used to acquire the data.
@@ -223,7 +223,7 @@ public interface SampleOrBuilder extends
    * <code>string SampleName = 12;</code>
    * @return The sampleName.
    */
-  java.lang.String getSampleName();
+  String getSampleName();
   /**
    * <pre>
    * A reference string relevant to the sample under study. See (MS:1000002)
@@ -252,7 +252,7 @@ public interface SampleOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.AutosamplerInfo AutoSamplerInformation = 13;</code>
    * @return The autoSamplerInformation.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.AutosamplerInfo getAutoSamplerInformation();
+  AutosamplerInfo getAutoSamplerInformation();
   /**
    * <pre>
    * Rack/plate/vial information.
@@ -260,7 +260,7 @@ public interface SampleOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.AutosamplerInfo AutoSamplerInformation = 13;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.AutosamplerInfoOrBuilder getAutoSamplerInformationOrBuilder();
+  AutosamplerInfoOrBuilder getAutoSamplerInformationOrBuilder();
 
   /**
    * <pre>
@@ -279,7 +279,7 @@ public interface SampleOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.Sample.QuantitationSampleType QuantSampleType = 14;</code>
    * @return The quantSampleType.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.Sample.QuantitationSampleType getQuantSampleType();
+  Sample.QuantitationSampleType getQuantSampleType();
 
   /**
    * <pre>
@@ -288,7 +288,7 @@ public interface SampleOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.InstrumentDetail InstrumentDetails = 15;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.InstrumentDetail> 
+  java.util.List<InstrumentDetail>
       getInstrumentDetailsList();
   /**
    * <pre>
@@ -297,7 +297,7 @@ public interface SampleOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.InstrumentDetail InstrumentDetails = 15;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.InstrumentDetail getInstrumentDetails(int index);
+  InstrumentDetail getInstrumentDetails(int index);
   /**
    * <pre>
    * descriptions of the Instruments for this sample 
@@ -313,7 +313,7 @@ public interface SampleOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.InstrumentDetail InstrumentDetails = 15;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.InstrumentDetailOrBuilder> 
+  java.util.List<? extends InstrumentDetailOrBuilder>
       getInstrumentDetailsOrBuilderList();
   /**
    * <pre>
@@ -322,6 +322,6 @@ public interface SampleOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.InstrumentDetail InstrumentDetails = 15;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.InstrumentDetailOrBuilder getInstrumentDetailsOrBuilder(
+  InstrumentDetailOrBuilder getInstrumentDetailsOrBuilder(
       int index);
 }

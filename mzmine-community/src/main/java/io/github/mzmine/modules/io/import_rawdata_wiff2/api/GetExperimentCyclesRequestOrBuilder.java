@@ -18,7 +18,7 @@ public interface GetExperimentCyclesRequestOrBuilder extends
    * <code>string ExperimentId = 1;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * The id of the experiment for which to retrieve the list of cycles
@@ -38,7 +38,7 @@ public interface GetExperimentCyclesRequestOrBuilder extends
    * <code>string SampleId = 2;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * The sample identifier 

@@ -18,7 +18,7 @@ public interface ChannelTraceOrBuilder extends
    * <code>string Id = 1;</code>
    * @return The id.
    */
-  java.lang.String getId();
+  String getId();
   /**
    * <pre>
    * &#47; The ID of the channel.
@@ -38,7 +38,7 @@ public interface ChannelTraceOrBuilder extends
    * <code>string Name = 2;</code>
    * @return The name.
    */
-  java.lang.String getName();
+  String getName();
   /**
    * <pre>
    * Channel Name.
@@ -58,7 +58,7 @@ public interface ChannelTraceOrBuilder extends
    * <code>string TraceType = 3;</code>
    * @return The traceType.
    */
-  java.lang.String getTraceType();
+  String getTraceType();
   /**
    * <pre>
    * &#47; Trace Type.
@@ -78,7 +78,7 @@ public interface ChannelTraceOrBuilder extends
    * <code>string SampleId = 4;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * &#47; Sample identifier.
@@ -98,7 +98,7 @@ public interface ChannelTraceOrBuilder extends
    * <code>repeated double XValues = 5;</code>
    * @return A list containing the xValues.
    */
-  java.util.List<java.lang.Double> getXValuesList();
+  java.util.List<Double> getXValuesList();
   /**
    * <pre>
    * &#47; X Axis - Time in Minutes.
@@ -127,7 +127,7 @@ public interface ChannelTraceOrBuilder extends
    * <code>repeated double YValues = 6;</code>
    * @return A list containing the yValues.
    */
-  java.util.List<java.lang.Double> getYValuesList();
+  java.util.List<Double> getYValuesList();
   /**
    * <pre>
    * &#47; Y Axis - Intensity.

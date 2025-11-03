@@ -18,7 +18,7 @@ public interface GetExperimentsRequestOrBuilder extends
    * <code>string SampleId = 1;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * the id of the sample 

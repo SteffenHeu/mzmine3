@@ -18,7 +18,7 @@ public interface ExperimentScanRecordsResponseOrBuilder extends
    * <code>string SampleId = 1;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * the target sample id
@@ -38,7 +38,7 @@ public interface ExperimentScanRecordsResponseOrBuilder extends
    * <code>string ExperimentId = 2;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * the id of the experiment 
@@ -67,7 +67,7 @@ public interface ExperimentScanRecordsResponseOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TofInstrumentParameters TofInstrumentParameters = 3;</code>
    * @return The tofInstrumentParameters.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TofInstrumentParameters getTofInstrumentParameters();
+  TofInstrumentParameters getTofInstrumentParameters();
   /**
    * <pre>
    * will be NULL for Non-Tof DataFormat, must be present for Tof Data 
@@ -75,7 +75,7 @@ public interface ExperimentScanRecordsResponseOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TofInstrumentParameters TofInstrumentParameters = 3;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TofInstrumentParametersOrBuilder getTofInstrumentParametersOrBuilder();
+  TofInstrumentParametersOrBuilder getTofInstrumentParametersOrBuilder();
 
   /**
    * <pre>
@@ -84,7 +84,7 @@ public interface ExperimentScanRecordsResponseOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ScanRecordInfo Scans = 4;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanRecordInfo> 
+  java.util.List<ScanRecordInfo>
       getScansList();
   /**
    * <pre>
@@ -93,7 +93,7 @@ public interface ExperimentScanRecordsResponseOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ScanRecordInfo Scans = 4;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanRecordInfo getScans(int index);
+  ScanRecordInfo getScans(int index);
   /**
    * <pre>
    * scan records
@@ -109,7 +109,7 @@ public interface ExperimentScanRecordsResponseOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ScanRecordInfo Scans = 4;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanRecordInfoOrBuilder> 
+  java.util.List<? extends ScanRecordInfoOrBuilder>
       getScansOrBuilderList();
   /**
    * <pre>
@@ -118,6 +118,6 @@ public interface ExperimentScanRecordsResponseOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ScanRecordInfo Scans = 4;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanRecordInfoOrBuilder getScansOrBuilder(
+  ScanRecordInfoOrBuilder getScansOrBuilder(
       int index);
 }

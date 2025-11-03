@@ -40,7 +40,7 @@ public interface ScanWindowOrBuilder extends
    * <code>string UnitAccession = 3;</code>
    * @return The unitAccession.
    */
-  java.lang.String getUnitAccession();
+  String getUnitAccession();
   /**
    * <pre>
    * In most of the cases will be MS:1000040

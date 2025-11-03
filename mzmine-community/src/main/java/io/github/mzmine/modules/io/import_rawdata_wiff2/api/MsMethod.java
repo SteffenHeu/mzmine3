@@ -38,20 +38,20 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod.Builder.class);
+            MsMethod.class, Builder.class);
   }
 
   public static final int SOURCEPARAMETERS_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
-  private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> sourceParameters_;
+  private java.util.List<Parameter> sourceParameters_;
   /**
    * <pre>
    * returns the source Parameters
@@ -59,8 +59,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  @java.lang.Override
-  public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> getSourceParametersList() {
+  @Override
+  public java.util.List<Parameter> getSourceParametersList() {
     return sourceParameters_;
   }
   /**
@@ -70,8 +70,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  @java.lang.Override
-  public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+  @Override
+  public java.util.List<? extends ParameterOrBuilder>
       getSourceParametersOrBuilderList() {
     return sourceParameters_;
   }
@@ -82,7 +82,7 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  @java.lang.Override
+  @Override
   public int getSourceParametersCount() {
     return sourceParameters_.size();
   }
@@ -93,8 +93,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getSourceParameters(int index) {
+  @Override
+  public Parameter getSourceParameters(int index) {
     return sourceParameters_.get(index);
   }
   /**
@@ -104,15 +104,15 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getSourceParametersOrBuilder(
+  @Override
+  public ParameterOrBuilder getSourceParametersOrBuilder(
       int index) {
     return sourceParameters_.get(index);
   }
 
   public static final int EXPERIMENTS_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
-  private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment> experiments_;
+  private java.util.List<MsMethodExperiment> experiments_;
   /**
    * <pre>
    * returns the experiment information 
@@ -120,8 +120,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  @java.lang.Override
-  public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment> getExperimentsList() {
+  @Override
+  public java.util.List<MsMethodExperiment> getExperimentsList() {
     return experiments_;
   }
   /**
@@ -131,8 +131,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  @java.lang.Override
-  public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder> 
+  @Override
+  public java.util.List<? extends MsMethodExperimentOrBuilder>
       getExperimentsOrBuilderList() {
     return experiments_;
   }
@@ -143,7 +143,7 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  @java.lang.Override
+  @Override
   public int getExperimentsCount() {
     return experiments_.size();
   }
@@ -154,8 +154,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment getExperiments(int index) {
+  @Override
+  public MsMethodExperiment getExperiments(int index) {
     return experiments_.get(index);
   }
   /**
@@ -165,14 +165,14 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder getExperimentsOrBuilder(
+  @Override
+  public MsMethodExperimentOrBuilder getExperimentsOrBuilder(
       int index) {
     return experiments_.get(index);
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -182,7 +182,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     for (int i = 0; i < sourceParameters_.size(); i++) {
@@ -194,7 +194,7 @@ private static final long serialVersionUID = 0L;
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -213,15 +213,15 @@ private static final long serialVersionUID = 0L;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod)) {
+    if (!(obj instanceof MsMethod)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod) obj;
+    MsMethod other = (MsMethod) obj;
 
     if (!getSourceParametersList()
         .equals(other.getSourceParametersList())) return false;
@@ -231,7 +231,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -251,44 +251,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(
+  public static MsMethod parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(
+  public static MsMethod parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(
+  public static MsMethod parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(
+  public static MsMethod parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(byte[] data)
+  public static MsMethod parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(
+  public static MsMethod parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(java.io.InputStream input)
+  public static MsMethod parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(
+  public static MsMethod parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -296,26 +296,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseDelimitedFrom(java.io.InputStream input)
+  public static MsMethod parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseDelimitedFrom(
+  public static MsMethod parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(
+  public static MsMethod parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod parseFrom(
+  public static MsMethod parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -323,23 +323,23 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod prototype) {
+  public static Builder newBuilder(MsMethod prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -353,18 +353,18 @@ private static final long serialVersionUID = 0L;
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.MsMethod)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodOrBuilder {
+      MsMethodOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod.Builder.class);
+              MsMethod.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod.newBuilder()
@@ -373,11 +373,11 @@ private static final long serialVersionUID = 0L;
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
 
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -398,36 +398,36 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod.getDefaultInstance();
+    @Override
+    public MsMethod getDefaultInstanceForType() {
+      return MsMethod.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod result = buildPartial();
+    @Override
+    public MsMethod build() {
+      MsMethod result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod(this);
+    @Override
+    public MsMethod buildPartial() {
+      MsMethod result = new MsMethod(this);
       buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartialRepeatedFields(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod result) {
+    private void buildPartialRepeatedFields(MsMethod result) {
       if (sourceParametersBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
           sourceParameters_ = java.util.Collections.unmodifiableList(sourceParameters_);
@@ -448,22 +448,22 @@ private static final long serialVersionUID = 0L;
       }
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod result) {
+    private void buildPartial0(MsMethod result) {
       int from_bitField0_ = bitField0_;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod)other);
+      if (other instanceof MsMethod) {
+        return mergeFrom((MsMethod)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod.getDefaultInstance()) return this;
+    public Builder mergeFrom(MsMethod other) {
+      if (other == MsMethod.getDefaultInstance()) return this;
       if (sourceParametersBuilder_ == null) {
         if (!other.sourceParameters_.isEmpty()) {
           if (sourceParameters_.isEmpty()) {
@@ -521,18 +521,18 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -543,9 +543,9 @@ private static final long serialVersionUID = 0L;
               done = true;
               break;
             case 10: {
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter m =
+              Parameter m =
                   input.readMessage(
-                      io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.parser(),
+                      Parameter.parser(),
                       extensionRegistry);
               if (sourceParametersBuilder_ == null) {
                 ensureSourceParametersIsMutable();
@@ -556,9 +556,9 @@ private static final long serialVersionUID = 0L;
               break;
             } // case 10
             case 18: {
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment m =
+              MsMethodExperiment m =
                   input.readMessage(
-                      io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.parser(),
+                      MsMethodExperiment.parser(),
                       extensionRegistry);
               if (experimentsBuilder_ == null) {
                 ensureExperimentsIsMutable();
@@ -585,17 +585,17 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> sourceParameters_ =
+    private java.util.List<Parameter> sourceParameters_ =
       java.util.Collections.emptyList();
     private void ensureSourceParametersIsMutable() {
       if (!((bitField0_ & 0x00000001) != 0)) {
-        sourceParameters_ = new java.util.ArrayList<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter>(sourceParameters_);
+        sourceParameters_ = new java.util.ArrayList<Parameter>(sourceParameters_);
         bitField0_ |= 0x00000001;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> sourceParametersBuilder_;
+        Parameter, Parameter.Builder, ParameterOrBuilder> sourceParametersBuilder_;
 
     /**
      * <pre>
@@ -604,7 +604,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> getSourceParametersList() {
+    public java.util.List<Parameter> getSourceParametersList() {
       if (sourceParametersBuilder_ == null) {
         return java.util.Collections.unmodifiableList(sourceParameters_);
       } else {
@@ -632,7 +632,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getSourceParameters(int index) {
+    public Parameter getSourceParameters(int index) {
       if (sourceParametersBuilder_ == null) {
         return sourceParameters_.get(index);
       } else {
@@ -647,7 +647,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
     public Builder setSourceParameters(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+        int index, Parameter value) {
       if (sourceParametersBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -668,7 +668,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
     public Builder setSourceParameters(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        int index, Parameter.Builder builderForValue) {
       if (sourceParametersBuilder_ == null) {
         ensureSourceParametersIsMutable();
         sourceParameters_.set(index, builderForValue.build());
@@ -685,7 +685,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public Builder addSourceParameters(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+    public Builder addSourceParameters(Parameter value) {
       if (sourceParametersBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -706,7 +706,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
     public Builder addSourceParameters(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+        int index, Parameter value) {
       if (sourceParametersBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -727,7 +727,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
     public Builder addSourceParameters(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        Parameter.Builder builderForValue) {
       if (sourceParametersBuilder_ == null) {
         ensureSourceParametersIsMutable();
         sourceParameters_.add(builderForValue.build());
@@ -745,7 +745,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
     public Builder addSourceParameters(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        int index, Parameter.Builder builderForValue) {
       if (sourceParametersBuilder_ == null) {
         ensureSourceParametersIsMutable();
         sourceParameters_.add(index, builderForValue.build());
@@ -763,7 +763,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
     public Builder addAllSourceParameters(
-        java.lang.Iterable<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> values) {
+        Iterable<? extends Parameter> values) {
       if (sourceParametersBuilder_ == null) {
         ensureSourceParametersIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -815,7 +815,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder getSourceParametersBuilder(
+    public Parameter.Builder getSourceParametersBuilder(
         int index) {
       return internalGetSourceParametersFieldBuilder().getBuilder(index);
     }
@@ -826,7 +826,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getSourceParametersOrBuilder(
+    public ParameterOrBuilder getSourceParametersOrBuilder(
         int index) {
       if (sourceParametersBuilder_ == null) {
         return sourceParameters_.get(index);  } else {
@@ -840,7 +840,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+    public java.util.List<? extends ParameterOrBuilder>
          getSourceParametersOrBuilderList() {
       if (sourceParametersBuilder_ != null) {
         return sourceParametersBuilder_.getMessageOrBuilderList();
@@ -855,9 +855,9 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder addSourceParametersBuilder() {
+    public Parameter.Builder addSourceParametersBuilder() {
       return internalGetSourceParametersFieldBuilder().addBuilder(
-          io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.getDefaultInstance());
+          Parameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -866,10 +866,10 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder addSourceParametersBuilder(
+    public Parameter.Builder addSourceParametersBuilder(
         int index) {
       return internalGetSourceParametersFieldBuilder().addBuilder(
-          index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.getDefaultInstance());
+          index, Parameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -878,16 +878,16 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder> 
+    public java.util.List<Parameter.Builder>
          getSourceParametersBuilderList() {
       return internalGetSourceParametersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+        Parameter, Parameter.Builder, ParameterOrBuilder>
         internalGetSourceParametersFieldBuilder() {
       if (sourceParametersBuilder_ == null) {
         sourceParametersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder>(
+            Parameter, Parameter.Builder, ParameterOrBuilder>(
                 sourceParameters_,
                 ((bitField0_ & 0x00000001) != 0),
                 getParentForChildren(),
@@ -897,17 +897,17 @@ private static final long serialVersionUID = 0L;
       return sourceParametersBuilder_;
     }
 
-    private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment> experiments_ =
+    private java.util.List<MsMethodExperiment> experiments_ =
       java.util.Collections.emptyList();
     private void ensureExperimentsIsMutable() {
       if (!((bitField0_ & 0x00000002) != 0)) {
-        experiments_ = new java.util.ArrayList<io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment>(experiments_);
+        experiments_ = new java.util.ArrayList<MsMethodExperiment>(experiments_);
         bitField0_ |= 0x00000002;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder> experimentsBuilder_;
+        MsMethodExperiment, MsMethodExperiment.Builder, MsMethodExperimentOrBuilder> experimentsBuilder_;
 
     /**
      * <pre>
@@ -916,7 +916,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment> getExperimentsList() {
+    public java.util.List<MsMethodExperiment> getExperimentsList() {
       if (experimentsBuilder_ == null) {
         return java.util.Collections.unmodifiableList(experiments_);
       } else {
@@ -944,7 +944,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment getExperiments(int index) {
+    public MsMethodExperiment getExperiments(int index) {
       if (experimentsBuilder_ == null) {
         return experiments_.get(index);
       } else {
@@ -959,7 +959,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
     public Builder setExperiments(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment value) {
+        int index, MsMethodExperiment value) {
       if (experimentsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -980,7 +980,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
     public Builder setExperiments(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder builderForValue) {
+        int index, MsMethodExperiment.Builder builderForValue) {
       if (experimentsBuilder_ == null) {
         ensureExperimentsIsMutable();
         experiments_.set(index, builderForValue.build());
@@ -997,7 +997,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public Builder addExperiments(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment value) {
+    public Builder addExperiments(MsMethodExperiment value) {
       if (experimentsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -1018,7 +1018,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
     public Builder addExperiments(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment value) {
+        int index, MsMethodExperiment value) {
       if (experimentsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -1039,7 +1039,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
     public Builder addExperiments(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder builderForValue) {
+        MsMethodExperiment.Builder builderForValue) {
       if (experimentsBuilder_ == null) {
         ensureExperimentsIsMutable();
         experiments_.add(builderForValue.build());
@@ -1057,7 +1057,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
     public Builder addExperiments(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder builderForValue) {
+        int index, MsMethodExperiment.Builder builderForValue) {
       if (experimentsBuilder_ == null) {
         ensureExperimentsIsMutable();
         experiments_.add(index, builderForValue.build());
@@ -1075,7 +1075,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
     public Builder addAllExperiments(
-        java.lang.Iterable<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment> values) {
+        Iterable<? extends MsMethodExperiment> values) {
       if (experimentsBuilder_ == null) {
         ensureExperimentsIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -1127,7 +1127,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder getExperimentsBuilder(
+    public MsMethodExperiment.Builder getExperimentsBuilder(
         int index) {
       return internalGetExperimentsFieldBuilder().getBuilder(index);
     }
@@ -1138,7 +1138,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder getExperimentsOrBuilder(
+    public MsMethodExperimentOrBuilder getExperimentsOrBuilder(
         int index) {
       if (experimentsBuilder_ == null) {
         return experiments_.get(index);  } else {
@@ -1152,7 +1152,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder> 
+    public java.util.List<? extends MsMethodExperimentOrBuilder>
          getExperimentsOrBuilderList() {
       if (experimentsBuilder_ != null) {
         return experimentsBuilder_.getMessageOrBuilderList();
@@ -1167,9 +1167,9 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder addExperimentsBuilder() {
+    public MsMethodExperiment.Builder addExperimentsBuilder() {
       return internalGetExperimentsFieldBuilder().addBuilder(
-          io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.getDefaultInstance());
+          MsMethodExperiment.getDefaultInstance());
     }
     /**
      * <pre>
@@ -1178,10 +1178,10 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder addExperimentsBuilder(
+    public MsMethodExperiment.Builder addExperimentsBuilder(
         int index) {
       return internalGetExperimentsFieldBuilder().addBuilder(
-          index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.getDefaultInstance());
+          index, MsMethodExperiment.getDefaultInstance());
     }
     /**
      * <pre>
@@ -1190,16 +1190,16 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder> 
+    public java.util.List<MsMethodExperiment.Builder>
          getExperimentsBuilderList() {
       return internalGetExperimentsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder> 
+        MsMethodExperiment, MsMethodExperiment.Builder, MsMethodExperimentOrBuilder>
         internalGetExperimentsFieldBuilder() {
       if (experimentsBuilder_ == null) {
         experimentsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder>(
+            MsMethodExperiment, MsMethodExperiment.Builder, MsMethodExperimentOrBuilder>(
                 experiments_,
                 ((bitField0_ & 0x00000002) != 0),
                 getParentForChildren(),
@@ -1213,18 +1213,18 @@ private static final long serialVersionUID = 0L;
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.MsMethod)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod DEFAULT_INSTANCE;
+  private static final MsMethod DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod();
+    DEFAULT_INSTANCE = new MsMethod();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod getDefaultInstance() {
+  public static MsMethod getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<MsMethod>
       PARSER = new com.google.protobuf.AbstractParser<MsMethod>() {
-    @java.lang.Override
+    @Override
     public MsMethod parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -1248,13 +1248,13 @@ private static final long serialVersionUID = 0L;
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<MsMethod> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethod getDefaultInstanceForType() {
+  @Override
+  public MsMethod getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

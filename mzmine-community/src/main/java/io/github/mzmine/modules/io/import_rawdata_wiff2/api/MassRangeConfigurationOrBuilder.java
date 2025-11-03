@@ -29,7 +29,7 @@ public interface MassRangeConfigurationOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
    * @return The selectionWindow.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow getSelectionWindow();
+  ScanWindow getSelectionWindow();
   /**
    * <pre>
    * Selection window properties that are associated with a value
@@ -38,7 +38,7 @@ public interface MassRangeConfigurationOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder getSelectionWindowOrBuilder();
+  ScanWindowOrBuilder getSelectionWindowOrBuilder();
 
   /**
    * <pre>
@@ -57,7 +57,7 @@ public interface MassRangeConfigurationOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
    * @return The isolationWindow.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow getIsolationWindow();
+  ScanWindow getIsolationWindow();
   /**
    * <pre>
    * Isolation window properties
@@ -65,5 +65,5 @@ public interface MassRangeConfigurationOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder getIsolationWindowOrBuilder();
+  ScanWindowOrBuilder getIsolationWindowOrBuilder();
 }

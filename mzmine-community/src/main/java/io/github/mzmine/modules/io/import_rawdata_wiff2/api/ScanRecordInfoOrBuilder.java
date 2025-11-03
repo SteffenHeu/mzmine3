@@ -47,7 +47,7 @@ public interface ScanRecordInfoOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TofCalibrationParameters TofCalibration = 3;</code>
    * @return The tofCalibration.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TofCalibrationParameters getTofCalibration();
+  TofCalibrationParameters getTofCalibration();
   /**
    * <pre>
    * Must be present for Tof scan and will be NULL for Non-Tof Scans
@@ -55,7 +55,7 @@ public interface ScanRecordInfoOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TofCalibrationParameters TofCalibration = 3;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TofCalibrationParametersOrBuilder getTofCalibrationOrBuilder();
+  TofCalibrationParametersOrBuilder getTofCalibrationOrBuilder();
 
   /**
    * <pre>

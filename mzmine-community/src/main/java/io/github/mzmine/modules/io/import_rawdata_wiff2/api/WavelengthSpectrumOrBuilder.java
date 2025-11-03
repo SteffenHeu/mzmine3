@@ -18,7 +18,7 @@ public interface WavelengthSpectrumOrBuilder extends
    * <code>string Id = 1;</code>
    * @return The id.
    */
-  java.lang.String getId();
+  String getId();
   /**
    * <pre>
    * the Id of the spectrum
@@ -38,7 +38,7 @@ public interface WavelengthSpectrumOrBuilder extends
    * <code>string SampleId = 3;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * The sample identifier 
@@ -72,7 +72,7 @@ public interface WavelengthSpectrumOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 5;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData> 
+  java.util.List<BinaryData>
       getDataList();
   /**
    * <pre>
@@ -82,7 +82,7 @@ public interface WavelengthSpectrumOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData getData(int index);
+  BinaryData getData(int index);
   /**
    * <pre>
    * the actual binary data. 
@@ -100,7 +100,7 @@ public interface WavelengthSpectrumOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 5;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryDataOrBuilder> 
+  java.util.List<? extends BinaryDataOrBuilder>
       getDataOrBuilderList();
   /**
    * <pre>
@@ -110,7 +110,7 @@ public interface WavelengthSpectrumOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryDataOrBuilder getDataOrBuilder(
+  BinaryDataOrBuilder getDataOrBuilder(
       int index);
 
   /**
@@ -121,7 +121,7 @@ public interface WavelengthSpectrumOrBuilder extends
    * <code>string Name = 6;</code>
    * @return The name.
    */
-  java.lang.String getName();
+  String getName();
   /**
    * <pre>
    * The name of the channel

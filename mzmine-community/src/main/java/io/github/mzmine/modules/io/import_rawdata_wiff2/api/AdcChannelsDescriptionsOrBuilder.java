@@ -30,8 +30,8 @@ public interface AdcChannelsDescriptionsOrBuilder extends
   /**
    * Use {@link #getNamesMap()} instead.
    */
-  @java.lang.Deprecated
-  java.util.Map<java.lang.Integer, java.lang.String>
+  @Deprecated
+  java.util.Map<Integer, String>
   getNames();
   /**
    * <pre>
@@ -40,7 +40,7 @@ public interface AdcChannelsDescriptionsOrBuilder extends
    *
    * <code>map&lt;int32, string&gt; Names = 1;</code>
    */
-  java.util.Map<java.lang.Integer, java.lang.String>
+  java.util.Map<Integer, String>
   getNamesMap();
   /**
    * <pre>
@@ -50,10 +50,10 @@ public interface AdcChannelsDescriptionsOrBuilder extends
    * <code>map&lt;int32, string&gt; Names = 1;</code>
    */
   /* nullable */
-java.lang.String getNamesOrDefault(
+String getNamesOrDefault(
       int key,
       /* nullable */
-java.lang.String defaultValue);
+String defaultValue);
   /**
    * <pre>
    * provides the mapping to the user defined names of the ADC channels
@@ -61,7 +61,7 @@ java.lang.String defaultValue);
    *
    * <code>map&lt;int32, string&gt; Names = 1;</code>
    */
-  java.lang.String getNamesOrThrow(
+  String getNamesOrThrow(
       int key);
 
   /**
@@ -71,7 +71,7 @@ java.lang.String defaultValue);
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> 
+  java.util.List<ControlledVocabularyParameter>
       getAttributesList();
   /**
    * <pre>
@@ -80,7 +80,7 @@ java.lang.String defaultValue);
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getAttributes(int index);
+  ControlledVocabularyParameter getAttributes(int index);
   /**
    * <pre>
    * additional user defined attributes that describe ADC channels
@@ -96,7 +96,7 @@ java.lang.String defaultValue);
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+  java.util.List<? extends ControlledVocabularyParameterOrBuilder>
       getAttributesOrBuilderList();
   /**
    * <pre>
@@ -105,6 +105,6 @@ java.lang.String defaultValue);
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
+  ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
       int index);
 }

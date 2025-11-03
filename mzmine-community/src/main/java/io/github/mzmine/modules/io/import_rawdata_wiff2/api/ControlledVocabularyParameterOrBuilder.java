@@ -19,7 +19,7 @@ public interface ControlledVocabularyParameterOrBuilder extends
    * <code>string Accession = 1;</code>
    * @return The accession.
    */
-  java.lang.String getAccession();
+  String getAccession();
   /**
    * <pre>
    * The accession number of the referred-to 
@@ -43,7 +43,7 @@ public interface ControlledVocabularyParameterOrBuilder extends
    * <code>string Name = 2;</code>
    * @return The name.
    */
-  java.lang.String getName();
+  String getName();
   /**
    * <pre>
    * The actual name for the parameter, from
@@ -66,7 +66,7 @@ public interface ControlledVocabularyParameterOrBuilder extends
    * <code>string Value = 3;</code>
    * @return The value.
    */
-  java.lang.String getValue();
+  String getValue();
   /**
    * <pre>
    * the value

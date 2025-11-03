@@ -18,7 +18,7 @@ public interface GetExperimentScanRecordsRequestOrBuilder extends
    * <code>string SampleId = 1;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * the target sample id
@@ -38,7 +38,7 @@ public interface GetExperimentScanRecordsRequestOrBuilder extends
    * <code>string ExperimentId = 2;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * the id of the experiment or use -1 to stream all experiments.

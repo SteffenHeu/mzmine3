@@ -18,7 +18,7 @@ public interface ScanXicOrBuilder extends
    * <code>string ExperimentId = 1;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * &#47; The id of the experiment used to acquire this Scan XIC
@@ -38,7 +38,7 @@ public interface ScanXicOrBuilder extends
    * <code>string SampleId = 2;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * &#47; The sample to which this Scan XIC belongs
@@ -58,7 +58,7 @@ public interface ScanXicOrBuilder extends
    * <code>repeated double XValues = 3;</code>
    * @return A list containing the xValues.
    */
-  java.util.List<java.lang.Double> getXValuesList();
+  java.util.List<Double> getXValuesList();
   /**
    * <pre>
    * &#47; X Axis - Time 
@@ -87,7 +87,7 @@ public interface ScanXicOrBuilder extends
    * <code>repeated double YValues = 4;</code>
    * @return A list containing the yValues.
    */
-  java.util.List<java.lang.Double> getYValuesList();
+  java.util.List<Double> getYValuesList();
   /**
    * <pre>
    * &#47; Y Axis - Intensity
@@ -125,7 +125,7 @@ public interface ScanXicOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRange = 5;</code>
    * @return The massRange.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange getMassRange();
+  MassRange getMassRange();
   /**
    * <pre>
    * &#47; the mass range
@@ -133,7 +133,7 @@ public interface ScanXicOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRange = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeOrBuilder getMassRangeOrBuilder();
+  MassRangeOrBuilder getMassRangeOrBuilder();
 
   /**
    * <pre>
@@ -152,7 +152,7 @@ public interface ScanXicOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CycleRange CycleRange = 6;</code>
    * @return The cycleRange.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.CycleRange getCycleRange();
+  CycleRange getCycleRange();
   /**
    * <pre>
    * &#47;  the range of the cycles 
@@ -160,7 +160,7 @@ public interface ScanXicOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CycleRange CycleRange = 6;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.CycleRangeOrBuilder getCycleRangeOrBuilder();
+  CycleRangeOrBuilder getCycleRangeOrBuilder();
 
   /**
    * <pre>
@@ -179,7 +179,7 @@ public interface ScanXicOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 7;</code>
    * @return The timeRange.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange getTimeRange();
+  TimeRange getTimeRange();
   /**
    * <pre>
    * &#47;  the range of the time 
@@ -187,5 +187,5 @@ public interface ScanXicOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 7;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder getTimeRangeOrBuilder();
+  TimeRangeOrBuilder getTimeRangeOrBuilder();
 }

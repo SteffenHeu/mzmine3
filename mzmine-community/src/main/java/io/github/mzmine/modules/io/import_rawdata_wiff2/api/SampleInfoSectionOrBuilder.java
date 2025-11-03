@@ -18,7 +18,7 @@ public interface SampleInfoSectionOrBuilder extends
    * <code>string Name = 1;</code>
    * @return The name.
    */
-  java.lang.String getName();
+  String getName();
   /**
    * <pre>
    * Section name.
@@ -37,7 +37,7 @@ public interface SampleInfoSectionOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Paragraph Paragraphs = 2;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Paragraph> 
+  java.util.List<Paragraph>
       getParagraphsList();
   /**
    * <pre>
@@ -46,7 +46,7 @@ public interface SampleInfoSectionOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Paragraph Paragraphs = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.Paragraph getParagraphs(int index);
+  Paragraph getParagraphs(int index);
   /**
    * <pre>
    * Get the paragraphs.
@@ -62,7 +62,7 @@ public interface SampleInfoSectionOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Paragraph Paragraphs = 2;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParagraphOrBuilder> 
+  java.util.List<? extends ParagraphOrBuilder>
       getParagraphsOrBuilderList();
   /**
    * <pre>
@@ -71,6 +71,6 @@ public interface SampleInfoSectionOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Paragraph Paragraphs = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParagraphOrBuilder getParagraphsOrBuilder(
+  ParagraphOrBuilder getParagraphsOrBuilder(
       int index);
 }

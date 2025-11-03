@@ -27,7 +27,7 @@ public interface PrecursorOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
    * @return The isolationWindow.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow getIsolationWindow();
+  IsolationWindow getIsolationWindow();
   /**
    * <pre>
    * Isolation window parameter. None for MS, 1 for MSMS, 2 for MSMSMS
@@ -35,7 +35,7 @@ public interface PrecursorOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindowOrBuilder getIsolationWindowOrBuilder();
+  IsolationWindowOrBuilder getIsolationWindowOrBuilder();
 
   /**
    * <pre>
@@ -56,7 +56,7 @@ public interface PrecursorOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
    * @return The dissociationMethod.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getDissociationMethod();
+  ControlledVocabularyParameter getDissociationMethod();
   /**
    * <pre>
    * MS_1000044 Fragmentation method used for dissociation or fragmentation 
@@ -65,7 +65,7 @@ public interface PrecursorOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getDissociationMethodOrBuilder();
+  ControlledVocabularyParameterOrBuilder getDissociationMethodOrBuilder();
 
   /**
    * <pre>
@@ -84,7 +84,7 @@ public interface PrecursorOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
    * @return The collisionEnergy.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy getCollisionEnergy();
+  CollisionEnergy getCollisionEnergy();
   /**
    * <pre>
    * collision energy attribute
@@ -92,7 +92,7 @@ public interface PrecursorOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergyOrBuilder getCollisionEnergyOrBuilder();
+  CollisionEnergyOrBuilder getCollisionEnergyOrBuilder();
 
   /**
    * <pre>

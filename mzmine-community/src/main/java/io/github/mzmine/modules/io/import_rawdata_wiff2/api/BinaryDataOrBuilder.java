@@ -21,7 +21,7 @@ public interface BinaryDataOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> 
+  java.util.List<ControlledVocabularyParameter>
       getAttributesList();
   /**
    * <pre>
@@ -34,7 +34,7 @@ public interface BinaryDataOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getAttributes(int index);
+  ControlledVocabularyParameter getAttributes(int index);
   /**
    * <pre>
    * attributes describing the values
@@ -58,7 +58,7 @@ public interface BinaryDataOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+  java.util.List<? extends ControlledVocabularyParameterOrBuilder>
       getAttributesOrBuilderList();
   /**
    * <pre>
@@ -71,7 +71,7 @@ public interface BinaryDataOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
+  ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
       int index);
 
   /**

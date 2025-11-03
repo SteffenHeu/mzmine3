@@ -18,7 +18,7 @@ public interface AutosamplerInfoOrBuilder extends
    * <code>string Rack = 1;</code>
    * @return The rack.
    */
-  java.lang.String getRack();
+  String getRack();
   /**
    * <pre>
    * Returns the rack position (or null if never set).
@@ -38,7 +38,7 @@ public interface AutosamplerInfoOrBuilder extends
    * <code>string Plate = 2;</code>
    * @return The plate.
    */
-  java.lang.String getPlate();
+  String getPlate();
   /**
    * <pre>
    * Returns the plate position (or null if never set).
@@ -58,7 +58,7 @@ public interface AutosamplerInfoOrBuilder extends
    * <code>string Vial = 3;</code>
    * @return The vial.
    */
-  java.lang.String getVial();
+  String getVial();
   /**
    * <pre>
    * Returns the vial position (or null if never set).

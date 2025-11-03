@@ -18,7 +18,7 @@ public interface GetBpcRequestOrBuilder extends
    * <code>string SampleId = 1;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * the id of the sample 
@@ -48,7 +48,7 @@ public interface GetBpcRequestOrBuilder extends
    * <code>string ExperimentId = 3;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * the id of the experiment
@@ -77,7 +77,7 @@ public interface GetBpcRequestOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
    * @return The massRanges.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange getMassRanges();
+  MassRange getMassRanges();
   /**
    * <pre>
    * the mass ranges
@@ -85,7 +85,7 @@ public interface GetBpcRequestOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeOrBuilder getMassRangesOrBuilder();
+  MassRangeOrBuilder getMassRangesOrBuilder();
 
   /**
    * <pre>
@@ -104,7 +104,7 @@ public interface GetBpcRequestOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
    * @return The timeRange.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange getTimeRange();
+  TimeRange getTimeRange();
   /**
    * <pre>
    * the range of the time
@@ -112,5 +112,5 @@ public interface GetBpcRequestOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder getTimeRangeOrBuilder();
+  TimeRangeOrBuilder getTimeRangeOrBuilder();
 }

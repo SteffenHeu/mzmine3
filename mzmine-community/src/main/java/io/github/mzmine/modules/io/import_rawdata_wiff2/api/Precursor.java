@@ -36,20 +36,20 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor.Builder.class);
+            Precursor.class, Builder.class);
   }
 
   private int bitField0_;
   public static final int ISOLATIONWINDOW_FIELD_NUMBER = 1;
-  private io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow isolationWindow_;
+  private IsolationWindow isolationWindow_;
   /**
    * <pre>
    * Isolation window parameter. None for MS, 1 for MSMS, 2 for MSMSMS
@@ -58,7 +58,7 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
    * @return Whether the isolationWindow field is set.
    */
-  @java.lang.Override
+  @Override
   public boolean hasIsolationWindow() {
     return ((bitField0_ & 0x00000001) != 0);
   }
@@ -70,9 +70,9 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
    * @return The isolationWindow.
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow getIsolationWindow() {
-    return isolationWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.getDefaultInstance() : isolationWindow_;
+  @Override
+  public IsolationWindow getIsolationWindow() {
+    return isolationWindow_ == null ? IsolationWindow.getDefaultInstance() : isolationWindow_;
   }
   /**
    * <pre>
@@ -81,13 +81,13 @@ private static final long serialVersionUID = 0L;
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindowOrBuilder getIsolationWindowOrBuilder() {
-    return isolationWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.getDefaultInstance() : isolationWindow_;
+  @Override
+  public IsolationWindowOrBuilder getIsolationWindowOrBuilder() {
+    return isolationWindow_ == null ? IsolationWindow.getDefaultInstance() : isolationWindow_;
   }
 
   public static final int DISSOCIATIONMETHOD_FIELD_NUMBER = 2;
-  private io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter dissociationMethod_;
+  private ControlledVocabularyParameter dissociationMethod_;
   /**
    * <pre>
    * MS_1000044 Fragmentation method used for dissociation or fragmentation 
@@ -97,7 +97,7 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
    * @return Whether the dissociationMethod field is set.
    */
-  @java.lang.Override
+  @Override
   public boolean hasDissociationMethod() {
     return ((bitField0_ & 0x00000002) != 0);
   }
@@ -110,9 +110,9 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
    * @return The dissociationMethod.
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getDissociationMethod() {
-    return dissociationMethod_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance() : dissociationMethod_;
+  @Override
+  public ControlledVocabularyParameter getDissociationMethod() {
+    return dissociationMethod_ == null ? ControlledVocabularyParameter.getDefaultInstance() : dissociationMethod_;
   }
   /**
    * <pre>
@@ -122,13 +122,13 @@ private static final long serialVersionUID = 0L;
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getDissociationMethodOrBuilder() {
-    return dissociationMethod_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance() : dissociationMethod_;
+  @Override
+  public ControlledVocabularyParameterOrBuilder getDissociationMethodOrBuilder() {
+    return dissociationMethod_ == null ? ControlledVocabularyParameter.getDefaultInstance() : dissociationMethod_;
   }
 
   public static final int COLLISIONENERGY_FIELD_NUMBER = 6;
-  private io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy collisionEnergy_;
+  private CollisionEnergy collisionEnergy_;
   /**
    * <pre>
    * collision energy attribute
@@ -137,7 +137,7 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
    * @return Whether the collisionEnergy field is set.
    */
-  @java.lang.Override
+  @Override
   public boolean hasCollisionEnergy() {
     return ((bitField0_ & 0x00000004) != 0);
   }
@@ -149,9 +149,9 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
    * @return The collisionEnergy.
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy getCollisionEnergy() {
-    return collisionEnergy_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.getDefaultInstance() : collisionEnergy_;
+  @Override
+  public CollisionEnergy getCollisionEnergy() {
+    return collisionEnergy_ == null ? CollisionEnergy.getDefaultInstance() : collisionEnergy_;
   }
   /**
    * <pre>
@@ -160,9 +160,9 @@ private static final long serialVersionUID = 0L;
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergyOrBuilder getCollisionEnergyOrBuilder() {
-    return collisionEnergy_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.getDefaultInstance() : collisionEnergy_;
+  @Override
+  public CollisionEnergyOrBuilder getCollisionEnergyOrBuilder() {
+    return collisionEnergy_ == null ? CollisionEnergy.getDefaultInstance() : collisionEnergy_;
   }
 
   public static final int PRECURSORCHARGESTATE_FIELD_NUMBER = 8;
@@ -175,13 +175,13 @@ private static final long serialVersionUID = 0L;
    * <code>int32 PrecursorChargeState = 8;</code>
    * @return The precursorChargeState.
    */
-  @java.lang.Override
+  @Override
   public int getPrecursorChargeState() {
     return precursorChargeState_;
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -191,7 +191,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (((bitField0_ & 0x00000001) != 0)) {
@@ -209,7 +209,7 @@ private static final long serialVersionUID = 0L;
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -236,15 +236,15 @@ private static final long serialVersionUID = 0L;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor)) {
+    if (!(obj instanceof Precursor)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor) obj;
+    Precursor other = (Precursor) obj;
 
     if (hasIsolationWindow() != other.hasIsolationWindow()) return false;
     if (hasIsolationWindow()) {
@@ -267,7 +267,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -293,44 +293,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(
+  public static Precursor parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(
+  public static Precursor parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(
+  public static Precursor parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(
+  public static Precursor parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(byte[] data)
+  public static Precursor parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(
+  public static Precursor parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(java.io.InputStream input)
+  public static Precursor parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(
+  public static Precursor parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -338,26 +338,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseDelimitedFrom(java.io.InputStream input)
+  public static Precursor parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseDelimitedFrom(
+  public static Precursor parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(
+  public static Precursor parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor parseFrom(
+  public static Precursor parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -365,23 +365,23 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor prototype) {
+  public static Builder newBuilder(Precursor prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -395,18 +395,18 @@ private static final long serialVersionUID = 0L;
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.Precursor)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.PrecursorOrBuilder {
+      PrecursorOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor.Builder.class);
+              Precursor.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor.newBuilder()
@@ -415,7 +415,7 @@ private static final long serialVersionUID = 0L;
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
       maybeForceBuilderInitialization();
     }
@@ -427,7 +427,7 @@ private static final long serialVersionUID = 0L;
         internalGetCollisionEnergyFieldBuilder();
       }
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -450,35 +450,35 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor.getDefaultInstance();
+    @Override
+    public Precursor getDefaultInstanceForType() {
+      return Precursor.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor result = buildPartial();
+    @Override
+    public Precursor build() {
+      Precursor result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor(this);
+    @Override
+    public Precursor buildPartial() {
+      Precursor result = new Precursor(this);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor result) {
+    private void buildPartial0(Precursor result) {
       int from_bitField0_ = bitField0_;
       int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000001) != 0)) {
@@ -505,18 +505,18 @@ private static final long serialVersionUID = 0L;
       result.bitField0_ |= to_bitField0_;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor)other);
+      if (other instanceof Precursor) {
+        return mergeFrom((Precursor)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor.getDefaultInstance()) return this;
+    public Builder mergeFrom(Precursor other) {
+      if (other == Precursor.getDefaultInstance()) return this;
       if (other.hasIsolationWindow()) {
         mergeIsolationWindow(other.getIsolationWindow());
       }
@@ -534,18 +534,18 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -598,9 +598,9 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow isolationWindow_;
+    private IsolationWindow isolationWindow_;
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindowOrBuilder> isolationWindowBuilder_;
+        IsolationWindow, IsolationWindow.Builder, IsolationWindowOrBuilder> isolationWindowBuilder_;
     /**
      * <pre>
      * Isolation window parameter. None for MS, 1 for MSMS, 2 for MSMSMS
@@ -620,9 +620,9 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
      * @return The isolationWindow.
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow getIsolationWindow() {
+    public IsolationWindow getIsolationWindow() {
       if (isolationWindowBuilder_ == null) {
-        return isolationWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.getDefaultInstance() : isolationWindow_;
+        return isolationWindow_ == null ? IsolationWindow.getDefaultInstance() : isolationWindow_;
       } else {
         return isolationWindowBuilder_.getMessage();
       }
@@ -634,7 +634,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
      */
-    public Builder setIsolationWindow(io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow value) {
+    public Builder setIsolationWindow(IsolationWindow value) {
       if (isolationWindowBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -655,7 +655,7 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
      */
     public Builder setIsolationWindow(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.Builder builderForValue) {
+        IsolationWindow.Builder builderForValue) {
       if (isolationWindowBuilder_ == null) {
         isolationWindow_ = builderForValue.build();
       } else {
@@ -672,11 +672,11 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
      */
-    public Builder mergeIsolationWindow(io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow value) {
+    public Builder mergeIsolationWindow(IsolationWindow value) {
       if (isolationWindowBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0) &&
           isolationWindow_ != null &&
-          isolationWindow_ != io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.getDefaultInstance()) {
+          isolationWindow_ != IsolationWindow.getDefaultInstance()) {
           getIsolationWindowBuilder().mergeFrom(value);
         } else {
           isolationWindow_ = value;
@@ -714,7 +714,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.Builder getIsolationWindowBuilder() {
+    public IsolationWindow.Builder getIsolationWindowBuilder() {
       bitField0_ |= 0x00000001;
       onChanged();
       return internalGetIsolationWindowFieldBuilder().getBuilder();
@@ -726,12 +726,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindowOrBuilder getIsolationWindowOrBuilder() {
+    public IsolationWindowOrBuilder getIsolationWindowOrBuilder() {
       if (isolationWindowBuilder_ != null) {
         return isolationWindowBuilder_.getMessageOrBuilder();
       } else {
         return isolationWindow_ == null ?
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.getDefaultInstance() : isolationWindow_;
+            IsolationWindow.getDefaultInstance() : isolationWindow_;
       }
     }
     /**
@@ -742,11 +742,11 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.IsolationWindow IsolationWindow = 1;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindowOrBuilder> 
+        IsolationWindow, IsolationWindow.Builder, IsolationWindowOrBuilder>
         internalGetIsolationWindowFieldBuilder() {
       if (isolationWindowBuilder_ == null) {
         isolationWindowBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.IsolationWindowOrBuilder>(
+            IsolationWindow, IsolationWindow.Builder, IsolationWindowOrBuilder>(
                 getIsolationWindow(),
                 getParentForChildren(),
                 isClean());
@@ -755,9 +755,9 @@ private static final long serialVersionUID = 0L;
       return isolationWindowBuilder_;
     }
 
-    private io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter dissociationMethod_;
+    private ControlledVocabularyParameter dissociationMethod_;
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> dissociationMethodBuilder_;
+        ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder> dissociationMethodBuilder_;
     /**
      * <pre>
      * MS_1000044 Fragmentation method used for dissociation or fragmentation 
@@ -779,9 +779,9 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
      * @return The dissociationMethod.
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getDissociationMethod() {
+    public ControlledVocabularyParameter getDissociationMethod() {
       if (dissociationMethodBuilder_ == null) {
-        return dissociationMethod_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance() : dissociationMethod_;
+        return dissociationMethod_ == null ? ControlledVocabularyParameter.getDefaultInstance() : dissociationMethod_;
       } else {
         return dissociationMethodBuilder_.getMessage();
       }
@@ -794,7 +794,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
      */
-    public Builder setDissociationMethod(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter value) {
+    public Builder setDissociationMethod(ControlledVocabularyParameter value) {
       if (dissociationMethodBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -816,7 +816,7 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
      */
     public Builder setDissociationMethod(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder builderForValue) {
+        ControlledVocabularyParameter.Builder builderForValue) {
       if (dissociationMethodBuilder_ == null) {
         dissociationMethod_ = builderForValue.build();
       } else {
@@ -834,11 +834,11 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
      */
-    public Builder mergeDissociationMethod(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter value) {
+    public Builder mergeDissociationMethod(ControlledVocabularyParameter value) {
       if (dissociationMethodBuilder_ == null) {
         if (((bitField0_ & 0x00000002) != 0) &&
           dissociationMethod_ != null &&
-          dissociationMethod_ != io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance()) {
+          dissociationMethod_ != ControlledVocabularyParameter.getDefaultInstance()) {
           getDissociationMethodBuilder().mergeFrom(value);
         } else {
           dissociationMethod_ = value;
@@ -878,7 +878,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder getDissociationMethodBuilder() {
+    public ControlledVocabularyParameter.Builder getDissociationMethodBuilder() {
       bitField0_ |= 0x00000002;
       onChanged();
       return internalGetDissociationMethodFieldBuilder().getBuilder();
@@ -891,12 +891,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getDissociationMethodOrBuilder() {
+    public ControlledVocabularyParameterOrBuilder getDissociationMethodOrBuilder() {
       if (dissociationMethodBuilder_ != null) {
         return dissociationMethodBuilder_.getMessageOrBuilder();
       } else {
         return dissociationMethod_ == null ?
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance() : dissociationMethod_;
+            ControlledVocabularyParameter.getDefaultInstance() : dissociationMethod_;
       }
     }
     /**
@@ -908,11 +908,11 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter DissociationMethod = 2;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+        ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder>
         internalGetDissociationMethodFieldBuilder() {
       if (dissociationMethodBuilder_ == null) {
         dissociationMethodBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder>(
+            ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder>(
                 getDissociationMethod(),
                 getParentForChildren(),
                 isClean());
@@ -921,9 +921,9 @@ private static final long serialVersionUID = 0L;
       return dissociationMethodBuilder_;
     }
 
-    private io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy collisionEnergy_;
+    private CollisionEnergy collisionEnergy_;
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy, io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergyOrBuilder> collisionEnergyBuilder_;
+        CollisionEnergy, CollisionEnergy.Builder, CollisionEnergyOrBuilder> collisionEnergyBuilder_;
     /**
      * <pre>
      * collision energy attribute
@@ -943,9 +943,9 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
      * @return The collisionEnergy.
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy getCollisionEnergy() {
+    public CollisionEnergy getCollisionEnergy() {
       if (collisionEnergyBuilder_ == null) {
-        return collisionEnergy_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.getDefaultInstance() : collisionEnergy_;
+        return collisionEnergy_ == null ? CollisionEnergy.getDefaultInstance() : collisionEnergy_;
       } else {
         return collisionEnergyBuilder_.getMessage();
       }
@@ -957,7 +957,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
      */
-    public Builder setCollisionEnergy(io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy value) {
+    public Builder setCollisionEnergy(CollisionEnergy value) {
       if (collisionEnergyBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -978,7 +978,7 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
      */
     public Builder setCollisionEnergy(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.Builder builderForValue) {
+        CollisionEnergy.Builder builderForValue) {
       if (collisionEnergyBuilder_ == null) {
         collisionEnergy_ = builderForValue.build();
       } else {
@@ -995,11 +995,11 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
      */
-    public Builder mergeCollisionEnergy(io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy value) {
+    public Builder mergeCollisionEnergy(CollisionEnergy value) {
       if (collisionEnergyBuilder_ == null) {
         if (((bitField0_ & 0x00000004) != 0) &&
           collisionEnergy_ != null &&
-          collisionEnergy_ != io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.getDefaultInstance()) {
+          collisionEnergy_ != CollisionEnergy.getDefaultInstance()) {
           getCollisionEnergyBuilder().mergeFrom(value);
         } else {
           collisionEnergy_ = value;
@@ -1037,7 +1037,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.Builder getCollisionEnergyBuilder() {
+    public CollisionEnergy.Builder getCollisionEnergyBuilder() {
       bitField0_ |= 0x00000004;
       onChanged();
       return internalGetCollisionEnergyFieldBuilder().getBuilder();
@@ -1049,12 +1049,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergyOrBuilder getCollisionEnergyOrBuilder() {
+    public CollisionEnergyOrBuilder getCollisionEnergyOrBuilder() {
       if (collisionEnergyBuilder_ != null) {
         return collisionEnergyBuilder_.getMessageOrBuilder();
       } else {
         return collisionEnergy_ == null ?
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.getDefaultInstance() : collisionEnergy_;
+            CollisionEnergy.getDefaultInstance() : collisionEnergy_;
       }
     }
     /**
@@ -1065,11 +1065,11 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.CollisionEnergy CollisionEnergy = 6;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy, io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergyOrBuilder> 
+        CollisionEnergy, CollisionEnergy.Builder, CollisionEnergyOrBuilder>
         internalGetCollisionEnergyFieldBuilder() {
       if (collisionEnergyBuilder_ == null) {
         collisionEnergyBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy, io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergy.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.CollisionEnergyOrBuilder>(
+            CollisionEnergy, CollisionEnergy.Builder, CollisionEnergyOrBuilder>(
                 getCollisionEnergy(),
                 getParentForChildren(),
                 isClean());
@@ -1087,7 +1087,7 @@ private static final long serialVersionUID = 0L;
      * <code>int32 PrecursorChargeState = 8;</code>
      * @return The precursorChargeState.
      */
-    @java.lang.Override
+    @Override
     public int getPrecursorChargeState() {
       return precursorChargeState_;
     }
@@ -1126,18 +1126,18 @@ private static final long serialVersionUID = 0L;
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.Precursor)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor DEFAULT_INSTANCE;
+  private static final Precursor DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor();
+    DEFAULT_INSTANCE = new Precursor();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor getDefaultInstance() {
+  public static Precursor getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<Precursor>
       PARSER = new com.google.protobuf.AbstractParser<Precursor>() {
-    @java.lang.Override
+    @Override
     public Precursor parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -1161,13 +1161,13 @@ private static final long serialVersionUID = 0L;
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<Precursor> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor getDefaultInstanceForType() {
+  @Override
+  public Precursor getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

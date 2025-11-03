@@ -27,7 +27,7 @@ public interface GetWavelengthSpectraRequestOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange Range = 1;</code>
    * @return The range.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange getRange();
+  TimeRange getRange();
   /**
    * <pre>
    * The window of time used for signal acquisition. If not present, then the open window is assumed
@@ -35,7 +35,7 @@ public interface GetWavelengthSpectraRequestOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange Range = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder getRangeOrBuilder();
+  TimeRangeOrBuilder getRangeOrBuilder();
 
   /**
    * <pre>
@@ -45,7 +45,7 @@ public interface GetWavelengthSpectraRequestOrBuilder extends
    * <code>string SampleId = 2;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * the target sample id

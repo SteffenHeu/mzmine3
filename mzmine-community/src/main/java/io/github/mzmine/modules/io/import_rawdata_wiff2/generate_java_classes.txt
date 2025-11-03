@@ -1,3 +1,0 @@
-to generate java classes run this in power shell:
-
-protoc Clearcore2.SampleData.Grpc.Contracts.proto --java_out="../../../../../../"

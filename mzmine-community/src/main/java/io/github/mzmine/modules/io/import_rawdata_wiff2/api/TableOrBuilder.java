@@ -17,7 +17,7 @@ public interface TableOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> 
+  java.util.List<Parameter>
       getParametersList();
   /**
    * <pre>
@@ -26,7 +26,7 @@ public interface TableOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getParameters(int index);
+  Parameter getParameters(int index);
   /**
    * <pre>
    * Get the Parameters.
@@ -42,7 +42,7 @@ public interface TableOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+  java.util.List<? extends ParameterOrBuilder>
       getParametersOrBuilderList();
   /**
    * <pre>
@@ -51,7 +51,7 @@ public interface TableOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getParametersOrBuilder(
+  ParameterOrBuilder getParametersOrBuilder(
       int index);
 
   /**
@@ -61,7 +61,7 @@ public interface TableOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> 
+  java.util.List<Parameter>
       getColumnsList();
   /**
    * <pre>
@@ -70,7 +70,7 @@ public interface TableOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getColumns(int index);
+  Parameter getColumns(int index);
   /**
    * <pre>
    * Get the table parameters.
@@ -86,7 +86,7 @@ public interface TableOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+  java.util.List<? extends ParameterOrBuilder>
       getColumnsOrBuilderList();
   /**
    * <pre>
@@ -95,6 +95,6 @@ public interface TableOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getColumnsOrBuilder(
+  ParameterOrBuilder getColumnsOrBuilder(
       int index);
 }

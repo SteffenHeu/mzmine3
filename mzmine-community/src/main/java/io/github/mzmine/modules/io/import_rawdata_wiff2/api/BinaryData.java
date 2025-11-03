@@ -39,20 +39,20 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData.Builder.class);
+            BinaryData.class, Builder.class);
   }
 
   public static final int ATTRIBUTES_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
-  private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> attributes_;
+  private java.util.List<ControlledVocabularyParameter> attributes_;
   /**
    * <pre>
    * attributes describing the values
@@ -64,8 +64,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  @java.lang.Override
-  public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> getAttributesList() {
+  @Override
+  public java.util.List<ControlledVocabularyParameter> getAttributesList() {
     return attributes_;
   }
   /**
@@ -79,8 +79,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  @java.lang.Override
-  public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+  @Override
+  public java.util.List<? extends ControlledVocabularyParameterOrBuilder>
       getAttributesOrBuilderList() {
     return attributes_;
   }
@@ -95,7 +95,7 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  @java.lang.Override
+  @Override
   public int getAttributesCount() {
     return attributes_.size();
   }
@@ -110,8 +110,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getAttributes(int index) {
+  @Override
+  public ControlledVocabularyParameter getAttributes(int index) {
     return attributes_.get(index);
   }
   /**
@@ -125,8 +125,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
+  @Override
+  public ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
       int index) {
     return attributes_.get(index);
   }
@@ -141,13 +141,13 @@ private static final long serialVersionUID = 0L;
    * <code>bytes Values = 2;</code>
    * @return The values.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString getValues() {
     return values_;
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -157,7 +157,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     for (int i = 0; i < attributes_.size(); i++) {
@@ -169,7 +169,7 @@ private static final long serialVersionUID = 0L;
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -188,15 +188,15 @@ private static final long serialVersionUID = 0L;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData)) {
+    if (!(obj instanceof BinaryData)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData) obj;
+    BinaryData other = (BinaryData) obj;
 
     if (!getAttributesList()
         .equals(other.getAttributesList())) return false;
@@ -206,7 +206,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -224,44 +224,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(
+  public static BinaryData parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(
+  public static BinaryData parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(
+  public static BinaryData parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(
+  public static BinaryData parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(byte[] data)
+  public static BinaryData parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(
+  public static BinaryData parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(java.io.InputStream input)
+  public static BinaryData parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(
+  public static BinaryData parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -269,26 +269,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseDelimitedFrom(java.io.InputStream input)
+  public static BinaryData parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseDelimitedFrom(
+  public static BinaryData parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(
+  public static BinaryData parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData parseFrom(
+  public static BinaryData parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -296,23 +296,23 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData prototype) {
+  public static Builder newBuilder(BinaryData prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -327,18 +327,18 @@ private static final long serialVersionUID = 0L;
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.BinaryData)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryDataOrBuilder {
+      BinaryDataOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData.Builder.class);
+              BinaryData.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData.newBuilder()
@@ -347,11 +347,11 @@ private static final long serialVersionUID = 0L;
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
 
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -366,36 +366,36 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData.getDefaultInstance();
+    @Override
+    public BinaryData getDefaultInstanceForType() {
+      return BinaryData.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData result = buildPartial();
+    @Override
+    public BinaryData build() {
+      BinaryData result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData(this);
+    @Override
+    public BinaryData buildPartial() {
+      BinaryData result = new BinaryData(this);
       buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartialRepeatedFields(io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData result) {
+    private void buildPartialRepeatedFields(BinaryData result) {
       if (attributesBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
           attributes_ = java.util.Collections.unmodifiableList(attributes_);
@@ -407,25 +407,25 @@ private static final long serialVersionUID = 0L;
       }
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData result) {
+    private void buildPartial0(BinaryData result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000002) != 0)) {
         result.values_ = values_;
       }
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData)other);
+      if (other instanceof BinaryData) {
+        return mergeFrom((BinaryData)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData.getDefaultInstance()) return this;
+    public Builder mergeFrom(BinaryData other) {
+      if (other == BinaryData.getDefaultInstance()) return this;
       if (attributesBuilder_ == null) {
         if (!other.attributes_.isEmpty()) {
           if (attributes_.isEmpty()) {
@@ -460,18 +460,18 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -482,9 +482,9 @@ private static final long serialVersionUID = 0L;
               done = true;
               break;
             case 10: {
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter m =
+              ControlledVocabularyParameter m =
                   input.readMessage(
-                      io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.parser(),
+                      ControlledVocabularyParameter.parser(),
                       extensionRegistry);
               if (attributesBuilder_ == null) {
                 ensureAttributesIsMutable();
@@ -516,17 +516,17 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> attributes_ =
+    private java.util.List<ControlledVocabularyParameter> attributes_ =
       java.util.Collections.emptyList();
     private void ensureAttributesIsMutable() {
       if (!((bitField0_ & 0x00000001) != 0)) {
-        attributes_ = new java.util.ArrayList<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter>(attributes_);
+        attributes_ = new java.util.ArrayList<ControlledVocabularyParameter>(attributes_);
         bitField0_ |= 0x00000001;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> attributesBuilder_;
+        ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder> attributesBuilder_;
 
     /**
      * <pre>
@@ -539,7 +539,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> getAttributesList() {
+    public java.util.List<ControlledVocabularyParameter> getAttributesList() {
       if (attributesBuilder_ == null) {
         return java.util.Collections.unmodifiableList(attributes_);
       } else {
@@ -575,7 +575,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter getAttributes(int index) {
+    public ControlledVocabularyParameter getAttributes(int index) {
       if (attributesBuilder_ == null) {
         return attributes_.get(index);
       } else {
@@ -594,7 +594,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
     public Builder setAttributes(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter value) {
+        int index, ControlledVocabularyParameter value) {
       if (attributesBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -619,7 +619,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
     public Builder setAttributes(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder builderForValue) {
+        int index, ControlledVocabularyParameter.Builder builderForValue) {
       if (attributesBuilder_ == null) {
         ensureAttributesIsMutable();
         attributes_.set(index, builderForValue.build());
@@ -640,7 +640,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public Builder addAttributes(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter value) {
+    public Builder addAttributes(ControlledVocabularyParameter value) {
       if (attributesBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -665,7 +665,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
     public Builder addAttributes(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter value) {
+        int index, ControlledVocabularyParameter value) {
       if (attributesBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -690,7 +690,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
     public Builder addAttributes(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder builderForValue) {
+        ControlledVocabularyParameter.Builder builderForValue) {
       if (attributesBuilder_ == null) {
         ensureAttributesIsMutable();
         attributes_.add(builderForValue.build());
@@ -712,7 +712,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
     public Builder addAttributes(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder builderForValue) {
+        int index, ControlledVocabularyParameter.Builder builderForValue) {
       if (attributesBuilder_ == null) {
         ensureAttributesIsMutable();
         attributes_.add(index, builderForValue.build());
@@ -734,7 +734,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
     public Builder addAllAttributes(
-        java.lang.Iterable<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter> values) {
+        Iterable<? extends ControlledVocabularyParameter> values) {
       if (attributesBuilder_ == null) {
         ensureAttributesIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -798,7 +798,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder getAttributesBuilder(
+    public ControlledVocabularyParameter.Builder getAttributesBuilder(
         int index) {
       return internalGetAttributesFieldBuilder().getBuilder(index);
     }
@@ -813,7 +813,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
+    public ControlledVocabularyParameterOrBuilder getAttributesOrBuilder(
         int index) {
       if (attributesBuilder_ == null) {
         return attributes_.get(index);  } else {
@@ -831,7 +831,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+    public java.util.List<? extends ControlledVocabularyParameterOrBuilder>
          getAttributesOrBuilderList() {
       if (attributesBuilder_ != null) {
         return attributesBuilder_.getMessageOrBuilderList();
@@ -850,9 +850,9 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder addAttributesBuilder() {
+    public ControlledVocabularyParameter.Builder addAttributesBuilder() {
       return internalGetAttributesFieldBuilder().addBuilder(
-          io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance());
+          ControlledVocabularyParameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -865,10 +865,10 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder addAttributesBuilder(
+    public ControlledVocabularyParameter.Builder addAttributesBuilder(
         int index) {
       return internalGetAttributesFieldBuilder().addBuilder(
-          index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.getDefaultInstance());
+          index, ControlledVocabularyParameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -881,16 +881,16 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.ControlledVocabularyParameter Attributes = 1;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder> 
+    public java.util.List<ControlledVocabularyParameter.Builder>
          getAttributesBuilderList() {
       return internalGetAttributesFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder> 
+        ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder>
         internalGetAttributesFieldBuilder() {
       if (attributesBuilder_ == null) {
         attributesBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameterOrBuilder>(
+            ControlledVocabularyParameter, ControlledVocabularyParameter.Builder, ControlledVocabularyParameterOrBuilder>(
                 attributes_,
                 ((bitField0_ & 0x00000001) != 0),
                 getParentForChildren(),
@@ -909,7 +909,7 @@ private static final long serialVersionUID = 0L;
      * <code>bytes Values = 2;</code>
      * @return The values.
      */
-    @java.lang.Override
+    @Override
     public com.google.protobuf.ByteString getValues() {
       return values_;
     }
@@ -948,18 +948,18 @@ private static final long serialVersionUID = 0L;
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.BinaryData)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData DEFAULT_INSTANCE;
+  private static final BinaryData DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData();
+    DEFAULT_INSTANCE = new BinaryData();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData getDefaultInstance() {
+  public static BinaryData getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<BinaryData>
       PARSER = new com.google.protobuf.AbstractParser<BinaryData>() {
-    @java.lang.Override
+    @Override
     public BinaryData parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -983,13 +983,13 @@ private static final long serialVersionUID = 0L;
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<BinaryData> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData getDefaultInstanceForType() {
+  @Override
+  public BinaryData getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

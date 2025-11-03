@@ -18,7 +18,7 @@ public interface ExperimentOrBuilder extends
    * <code>string Id = 1;</code>
    * @return The id.
    */
-  java.lang.String getId();
+  String getId();
   /**
    * <pre>
    * A unique identifier for this experiment
@@ -38,7 +38,7 @@ public interface ExperimentOrBuilder extends
    * <code>string SampleId = 2;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * The sample identifier to which the experiment belongs
@@ -81,7 +81,7 @@ public interface ExperimentOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MassRangeConfiguration MassRanges = 5;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration> 
+  java.util.List<MassRangeConfiguration>
       getMassRangesList();
   /**
    * <pre>
@@ -90,7 +90,7 @@ public interface ExperimentOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MassRangeConfiguration MassRanges = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration getMassRanges(int index);
+  MassRangeConfiguration getMassRanges(int index);
   /**
    * <pre>
    * usually TOF data has only one item in this collection
@@ -106,7 +106,7 @@ public interface ExperimentOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MassRangeConfiguration MassRanges = 5;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfigurationOrBuilder> 
+  java.util.List<? extends MassRangeConfigurationOrBuilder>
       getMassRangesOrBuilderList();
   /**
    * <pre>
@@ -115,7 +115,7 @@ public interface ExperimentOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MassRangeConfiguration MassRanges = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfigurationOrBuilder getMassRangesOrBuilder(
+  MassRangeConfigurationOrBuilder getMassRangesOrBuilder(
       int index);
 
   /**
@@ -136,7 +136,7 @@ public interface ExperimentOrBuilder extends
    * <code>string ScanType = 7;</code>
    * @return The scanType.
    */
-  java.lang.String getScanType();
+  String getScanType();
   /**
    * <pre>
    * Returns the scan type of the experiment 
@@ -165,7 +165,7 @@ public interface ExperimentOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.Experiment.FRAGMENTATION_MODE FragmentationMode = 8;</code>
    * @return The fragmentationMode.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.Experiment.FRAGMENTATION_MODE getFragmentationMode();
+  Experiment.FRAGMENTATION_MODE getFragmentationMode();
 
   /**
    * <pre>

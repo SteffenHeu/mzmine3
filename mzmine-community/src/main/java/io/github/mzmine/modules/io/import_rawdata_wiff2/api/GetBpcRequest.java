@@ -34,21 +34,21 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest.Builder.class);
+            GetBpcRequest.class, Builder.class);
   }
 
   private int bitField0_;
   public static final int SAMPLEID_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object sampleId_ = "";
+  private volatile Object sampleId_ = "";
   /**
    * <pre>
    * the id of the sample 
@@ -57,15 +57,15 @@ private static final long serialVersionUID = 0L;
    * <code>string SampleId = 1;</code>
    * @return The sampleId.
    */
-  @java.lang.Override
-  public java.lang.String getSampleId() {
-    java.lang.Object ref = sampleId_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getSampleId() {
+    Object ref = sampleId_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       sampleId_ = s;
       return s;
     }
@@ -78,14 +78,14 @@ private static final long serialVersionUID = 0L;
    * <code>string SampleId = 1;</code>
    * @return The bytes for sampleId.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getSampleIdBytes() {
-    java.lang.Object ref = sampleId_;
-    if (ref instanceof java.lang.String) {
+    Object ref = sampleId_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       sampleId_ = b;
       return b;
     } else {
@@ -103,14 +103,14 @@ private static final long serialVersionUID = 0L;
    * <code>int32 Period = 2;</code>
    * @return The period.
    */
-  @java.lang.Override
+  @Override
   public int getPeriod() {
     return period_;
   }
 
   public static final int EXPERIMENTID_FIELD_NUMBER = 3;
   @SuppressWarnings("serial")
-  private volatile java.lang.Object experimentId_ = "";
+  private volatile Object experimentId_ = "";
   /**
    * <pre>
    * the id of the experiment
@@ -119,15 +119,15 @@ private static final long serialVersionUID = 0L;
    * <code>string ExperimentId = 3;</code>
    * @return The experimentId.
    */
-  @java.lang.Override
-  public java.lang.String getExperimentId() {
-    java.lang.Object ref = experimentId_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
+  @Override
+  public String getExperimentId() {
+    Object ref = experimentId_;
+    if (ref instanceof String) {
+      return (String) ref;
     } else {
       com.google.protobuf.ByteString bs = 
           (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
+      String s = bs.toStringUtf8();
       experimentId_ = s;
       return s;
     }
@@ -140,14 +140,14 @@ private static final long serialVersionUID = 0L;
    * <code>string ExperimentId = 3;</code>
    * @return The bytes for experimentId.
    */
-  @java.lang.Override
+  @Override
   public com.google.protobuf.ByteString
       getExperimentIdBytes() {
-    java.lang.Object ref = experimentId_;
-    if (ref instanceof java.lang.String) {
+    Object ref = experimentId_;
+    if (ref instanceof String) {
       com.google.protobuf.ByteString b = 
           com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
+              (String) ref);
       experimentId_ = b;
       return b;
     } else {
@@ -156,7 +156,7 @@ private static final long serialVersionUID = 0L;
   }
 
   public static final int MASSRANGES_FIELD_NUMBER = 4;
-  private io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange massRanges_;
+  private MassRange massRanges_;
   /**
    * <pre>
    * the mass ranges
@@ -165,7 +165,7 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
    * @return Whether the massRanges field is set.
    */
-  @java.lang.Override
+  @Override
   public boolean hasMassRanges() {
     return ((bitField0_ & 0x00000001) != 0);
   }
@@ -177,9 +177,9 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
    * @return The massRanges.
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange getMassRanges() {
-    return massRanges_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.getDefaultInstance() : massRanges_;
+  @Override
+  public MassRange getMassRanges() {
+    return massRanges_ == null ? MassRange.getDefaultInstance() : massRanges_;
   }
   /**
    * <pre>
@@ -188,13 +188,13 @@ private static final long serialVersionUID = 0L;
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeOrBuilder getMassRangesOrBuilder() {
-    return massRanges_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.getDefaultInstance() : massRanges_;
+  @Override
+  public MassRangeOrBuilder getMassRangesOrBuilder() {
+    return massRanges_ == null ? MassRange.getDefaultInstance() : massRanges_;
   }
 
   public static final int TIMERANGE_FIELD_NUMBER = 5;
-  private io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange timeRange_;
+  private TimeRange timeRange_;
   /**
    * <pre>
    * the range of the time
@@ -203,7 +203,7 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
    * @return Whether the timeRange field is set.
    */
-  @java.lang.Override
+  @Override
   public boolean hasTimeRange() {
     return ((bitField0_ & 0x00000002) != 0);
   }
@@ -215,9 +215,9 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
    * @return The timeRange.
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange getTimeRange() {
-    return timeRange_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.getDefaultInstance() : timeRange_;
+  @Override
+  public TimeRange getTimeRange() {
+    return timeRange_ == null ? TimeRange.getDefaultInstance() : timeRange_;
   }
   /**
    * <pre>
@@ -226,13 +226,13 @@ private static final long serialVersionUID = 0L;
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder getTimeRangeOrBuilder() {
-    return timeRange_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.getDefaultInstance() : timeRange_;
+  @Override
+  public TimeRangeOrBuilder getTimeRangeOrBuilder() {
+    return timeRange_ == null ? TimeRange.getDefaultInstance() : timeRange_;
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -242,7 +242,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (!com.google.protobuf.GeneratedMessage.isStringEmpty(sampleId_)) {
@@ -263,7 +263,7 @@ private static final long serialVersionUID = 0L;
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -292,15 +292,15 @@ private static final long serialVersionUID = 0L;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest)) {
+    if (!(obj instanceof GetBpcRequest)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest) obj;
+    GetBpcRequest other = (GetBpcRequest) obj;
 
     if (!getSampleId()
         .equals(other.getSampleId())) return false;
@@ -322,7 +322,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -348,44 +348,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(
+  public static GetBpcRequest parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(
+  public static GetBpcRequest parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(
+  public static GetBpcRequest parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(
+  public static GetBpcRequest parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(byte[] data)
+  public static GetBpcRequest parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(
+  public static GetBpcRequest parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(java.io.InputStream input)
+  public static GetBpcRequest parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(
+  public static GetBpcRequest parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -393,26 +393,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseDelimitedFrom(java.io.InputStream input)
+  public static GetBpcRequest parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseDelimitedFrom(
+  public static GetBpcRequest parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(
+  public static GetBpcRequest parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest parseFrom(
+  public static GetBpcRequest parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -420,23 +420,23 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest prototype) {
+  public static Builder newBuilder(GetBpcRequest prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -446,18 +446,18 @@ private static final long serialVersionUID = 0L;
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.GetBpcRequest)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequestOrBuilder {
+      GetBpcRequestOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest.Builder.class);
+              GetBpcRequest.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest.newBuilder()
@@ -466,7 +466,7 @@ private static final long serialVersionUID = 0L;
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
       maybeForceBuilderInitialization();
     }
@@ -477,7 +477,7 @@ private static final long serialVersionUID = 0L;
         internalGetTimeRangeFieldBuilder();
       }
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -497,35 +497,35 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest.getDefaultInstance();
+    @Override
+    public GetBpcRequest getDefaultInstanceForType() {
+      return GetBpcRequest.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest result = buildPartial();
+    @Override
+    public GetBpcRequest build() {
+      GetBpcRequest result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest(this);
+    @Override
+    public GetBpcRequest buildPartial() {
+      GetBpcRequest result = new GetBpcRequest(this);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest result) {
+    private void buildPartial0(GetBpcRequest result) {
       int from_bitField0_ = bitField0_;
       if (((from_bitField0_ & 0x00000001) != 0)) {
         result.sampleId_ = sampleId_;
@@ -552,18 +552,18 @@ private static final long serialVersionUID = 0L;
       result.bitField0_ |= to_bitField0_;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest)other);
+      if (other instanceof GetBpcRequest) {
+        return mergeFrom((GetBpcRequest)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest.getDefaultInstance()) return this;
+    public Builder mergeFrom(GetBpcRequest other) {
+      if (other == GetBpcRequest.getDefaultInstance()) return this;
       if (!other.getSampleId().isEmpty()) {
         sampleId_ = other.sampleId_;
         bitField0_ |= 0x00000001;
@@ -588,18 +588,18 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -655,7 +655,7 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.lang.Object sampleId_ = "";
+    private Object sampleId_ = "";
     /**
      * <pre>
      * the id of the sample 
@@ -664,16 +664,16 @@ private static final long serialVersionUID = 0L;
      * <code>string SampleId = 1;</code>
      * @return The sampleId.
      */
-    public java.lang.String getSampleId() {
-      java.lang.Object ref = sampleId_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getSampleId() {
+      Object ref = sampleId_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         sampleId_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -686,11 +686,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getSampleIdBytes() {
-      java.lang.Object ref = sampleId_;
+      Object ref = sampleId_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         sampleId_ = b;
         return b;
       } else {
@@ -707,7 +707,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setSampleId(
-        java.lang.String value) {
+        String value) {
       if (value == null) { throw new NullPointerException(); }
       sampleId_ = value;
       bitField0_ |= 0x00000001;
@@ -756,7 +756,7 @@ private static final long serialVersionUID = 0L;
      * <code>int32 Period = 2;</code>
      * @return The period.
      */
-    @java.lang.Override
+    @Override
     public int getPeriod() {
       return period_;
     }
@@ -791,7 +791,7 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private java.lang.Object experimentId_ = "";
+    private Object experimentId_ = "";
     /**
      * <pre>
      * the id of the experiment
@@ -800,16 +800,16 @@ private static final long serialVersionUID = 0L;
      * <code>string ExperimentId = 3;</code>
      * @return The experimentId.
      */
-    public java.lang.String getExperimentId() {
-      java.lang.Object ref = experimentId_;
-      if (!(ref instanceof java.lang.String)) {
+    public String getExperimentId() {
+      Object ref = experimentId_;
+      if (!(ref instanceof String)) {
         com.google.protobuf.ByteString bs =
             (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
+        String s = bs.toStringUtf8();
         experimentId_ = s;
         return s;
       } else {
-        return (java.lang.String) ref;
+        return (String) ref;
       }
     }
     /**
@@ -822,11 +822,11 @@ private static final long serialVersionUID = 0L;
      */
     public com.google.protobuf.ByteString
         getExperimentIdBytes() {
-      java.lang.Object ref = experimentId_;
+      Object ref = experimentId_;
       if (ref instanceof String) {
         com.google.protobuf.ByteString b = 
             com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
+                (String) ref);
         experimentId_ = b;
         return b;
       } else {
@@ -843,7 +843,7 @@ private static final long serialVersionUID = 0L;
      * @return This builder for chaining.
      */
     public Builder setExperimentId(
-        java.lang.String value) {
+        String value) {
       if (value == null) { throw new NullPointerException(); }
       experimentId_ = value;
       bitField0_ |= 0x00000004;
@@ -883,9 +883,9 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    private io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange massRanges_;
+    private MassRange massRanges_;
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeOrBuilder> massRangesBuilder_;
+        MassRange, MassRange.Builder, MassRangeOrBuilder> massRangesBuilder_;
     /**
      * <pre>
      * the mass ranges
@@ -905,9 +905,9 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
      * @return The massRanges.
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange getMassRanges() {
+    public MassRange getMassRanges() {
       if (massRangesBuilder_ == null) {
-        return massRanges_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.getDefaultInstance() : massRanges_;
+        return massRanges_ == null ? MassRange.getDefaultInstance() : massRanges_;
       } else {
         return massRangesBuilder_.getMessage();
       }
@@ -919,7 +919,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
      */
-    public Builder setMassRanges(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange value) {
+    public Builder setMassRanges(MassRange value) {
       if (massRangesBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -940,7 +940,7 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
      */
     public Builder setMassRanges(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.Builder builderForValue) {
+        MassRange.Builder builderForValue) {
       if (massRangesBuilder_ == null) {
         massRanges_ = builderForValue.build();
       } else {
@@ -957,11 +957,11 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
      */
-    public Builder mergeMassRanges(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange value) {
+    public Builder mergeMassRanges(MassRange value) {
       if (massRangesBuilder_ == null) {
         if (((bitField0_ & 0x00000008) != 0) &&
           massRanges_ != null &&
-          massRanges_ != io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.getDefaultInstance()) {
+          massRanges_ != MassRange.getDefaultInstance()) {
           getMassRangesBuilder().mergeFrom(value);
         } else {
           massRanges_ = value;
@@ -999,7 +999,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.Builder getMassRangesBuilder() {
+    public MassRange.Builder getMassRangesBuilder() {
       bitField0_ |= 0x00000008;
       onChanged();
       return internalGetMassRangesFieldBuilder().getBuilder();
@@ -1011,12 +1011,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeOrBuilder getMassRangesOrBuilder() {
+    public MassRangeOrBuilder getMassRangesOrBuilder() {
       if (massRangesBuilder_ != null) {
         return massRangesBuilder_.getMessageOrBuilder();
       } else {
         return massRanges_ == null ?
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.getDefaultInstance() : massRanges_;
+            MassRange.getDefaultInstance() : massRanges_;
       }
     }
     /**
@@ -1027,11 +1027,11 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.MassRange MassRanges = 4;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeOrBuilder> 
+        MassRange, MassRange.Builder, MassRangeOrBuilder>
         internalGetMassRangesFieldBuilder() {
       if (massRangesBuilder_ == null) {
         massRangesBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRange.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeOrBuilder>(
+            MassRange, MassRange.Builder, MassRangeOrBuilder>(
                 getMassRanges(),
                 getParentForChildren(),
                 isClean());
@@ -1040,9 +1040,9 @@ private static final long serialVersionUID = 0L;
       return massRangesBuilder_;
     }
 
-    private io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange timeRange_;
+    private TimeRange timeRange_;
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange, io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder> timeRangeBuilder_;
+        TimeRange, TimeRange.Builder, TimeRangeOrBuilder> timeRangeBuilder_;
     /**
      * <pre>
      * the range of the time
@@ -1062,9 +1062,9 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
      * @return The timeRange.
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange getTimeRange() {
+    public TimeRange getTimeRange() {
       if (timeRangeBuilder_ == null) {
-        return timeRange_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.getDefaultInstance() : timeRange_;
+        return timeRange_ == null ? TimeRange.getDefaultInstance() : timeRange_;
       } else {
         return timeRangeBuilder_.getMessage();
       }
@@ -1076,7 +1076,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
      */
-    public Builder setTimeRange(io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange value) {
+    public Builder setTimeRange(TimeRange value) {
       if (timeRangeBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -1097,7 +1097,7 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
      */
     public Builder setTimeRange(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.Builder builderForValue) {
+        TimeRange.Builder builderForValue) {
       if (timeRangeBuilder_ == null) {
         timeRange_ = builderForValue.build();
       } else {
@@ -1114,11 +1114,11 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
      */
-    public Builder mergeTimeRange(io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange value) {
+    public Builder mergeTimeRange(TimeRange value) {
       if (timeRangeBuilder_ == null) {
         if (((bitField0_ & 0x00000010) != 0) &&
           timeRange_ != null &&
-          timeRange_ != io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.getDefaultInstance()) {
+          timeRange_ != TimeRange.getDefaultInstance()) {
           getTimeRangeBuilder().mergeFrom(value);
         } else {
           timeRange_ = value;
@@ -1156,7 +1156,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.Builder getTimeRangeBuilder() {
+    public TimeRange.Builder getTimeRangeBuilder() {
       bitField0_ |= 0x00000010;
       onChanged();
       return internalGetTimeRangeFieldBuilder().getBuilder();
@@ -1168,12 +1168,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder getTimeRangeOrBuilder() {
+    public TimeRangeOrBuilder getTimeRangeOrBuilder() {
       if (timeRangeBuilder_ != null) {
         return timeRangeBuilder_.getMessageOrBuilder();
       } else {
         return timeRange_ == null ?
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.getDefaultInstance() : timeRange_;
+            TimeRange.getDefaultInstance() : timeRange_;
       }
     }
     /**
@@ -1184,11 +1184,11 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange TimeRange = 5;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange, io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder> 
+        TimeRange, TimeRange.Builder, TimeRangeOrBuilder>
         internalGetTimeRangeFieldBuilder() {
       if (timeRangeBuilder_ == null) {
         timeRangeBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange, io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder>(
+            TimeRange, TimeRange.Builder, TimeRangeOrBuilder>(
                 getTimeRange(),
                 getParentForChildren(),
                 isClean());
@@ -1201,18 +1201,18 @@ private static final long serialVersionUID = 0L;
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.GetBpcRequest)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest DEFAULT_INSTANCE;
+  private static final GetBpcRequest DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest();
+    DEFAULT_INSTANCE = new GetBpcRequest();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest getDefaultInstance() {
+  public static GetBpcRequest getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<GetBpcRequest>
       PARSER = new com.google.protobuf.AbstractParser<GetBpcRequest>() {
-    @java.lang.Override
+    @Override
     public GetBpcRequest parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -1236,13 +1236,13 @@ private static final long serialVersionUID = 0L;
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<GetBpcRequest> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetBpcRequest getDefaultInstanceForType() {
+  @Override
+  public GetBpcRequest getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

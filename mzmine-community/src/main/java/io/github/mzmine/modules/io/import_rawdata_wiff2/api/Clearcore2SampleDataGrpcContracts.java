@@ -289,7 +289,7 @@ public final class Clearcore2SampleDataGrpcContracts extends com.google.protobuf
   private static  com.google.protobuf.Descriptors.FileDescriptor
       descriptor;
   static {
-    java.lang.String[] descriptorData = {
+    String[] descriptorData = {
       "\n*Clearcore2.SampleData.Grpc.Contracts.p" +
       "roto\022(Clearcore2.SampleData.DataAccessAp" +
       "i.V002\032\036google/protobuf/wrappers.proto\032\034" +
@@ -567,307 +567,307 @@ public final class Clearcore2SampleDataGrpcContracts extends com.google.protobuf
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Empty_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Empty_descriptor,
-        new java.lang.String[] { });
+        new String[] { });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_descriptor =
       getDescriptor().getMessageType(1);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_SourceFile_descriptor,
-        new java.lang.String[] { "Name", "Id", "Location", });
+        new String[] { "Name", "Id", "Location", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor =
       getDescriptor().getMessageType(2);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor,
-        new java.lang.String[] { "Names", "Attributes", });
+        new String[] { "Names", "Attributes", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_NamesEntry_descriptor =
       internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_descriptor.getNestedType(0);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_NamesEntry_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_AdcChannelsDescriptions_NamesEntry_descriptor,
-        new java.lang.String[] { "Key", "Value", });
+        new String[] { "Key", "Value", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentTic_descriptor =
       getDescriptor().getMessageType(3);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentTic_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentTic_descriptor,
-        new java.lang.String[] { "ExperimentId", "SampleId", "Data", });
+        new String[] { "ExperimentId", "SampleId", "Data", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentCycles_descriptor =
       getDescriptor().getMessageType(4);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentCycles_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentCycles_descriptor,
-        new java.lang.String[] { "ExperimentId", "SampleId", "Data", });
+        new String[] { "ExperimentId", "SampleId", "Data", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_AutosamplerInfo_descriptor =
       getDescriptor().getMessageType(5);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_AutosamplerInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_AutosamplerInfo_descriptor,
-        new java.lang.String[] { "Rack", "Plate", "Vial", "InjectionVolume", });
+        new String[] { "Rack", "Plate", "Vial", "InjectionVolume", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_descriptor =
       getDescriptor().getMessageType(6);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ControlledVocabularyParameter_descriptor,
-        new java.lang.String[] { "Accession", "Name", "Value", });
+        new String[] { "Accession", "Name", "Value", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanWindow_descriptor =
       getDescriptor().getMessageType(7);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanWindow_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanWindow_descriptor,
-        new java.lang.String[] { "Start", "End", "UnitAccession", });
+        new String[] { "Start", "End", "UnitAccession", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_IsolationWindow_descriptor =
       getDescriptor().getMessageType(8);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_IsolationWindow_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_IsolationWindow_descriptor,
-        new java.lang.String[] { "LowerOffset", "UpperOffset", "IsolationWindowTarget", "UnitAccession", });
+        new String[] { "LowerOffset", "UpperOffset", "IsolationWindowTarget", "UnitAccession", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_CollisionEnergy_descriptor =
       getDescriptor().getMessageType(9);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_CollisionEnergy_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_CollisionEnergy_descriptor,
-        new java.lang.String[] { "CollisionEnergyRampStart", "CollisionEnergyRampEnd", });
+        new String[] { "CollisionEnergyRampStart", "CollisionEnergyRampEnd", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_descriptor =
       getDescriptor().getMessageType(10);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Precursor_descriptor,
-        new java.lang.String[] { "IsolationWindow", "DissociationMethod", "CollisionEnergy", "PrecursorChargeState", });
+        new String[] { "IsolationWindow", "DissociationMethod", "CollisionEnergy", "PrecursorChargeState", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_descriptor =
       getDescriptor().getMessageType(11);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_descriptor,
-        new java.lang.String[] { "SelectionWindow", "IsolationWindow", });
+        new String[] { "SelectionWindow", "IsolationWindow", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Experiment_descriptor =
       getDescriptor().getMessageType(12);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Experiment_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Experiment_descriptor,
-        new java.lang.String[] { "Id", "SampleId", "MsLevel", "IsPositivePolarityScan", "MassRanges", "IsDataInCentroidFormat", "ScanType", "FragmentationMode", "ElectronKe", "ZenoMode", });
+        new String[] { "Id", "SampleId", "MsLevel", "IsPositivePolarityScan", "MassRanges", "IsDataInCentroidFormat", "ScanType", "FragmentationMode", "ElectronKe", "ZenoMode", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Sample_descriptor =
       getDescriptor().getMessageType(13);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Sample_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Sample_descriptor,
-        new java.lang.String[] { "Id", "Sources", "StartTimestamp", "IsCorrupted", "UserSampleId", "SampleComment", "UserName", "AcquisitionMethodName", "SupportsSpectrumModeWavelengthChromatogram", "SupportsChannelModeWavelengthChromatogram", "SampleName", "AutoSamplerInformation", "QuantSampleType", "InstrumentDetails", });
+        new String[] { "Id", "Sources", "StartTimestamp", "IsCorrupted", "UserSampleId", "SampleComment", "UserName", "AcquisitionMethodName", "SupportsSpectrumModeWavelengthChromatogram", "SupportsChannelModeWavelengthChromatogram", "SampleName", "AutoSamplerInformation", "QuantSampleType", "InstrumentDetails", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_SampleInfoSection_descriptor =
       getDescriptor().getMessageType(14);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_SampleInfoSection_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_SampleInfoSection_descriptor,
-        new java.lang.String[] { "Name", "Paragraphs", });
+        new String[] { "Name", "Paragraphs", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Paragraph_descriptor =
       getDescriptor().getMessageType(15);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Paragraph_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Paragraph_descriptor,
-        new java.lang.String[] { "Name", "Parameters", "Tables", });
+        new String[] { "Name", "Parameters", "Tables", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_descriptor =
       getDescriptor().getMessageType(16);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_descriptor,
-        new java.lang.String[] { "Parameters", "Columns", });
+        new String[] { "Parameters", "Columns", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanXic_descriptor =
       getDescriptor().getMessageType(17);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanXic_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanXic_descriptor,
-        new java.lang.String[] { "ExperimentId", "SampleId", "XValues", "YValues", "MassRange", "CycleRange", "TimeRange", });
+        new String[] { "ExperimentId", "SampleId", "XValues", "YValues", "MassRange", "CycleRange", "TimeRange", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MrmXic_descriptor =
       getDescriptor().getMessageType(18);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MrmXic_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_MrmXic_descriptor,
-        new java.lang.String[] { "ExperimentId", "SampleId", "XValues", "YValues", "MassIndex", "CycleRange", "TimeRange", });
+        new String[] { "ExperimentId", "SampleId", "XValues", "YValues", "MassIndex", "CycleRange", "TimeRange", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Bpc_descriptor =
       getDescriptor().getMessageType(19);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Bpc_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Bpc_descriptor,
-        new java.lang.String[] { "ExperimentId", "SampleId", "XValues", "YValues", "MassRange", "TimeRange", });
+        new String[] { "ExperimentId", "SampleId", "XValues", "YValues", "MassRange", "TimeRange", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_descriptor =
       getDescriptor().getMessageType(20);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_BinaryData_descriptor,
-        new java.lang.String[] { "Attributes", "Values", });
+        new String[] { "Attributes", "Values", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Spectrum_descriptor =
       getDescriptor().getMessageType(21);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Spectrum_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Spectrum_descriptor,
-        new java.lang.String[] { "Id", "ExperimentId", "SampleId", "ScanStartTime", "Data", "Precursor", });
+        new String[] { "Id", "ExperimentId", "SampleId", "ScanStartTime", "Data", "Precursor", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_WavelengthSpectrum_descriptor =
       getDescriptor().getMessageType(22);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_WavelengthSpectrum_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_WavelengthSpectrum_descriptor,
-        new java.lang.String[] { "Id", "SampleId", "ScanStartTime", "Data", "Name", });
+        new String[] { "Id", "SampleId", "ScanStartTime", "Data", "Name", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentTicRequest_descriptor =
       getDescriptor().getMessageType(23);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentTicRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentTicRequest_descriptor,
-        new java.lang.String[] { "SampleId", "ExperimentId", });
+        new String[] { "SampleId", "ExperimentId", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentCyclesRequest_descriptor =
       getDescriptor().getMessageType(24);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentCyclesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentCyclesRequest_descriptor,
-        new java.lang.String[] { "ExperimentId", "SampleId", });
+        new String[] { "ExperimentId", "SampleId", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ListSamplesRequest_descriptor =
       getDescriptor().getMessageType(25);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ListSamplesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ListSamplesRequest_descriptor,
-        new java.lang.String[] { "AbsolutePathToWiffFile", "SkipCorrupted", "SampleIDs", });
+        new String[] { "AbsolutePathToWiffFile", "SkipCorrupted", "SampleIDs", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetSampleInfoRequest_descriptor =
       getDescriptor().getMessageType(26);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetSampleInfoRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetSampleInfoRequest_descriptor,
-        new java.lang.String[] { "SampleId", });
+        new String[] { "SampleId", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentsRequest_descriptor =
       getDescriptor().getMessageType(27);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentsRequest_descriptor,
-        new java.lang.String[] { "SampleId", "ReadDetailedParameters", });
+        new String[] { "SampleId", "ReadDetailedParameters", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetScanXicRequest_descriptor =
       getDescriptor().getMessageType(28);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetScanXicRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetScanXicRequest_descriptor,
-        new java.lang.String[] { "SampleId", "ExperimentId", "MassRanges", "CycleRange", "TimeRange", });
+        new String[] { "SampleId", "ExperimentId", "MassRanges", "CycleRange", "TimeRange", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetMrmXicRequest_descriptor =
       getDescriptor().getMessageType(29);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetMrmXicRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetMrmXicRequest_descriptor,
-        new java.lang.String[] { "SampleId", "ExperimentId", "MassIndexes", "CycleRange", "TimeRange", });
+        new String[] { "SampleId", "ExperimentId", "MassIndexes", "CycleRange", "TimeRange", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_TimeRange_descriptor =
       getDescriptor().getMessageType(30);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_TimeRange_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_TimeRange_descriptor,
-        new java.lang.String[] { "Start", "End", });
+        new String[] { "Start", "End", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_CycleRange_descriptor =
       getDescriptor().getMessageType(31);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_CycleRange_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_CycleRange_descriptor,
-        new java.lang.String[] { "Start", "End", });
+        new String[] { "Start", "End", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRange_descriptor =
       getDescriptor().getMessageType(32);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRange_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRange_descriptor,
-        new java.lang.String[] { "Start", "End", });
+        new String[] { "Start", "End", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetSpectraRequest_descriptor =
       getDescriptor().getMessageType(33);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetSpectraRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetSpectraRequest_descriptor,
-        new java.lang.String[] { "Range", "SampleId", "ExperimentId", "ConvertToCentroid", "AddFramingZeros", "OverrideAddFramingZerosDefaultValue", "CentroidOption", });
+        new String[] { "Range", "SampleId", "ExperimentId", "ConvertToCentroid", "AddFramingZeros", "OverrideAddFramingZerosDefaultValue", "CentroidOption", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetWavelengthSpectraRequest_descriptor =
       getDescriptor().getMessageType(34);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetWavelengthSpectraRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetWavelengthSpectraRequest_descriptor,
-        new java.lang.String[] { "Range", "SampleId", "IsRequestingChannelModeData", "ExperimentId", });
+        new String[] { "Range", "SampleId", "IsRequestingChannelModeData", "ExperimentId", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentScanRecordsRequest_descriptor =
       getDescriptor().getMessageType(35);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentScanRecordsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetExperimentScanRecordsRequest_descriptor,
-        new java.lang.String[] { "SampleId", "ExperimentId", "RawScanOffsets", });
+        new String[] { "SampleId", "ExperimentId", "RawScanOffsets", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetAdcChannelDescriptionsRequest_descriptor =
       getDescriptor().getMessageType(36);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetAdcChannelDescriptionsRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetAdcChannelDescriptionsRequest_descriptor,
-        new java.lang.String[] { "SampleId", });
+        new String[] { "SampleId", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetChannelTracesRequest_descriptor =
       getDescriptor().getMessageType(37);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetChannelTracesRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetChannelTracesRequest_descriptor,
-        new java.lang.String[] { "SampleId", });
+        new String[] { "SampleId", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentScanRecordsResponse_descriptor =
       getDescriptor().getMessageType(38);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentScanRecordsResponse_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ExperimentScanRecordsResponse_descriptor,
-        new java.lang.String[] { "SampleId", "ExperimentId", "TofInstrumentParameters", "Scans", });
+        new String[] { "SampleId", "ExperimentId", "TofInstrumentParameters", "Scans", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_TofInstrumentParameters_descriptor =
       getDescriptor().getMessageType(39);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_TofInstrumentParameters_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_TofInstrumentParameters_descriptor,
-        new java.lang.String[] { "TimeBinsToSum", "TdcResolution", });
+        new String[] { "TimeBinsToSum", "TdcResolution", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_TofCalibrationParameters_descriptor =
       getDescriptor().getMessageType(40);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_TofCalibrationParameters_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_TofCalibrationParameters_descriptor,
-        new java.lang.String[] { "Slope", "Delay", });
+        new String[] { "Slope", "Delay", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanRecordInfo_descriptor =
       getDescriptor().getMessageType(41);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanRecordInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ScanRecordInfo_descriptor,
-        new java.lang.String[] { "Offset", "Length", "TofCalibration", "PrecursorMass", "RetentionTime", });
+        new String[] { "Offset", "Length", "TofCalibration", "PrecursorMass", "RetentionTime", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_InstrumentDetail_descriptor =
       getDescriptor().getMessageType(42);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_InstrumentDetail_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_InstrumentDetail_descriptor,
-        new java.lang.String[] { "DeviceType", "DeviceModelName", "SerialNumber", });
+        new String[] { "DeviceType", "DeviceModelName", "SerialNumber", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ChannelTrace_descriptor =
       getDescriptor().getMessageType(43);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_ChannelTrace_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_ChannelTrace_descriptor,
-        new java.lang.String[] { "Id", "Name", "TraceType", "SampleId", "XValues", "YValues", });
+        new String[] { "Id", "Name", "TraceType", "SampleId", "XValues", "YValues", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_descriptor =
       getDescriptor().getMessageType(44);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethod_descriptor,
-        new java.lang.String[] { "SourceParameters", "Experiments", });
+        new String[] { "SourceParameters", "Experiments", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Parameter_descriptor =
       getDescriptor().getMessageType(45);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_Parameter_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_Parameter_descriptor,
-        new java.lang.String[] { "Name", "Unit", "Values", "Type", "Key", });
+        new String[] { "Name", "Unit", "Values", "Type", "Key", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethodExperiment_descriptor =
       getDescriptor().getMessageType(46);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethodExperiment_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_MsMethodExperiment_descriptor,
-        new java.lang.String[] { "Name", "Parameters", "Experiments", });
+        new String[] { "Name", "Parameters", "Experiments", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetMsMethodParametersRequest_descriptor =
       getDescriptor().getMessageType(47);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetMsMethodParametersRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetMsMethodParametersRequest_descriptor,
-        new java.lang.String[] { "SampleId", });
+        new String[] { "SampleId", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetLcMethodParametersRequest_descriptor =
       getDescriptor().getMessageType(48);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetLcMethodParametersRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetLcMethodParametersRequest_descriptor,
-        new java.lang.String[] { "SampleId", });
+        new String[] { "SampleId", });
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_descriptor =
       getDescriptor().getMessageType(49);
     internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessage.FieldAccessorTable(
         internal_static_Clearcore2_SampleData_DataAccessApi_V002_GetBpcRequest_descriptor,
-        new java.lang.String[] { "SampleId", "Period", "ExperimentId", "MassRanges", "TimeRange", });
+        new String[] { "SampleId", "Period", "ExperimentId", "MassRanges", "TimeRange", });
     descriptor.resolveAllFeaturesImmutable();
     com.google.protobuf.WrappersProto.getDescriptor();
     com.google.protobuf.StructProto.getDescriptor();

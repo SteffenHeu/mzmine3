@@ -18,7 +18,7 @@ public interface ExperimentTicOrBuilder extends
    * <code>string ExperimentId = 1;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * The id of the experiment used to acquire this Tic
@@ -38,7 +38,7 @@ public interface ExperimentTicOrBuilder extends
    * <code>string SampleId = 2;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * The sample identifier 
@@ -58,7 +58,7 @@ public interface ExperimentTicOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 3;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData> 
+  java.util.List<BinaryData>
       getDataList();
   /**
    * <pre>
@@ -68,7 +68,7 @@ public interface ExperimentTicOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 3;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData getData(int index);
+  BinaryData getData(int index);
   /**
    * <pre>
    * the actual binary data. 
@@ -86,7 +86,7 @@ public interface ExperimentTicOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 3;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryDataOrBuilder> 
+  java.util.List<? extends BinaryDataOrBuilder>
       getDataOrBuilderList();
   /**
    * <pre>
@@ -96,6 +96,6 @@ public interface ExperimentTicOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 3;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryDataOrBuilder getDataOrBuilder(
+  BinaryDataOrBuilder getDataOrBuilder(
       int index);
 }

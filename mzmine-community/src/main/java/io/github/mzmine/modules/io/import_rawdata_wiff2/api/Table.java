@@ -38,20 +38,20 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table.Builder.class);
+            Table.class, Builder.class);
   }
 
   public static final int PARAMETERS_FIELD_NUMBER = 1;
   @SuppressWarnings("serial")
-  private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> parameters_;
+  private java.util.List<Parameter> parameters_;
   /**
    * <pre>
    * Get the Parameters.
@@ -59,8 +59,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  @java.lang.Override
-  public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> getParametersList() {
+  @Override
+  public java.util.List<Parameter> getParametersList() {
     return parameters_;
   }
   /**
@@ -70,8 +70,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  @java.lang.Override
-  public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+  @Override
+  public java.util.List<? extends ParameterOrBuilder>
       getParametersOrBuilderList() {
     return parameters_;
   }
@@ -82,7 +82,7 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  @java.lang.Override
+  @Override
   public int getParametersCount() {
     return parameters_.size();
   }
@@ -93,8 +93,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getParameters(int index) {
+  @Override
+  public Parameter getParameters(int index) {
     return parameters_.get(index);
   }
   /**
@@ -104,15 +104,15 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getParametersOrBuilder(
+  @Override
+  public ParameterOrBuilder getParametersOrBuilder(
       int index) {
     return parameters_.get(index);
   }
 
   public static final int COLUMNS_FIELD_NUMBER = 2;
   @SuppressWarnings("serial")
-  private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> columns_;
+  private java.util.List<Parameter> columns_;
   /**
    * <pre>
    * Get the table parameters.
@@ -120,8 +120,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  @java.lang.Override
-  public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> getColumnsList() {
+  @Override
+  public java.util.List<Parameter> getColumnsList() {
     return columns_;
   }
   /**
@@ -131,8 +131,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  @java.lang.Override
-  public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+  @Override
+  public java.util.List<? extends ParameterOrBuilder>
       getColumnsOrBuilderList() {
     return columns_;
   }
@@ -143,7 +143,7 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  @java.lang.Override
+  @Override
   public int getColumnsCount() {
     return columns_.size();
   }
@@ -154,8 +154,8 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getColumns(int index) {
+  @Override
+  public Parameter getColumns(int index) {
     return columns_.get(index);
   }
   /**
@@ -165,14 +165,14 @@ private static final long serialVersionUID = 0L;
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getColumnsOrBuilder(
+  @Override
+  public ParameterOrBuilder getColumnsOrBuilder(
       int index) {
     return columns_.get(index);
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -182,7 +182,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     for (int i = 0; i < parameters_.size(); i++) {
@@ -194,7 +194,7 @@ private static final long serialVersionUID = 0L;
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -213,15 +213,15 @@ private static final long serialVersionUID = 0L;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table)) {
+    if (!(obj instanceof Table)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table) obj;
+    Table other = (Table) obj;
 
     if (!getParametersList()
         .equals(other.getParametersList())) return false;
@@ -231,7 +231,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -251,44 +251,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(
+  public static Table parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(
+  public static Table parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(
+  public static Table parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(
+  public static Table parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(byte[] data)
+  public static Table parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(
+  public static Table parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(java.io.InputStream input)
+  public static Table parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(
+  public static Table parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -296,26 +296,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseDelimitedFrom(java.io.InputStream input)
+  public static Table parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseDelimitedFrom(
+  public static Table parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(
+  public static Table parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table parseFrom(
+  public static Table parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -323,23 +323,23 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table prototype) {
+  public static Builder newBuilder(Table prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -353,18 +353,18 @@ private static final long serialVersionUID = 0L;
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.Table)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.TableOrBuilder {
+      TableOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table.Builder.class);
+              Table.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table.newBuilder()
@@ -373,11 +373,11 @@ private static final long serialVersionUID = 0L;
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
 
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -398,36 +398,36 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_Table_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table.getDefaultInstance();
+    @Override
+    public Table getDefaultInstanceForType() {
+      return Table.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table result = buildPartial();
+    @Override
+    public Table build() {
+      Table result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table(this);
+    @Override
+    public Table buildPartial() {
+      Table result = new Table(this);
       buildPartialRepeatedFields(result);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartialRepeatedFields(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table result) {
+    private void buildPartialRepeatedFields(Table result) {
       if (parametersBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0)) {
           parameters_ = java.util.Collections.unmodifiableList(parameters_);
@@ -448,22 +448,22 @@ private static final long serialVersionUID = 0L;
       }
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table result) {
+    private void buildPartial0(Table result) {
       int from_bitField0_ = bitField0_;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table)other);
+      if (other instanceof Table) {
+        return mergeFrom((Table)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table.getDefaultInstance()) return this;
+    public Builder mergeFrom(Table other) {
+      if (other == Table.getDefaultInstance()) return this;
       if (parametersBuilder_ == null) {
         if (!other.parameters_.isEmpty()) {
           if (parameters_.isEmpty()) {
@@ -521,18 +521,18 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -543,9 +543,9 @@ private static final long serialVersionUID = 0L;
               done = true;
               break;
             case 10: {
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter m =
+              Parameter m =
                   input.readMessage(
-                      io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.parser(),
+                      Parameter.parser(),
                       extensionRegistry);
               if (parametersBuilder_ == null) {
                 ensureParametersIsMutable();
@@ -556,9 +556,9 @@ private static final long serialVersionUID = 0L;
               break;
             } // case 10
             case 18: {
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter m =
+              Parameter m =
                   input.readMessage(
-                      io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.parser(),
+                      Parameter.parser(),
                       extensionRegistry);
               if (columnsBuilder_ == null) {
                 ensureColumnsIsMutable();
@@ -585,17 +585,17 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> parameters_ =
+    private java.util.List<Parameter> parameters_ =
       java.util.Collections.emptyList();
     private void ensureParametersIsMutable() {
       if (!((bitField0_ & 0x00000001) != 0)) {
-        parameters_ = new java.util.ArrayList<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter>(parameters_);
+        parameters_ = new java.util.ArrayList<Parameter>(parameters_);
         bitField0_ |= 0x00000001;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> parametersBuilder_;
+        Parameter, Parameter.Builder, ParameterOrBuilder> parametersBuilder_;
 
     /**
      * <pre>
@@ -604,7 +604,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> getParametersList() {
+    public java.util.List<Parameter> getParametersList() {
       if (parametersBuilder_ == null) {
         return java.util.Collections.unmodifiableList(parameters_);
       } else {
@@ -632,7 +632,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getParameters(int index) {
+    public Parameter getParameters(int index) {
       if (parametersBuilder_ == null) {
         return parameters_.get(index);
       } else {
@@ -647,7 +647,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
     public Builder setParameters(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+        int index, Parameter value) {
       if (parametersBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -668,7 +668,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
     public Builder setParameters(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        int index, Parameter.Builder builderForValue) {
       if (parametersBuilder_ == null) {
         ensureParametersIsMutable();
         parameters_.set(index, builderForValue.build());
@@ -685,7 +685,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public Builder addParameters(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+    public Builder addParameters(Parameter value) {
       if (parametersBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -706,7 +706,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
     public Builder addParameters(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+        int index, Parameter value) {
       if (parametersBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -727,7 +727,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
     public Builder addParameters(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        Parameter.Builder builderForValue) {
       if (parametersBuilder_ == null) {
         ensureParametersIsMutable();
         parameters_.add(builderForValue.build());
@@ -745,7 +745,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
     public Builder addParameters(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        int index, Parameter.Builder builderForValue) {
       if (parametersBuilder_ == null) {
         ensureParametersIsMutable();
         parameters_.add(index, builderForValue.build());
@@ -763,7 +763,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
     public Builder addAllParameters(
-        java.lang.Iterable<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> values) {
+        Iterable<? extends Parameter> values) {
       if (parametersBuilder_ == null) {
         ensureParametersIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -815,7 +815,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder getParametersBuilder(
+    public Parameter.Builder getParametersBuilder(
         int index) {
       return internalGetParametersFieldBuilder().getBuilder(index);
     }
@@ -826,7 +826,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getParametersOrBuilder(
+    public ParameterOrBuilder getParametersOrBuilder(
         int index) {
       if (parametersBuilder_ == null) {
         return parameters_.get(index);  } else {
@@ -840,7 +840,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+    public java.util.List<? extends ParameterOrBuilder>
          getParametersOrBuilderList() {
       if (parametersBuilder_ != null) {
         return parametersBuilder_.getMessageOrBuilderList();
@@ -855,9 +855,9 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder addParametersBuilder() {
+    public Parameter.Builder addParametersBuilder() {
       return internalGetParametersFieldBuilder().addBuilder(
-          io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.getDefaultInstance());
+          Parameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -866,10 +866,10 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder addParametersBuilder(
+    public Parameter.Builder addParametersBuilder(
         int index) {
       return internalGetParametersFieldBuilder().addBuilder(
-          index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.getDefaultInstance());
+          index, Parameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -878,16 +878,16 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Parameters = 1;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder> 
+    public java.util.List<Parameter.Builder>
          getParametersBuilderList() {
       return internalGetParametersFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+        Parameter, Parameter.Builder, ParameterOrBuilder>
         internalGetParametersFieldBuilder() {
       if (parametersBuilder_ == null) {
         parametersBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder>(
+            Parameter, Parameter.Builder, ParameterOrBuilder>(
                 parameters_,
                 ((bitField0_ & 0x00000001) != 0),
                 getParentForChildren(),
@@ -897,17 +897,17 @@ private static final long serialVersionUID = 0L;
       return parametersBuilder_;
     }
 
-    private java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> columns_ =
+    private java.util.List<Parameter> columns_ =
       java.util.Collections.emptyList();
     private void ensureColumnsIsMutable() {
       if (!((bitField0_ & 0x00000002) != 0)) {
-        columns_ = new java.util.ArrayList<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter>(columns_);
+        columns_ = new java.util.ArrayList<Parameter>(columns_);
         bitField0_ |= 0x00000002;
        }
     }
 
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> columnsBuilder_;
+        Parameter, Parameter.Builder, ParameterOrBuilder> columnsBuilder_;
 
     /**
      * <pre>
@@ -916,7 +916,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> getColumnsList() {
+    public java.util.List<Parameter> getColumnsList() {
       if (columnsBuilder_ == null) {
         return java.util.Collections.unmodifiableList(columns_);
       } else {
@@ -944,7 +944,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getColumns(int index) {
+    public Parameter getColumns(int index) {
       if (columnsBuilder_ == null) {
         return columns_.get(index);
       } else {
@@ -959,7 +959,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
     public Builder setColumns(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+        int index, Parameter value) {
       if (columnsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -980,7 +980,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
     public Builder setColumns(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        int index, Parameter.Builder builderForValue) {
       if (columnsBuilder_ == null) {
         ensureColumnsIsMutable();
         columns_.set(index, builderForValue.build());
@@ -997,7 +997,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public Builder addColumns(io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+    public Builder addColumns(Parameter value) {
       if (columnsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -1018,7 +1018,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
     public Builder addColumns(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter value) {
+        int index, Parameter value) {
       if (columnsBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -1039,7 +1039,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
     public Builder addColumns(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        Parameter.Builder builderForValue) {
       if (columnsBuilder_ == null) {
         ensureColumnsIsMutable();
         columns_.add(builderForValue.build());
@@ -1057,7 +1057,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
     public Builder addColumns(
-        int index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder builderForValue) {
+        int index, Parameter.Builder builderForValue) {
       if (columnsBuilder_ == null) {
         ensureColumnsIsMutable();
         columns_.add(index, builderForValue.build());
@@ -1075,7 +1075,7 @@ private static final long serialVersionUID = 0L;
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
     public Builder addAllColumns(
-        java.lang.Iterable<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> values) {
+        Iterable<? extends Parameter> values) {
       if (columnsBuilder_ == null) {
         ensureColumnsIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
@@ -1127,7 +1127,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder getColumnsBuilder(
+    public Parameter.Builder getColumnsBuilder(
         int index) {
       return internalGetColumnsFieldBuilder().getBuilder(index);
     }
@@ -1138,7 +1138,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getColumnsOrBuilder(
+    public ParameterOrBuilder getColumnsOrBuilder(
         int index) {
       if (columnsBuilder_ == null) {
         return columns_.get(index);  } else {
@@ -1152,7 +1152,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+    public java.util.List<? extends ParameterOrBuilder>
          getColumnsOrBuilderList() {
       if (columnsBuilder_ != null) {
         return columnsBuilder_.getMessageOrBuilderList();
@@ -1167,9 +1167,9 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder addColumnsBuilder() {
+    public Parameter.Builder addColumnsBuilder() {
       return internalGetColumnsFieldBuilder().addBuilder(
-          io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.getDefaultInstance());
+          Parameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -1178,10 +1178,10 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder addColumnsBuilder(
+    public Parameter.Builder addColumnsBuilder(
         int index) {
       return internalGetColumnsFieldBuilder().addBuilder(
-          index, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.getDefaultInstance());
+          index, Parameter.getDefaultInstance());
     }
     /**
      * <pre>
@@ -1190,16 +1190,16 @@ private static final long serialVersionUID = 0L;
      *
      * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter Columns = 2;</code>
      */
-    public java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder> 
+    public java.util.List<Parameter.Builder>
          getColumnsBuilderList() {
       return internalGetColumnsFieldBuilder().getBuilderList();
     }
     private com.google.protobuf.RepeatedFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+        Parameter, Parameter.Builder, ParameterOrBuilder>
         internalGetColumnsFieldBuilder() {
       if (columnsBuilder_ == null) {
         columnsBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter, io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder>(
+            Parameter, Parameter.Builder, ParameterOrBuilder>(
                 columns_,
                 ((bitField0_ & 0x00000002) != 0),
                 getParentForChildren(),
@@ -1213,18 +1213,18 @@ private static final long serialVersionUID = 0L;
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.Table)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table DEFAULT_INSTANCE;
+  private static final Table DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table();
+    DEFAULT_INSTANCE = new Table();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table getDefaultInstance() {
+  public static Table getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<Table>
       PARSER = new com.google.protobuf.AbstractParser<Table>() {
-    @java.lang.Override
+    @Override
     public Table parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -1248,13 +1248,13 @@ private static final long serialVersionUID = 0L;
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<Table> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.Table getDefaultInstanceForType() {
+  @Override
+  public Table getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

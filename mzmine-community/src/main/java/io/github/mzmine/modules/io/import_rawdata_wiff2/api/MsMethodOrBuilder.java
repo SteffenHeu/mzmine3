@@ -17,7 +17,7 @@ public interface MsMethodOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter> 
+  java.util.List<Parameter>
       getSourceParametersList();
   /**
    * <pre>
@@ -26,7 +26,7 @@ public interface MsMethodOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.Parameter getSourceParameters(int index);
+  Parameter getSourceParameters(int index);
   /**
    * <pre>
    * returns the source Parameters
@@ -42,7 +42,7 @@ public interface MsMethodOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder> 
+  java.util.List<? extends ParameterOrBuilder>
       getSourceParametersOrBuilderList();
   /**
    * <pre>
@@ -51,7 +51,7 @@ public interface MsMethodOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.Parameter SourceParameters = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterOrBuilder getSourceParametersOrBuilder(
+  ParameterOrBuilder getSourceParametersOrBuilder(
       int index);
 
   /**
@@ -61,7 +61,7 @@ public interface MsMethodOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment> 
+  java.util.List<MsMethodExperiment>
       getExperimentsList();
   /**
    * <pre>
@@ -70,7 +70,7 @@ public interface MsMethodOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperiment getExperiments(int index);
+  MsMethodExperiment getExperiments(int index);
   /**
    * <pre>
    * returns the experiment information 
@@ -86,7 +86,7 @@ public interface MsMethodOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder> 
+  java.util.List<? extends MsMethodExperimentOrBuilder>
       getExperimentsOrBuilderList();
   /**
    * <pre>
@@ -95,6 +95,6 @@ public interface MsMethodOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.MsMethodExperiment Experiments = 2;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.MsMethodExperimentOrBuilder getExperimentsOrBuilder(
+  MsMethodExperimentOrBuilder getExperimentsOrBuilder(
       int index);
 }

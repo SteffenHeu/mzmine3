@@ -19,7 +19,7 @@ public interface SourceFileOrBuilder extends
    * <code>string Name = 1;</code>
    * @return The name.
    */
-  java.lang.String getName();
+  String getName();
   /**
    * <pre>
    * Name of the source file, without 
@@ -40,7 +40,7 @@ public interface SourceFileOrBuilder extends
    * <code>string Id = 2;</code>
    * @return The id.
    */
-  java.lang.String getId();
+  String getId();
   /**
    * <pre>
    * An identifier for this file.
@@ -60,7 +60,7 @@ public interface SourceFileOrBuilder extends
    * <code>string Location = 3;</code>
    * @return The location.
    */
-  java.lang.String getLocation();
+  String getLocation();
   /**
    * <pre>
    * URI-formatted location where the file was retrieved.

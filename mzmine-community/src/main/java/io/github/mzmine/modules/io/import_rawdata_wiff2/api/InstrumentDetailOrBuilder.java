@@ -37,7 +37,7 @@ public interface InstrumentDetailOrBuilder extends
    * <code>string DeviceModelName = 2;</code>
    * @return The deviceModelName.
    */
-  java.lang.String getDeviceModelName();
+  String getDeviceModelName();
   /**
    * <pre>
    * Returns the instrument device model name.
@@ -57,7 +57,7 @@ public interface InstrumentDetailOrBuilder extends
    * <code>string SerialNumber = 3;</code>
    * @return The serialNumber.
    */
-  java.lang.String getSerialNumber();
+  String getSerialNumber();
   /**
    * <pre>
    * Gets the instrument serial number. 

@@ -27,7 +27,7 @@ public interface GetSpectraRequestOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange Range = 1;</code>
    * @return The range.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange getRange();
+  TimeRange getRange();
   /**
    * <pre>
    * This is a time window for sub selecting a subset of information 
@@ -35,7 +35,7 @@ public interface GetSpectraRequestOrBuilder extends
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.TimeRange Range = 1;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRangeOrBuilder getRangeOrBuilder();
+  TimeRangeOrBuilder getRangeOrBuilder();
 
   /**
    * <pre>
@@ -45,7 +45,7 @@ public interface GetSpectraRequestOrBuilder extends
    * <code>string SampleId = 2;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * the id of the sample
@@ -65,7 +65,7 @@ public interface GetSpectraRequestOrBuilder extends
    * <code>string ExperimentId = 3;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * the id of the experiment
@@ -135,5 +135,5 @@ public interface GetSpectraRequestOrBuilder extends
    * <code>optional .Clearcore2.SampleData.DataAccessApi.V002.CentroidOptions CentroidOption = 7;</code>
    * @return The centroidOption.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.CentroidOptions getCentroidOption();
+  CentroidOptions getCentroidOption();
 }

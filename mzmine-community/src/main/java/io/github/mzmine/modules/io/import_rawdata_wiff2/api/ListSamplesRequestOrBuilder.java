@@ -18,7 +18,7 @@ public interface ListSamplesRequestOrBuilder extends
    * <code>string AbsolutePathToWiffFile = 1;</code>
    * @return The absolutePathToWiffFile.
    */
-  java.lang.String getAbsolutePathToWiffFile();
+  String getAbsolutePathToWiffFile();
   /**
    * <pre>
    * Absolute path to the wiff file
@@ -48,7 +48,7 @@ public interface ListSamplesRequestOrBuilder extends
    * <code>repeated string SampleIDs = 3;</code>
    * @return A list containing the sampleIDs.
    */
-  java.util.List<java.lang.String>
+  java.util.List<String>
       getSampleIDsList();
   /**
    * <pre>
@@ -68,7 +68,7 @@ public interface ListSamplesRequestOrBuilder extends
    * @param index The index of the element to return.
    * @return The sampleIDs at the given index.
    */
-  java.lang.String getSampleIDs(int index);
+  String getSampleIDs(int index);
   /**
    * <pre>
    * List of samples to read from the file.

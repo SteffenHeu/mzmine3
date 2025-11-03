@@ -18,7 +18,7 @@ public interface ParameterOrBuilder extends
    * <code>string Name = 1;</code>
    * @return The name.
    */
-  java.lang.String getName();
+  String getName();
   /**
    * <pre>
    * returns name of the parameter
@@ -38,7 +38,7 @@ public interface ParameterOrBuilder extends
    * <code>string Unit = 2;</code>
    * @return The unit.
    */
-  java.lang.String getUnit();
+  String getUnit();
   /**
    * <pre>
    * returns the unit of the parameter
@@ -111,7 +111,7 @@ public interface ParameterOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ParameterType Type = 4;</code>
    * @return The type.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.ParameterType getType();
+  ParameterType getType();
 
   /**
    * <pre>
@@ -121,7 +121,7 @@ public interface ParameterOrBuilder extends
    * <code>string Key = 5;</code>
    * @return The key.
    */
-  java.lang.String getKey();
+  String getKey();
   /**
    * <pre>
    * gets the key of the parameter

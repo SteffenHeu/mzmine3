@@ -36,20 +36,20 @@ private static final long serialVersionUID = 0L;
 
   public static final com.google.protobuf.Descriptors.Descriptor
       getDescriptor() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_descriptor;
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_descriptor;
   }
 
-  @java.lang.Override
-  protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+  @Override
+  protected FieldAccessorTable
       internalGetFieldAccessorTable() {
-    return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_fieldAccessorTable
+    return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_fieldAccessorTable
         .ensureFieldAccessorsInitialized(
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration.Builder.class);
+            MassRangeConfiguration.class, Builder.class);
   }
 
   private int bitField0_;
   public static final int SELECTIONWINDOW_FIELD_NUMBER = 1;
-  private io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow selectionWindow_;
+  private ScanWindow selectionWindow_;
   /**
    * <pre>
    * Selection window properties that are associated with a value
@@ -59,7 +59,7 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
    * @return Whether the selectionWindow field is set.
    */
-  @java.lang.Override
+  @Override
   public boolean hasSelectionWindow() {
     return ((bitField0_ & 0x00000001) != 0);
   }
@@ -72,9 +72,9 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
    * @return The selectionWindow.
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow getSelectionWindow() {
-    return selectionWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance() : selectionWindow_;
+  @Override
+  public ScanWindow getSelectionWindow() {
+    return selectionWindow_ == null ? ScanWindow.getDefaultInstance() : selectionWindow_;
   }
   /**
    * <pre>
@@ -84,13 +84,13 @@ private static final long serialVersionUID = 0L;
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder getSelectionWindowOrBuilder() {
-    return selectionWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance() : selectionWindow_;
+  @Override
+  public ScanWindowOrBuilder getSelectionWindowOrBuilder() {
+    return selectionWindow_ == null ? ScanWindow.getDefaultInstance() : selectionWindow_;
   }
 
   public static final int ISOLATIONWINDOW_FIELD_NUMBER = 2;
-  private io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow isolationWindow_;
+  private ScanWindow isolationWindow_;
   /**
    * <pre>
    * Isolation window properties
@@ -99,7 +99,7 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
    * @return Whether the isolationWindow field is set.
    */
-  @java.lang.Override
+  @Override
   public boolean hasIsolationWindow() {
     return ((bitField0_ & 0x00000002) != 0);
   }
@@ -111,9 +111,9 @@ private static final long serialVersionUID = 0L;
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
    * @return The isolationWindow.
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow getIsolationWindow() {
-    return isolationWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance() : isolationWindow_;
+  @Override
+  public ScanWindow getIsolationWindow() {
+    return isolationWindow_ == null ? ScanWindow.getDefaultInstance() : isolationWindow_;
   }
   /**
    * <pre>
@@ -122,13 +122,13 @@ private static final long serialVersionUID = 0L;
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
    */
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder getIsolationWindowOrBuilder() {
-    return isolationWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance() : isolationWindow_;
+  @Override
+  public ScanWindowOrBuilder getIsolationWindowOrBuilder() {
+    return isolationWindow_ == null ? ScanWindow.getDefaultInstance() : isolationWindow_;
   }
 
   private byte memoizedIsInitialized = -1;
-  @java.lang.Override
+  @Override
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
     if (isInitialized == 1) return true;
@@ -138,7 +138,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
     if (((bitField0_ & 0x00000001) != 0)) {
@@ -150,7 +150,7 @@ private static final long serialVersionUID = 0L;
     getUnknownFields().writeTo(output);
   }
 
-  @java.lang.Override
+  @Override
   public int getSerializedSize() {
     int size = memoizedSize;
     if (size != -1) return size;
@@ -169,15 +169,15 @@ private static final long serialVersionUID = 0L;
     return size;
   }
 
-  @java.lang.Override
-  public boolean equals(final java.lang.Object obj) {
+  @Override
+  public boolean equals(final Object obj) {
     if (obj == this) {
      return true;
     }
-    if (!(obj instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration)) {
+    if (!(obj instanceof MassRangeConfiguration)) {
       return super.equals(obj);
     }
-    io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration other = (io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration) obj;
+    MassRangeConfiguration other = (MassRangeConfiguration) obj;
 
     if (hasSelectionWindow() != other.hasSelectionWindow()) return false;
     if (hasSelectionWindow()) {
@@ -193,7 +193,7 @@ private static final long serialVersionUID = 0L;
     return true;
   }
 
-  @java.lang.Override
+  @Override
   public int hashCode() {
     if (memoizedHashCode != 0) {
       return memoizedHashCode;
@@ -213,44 +213,44 @@ private static final long serialVersionUID = 0L;
     return hash;
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(
+  public static MassRangeConfiguration parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(
+  public static MassRangeConfiguration parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(
+  public static MassRangeConfiguration parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(
+  public static MassRangeConfiguration parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(byte[] data)
+  public static MassRangeConfiguration parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(
+  public static MassRangeConfiguration parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return PARSER.parseFrom(data, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(java.io.InputStream input)
+  public static MassRangeConfiguration parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(
+  public static MassRangeConfiguration parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -258,26 +258,26 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseDelimitedFrom(java.io.InputStream input)
+  public static MassRangeConfiguration parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input);
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseDelimitedFrom(
+  public static MassRangeConfiguration parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(
+  public static MassRangeConfiguration parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessage
         .parseWithIOException(PARSER, input);
   }
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration parseFrom(
+  public static MassRangeConfiguration parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -285,23 +285,23 @@ private static final long serialVersionUID = 0L;
         .parseWithIOException(PARSER, input, extensionRegistry);
   }
 
-  @java.lang.Override
+  @Override
   public Builder newBuilderForType() { return newBuilder(); }
   public static Builder newBuilder() {
     return DEFAULT_INSTANCE.toBuilder();
   }
-  public static Builder newBuilder(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration prototype) {
+  public static Builder newBuilder(MassRangeConfiguration prototype) {
     return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
   }
-  @java.lang.Override
+  @Override
   public Builder toBuilder() {
     return this == DEFAULT_INSTANCE
         ? new Builder() : new Builder().mergeFrom(this);
   }
 
-  @java.lang.Override
+  @Override
   protected Builder newBuilderForType(
-      com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      BuilderParent parent) {
     Builder builder = new Builder(parent);
     return builder;
   }
@@ -315,18 +315,18 @@ private static final long serialVersionUID = 0L;
   public static final class Builder extends
       com.google.protobuf.GeneratedMessage.Builder<Builder> implements
       // @@protoc_insertion_point(builder_implements:Clearcore2.SampleData.DataAccessApi.V002.MassRangeConfiguration)
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfigurationOrBuilder {
+      MassRangeConfigurationOrBuilder {
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_descriptor;
     }
 
-    @java.lang.Override
-    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+    @Override
+    protected FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_fieldAccessorTable
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration.class, io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration.Builder.class);
+              MassRangeConfiguration.class, Builder.class);
     }
 
     // Construct using io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration.newBuilder()
@@ -335,7 +335,7 @@ private static final long serialVersionUID = 0L;
     }
 
     private Builder(
-        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        BuilderParent parent) {
       super(parent);
       maybeForceBuilderInitialization();
     }
@@ -346,7 +346,7 @@ private static final long serialVersionUID = 0L;
         internalGetIsolationWindowFieldBuilder();
       }
     }
-    @java.lang.Override
+    @Override
     public Builder clear() {
       super.clear();
       bitField0_ = 0;
@@ -363,35 +363,35 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public com.google.protobuf.Descriptors.Descriptor
         getDescriptorForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_descriptor;
+      return Clearcore2SampleDataGrpcContracts.internal_static_Clearcore2_SampleData_DataAccessApi_V002_MassRangeConfiguration_descriptor;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration getDefaultInstanceForType() {
-      return io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration.getDefaultInstance();
+    @Override
+    public MassRangeConfiguration getDefaultInstanceForType() {
+      return MassRangeConfiguration.getDefaultInstance();
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration build() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration result = buildPartial();
+    @Override
+    public MassRangeConfiguration build() {
+      MassRangeConfiguration result = buildPartial();
       if (!result.isInitialized()) {
         throw newUninitializedMessageException(result);
       }
       return result;
     }
 
-    @java.lang.Override
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration buildPartial() {
-      io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration result = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration(this);
+    @Override
+    public MassRangeConfiguration buildPartial() {
+      MassRangeConfiguration result = new MassRangeConfiguration(this);
       if (bitField0_ != 0) { buildPartial0(result); }
       onBuilt();
       return result;
     }
 
-    private void buildPartial0(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration result) {
+    private void buildPartial0(MassRangeConfiguration result) {
       int from_bitField0_ = bitField0_;
       int to_bitField0_ = 0;
       if (((from_bitField0_ & 0x00000001) != 0)) {
@@ -409,18 +409,18 @@ private static final long serialVersionUID = 0L;
       result.bitField0_ |= to_bitField0_;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(com.google.protobuf.Message other) {
-      if (other instanceof io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration) {
-        return mergeFrom((io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration)other);
+      if (other instanceof MassRangeConfiguration) {
+        return mergeFrom((MassRangeConfiguration)other);
       } else {
         super.mergeFrom(other);
         return this;
       }
     }
 
-    public Builder mergeFrom(io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration other) {
-      if (other == io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration.getDefaultInstance()) return this;
+    public Builder mergeFrom(MassRangeConfiguration other) {
+      if (other == MassRangeConfiguration.getDefaultInstance()) return this;
       if (other.hasSelectionWindow()) {
         mergeSelectionWindow(other.getSelectionWindow());
       }
@@ -432,18 +432,18 @@ private static final long serialVersionUID = 0L;
       return this;
     }
 
-    @java.lang.Override
+    @Override
     public final boolean isInitialized() {
       return true;
     }
 
-    @java.lang.Override
+    @Override
     public Builder mergeFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
+        throw new NullPointerException();
       }
       try {
         boolean done = false;
@@ -484,9 +484,9 @@ private static final long serialVersionUID = 0L;
     }
     private int bitField0_;
 
-    private io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow selectionWindow_;
+    private ScanWindow selectionWindow_;
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder> selectionWindowBuilder_;
+        ScanWindow, ScanWindow.Builder, ScanWindowOrBuilder> selectionWindowBuilder_;
     /**
      * <pre>
      * Selection window properties that are associated with a value
@@ -508,9 +508,9 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
      * @return The selectionWindow.
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow getSelectionWindow() {
+    public ScanWindow getSelectionWindow() {
       if (selectionWindowBuilder_ == null) {
-        return selectionWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance() : selectionWindow_;
+        return selectionWindow_ == null ? ScanWindow.getDefaultInstance() : selectionWindow_;
       } else {
         return selectionWindowBuilder_.getMessage();
       }
@@ -523,7 +523,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
      */
-    public Builder setSelectionWindow(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow value) {
+    public Builder setSelectionWindow(ScanWindow value) {
       if (selectionWindowBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -545,7 +545,7 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
      */
     public Builder setSelectionWindow(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder builderForValue) {
+        ScanWindow.Builder builderForValue) {
       if (selectionWindowBuilder_ == null) {
         selectionWindow_ = builderForValue.build();
       } else {
@@ -563,11 +563,11 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
      */
-    public Builder mergeSelectionWindow(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow value) {
+    public Builder mergeSelectionWindow(ScanWindow value) {
       if (selectionWindowBuilder_ == null) {
         if (((bitField0_ & 0x00000001) != 0) &&
           selectionWindow_ != null &&
-          selectionWindow_ != io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance()) {
+          selectionWindow_ != ScanWindow.getDefaultInstance()) {
           getSelectionWindowBuilder().mergeFrom(value);
         } else {
           selectionWindow_ = value;
@@ -607,7 +607,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder getSelectionWindowBuilder() {
+    public ScanWindow.Builder getSelectionWindowBuilder() {
       bitField0_ |= 0x00000001;
       onChanged();
       return internalGetSelectionWindowFieldBuilder().getBuilder();
@@ -620,12 +620,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder getSelectionWindowOrBuilder() {
+    public ScanWindowOrBuilder getSelectionWindowOrBuilder() {
       if (selectionWindowBuilder_ != null) {
         return selectionWindowBuilder_.getMessageOrBuilder();
       } else {
         return selectionWindow_ == null ?
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance() : selectionWindow_;
+            ScanWindow.getDefaultInstance() : selectionWindow_;
       }
     }
     /**
@@ -637,11 +637,11 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow SelectionWindow = 1;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder> 
+        ScanWindow, ScanWindow.Builder, ScanWindowOrBuilder>
         internalGetSelectionWindowFieldBuilder() {
       if (selectionWindowBuilder_ == null) {
         selectionWindowBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder>(
+            ScanWindow, ScanWindow.Builder, ScanWindowOrBuilder>(
                 getSelectionWindow(),
                 getParentForChildren(),
                 isClean());
@@ -650,9 +650,9 @@ private static final long serialVersionUID = 0L;
       return selectionWindowBuilder_;
     }
 
-    private io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow isolationWindow_;
+    private ScanWindow isolationWindow_;
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder> isolationWindowBuilder_;
+        ScanWindow, ScanWindow.Builder, ScanWindowOrBuilder> isolationWindowBuilder_;
     /**
      * <pre>
      * Isolation window properties
@@ -672,9 +672,9 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
      * @return The isolationWindow.
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow getIsolationWindow() {
+    public ScanWindow getIsolationWindow() {
       if (isolationWindowBuilder_ == null) {
-        return isolationWindow_ == null ? io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance() : isolationWindow_;
+        return isolationWindow_ == null ? ScanWindow.getDefaultInstance() : isolationWindow_;
       } else {
         return isolationWindowBuilder_.getMessage();
       }
@@ -686,7 +686,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
      */
-    public Builder setIsolationWindow(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow value) {
+    public Builder setIsolationWindow(ScanWindow value) {
       if (isolationWindowBuilder_ == null) {
         if (value == null) {
           throw new NullPointerException();
@@ -707,7 +707,7 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
      */
     public Builder setIsolationWindow(
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder builderForValue) {
+        ScanWindow.Builder builderForValue) {
       if (isolationWindowBuilder_ == null) {
         isolationWindow_ = builderForValue.build();
       } else {
@@ -724,11 +724,11 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
      */
-    public Builder mergeIsolationWindow(io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow value) {
+    public Builder mergeIsolationWindow(ScanWindow value) {
       if (isolationWindowBuilder_ == null) {
         if (((bitField0_ & 0x00000002) != 0) &&
           isolationWindow_ != null &&
-          isolationWindow_ != io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance()) {
+          isolationWindow_ != ScanWindow.getDefaultInstance()) {
           getIsolationWindowBuilder().mergeFrom(value);
         } else {
           isolationWindow_ = value;
@@ -766,7 +766,7 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder getIsolationWindowBuilder() {
+    public ScanWindow.Builder getIsolationWindowBuilder() {
       bitField0_ |= 0x00000002;
       onChanged();
       return internalGetIsolationWindowFieldBuilder().getBuilder();
@@ -778,12 +778,12 @@ private static final long serialVersionUID = 0L;
      *
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
      */
-    public io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder getIsolationWindowOrBuilder() {
+    public ScanWindowOrBuilder getIsolationWindowOrBuilder() {
       if (isolationWindowBuilder_ != null) {
         return isolationWindowBuilder_.getMessageOrBuilder();
       } else {
         return isolationWindow_ == null ?
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.getDefaultInstance() : isolationWindow_;
+            ScanWindow.getDefaultInstance() : isolationWindow_;
       }
     }
     /**
@@ -794,11 +794,11 @@ private static final long serialVersionUID = 0L;
      * <code>.Clearcore2.SampleData.DataAccessApi.V002.ScanWindow IsolationWindow = 2;</code>
      */
     private com.google.protobuf.SingleFieldBuilder<
-        io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder> 
+        ScanWindow, ScanWindow.Builder, ScanWindowOrBuilder>
         internalGetIsolationWindowFieldBuilder() {
       if (isolationWindowBuilder_ == null) {
         isolationWindowBuilder_ = new com.google.protobuf.SingleFieldBuilder<
-            io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow.Builder, io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindowOrBuilder>(
+            ScanWindow, ScanWindow.Builder, ScanWindowOrBuilder>(
                 getIsolationWindow(),
                 getParentForChildren(),
                 isClean());
@@ -811,18 +811,18 @@ private static final long serialVersionUID = 0L;
   }
 
   // @@protoc_insertion_point(class_scope:Clearcore2.SampleData.DataAccessApi.V002.MassRangeConfiguration)
-  private static final io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration DEFAULT_INSTANCE;
+  private static final MassRangeConfiguration DEFAULT_INSTANCE;
   static {
-    DEFAULT_INSTANCE = new io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration();
+    DEFAULT_INSTANCE = new MassRangeConfiguration();
   }
 
-  public static io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration getDefaultInstance() {
+  public static MassRangeConfiguration getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
   private static final com.google.protobuf.Parser<MassRangeConfiguration>
       PARSER = new com.google.protobuf.AbstractParser<MassRangeConfiguration>() {
-    @java.lang.Override
+    @Override
     public MassRangeConfiguration parsePartialFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
@@ -846,13 +846,13 @@ private static final long serialVersionUID = 0L;
     return PARSER;
   }
 
-  @java.lang.Override
+  @Override
   public com.google.protobuf.Parser<MassRangeConfiguration> getParserForType() {
     return PARSER;
   }
 
-  @java.lang.Override
-  public io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration getDefaultInstanceForType() {
+  @Override
+  public MassRangeConfiguration getDefaultInstanceForType() {
     return DEFAULT_INSTANCE;
   }
 

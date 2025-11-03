@@ -18,7 +18,7 @@ public interface SpectrumOrBuilder extends
    * <code>string Id = 1;</code>
    * @return The id.
    */
-  java.lang.String getId();
+  String getId();
   /**
    * <pre>
    * the Id of the spectrum
@@ -38,7 +38,7 @@ public interface SpectrumOrBuilder extends
    * <code>string ExperimentId = 2;</code>
    * @return The experimentId.
    */
-  java.lang.String getExperimentId();
+  String getExperimentId();
   /**
    * <pre>
    * The id of the experiment used to acquire this spectrum
@@ -58,7 +58,7 @@ public interface SpectrumOrBuilder extends
    * <code>string SampleId = 3;</code>
    * @return The sampleId.
    */
-  java.lang.String getSampleId();
+  String getSampleId();
   /**
    * <pre>
    * The sample identifier 
@@ -92,7 +92,7 @@ public interface SpectrumOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 5;</code>
    */
-  java.util.List<io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData> 
+  java.util.List<BinaryData>
       getDataList();
   /**
    * <pre>
@@ -102,7 +102,7 @@ public interface SpectrumOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData getData(int index);
+  BinaryData getData(int index);
   /**
    * <pre>
    * the actual binary data. 
@@ -120,7 +120,7 @@ public interface SpectrumOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 5;</code>
    */
-  java.util.List<? extends io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryDataOrBuilder> 
+  java.util.List<? extends BinaryDataOrBuilder>
       getDataOrBuilderList();
   /**
    * <pre>
@@ -130,7 +130,7 @@ public interface SpectrumOrBuilder extends
    *
    * <code>repeated .Clearcore2.SampleData.DataAccessApi.V002.BinaryData Data = 5;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryDataOrBuilder getDataOrBuilder(
+  BinaryDataOrBuilder getDataOrBuilder(
       int index);
 
   /**
@@ -148,12 +148,12 @@ public interface SpectrumOrBuilder extends
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.Precursor Precursor = 6;</code>
    * @return The precursor.
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor getPrecursor();
+  Precursor getPrecursor();
   /**
    * <pre>
    * </pre>
    *
    * <code>.Clearcore2.SampleData.DataAccessApi.V002.Precursor Precursor = 6;</code>
    */
-  io.github.mzmine.modules.io.import_rawdata_wiff2.api.PrecursorOrBuilder getPrecursorOrBuilder();
+  PrecursorOrBuilder getPrecursorOrBuilder();
 }
