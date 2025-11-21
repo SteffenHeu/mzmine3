@@ -1,54 +1,85 @@
 package io.github.mzmine.modules.io.import_rawdata_wiff2;
 
 import com.google.common.collect.Range;
+import io.github.mzmine.datamodel.MassSpectrumType;
+import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.features.types.otherdectectors.ChromatogramTypeType;
 import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
+import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.datamodel.msms.ActivationMethod;
 import io.github.mzmine.datamodel.msms.DIAMsMsInfoImpl;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
+import io.github.mzmine.datamodel.otherdetectors.OtherDataFile;
+import io.github.mzmine.datamodel.otherdetectors.OtherDataFileImpl;
+import io.github.mzmine.datamodel.otherdetectors.OtherFeature;
+import io.github.mzmine.datamodel.otherdetectors.OtherFeatureImpl;
+import io.github.mzmine.datamodel.otherdetectors.OtherTimeSeriesDataImpl;
+import io.github.mzmine.datamodel.otherdetectors.SimpleOtherTimeSeries;
+import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.SimpleSpectralArrays;
+import io.github.mzmine.modules.io.import_rawdata_mzml.ConversionUtils;
+import io.github.mzmine.modules.io.import_rawdata_mzml.msdk.data.ChromatogramType;
+import io.github.mzmine.modules.io.import_rawdata_mzml.msdk.data.MzMLCV;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ChannelTrace;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.DataProviderGrpc;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.DataProviderGrpc.DataProviderBlockingStub;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Experiment;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetChannelTracesRequest;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetExperimentsRequest;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetSpectraRequest;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ListSamplesRequest;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Sample;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Spectrum;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.RangeUtils;
+import io.github.mzmine.util.date.LocalDateTimeParser;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import java.io.File;
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.lang.foreign.ValueLayout.OfDouble;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.apache.commons.collections4.IteratorUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.LoggerFactory;
 
 public class Wiff2DataAccess implements AutoCloseable {
 
   private static final Logger logger = Logger.getLogger(Wiff2DataAccess.class.getName());
+  private static final org.slf4j.Logger log = LoggerFactory.getLogger(Wiff2DataAccess.class);
+  private static final OfDouble doubleLayout = ValueLayout.JAVA_DOUBLE.withOrder(
+      ByteOrder.LITTLE_ENDIAN).withByteAlignment(1); // byte buffer from protobuf is not aligned.
 
   private final ManagedChannel channel;
   private final DataProviderBlockingStub dataProvider;
   @NotNull
   private final File file;
   @Nullable
-  private final MemoryMapStorage storage;
+  private final boolean centroid;
 
-  public Wiff2DataAccess(@NotNull final File file, @Nullable final MemoryMapStorage storage)
-      throws IOException {
+  public Wiff2DataAccess(@NotNull final File file, final boolean centroid) throws IOException {
     this.file = file;
-    this.storage = storage;
+    this.centroid = centroid;
 
     ClearcoreServer server = ClearcoreServer.getOrStart();
 
@@ -81,68 +112,121 @@ public class Wiff2DataAccess implements AutoCloseable {
 //        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\SCIEX\\ZenoTOF\\RawData\\3_Feces_DDA\\Pos\\20230406_blank_POS_1.wiff2"),
         // swath
         "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\SCIEX\\ZenoTOF\\RawData\\4_Feces_SWATH-DIA\\Pos\\20230406_feces_SWATH_1-2_POS.wiff2"),
-        MemoryMapStorage.forRawDataFile())) {
+        true)) {
 
       List<Sample> samples = access.getSamples();
+      MemoryMapStorage storage = MemoryMapStorage.forRawDataFile();
 
       for (Sample sample : samples) {
 //        logger.info(sample.getId() + ":");
         final RawDataFileImpl rawDataFile = new RawDataFileImpl(sample.getSampleName(),
-            access.file.getAbsolutePath(), access.storage);
-        List<Experiment> experiments = access.getExperiments(sample);
+            access.file.getAbsolutePath(), storage);
 
-        Iterator<Spectrum> spectra = access.getSpectra(sample, experiments.get(2));
+        final List<Scan> scans = new ArrayList<>();
+        final String startTimestamp = sample.getStartTimestamp();
+        rawDataFile.setStartTimeStamp(LocalDateTimeParser.parseAnyFirstDate(startTimestamp));
 
-        access.spectrumToMzmineScan(rawDataFile, sample, experiments.get(1), spectra.next());
-        logger.info(spectra.toString());
+        final List<Experiment> experiments = access.getExperiments(sample);
+
+        /*Instant start = Instant.now();
+        for (Experiment experiment : experiments) {
+          final Iterator<Spectrum> spectra = access.getSpectrumIterator(sample, experiment);
+
+          while (spectra.hasNext()) {
+            final Spectrum spectrum = spectra.next();
+            final Scan scan = access.spectrumToMzmineScan(rawDataFile, sample, experiment,
+                spectrum);
+            scans.add(scan);
+          }
+
+          final Duration elapsed = Duration.between(start, Instant.now());
+          logger.info(
+              "Loaded experiment %s in %d ms".formatted(experiment.getId(), elapsed.toMillis()));
+        }
+        final Duration elapsed = Duration.between(start, Instant.now());
+        logger.info("Loaded %d scans in %d ms".formatted(scans.size(), elapsed.toMillis()));
+
+        scans.sort(Scan::compareTo);*/
+
+        // mrms
+        /*for (Experiment experiment : experiments) {
+          GetMrmXicRequest.newBuilder().setSampleId(sample.getId())
+              .setExperimentId(experiment.getId())
+              .setTimeRange(TimeRange.newBuilder().setStart(0).setEnd(Double.MAX_VALUE).build()).build();
+
+        }*/
+
+        // wavelength spectra
+        /*for (Experiment experiment : experiments) {
+          GetWavelengthSpectraRequest spectraRequest = GetWavelengthSpectraRequest.newBuilder()
+              .setSampleId(sample.getId()).setExperimentId(Integer.parseInt(experiment.getId()))
+              .setRange(getFullTimeRange()).build();
+
+        }*/
+
+        // chromatograms
+        final List<@NotNull OtherDataFile> otherDataFiles = access.getAnalogTraces(sample,
+            rawDataFile);
+        rawDataFile.addOtherDataFiles(otherDataFiles);
       }
     }
+
+    ClearcoreServer.terminateSeverIfRunning();
   }
 
-  private @NotNull List<Sample> getSamples() {
-
-    final ListSamplesRequest samplesRequest = ListSamplesRequest.newBuilder()
-        .setAbsolutePathToWiffFile(file.getAbsolutePath()).setSkipCorrupted(true).build();
-    final Iterator<Sample> samplesDescriptions = dataProvider.getSamplesDescriptions(
-        samplesRequest);
-
-    List<Sample> samples = IteratorUtils.toList(samplesDescriptions);
-    return samples;
+  private static @NotNull ChromatogramType getChromatogramTypeFromTrace(
+      @NotNull ChannelTrace trace) {
+    // todo: add more types. no example data yet.
+    ChromatogramType chromatogramType = switch (trace.getTraceType()) {
+      case "Pressure" -> ChromatogramType.PRESSURE;
+      default -> ChromatogramType.UNKNOWN;
+    };
+    return chromatogramType;
   }
 
-  private List<Experiment> getExperiments(Sample sample) {
-    final GetExperimentsRequest r = GetExperimentsRequest.newBuilder().setSampleId(sample.getId())
-        .build();
-    final List<Experiment> experiments = IteratorUtils.toList(dataProvider.getExperiments(r));
-//    logger.info(experiments.toString());
-    return experiments;
+  private static @NotNull String getRangeAxisLabelFromTrace(@NotNull ChannelTrace trace) {
+    return getChromatogramTypeFromTrace(trace).toString();
   }
 
-  private Iterator<Spectrum> getSpectra(@NotNull final Sample sample,
-      @NotNull final Experiment experiment) {
-    GetSpectraRequest r = GetSpectraRequest.newBuilder().setSampleId(sample.getId())
-        .setExperimentId(experiment.getId())
-        .setRange(TimeRange.newBuilder().setStart(0d).setEnd(Double.MAX_VALUE))
-        .setConvertToCentroid(true).build();
-    return dataProvider.getSpectra(r);
+  private static @NotNull String getRangeAxisUnitFromTrace(@NotNull ChannelTrace trace) {
+    return switch (getChromatogramTypeFromTrace(trace)) {
+      case TIC, UNKNOWN, FLOW_RATE, PRESSURE, ION_CURRENT, EMISSION, ABSORPTION,
+           ELECTROMAGNETIC_RADIATION, BPC, SIC, SIM, MRM_SRM -> "Unknown";
+    };
   }
 
-  private Scan spectrumToMzmineScan(@NotNull final RawDataFile file, @NotNull Sample sample,
-      @NotNull Experiment experiment, @NotNull final Spectrum spectrum) {
+  private static @NotNull TimeRange getFullTimeRange() {
+    return TimeRange.newBuilder().setStart(0).setEnd(Double.MAX_VALUE).build();
+  }
 
-    final int scanId = Integer.parseInt(spectrum.getId());
-    final int msLevel = experiment.getMsLevel();
-    final float rt = (float) spectrum.getScanStartTime();
-    final @Nullable Precursor precursor = spectrum.getPrecursor();
+  private static @NotNull SimpleSpectralArrays getSimpleSpectralArrays(@NotNull Spectrum spectrum) {
+    double[] mzs = null;
+    double[] intensities = null;
+    for (int i = 0; i < spectrum.getDataCount(); i++) {
+      final BinaryData data = spectrum.getData(i);
+      final ByteBuffer buffer = data.getValues().asReadOnlyByteBuffer();
+      final MemorySegment segment = MemorySegment.ofBuffer(buffer);
 
-    final MsMsInfo msmsInfo = getMsMsInfo(precursor, experiment);
-
-//    new SimpleScan(file, scanId, msLevel, rt, )
-    return null;
+      for (ControlledVocabularyParameter cv : data.getAttributesList()) {
+        switch (cv.getAccession()) {
+          case MzMLCV.cvMzArray -> {
+            mzs = segment.toArray(doubleLayout);
+          }
+          case MzMLCV.cvIntensityArray -> {
+            intensities = segment.toArray(doubleLayout);
+          }
+        }
+      }
+    }
+    if (mzs == null || intensities == null) {
+      throw new RuntimeException("mzs or intensities not set");
+    }
+    return new SimpleSpectralArrays(mzs, intensities);
   }
 
   @Nullable
-  private MsMsInfo getMsMsInfo(@Nullable Precursor precursor, @NotNull Experiment experiment) {
+  private static MsMsInfo getMsMsInfo(@Nullable Precursor precursor,
+      @NotNull Experiment experiment) {
     if (experiment.getMsLevel() < 2 || precursor == null) {
       return null;
     }
@@ -191,9 +275,110 @@ public class Wiff2DataAccess implements AutoCloseable {
     return null;
   }
 
+  /**
+   * Retrieves the analog traces for the specific sample. Does <emph>not</emph> add them to the
+   * rawDataFile.
+   *
+   * @param sample      The sample
+   * @param rawDataFile The data file to assoiciate them with. Traces are not added.
+   * @return The loaded traces.
+   */
+  @NotNull List<@NotNull OtherDataFile> getAnalogTraces(Sample sample,
+      RawDataFileImpl rawDataFile) {
+    GetChannelTracesRequest tracesRequest = GetChannelTracesRequest.newBuilder()
+        .setSampleId(sample.getId()).build();
+    Iterator<ChannelTrace> tracesIterator = dataProvider.getChannelTraces(tracesRequest);
+
+    if (!tracesIterator.hasNext()) {
+      logger.info("File: %s\tSample: %d\tdoes not contain any analog traces.");
+      return List.of();
+    }
+
+    final Map<String, OtherDataFileImpl> traceTypeFileMap = new HashMap<>();
+    while (tracesIterator.hasNext()) {
+      final ChannelTrace trace = tracesIterator.next();
+      final OtherDataFileImpl otherFile = traceTypeFileMap.computeIfAbsent(trace.getTraceType(),
+          _ -> new OtherDataFileImpl(rawDataFile));
+      final OtherTimeSeriesDataImpl timeSeriesData = otherFile.getOtherTimeSeriesData() != null
+          ? (OtherTimeSeriesDataImpl) otherFile.getOtherTimeSeriesData()
+          : new OtherTimeSeriesDataImpl(otherFile);
+      otherFile.setOtherTimeSeriesData(timeSeriesData);
+
+      final ChromatogramType chromatogramType = getChromatogramTypeFromTrace(trace);
+      timeSeriesData.setTimeSeriesRangeLabel(getRangeAxisLabelFromTrace(trace));
+      timeSeriesData.setTimeSeriesRangeUnit(getRangeAxisUnitFromTrace(trace));
+
+      final SimpleOtherTimeSeries timeSeries = new SimpleOtherTimeSeries(
+          rawDataFile.getMemoryMapStorage(), ConversionUtils.convertDoublesToFloats(
+          trace.getXValuesList().stream().mapToDouble(Double::doubleValue).toArray()),
+          trace.getYValuesList().stream().mapToDouble(Double::doubleValue).toArray(),
+          trace.getName(), timeSeriesData);
+
+      final OtherFeature otherFeature = new OtherFeatureImpl(timeSeries);
+      otherFeature.set(ChromatogramTypeType.class, chromatogramType);
+      timeSeriesData.addRawTrace(otherFeature);
+
+      logger.info(trace.toString());
+    }
+    return new ArrayList<>(traceTypeFileMap.values());
+  }
+
+  @NotNull List<Sample> getSamples() {
+
+    final ListSamplesRequest samplesRequest = ListSamplesRequest.newBuilder()
+        .setAbsolutePathToWiffFile(file.getAbsolutePath()).setSkipCorrupted(true).build();
+    final Iterator<Sample> samplesDescriptions = dataProvider.getSamplesDescriptions(
+        samplesRequest);
+
+    List<Sample> samples = IteratorUtils.toList(samplesDescriptions);
+    return samples;
+  }
+
+  List<Experiment> getExperiments(Sample sample) {
+    final GetExperimentsRequest r = GetExperimentsRequest.newBuilder().setSampleId(sample.getId())
+        .build();
+    final List<Experiment> experiments = IteratorUtils.toList(dataProvider.getExperiments(r));
+//    logger.info(experiments.toString());
+    return experiments;
+  }
+
+  Iterator<Spectrum> getSpectrumIterator(@NotNull final Sample sample,
+      @NotNull final Experiment experiment) {
+    GetSpectraRequest r = GetSpectraRequest.newBuilder().setSampleId(sample.getId())
+        .setExperimentId(experiment.getId())
+        .setRange(TimeRange.newBuilder().setStart(0d).setEnd(Double.MAX_VALUE))
+        .setConvertToCentroid(centroid).build();
+    return dataProvider.getSpectra(r);
+  }
+
+  Scan spectrumToMzmineScan(@NotNull final RawDataFile file, @NotNull Sample sample,
+      @NotNull Experiment experiment, @NotNull final Spectrum spectrum) {
+
+    final int scanId = Integer.parseInt(spectrum.getId());
+    final int msLevel = experiment.getMsLevel();
+    final float rt = (float) spectrum.getScanStartTime();
+    final @Nullable Precursor precursor = spectrum.getPrecursor();
+
+    final MsMsInfo msmsInfo = getMsMsInfo(precursor, experiment);
+
+    final SimpleSpectralArrays spectralData = getSimpleSpectralArrays(spectrum);
+    final ScanWindow massRange = experiment.getMassRanges(0).getSelectionWindow();
+
+    return new SimpleScan(file, scanId, msLevel, rt, msmsInfo, spectralData.mzs(),
+        spectralData.intensities(),
+        !centroid && !experiment.getIsDataInCentroidFormat() ? MassSpectrumType.PROFILE
+            : MassSpectrumType.CENTROIDED,
+        experiment.getIsPositivePolarityScan() ? PolarityType.POSITIVE : PolarityType.NEGATIVE,
+        null, Range.closed(massRange.getStart(), massRange.getEnd()));
+
+  }
+
   @Override
   public void close() throws Exception {
+    dataProvider.closeFile(
+        SourceFile.newBuilder().setLocation(file.getParentFile().toURI().toString())
+            .setName(file.getName()).build());
     channel.shutdown();
-    ClearcoreServer.terminateSeverIfRunning();
+//    ClearcoreServer.terminateSeverIfRunning();
   }
 }
