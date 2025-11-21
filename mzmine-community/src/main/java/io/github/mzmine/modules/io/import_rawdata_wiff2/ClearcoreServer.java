@@ -137,7 +137,7 @@ public class ClearcoreServer {
 
   private void terminateClearcoreInstance() {
     if (process != null) {
-      logger.info("Terminating SCIEX clearcore service.");
+//      logger.info("Terminating SCIEX clearcore service.");
       process.destroy();
     }
   }
