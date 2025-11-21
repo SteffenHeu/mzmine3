@@ -318,7 +318,7 @@ public class Wiff2DataAccess implements AutoCloseable {
       otherFeature.set(ChromatogramTypeType.class, chromatogramType);
       timeSeriesData.addRawTrace(otherFeature);
 
-      logger.info(trace.toString());
+//      logger.info(trace.toString());
     }
     return new ArrayList<>(traceTypeFileMap.values());
   }

@@ -28,6 +28,7 @@ import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.RawDataImportTask;
 import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.otherdetectors.OtherDataFile;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Experiment;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Sample;
@@ -36,7 +37,9 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.taskcontrol.AbstractRawDataFileTask;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.StringUtils;
 import io.github.mzmine.util.date.LocalDateTimeParser;
+import io.github.mzmine.util.files.FileAndPathUtil;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
@@ -90,9 +93,9 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
         final int sampleIndex = samples.indexOf(sample);
         final double sampleProgress = (double) sampleIndex / samples.size();
 
-//        logger.info(sample.getId() + ":");
-        final RawDataFileImpl rawDataFile = new RawDataFileImpl(sample.getSampleName(),
+        final RawDataFileImpl rawDataFile = new RawDataFileImpl(getDataFileName(sample, samples),
             file.getAbsolutePath(), getMemoryMapStorage());
+
         final List<Scan> scans = new ArrayList<>();
         final String startTimestamp = sample.getStartTimestamp();
         rawDataFile.setStartTimeStamp(LocalDateTimeParser.parseAnyFirstDate(startTimestamp));
@@ -110,11 +113,16 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
 
           final int experimentIndex = experiments.indexOf(experiment);
           final double experimentProgress = (double) experimentIndex / experiments.size();
-          progress = sampleProgress + experimentProgress;
+          progress = sampleProgress + (1d / samples.size()) * experimentProgress;
         }
 
         scans.sort(Scan::compareTo);
         scans.forEach(rawDataFile::addScan);
+
+        final List<@NotNull OtherDataFile> otherDataFiles = access.getAnalogTraces(sample,
+            rawDataFile);
+        rawDataFile.addOtherDataFiles(otherDataFiles);
+
         files.add(rawDataFile);
       }
     } catch (IOException e) {
@@ -124,6 +132,24 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
     }
 
     files.forEach(project::addFile);
+  }
+
+  private @NotNull String getDataFileName(Sample sample, List<Sample> samples) {
+    String sampleName = sample.getSampleName();
+    String userSampleID = sample.getUserSampleId();
+    String filename = FileAndPathUtil.eraseFormat(file.getName());
+
+    if(samples.size() <= 1) {
+      return filename;
+    }
+
+    StringBuilder b = new StringBuilder();
+    b.append(filename).append("_").append(sampleName);
+    if(!StringUtils.isBlank(userSampleID)) {
+      b.append("_").append(userSampleID);
+    }
+
+    return b.append(".wiff2").toString();
   }
 
   @Override
