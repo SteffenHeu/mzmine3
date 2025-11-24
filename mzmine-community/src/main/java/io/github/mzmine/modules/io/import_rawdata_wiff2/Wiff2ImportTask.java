@@ -28,6 +28,7 @@ import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.RawDataImportTask;
 import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.datamodel.otherdetectors.OtherDataFile;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Experiment;
@@ -37,6 +38,7 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.taskcontrol.AbstractRawDataFileTask;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.RawDataFileType;
 import io.github.mzmine.util.StringUtils;
 import io.github.mzmine.util.date.LocalDateTimeParser;
 import io.github.mzmine.util.files.FileAndPathUtil;
@@ -66,6 +68,60 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
     this.project = project;
   }
 
+  private static @NotNull String getDataFileName(File file, Sample sample, List<Sample> samples) {
+    String sampleName = sample.getSampleName();
+    String userSampleID = sample.getUserSampleId();
+    String filename = FileAndPathUtil.eraseFormat(file.getName());
+
+    if (samples.size() <= 1) {
+      return filename;
+    }
+
+    // same sampleName is allowed, but they will have different ids. the id is:
+    //wiff2:///<filePath>/<a number>
+    String sampleId = sample.getId();
+    int idSepIndex = sampleId.lastIndexOf('/');
+    int id = -1;
+    if (idSepIndex != -1) {
+      String idStr = sampleId.substring(idSepIndex + 1);
+      try {
+        id = Integer.parseInt(idStr);
+      } catch (NumberFormatException e) {
+        // silent
+      }
+    }
+
+    final StringBuilder b = new StringBuilder();
+    b.append(filename);
+    if (id != -1) {
+      b.append("_").append(id); // sciex unique id
+    }
+
+    b.append("_").append(sampleName);
+    if (!StringUtils.isBlank(userSampleID)) {
+      b.append("_").append(userSampleID);
+    }
+
+    return b.append(".wiff2").toString();
+  }
+
+  public static List<File> mapImportedFileNames(@NotNull File file, @NotNull RawDataFileType type) {
+    if (type != RawDataFileType.SCIEX_WIFF2) {
+      return List.of(file);
+    }
+
+    final List<File> imported = new ArrayList<>();
+    try (var access = new Wiff2DataAccess(file, true)) {
+      List<Sample> samples = access.getSamples();
+      for (Sample sample : samples) {
+        imported.add(new File(file.getParentFile(), getDataFileName(file, sample, samples)));
+      }
+    } catch (Exception e) {
+      //
+    }
+    return imported;
+  }
+
   @Override
   public @Nullable RawDataFile getImportedRawDataFile() {
     return files.getFirst();
@@ -93,10 +149,10 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
         final int sampleIndex = samples.indexOf(sample);
         final double sampleProgress = (double) sampleIndex / samples.size();
 
-        final RawDataFileImpl rawDataFile = new RawDataFileImpl(getDataFileName(sample, samples),
-            file.getAbsolutePath(), getMemoryMapStorage());
+        final RawDataFileImpl rawDataFile = new RawDataFileImpl(
+            getDataFileName(file, sample, samples), file.getAbsolutePath(), getMemoryMapStorage());
 
-        final List<Scan> scans = new ArrayList<>();
+        final List<SimpleScan> scans = new ArrayList<>();
         final String startTimestamp = sample.getStartTimestamp();
         rawDataFile.setStartTimeStamp(LocalDateTimeParser.parseAnyFirstDate(startTimestamp));
 
@@ -106,7 +162,7 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
           final Iterator<Spectrum> spectra = access.getSpectrumIterator(sample, experiment);
           while (spectra.hasNext()) {
             final Spectrum spectrum = spectra.next();
-            final Scan scan = access.spectrumToMzmineScan(rawDataFile, sample, experiment,
+            final SimpleScan scan = access.spectrumToMzmineScan(rawDataFile, sample, experiment,
                 spectrum);
             scans.add(scan);
           }
@@ -117,6 +173,10 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
         }
 
         scans.sort(Scan::compareTo);
+        for (int i = 0; i < scans.size(); i++) {
+          SimpleScan scan = scans.get(i);
+          scan.setScanNumber(i + 1);
+        }
         scans.forEach(rawDataFile::addScan);
 
         final List<@NotNull OtherDataFile> otherDataFiles = access.getAnalogTraces(sample,
@@ -132,24 +192,6 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
     }
 
     files.forEach(project::addFile);
-  }
-
-  private @NotNull String getDataFileName(Sample sample, List<Sample> samples) {
-    String sampleName = sample.getSampleName();
-    String userSampleID = sample.getUserSampleId();
-    String filename = FileAndPathUtil.eraseFormat(file.getName());
-
-    if(samples.size() <= 1) {
-      return filename;
-    }
-
-    StringBuilder b = new StringBuilder();
-    b.append(filename).append("_").append(sampleName);
-    if(!StringUtils.isBlank(userSampleID)) {
-      b.append("_").append(userSampleID);
-    }
-
-    return b.append(".wiff2").toString();
   }
 
   @Override

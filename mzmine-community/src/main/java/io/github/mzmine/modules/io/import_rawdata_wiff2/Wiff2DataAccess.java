@@ -1,6 +1,7 @@
 package io.github.mzmine.modules.io.import_rawdata_wiff2;
 
 import com.google.common.collect.Range;
+import com.google.protobuf.DoubleValue;
 import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
@@ -240,6 +241,11 @@ public class Wiff2DataAccess implements AutoCloseable {
         (float) (ce.getCollisionEnergyRampStart() + ce.getCollisionEnergyRampEnd()) / 2;
     final double isolationTarget = isolationWindow.getIsolationWindowTarget();
 
+    if(experiment.hasElectronKe()) {
+      DoubleValue electronEnergy = experiment.getElectronKe();
+      logger.info("has election ke " + electronEnergy.toString());
+    }
+
     if (Double.compare(isolationTarget, 0) == 0) {
       // ZT scan: no isolation window target set
       // Need to get range from experiment
@@ -351,7 +357,7 @@ public class Wiff2DataAccess implements AutoCloseable {
     return dataProvider.getSpectra(r);
   }
 
-  Scan spectrumToMzmineScan(@NotNull final RawDataFile file, @NotNull Sample sample,
+  SimpleScan spectrumToMzmineScan(@NotNull final RawDataFile file, @NotNull Sample sample,
       @NotNull Experiment experiment, @NotNull final Spectrum spectrum) {
 
     final int scanId = Integer.parseInt(spectrum.getId());
@@ -364,12 +370,19 @@ public class Wiff2DataAccess implements AutoCloseable {
     final SimpleSpectralArrays spectralData = getSimpleSpectralArrays(spectrum);
     final ScanWindow massRange = experiment.getMassRanges(0).getSelectionWindow();
 
+    StringBuilder scanDesc = new StringBuilder();
+    scanDesc.append("Scan=").append(scanId);
+    scanDesc.append(" Exp=").append(experiment.getId());
+    if(experiment.hasZenoMode()) {
+      scanDesc.append(" Zeno=").append(experiment.getZenoMode().toString());
+    }
+
     return new SimpleScan(file, scanId, msLevel, rt, msmsInfo, spectralData.mzs(),
         spectralData.intensities(),
         !centroid && !experiment.getIsDataInCentroidFormat() ? MassSpectrumType.PROFILE
             : MassSpectrumType.CENTROIDED,
         experiment.getIsPositivePolarityScan() ? PolarityType.POSITIVE : PolarityType.NEGATIVE,
-        null, Range.closed(massRange.getStart(), massRange.getEnd()));
+        scanDesc.toString(), Range.closed(massRange.getStart(), massRange.getEnd()));
 
   }
 
