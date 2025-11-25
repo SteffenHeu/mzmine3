@@ -51,6 +51,7 @@ import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.TDFImportTask;
 import io.github.mzmine.modules.io.import_rawdata_bruker_tsf.TSFImportTask;
 import io.github.mzmine.modules.io.import_rawdata_icpms_csv.IcpMsCVSImportTask;
 import io.github.mzmine.modules.io.import_rawdata_imzml.ImzMLImportTask;
+import io.github.mzmine.modules.io.import_rawdata_masslynx.MassLynxImportTaskDelegator;
 import io.github.mzmine.modules.io.import_rawdata_msconvert.MSConvertImportTask;
 import io.github.mzmine.modules.io.import_rawdata_mzdata.MzDataImportTask;
 import io.github.mzmine.modules.io.import_rawdata_mzml.MSDKmzMLImportTask;
@@ -423,9 +424,12 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
 //      case AIRD -> throw new IllegalStateException("Unexpected value: " + fileType);
       // When adding a new file type, also add to MSConvertImportTask#getSupportedFileTypes()
       case SCIEX_WIFF2 -> new Wiff2ImportTask(storage, moduleCallDate, file, parameters, project);
-      case WATERS_RAW, WATERS_RAW_IMS, SCIEX_WIFF, AGILENT_D, AGILENT_D_IMS, SHIMADZU_LCD, MBI ->
+      case SCIEX_WIFF, AGILENT_D, AGILENT_D_IMS, SHIMADZU_LCD, MBI ->
           new MSConvertImportTask(storage, moduleCallDate, file, scanProcessorConfig, project,
               module, parameters);
+      case WATERS_RAW, WATERS_RAW_IMS ->
+          new MassLynxImportTaskDelegator(storage, moduleCallDate, file, scanProcessorConfig,
+              project, parameters, module);
     };
   }
 
@@ -466,10 +470,12 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
       case BRUKER_BAF ->
           new BafImportTask(storage, moduleCallDate, file, module, parameters, project,
               scanProcessorConfig);
+      case WATERS_RAW, WATERS_RAW_IMS ->
+          new MassLynxImportTaskDelegator(storage, moduleCallDate, file, scanProcessorConfig,
+              project, parameters, module);
       case SCIEX_WIFF2 -> new Wiff2ImportTask(storage, moduleCallDate, file, parameters, project);
       // When adding a new file type, also add to MSConvertImportTask#getSupportedFileTypes()
-      case AGILENT_D, AGILENT_D_IMS, SCIEX_WIFF, WATERS_RAW, WATERS_RAW_IMS,
-           SHIMADZU_LCD, MBI ->
+      case AGILENT_D, AGILENT_D_IMS, SCIEX_WIFF, SHIMADZU_LCD, MBI ->
           new MSConvertImportTask(storage, moduleCallDate, file, scanProcessorConfig, project,
               module, parameters);
       // all unsupported tasks are wrapped to apply import and mass detection separately
