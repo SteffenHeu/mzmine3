@@ -103,14 +103,13 @@ public class SpectraPlot extends EChartViewer implements LabelColorMatch {
   private final XYPlot plot;
   private final TextTitle chartTitle;
   private final TextTitle chartSubTitle;
+  private final ObjectProperty<MZTolerance> mzToleranceProperty = new SimpleObjectProperty<>();
+  private final ObjectProperty<Range<Double>> selectedMzRangeProperty = new SimpleObjectProperty<>();
   /**
    * If true, the labels of the data set will have the same color as the data set itself
    */
   protected BooleanProperty matchLabelColors;
   protected ObjectProperty<SpectrumCursorPosition> cursorPosition;
-  private final ObjectProperty<MZTolerance> mzToleranceProperty = new SimpleObjectProperty<>();
-  private final ObjectProperty<Range<Double>> selectedMzRangeProperty = new SimpleObjectProperty<>();
-
   // Spectra processing
   protected DataPointProcessingController controller;
   protected EStandardChartTheme theme;
@@ -501,14 +500,12 @@ public class SpectraPlot extends EChartViewer implements LabelColorMatch {
     boolean showPrecursorWindow = MZmineCore.getConfiguration().getPreferences()
         .getValue(MZminePreferences.showPrecursorWindow);
     if (scan.getMSLevel() == 2) {
+      final MsMsInfo info = scan.getMsMsInfo();
       final Double prmz = scan.getPrecursorMz();
-      if (prmz != null) {
-        final MsMsInfo info = scan.getMsMsInfo();
-        if (showPrecursorWindow && info != null && info.getIsolationWindow() != null) {
-          addDomainMarker(info.getIsolationWindow(), color, alpha);
-        } else {
-          addDomainMarker(prmz, color, alpha);
-        }
+      if (showPrecursorWindow && info != null && info.getIsolationWindow() != null) {
+        addDomainMarker(info.getIsolationWindow(), color, alpha);
+      } else if (prmz != null) {
+        addDomainMarker(prmz, color, alpha);
       }
     } else if (scan.getMSLevel() > 2) {
       // add all parent precursors
