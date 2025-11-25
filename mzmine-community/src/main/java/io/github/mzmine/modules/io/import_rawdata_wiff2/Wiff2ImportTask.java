@@ -30,6 +30,7 @@ import io.github.mzmine.datamodel.RawDataImportTask;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.datamodel.otherdetectors.OtherDataFile;
+import io.github.mzmine.gui.preferences.VendorImportParameters;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Experiment;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Sample;
@@ -123,11 +124,6 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
   }
 
   @Override
-  public @Nullable RawDataFile getImportedRawDataFile() {
-    return files.getFirst();
-  }
-
-  @Override
   public String getTaskDescription() {
     return "Importing file " + file;
   }
@@ -141,7 +137,8 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
   protected void process() {
 
     try (Wiff2DataAccess access = new Wiff2DataAccess(file,
-        parameters.getValue(AllSpectralDataImportParameters.applyVendorCentroiding))) {
+        parameters.getEmbeddedParameterValue(AllSpectralDataImportParameters.vendorOptions)
+            .getValue(VendorImportParameters.applyVendorCentroiding))) {
 
       final List<Sample> samples = access.getSamples();
 
@@ -183,6 +180,8 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
             rawDataFile);
         rawDataFile.addOtherDataFiles(otherDataFiles);
 
+        access.loadAndAddMrms(sample, rawDataFile, experiments);
+
         files.add(rawDataFile);
       }
     } catch (IOException e) {
@@ -196,6 +195,11 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
 
   @Override
   protected @NotNull List<RawDataFile> getProcessedDataFiles() {
-    return List.of(getImportedRawDataFile());
+    return getImportedRawDataFiles();
+  }
+
+  @Override
+  public @NotNull List<RawDataFile> getImportedRawDataFiles() {
+    return isFinished() ? files : List.of();
   }
 }

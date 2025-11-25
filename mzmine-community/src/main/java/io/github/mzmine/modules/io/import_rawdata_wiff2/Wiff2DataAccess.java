@@ -6,6 +6,7 @@ import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.featuredata.OtherFeatureUtils;
 import io.github.mzmine.datamodel.features.types.otherdectectors.ChromatogramTypeType;
 import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
 import io.github.mzmine.datamodel.impl.SimpleScan;
@@ -18,6 +19,8 @@ import io.github.mzmine.datamodel.otherdetectors.OtherFeature;
 import io.github.mzmine.datamodel.otherdetectors.OtherFeatureImpl;
 import io.github.mzmine.datamodel.otherdetectors.OtherTimeSeriesDataImpl;
 import io.github.mzmine.datamodel.otherdetectors.SimpleOtherTimeSeries;
+import io.github.mzmine.gui.preferences.NumberFormats;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.SimpleSpectralArrays;
 import io.github.mzmine.modules.io.import_rawdata_mzml.ConversionUtils;
 import io.github.mzmine.modules.io.import_rawdata_mzml.msdk.data.ChromatogramType;
@@ -30,8 +33,11 @@ import io.github.mzmine.modules.io.import_rawdata_wiff2.api.DataProviderGrpc.Dat
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Experiment;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetChannelTracesRequest;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetExperimentsRequest;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetMrmXicRequest;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.GetSpectraRequest;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ListSamplesRequest;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.MassRangeConfiguration;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.MrmXic;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Sample;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow;
@@ -45,6 +51,7 @@ import io.github.mzmine.util.date.LocalDateTimeParser;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import java.io.File;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
@@ -58,7 +65,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.collections.iterators.EmptyIterator;
 import org.apache.commons.collections4.IteratorUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -75,14 +84,13 @@ public class Wiff2DataAccess implements AutoCloseable {
   private final DataProviderBlockingStub dataProvider;
   @NotNull
   private final File file;
-  @Nullable
   private final boolean centroid;
 
   public Wiff2DataAccess(@NotNull final File file, final boolean centroid) throws IOException {
     this.file = file;
     this.centroid = centroid;
 
-    ClearcoreServer server = ClearcoreServer.getOrStart();
+    final ClearcoreServer server = ClearcoreServer.getOrStart();
 
     ManagedChannel tempChannel = null;
     int tryCount = 0;
@@ -112,7 +120,9 @@ public class Wiff2DataAccess implements AutoCloseable {
         // DDA
 //        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\SCIEX\\ZenoTOF\\RawData\\3_Feces_DDA\\Pos\\20230406_blank_POS_1.wiff2"),
         // swath
-        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\SCIEX\\ZenoTOF\\RawData\\4_Feces_SWATH-DIA\\Pos\\20230406_feces_SWATH_1-2_POS.wiff2"),
+//        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\SCIEX\\ZenoTOF\\RawData\\4_Feces_SWATH-DIA\\Pos\\20230406_feces_SWATH_1-2_POS.wiff2"),
+        // mrm
+        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\SCIEX\\QTRAP 7500\\240207_DBS_Berlin_Vergleichsproben\\Messung3.wiff2"),
         true)) {
 
       List<Sample> samples = access.getSamples();
@@ -149,13 +159,7 @@ public class Wiff2DataAccess implements AutoCloseable {
 
         scans.sort(Scan::compareTo);*/
 
-        // mrms
-        /*for (Experiment experiment : experiments) {
-          GetMrmXicRequest.newBuilder().setSampleId(sample.getId())
-              .setExperimentId(experiment.getId())
-              .setTimeRange(TimeRange.newBuilder().setStart(0).setEnd(Double.MAX_VALUE).build()).build();
-
-        }*/
+        access.loadAndAddMrms(sample, rawDataFile, experiments);
 
         // wavelength spectra
         /*for (Experiment experiment : experiments) {
@@ -170,6 +174,10 @@ public class Wiff2DataAccess implements AutoCloseable {
             rawDataFile);
         rawDataFile.addOtherDataFiles(otherDataFiles);
       }
+    } catch (Exception e) {
+      logger.log(Level.SEVERE, e.getMessage(), e);
+      ClearcoreServer.terminateSeverIfRunning();
+      return;
     }
 
     ClearcoreServer.terminateSeverIfRunning();
@@ -241,7 +249,7 @@ public class Wiff2DataAccess implements AutoCloseable {
         (float) (ce.getCollisionEnergyRampStart() + ce.getCollisionEnergyRampEnd()) / 2;
     final double isolationTarget = isolationWindow.getIsolationWindowTarget();
 
-    if(experiment.hasElectronKe()) {
+    if (experiment.hasElectronKe()) {
       DoubleValue electronEnergy = experiment.getElectronKe();
       logger.info("has election ke " + electronEnergy.toString());
     }
@@ -279,6 +287,75 @@ public class Wiff2DataAccess implements AutoCloseable {
 
     logger.info("Unkown MSMS type in sciex data.");
     return null;
+  }
+
+  public void loadAndAddMrms(@NotNull final Sample sample,
+      @NotNull final RawDataFileImpl rawDataFile, @NotNull final List<Experiment> experiments) {
+    final OtherDataFileImpl mrmsFile = new OtherDataFileImpl(rawDataFile);
+    final OtherTimeSeriesDataImpl mrmsTimeSeriesData = new OtherTimeSeriesDataImpl(mrmsFile);
+    mrmsTimeSeriesData.setTimeSeriesRangeUnit("counts");
+    mrmsTimeSeriesData.setTimeSeriesRangeLabel("Intensity");
+    mrmsTimeSeriesData.setChromatogramType(ChromatogramType.MRM_SRM);
+    mrmsFile.setOtherTimeSeriesData(mrmsTimeSeriesData);
+    // mrms
+    for (Experiment experiment : experiments) {
+      loadAndAddMrmXics(sample, experiment, mrmsTimeSeriesData);
+    }
+    if (mrmsTimeSeriesData.getNumberOfTimeSeries() > 0) {
+      rawDataFile.addOtherDataFiles(List.of(mrmsFile));
+    }
+  }
+
+  private void loadAndAddMrmXics(@NotNull final Sample sample, @NotNull final Experiment experiment,
+      @NotNull final OtherTimeSeriesDataImpl timeSeriesData) {
+    if (!experiment.getScanType().equals("MRM")) {
+      return;
+    }
+
+    GetMrmXicRequest.Builder mrmXicRequest = GetMrmXicRequest.newBuilder()
+        .setSampleId(sample.getId()).setExperimentId(experiment.getId())
+        .setTimeRange(getFullTimeRange());
+    for (int i = 0; i < experiment.getMassRangesCount(); i++) {
+      mrmXicRequest.addMassIndexes(i);
+    }
+
+    final List<MrmXic> mrmXics = new ArrayList<>();
+
+    Iterator<MrmXic> iterator = dataProvider.getMrmXics(mrmXicRequest.build());
+    try {
+      while (iterator.hasNext()) {
+        mrmXics.add(iterator.next());
+      }
+    } catch (StatusRuntimeException e) {
+      // internal sciex error, method not implemented
+      logger.fine("Error while parsing MRM from experiment " + experiment.toString() + ": "
+          + e.getMessage());
+    }
+
+    for (int i = 0; i < mrmXics.size(); i++) {
+      final MassRangeConfiguration massRanges = experiment.getMassRanges(i);
+      final ScanWindow selectionWindow = massRanges.getSelectionWindow();
+      final ScanWindow isolationWindow = massRanges.getIsolationWindow();
+      final double q3mass = (selectionWindow.getEnd() + selectionWindow.getStart()) / 2;
+      final double q1mass = (isolationWindow.getEnd() + isolationWindow.getStart()) / 2;
+      final MrmXic xic = mrmXics.get(i);
+
+      final FloatArrayList rts = new FloatArrayList(xic.getXValuesCount());
+      for (Double rt : xic.getXValuesList()) {
+        rts.add(rt.floatValue());
+      }
+      SimpleOtherTimeSeries series = new SimpleOtherTimeSeries(
+          timeSeriesData.getOtherDataFile().getCorrespondingRawDataFile().getMemoryMapStorage(),
+          rts.toFloatArray(),
+          xic.getYValuesList().stream().mapToDouble(Double::doubleValue).toArray(),
+          "%.3f -> %.3f".formatted(q1mass, q3mass), timeSeriesData);
+      final OtherFeatureImpl otherFeature = new OtherFeatureImpl(series);
+
+      OtherFeatureUtils.applyMrmInfo(q1mass, q3mass, ActivationMethod.CID, null, otherFeature);
+      timeSeriesData.addRawTrace(otherFeature);
+    }
+
+    return;
   }
 
   /**
@@ -350,6 +427,10 @@ public class Wiff2DataAccess implements AutoCloseable {
 
   Iterator<Spectrum> getSpectrumIterator(@NotNull final Sample sample,
       @NotNull final Experiment experiment) {
+    if (experiment.getScanType().equals("MRM")) {
+      return EmptyIterator.INSTANCE;
+    }
+
     GetSpectraRequest r = GetSpectraRequest.newBuilder().setSampleId(sample.getId())
         .setExperimentId(experiment.getId())
         .setRange(TimeRange.newBuilder().setStart(0d).setEnd(Double.MAX_VALUE))
@@ -373,7 +454,7 @@ public class Wiff2DataAccess implements AutoCloseable {
     StringBuilder scanDesc = new StringBuilder();
     scanDesc.append("Scan=").append(scanId);
     scanDesc.append(" Exp=").append(experiment.getId());
-    if(experiment.hasZenoMode()) {
+    if (experiment.hasZenoMode()) {
       scanDesc.append(" Zeno=").append(experiment.getZenoMode().toString());
     }
 
