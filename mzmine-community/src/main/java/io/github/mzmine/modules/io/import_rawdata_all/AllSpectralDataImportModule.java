@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -189,20 +188,24 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
   private static boolean checkDuplicateFilesInImportListAndProject(
       final @NotNull MZmineProject project, final ImportFile[] filesToImport) {
     // check that files were not loaded before
-    File[] alreadyImportedFiles = Stream.concat(
-        project.getCurrentRawDataFiles().stream().map(RawDataFile::getAbsoluteFilePath),
-        Arrays.stream(filesToImport).map(ImportFile::importedFile)).toArray(File[]::new);
-    return containsDuplicateFiles(alreadyImportedFiles,
+    final Stream<@NotNull File> currentFiles = project.getCurrentRawDataFiles().stream()
+        .map(RawDataFile::getAbsoluteFilePath)
+        .distinct(); // some data files may create more than one RawDataFile
+    final Stream<@NotNull File> importFiles = Arrays.stream(filesToImport)
+        .map(ImportFile::importedFile);
+
+    final File[] combinedFiles = Stream.concat(currentFiles, importFiles).toArray(File[]::new);
+    return containsDuplicateFiles(combinedFiles,
         "raw data file names in the import list that collide with already loaded data");
   }
 
   /**
-   * @param context libraries or raw data
+   * @param context libraries or raw data (context for the error message)
    * @return true if file names are duplicates
    */
-  private static boolean containsDuplicateFiles(final File[] fileNames, String context) {
+  private static boolean containsDuplicateFiles(final File[] files, String context) {
     List<String> duplicates = CollectionUtils.streamDuplicates(
-        Arrays.stream(fileNames).map(File::getName)).toList();
+        Arrays.stream(files).map(File::getName)).toList();
     if (!duplicates.isEmpty()) {
       String msg = """
           Stopped import as there were duplicate %s.
@@ -265,6 +268,10 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
     // skip files that are already loaded
     final ImportFile[] filesToImport = AllSpectralDataImportParameters.skipAlreadyLoadedFiles(
         project, parameters);
+
+    if (filesToImport.length == 0) {
+      return ExitCode.OK;
+    }
 
     // after skipping already loaded
     if (checkDuplicateFilesInImportListAndProject(project, filesToImport)) {
