@@ -394,8 +394,13 @@ public class Wiff2DataAccess implements AutoCloseable {
         .setSampleId(sample.getId()).build();
     Iterator<ChannelTrace> tracesIterator = dataProvider.getChannelTraces(tracesRequest);
 
-    if (!tracesIterator.hasNext()) {
-      logger.info("File: %s\tSample: %d\tdoes not contain any analog traces.");
+    try {
+      if (!tracesIterator.hasNext()) {
+        logger.info("File: %s\tSample: %d\tdoes not contain any analog traces.");
+        return List.of();
+      }
+    } catch (StatusRuntimeException e) {
+      // has no .timeseries file. Skip.
       return List.of();
     }
 
