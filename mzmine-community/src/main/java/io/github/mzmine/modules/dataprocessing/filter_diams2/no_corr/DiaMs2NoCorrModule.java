@@ -22,33 +22,33 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.taskcontrol.operations;
+package io.github.mzmine.modules.dataprocessing.filter_diams2.no_corr;
 
-import io.github.mzmine.taskcontrol.Task;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaCorrelationModule;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrTask;
+import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.taskcontrol.operations.TaskSubProcessor;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Something that is dependent on the parent task still running or may change task status
- */
-public class AbstractParentTaskDependent implements ParentTaskDependent {
+public class DiaMs2NoCorrModule implements DiaCorrelationModule {
 
-  protected Task parentTask;
-
-  public AbstractParentTaskDependent() {
-    this(null);
-  }
-
-  public AbstractParentTaskDependent(@Nullable final Task parentTask) {
-    this.parentTask = parentTask;
-  }
-
-  @Nullable
-  public Task getParentTask() {
-    return parentTask;
+  @Override
+  public @NotNull String getName() {
+    return "DIA pseudo MS2 builder (no correlation) (experimental)";
   }
 
   @Override
-  public void setParentTask(final @Nullable Task parentTask) {
-    this.parentTask = parentTask;
+  public @Nullable Class<? extends ParameterSet> getParameterSetClass() {
+    return DiaMs2NoCorrParameters.class;
+  }
+
+  @Override
+  public TaskSubProcessor createLogicTask(@NotNull ModularFeatureList flist,
+      @NotNull DiaMs2CorrParameters mainParam, @NotNull ParameterSet moduleParam,
+      @NotNull DiaMs2CorrTask mainTask) {
+    return new DiaMs2NoCorrTask(flist, mainParam, moduleParam, mainTask);
   }
 }
