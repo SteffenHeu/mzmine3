@@ -28,6 +28,7 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.no_corr.DiaMs2NoCorrModule;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.rt_corr.DiaMs2RtCorrModule;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.sliding_mz.DiaSlidingMzModule;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnum;
 import io.github.mzmine.taskcontrol.operations.TaskSubProcessor;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
 public enum DiaCorrelationOptions implements ModuleOptionsEnum<DiaCorrelationModule> {
-  RT_CORRELATION, NO_CORRELATION;
+  RT_CORRELATION, NO_CORRELATION, SLIDING_MZ;
 
   public static String getDescriptions() {
     return Arrays.stream(values()).map(v -> "- " + v.toString() + ": " + v.getDescription())
@@ -48,6 +49,7 @@ public enum DiaCorrelationOptions implements ModuleOptionsEnum<DiaCorrelationMod
     return switch (this) {
       case NO_CORRELATION -> DiaMs2NoCorrModule.class;
       case RT_CORRELATION -> DiaMs2RtCorrModule.class;
+      case SLIDING_MZ -> DiaSlidingMzModule.class;
     };
   }
 
@@ -56,6 +58,7 @@ public enum DiaCorrelationOptions implements ModuleOptionsEnum<DiaCorrelationMod
     return switch (this) {
       case NO_CORRELATION -> "no_corr";
       case RT_CORRELATION -> "rt_corr";
+      case SLIDING_MZ -> "mz_corr";
     };
   }
 
@@ -72,6 +75,8 @@ public enum DiaCorrelationOptions implements ModuleOptionsEnum<DiaCorrelationMod
           "Pairs the closest MS2 spectrum based on retention time and ion mobility dimension without filtering for feature shape correlation. (Quadrupole aware)";
       case RT_CORRELATION ->
           "Correlates feature shapes of potential fragments in RT dimension and filters by ion mobility dimension, if available. (Quadrupole aware)";
+      case SLIDING_MZ ->
+          "For sliding quads only (midiaPASEF/ZT scan): Checks for intensity correlation of fragment and precursor ions.";
     };
   }
 
@@ -80,6 +85,7 @@ public enum DiaCorrelationOptions implements ModuleOptionsEnum<DiaCorrelationMod
     return switch (this) {
       case NO_CORRELATION -> "No correlation";
       case RT_CORRELATION -> "RT correlation";
+      case SLIDING_MZ -> "Sliding m/z window";
     };
   }
 }
