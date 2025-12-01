@@ -281,7 +281,7 @@ public class MSConvertImportTask extends AbstractTask implements RawDataImportTa
 
   public static Set<RawDataFileType> getSupportedFileTypes() {
     return Set.of(RawDataFileType.WATERS_RAW, RawDataFileType.WATERS_RAW_IMS,
-        RawDataFileType.SCIEX_WIFF, RawDataFileType.SCIEX_WIFF2, RawDataFileType.AGILENT_D,
+        RawDataFileType.SCIEX_WIFF, RawDataFileType.AGILENT_D,
         RawDataFileType.AGILENT_D_IMS, RawDataFileType.THERMO_RAW, RawDataFileType.SHIMADZU_LCD);
   }
 
