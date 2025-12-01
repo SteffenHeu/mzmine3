@@ -39,7 +39,7 @@ public class DiaSlidingMzModule implements DiaCorrelationModule {
   public TaskSubProcessor createLogicTask(@NotNull ModularFeatureList flist,
       @NotNull DiaMs2CorrParameters mainParam, @NotNull ParameterSet moduleParam,
       @NotNull DiaMs2CorrTask mainTask) {
-    return null;
+    return new DiaSlidingMzTask(flist, mainParam, moduleParam, mainTask);
   }
 
   @Override
