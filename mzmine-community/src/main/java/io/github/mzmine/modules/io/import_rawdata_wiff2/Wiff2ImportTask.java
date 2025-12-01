@@ -75,7 +75,7 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
     String filename = FileAndPathUtil.eraseFormat(file.getName());
 
     if (samples.size() <= 1) {
-      return filename;
+      return file.getName();
     }
 
     // same sampleName is allowed, but they will have different ids. the id is:

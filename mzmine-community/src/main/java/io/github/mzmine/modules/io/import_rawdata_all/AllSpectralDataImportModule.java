@@ -68,6 +68,7 @@ import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.RawDataFileType;
 import io.github.mzmine.util.RawDataFileTypeDetector;
 import io.github.mzmine.util.collections.CollectionUtils;
+import io.github.mzmine.util.files.FileAndPathUtil;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibrary;
 import java.io.File;
 import java.time.Instant;
@@ -147,7 +148,15 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
   public static ImportFile validateToActualPath(File file, boolean keepConverted) {
     file = validateBrukerPath(file);
 
-    final RawDataFileType type = RawDataFileTypeDetector.detectDataFileType(file);
+    RawDataFileType type = RawDataFileTypeDetector.detectDataFileType(file);
+    if (type == RawDataFileType.SCIEX_WIFF) {
+      final File wiff2 = new File(file.getParentFile(),
+          FileAndPathUtil.eraseFormat(file.getName()) + ".wiff2");
+      if (wiff2.exists() && wiff2.canRead()) {
+        file = wiff2;
+        type = RawDataFileType.SCIEX_WIFF2;
+      }
+    }
     // we are loading thermo raw files by thermo raw file parser that keeps the .raw extension.
     // MSconvert task can in theory convert thermo .raw so skip the method call instead of changing the way msconvert task works
     // TODO this will need to change with the data handling parameter that defines which SDK to use for each format.
