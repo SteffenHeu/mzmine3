@@ -49,6 +49,6 @@ public class DiaSlidingMzModule implements DiaCorrelationModule {
 
   @Override
   public @Nullable Class<? extends ParameterSet> getParameterSetClass() {
-    return;
+    return DiaSlidingMzParameters.class;
   }
 }

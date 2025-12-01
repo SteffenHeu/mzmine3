@@ -28,17 +28,101 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
 import io.github.mzmine.datamodel.Scan;
-import io.github.mzmine.datamodel.featuredata.IonSeries;
+import io.github.mzmine.datamodel.SimpleRange.SimpleDoubleRange;
+import io.github.mzmine.datamodel.data_access.EfficientDataAccess.ScanDataType;
+import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
+import io.github.mzmine.datamodel.featuredata.impl.BuildingIonSeries;
+import io.github.mzmine.datamodel.msms.MsMsInfo;
+import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.RangeUtils;
+import io.github.mzmine.util.scans.ScanUtils;
+import io.github.mzmine.util.scans.SpectraMerging;
+import it.unimi.dsi.fastutil.doubles.Double2ObjectArrayMap;
+import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float> rtRange,
-                              RangeMap<Double, IonSeries> massograms) {
+                              @NotNull RangeMap<Double, @NotNull IonTimeSeries<?>> massograms,
+                              double @NotNull [] isolationCenters,
+                              @NotNull List<@NotNull SimpleDoubleRange> isolationRanges) {
+
+  private static final double isolationWidthFactor = 5;
 
   public CycleMassograms(@NotNull List<Scan> ms2Scans) {
+
+    final List<SimpleDoubleRange> isolationRanges = new ArrayList<>();
+    final double[] isolationCenters = new double[ms2Scans.size()];
+
+    for (int i = 0; i < ms2Scans.size(); i++) {
+      Scan scan = ms2Scans.get(i);
+      final MsMsInfo msMsInfo = scan.getMsMsInfo();
+      if (msMsInfo == null) {
+        throw new IllegalStateException(
+            "No msms info for scan %s".formatted(ScanUtils.scanToString(scan)));
+      }
+
+      final Range<Double> reportedIsolation = msMsInfo.getIsolationWindow();
+      final double center = RangeUtils.rangeCenter(reportedIsolation);
+      final double halfLength =
+          RangeUtils.rangeLength(reportedIsolation) * isolationWidthFactor * 0.5;
+
+      isolationRanges.add(new SimpleDoubleRange(center - halfLength, center + halfLength));
+      isolationCenters[i] = center;
+    }
+
     this(ms2Scans,
         Range.closed(ms2Scans.getFirst().getRetentionTime(), ms2Scans.getLast().getRetentionTime()),
-        TreeRangeMap.create());
+        TreeRangeMap.create(), isolationCenters, isolationRanges);
   }
 
+  public Double2ObjectMap<IonTimeSeries<?>> getTraces(final double[] relevantMzs,
+      final MZTolerance tolerance, @Nullable MemoryMapStorage storage) {
+
+    final List<Range<Double>> toExtract = new ArrayList<>();
+
+    for (double mz : relevantMzs) {
+      final IonTimeSeries<?> series = massograms.get(mz);
+      if (series == null) {
+        Range<Double> range = SpectraMerging.createNewNonOverlappingRange(massograms,
+            tolerance.getToleranceRange(mz));
+        // need to put the actual range so we dont create overlaps due to them being absent
+        massograms.put(range, IonTimeSeries.EMPTY); // put empty since we cannot put null
+        toExtract.add(range);
+      }
+    }
+
+    if (!toExtract.isEmpty()) {
+      final ExtractMzRangesIonSeriesFunction extract = new ExtractMzRangesIonSeriesFunction(
+          ms2Scans.getFirst().getDataFile(), ms2Scans, toExtract, ScanDataType.MASS_LIST, null);
+      @NotNull BuildingIonSeries[] buildingIonSeries = extract.get();
+      List<? extends IonTimeSeries<? extends Scan>> result = Arrays.stream(buildingIonSeries)
+          .map(b -> b.toFullIonTimeSeries(storage, ms2Scans)).toList();
+      for (int i = 0; i < result.size(); i++) {
+        massograms.put(toExtract.get(i), result.get(i));
+      }
+    }
+
+    final Double2ObjectMap<IonTimeSeries<?>> result = new Double2ObjectArrayMap<>(
+        relevantMzs.length);
+    for (double mzs : relevantMzs) {
+      final IonTimeSeries<?> series = massograms.get(mzs);
+      result.put(mzs, series);
+    }
+
+    return result;
+  }
+
+  public @NotNull SimpleDoubleRange isolationRange(int i) {
+    return isolationRanges.get(i);
+  }
+
+  public double isolationCenter(int i) {
+    return isolationCenters[i];
+  }
 }

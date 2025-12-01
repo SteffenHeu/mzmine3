@@ -24,13 +24,19 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_diams2.sliding_mz;
 
+import com.google.common.collect.TreeRangeMap;
 import io.github.mzmine.datamodel.FeatureStatus;
+import io.github.mzmine.datamodel.PseudoSpectrumType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.SimpleRange.SimpleDoubleRange;
+import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
 import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.datamodel.impl.SimplePseudoSpectrum;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaCorrelationOptions;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
@@ -41,17 +47,25 @@ import io.github.mzmine.parameters.parametertypes.submodules.ValueWithParameters
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.operations.AbstractTaskSubProcessor;
 import io.github.mzmine.taskcontrol.operations.TaskSubProcessor;
+import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.collections.BinarySearch;
 import io.github.mzmine.util.collections.BinarySearch.DefaultTo;
 import io.github.mzmine.util.collections.IndexRange;
 import io.github.mzmine.util.scans.SpectraMerging;
 import io.github.mzmine.util.scans.SpectraMerging.IntensityMergingType;
+import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
+
+  private static final Logger logger = Logger.getLogger(DiaSlidingMzTask.class.getName());
 
   private final ModularFeatureList flist;
   private final DiaMs2CorrParameters mainParam;
@@ -61,6 +75,8 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
   private final TaskSubProcessor pregroupingTask;
   private final int totalRows;
   private final MZTolerance mzTol = MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA;
+  private final MemoryMapStorage temp = MemoryMapStorage.forFeatureList();
+  private final ModularFeatureList dummy;
   private int processed = 0;
 
   protected DiaSlidingMzTask(ModularFeatureList flist, DiaMs2CorrParameters mainParam,
@@ -78,6 +94,9 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
     pregroupingTask = pregrouping.value()
         .createLogicTask(flist, mainParam, pregrouping.parameters(),
             (DiaMs2CorrTask) getParentTask());
+
+    dummy = new ModularFeatureList("dummy", temp, flist.getNumberOfRows(), flist.getNumberOfRows(),
+        flist.getRawDataFiles().get(0));
   }
 
   @Override
@@ -100,6 +119,8 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
 
     final List<FeatureListRow> rows = flist.getRowsCopy();
 
+    final TreeRangeMap<Float, CycleMassograms> massogramBuffer = TreeRangeMap.create();
+
     for (final FeatureListRow row : rows) {
       final Feature feature = row.getFeature(file);
       if (feature == null || feature.getFeatureStatus() == FeatureStatus.UNKNOWN) {
@@ -112,12 +133,109 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         continue;
       }
 
+      CycleMassograms cycleMassograms = massogramBuffer.get(
+          ms2Cycle.get(ms2Cycle.size() / 2).getRetentionTime());
+      if (cycleMassograms == null) {
+        CycleMassograms buffered = new CycleMassograms(ms2Cycle);
+        massogramBuffer.put(buffered.rtRange(), buffered);
+        cycleMassograms = buffered;
+      }
+
       final double[] relevantMzs = getRelevantMzs(feature);
+      if (relevantMzs.length < 1) {
+        continue;
+      }
 
-      for (int i = 0; i < ms2Cycle.size(); i++) {
+      final double featureMz = feature.getMZ();
+      final int closestIsolationIndex = BinarySearch.binarySearch(
+          cycleMassograms.isolationCenters(), featureMz, DefaultTo.CLOSEST_VALUE, 0,
+          cycleMassograms.ms2Scans().size());
+      final SimpleDoubleRange isolationWindow = cycleMassograms.isolationRanges()
+          .get(closestIsolationIndex);
+      final double isolationWidth = isolationWindow.length();
+      final IndexRange indexRange = BinarySearch.indexRange(cycleMassograms.isolationCenters(),
+          featureMz - isolationWidth / 2, featureMz + isolationWidth / 2);
+      final double quadStep =
+          cycleMassograms.isolationCenter(1) - cycleMassograms.isolationCenter(0);
+      final int maxToleranceWindow = (int) Math.ceil((isolationWidth / 2) / quadStep);
 
+      logger.finest("Searching in scans %d (%.2f) - %d (%.2f) with tolerance window %d".formatted(
+          indexRange.min(), cycleMassograms.isolationRange(indexRange.min()).upper(),
+          indexRange.maxInclusive(),
+          cycleMassograms.isolationRange(indexRange.maxInclusive()).lower(), maxToleranceWindow));
+
+      final Object2IntArrayMap<IonTimeSeries<?>> traceMaxIndices = getTraceMaxIndices(
+          closestIsolationIndex, indexRange, maxToleranceWindow, cycleMassograms, relevantMzs);
+
+      DoubleArrayList mzs = new DoubleArrayList();
+      DoubleArrayList intensities = new DoubleArrayList();
+      for (Entry<IonTimeSeries<?>> seriesEntry : traceMaxIndices.object2IntEntrySet()) {
+        final ModularFeature mzFeature = new ModularFeature(dummy, file,
+            seriesEntry.getKey().subSeries(temp, indexRange.min(), indexRange.maxExclusive()),
+            FeatureStatus.MANUAL);
+        mzs.add(mzFeature.getMZ());
+        mzs.add(mzFeature.getHeight());
+      }
+
+      SimplePseudoSpectrum mzCorrelatedSpectrum = new SimplePseudoSpectrum(file, 2, feature.getRT(),
+          null, mzs.toDoubleArray(), intensities.toDoubleArray(),
+          feature.getRepresentativePolarity(), null, PseudoSpectrumType.LC_DIA);
+      feature.setAllMS2FragmentScans(List.of(mzCorrelatedSpectrum));
+      processed++;
+    }
+  }
+
+  private @NotNull Object2IntArrayMap<IonTimeSeries<?>> getTraceMaxIndices(
+      final int closestIsolationIndex, final IndexRange indexRange, final int maxToleranceWindow,
+      @NotNull final CycleMassograms massograms, final double @NotNull [] relevantMzs) {
+
+    final Object2IntArrayMap<IonTimeSeries<?>> traceMaxIndices = new Object2IntArrayMap<>();
+
+    final Double2ObjectMap<IonTimeSeries<?>> traces = massograms.getTraces(relevantMzs, mzTol,
+        temp);
+    for (final IonTimeSeries<?> trace : traces.values()) {
+
+      // slope at current point
+      final double intensityAtClosestIsolation = trace.getIntensity(closestIsolationIndex);
+      final double leftSlope =
+          trace.getIntensity(closestIsolationIndex - 1) - intensityAtClosestIsolation;
+      final double rightSlope =
+          intensityAtClosestIsolation - trace.getIntensity(closestIsolationIndex + 1);
+
+      int searchDirection;
+      if (leftSlope < 0 && rightSlope < 0) {
+        // increasing, search right
+        searchDirection = 1;
+      } else if (leftSlope > 0 && rightSlope > 0) {
+        // decreasing, search left
+        searchDirection = -1;
+      } else if (leftSlope < 0 && rightSlope > 0) {
+        // at maximum
+        searchDirection = 0;
+      } else {
+        // in local minimum, not valid
+        continue;
+      }
+
+      // get maximum
+      double maxIntensity = intensityAtClosestIsolation;
+      int maxIndex = closestIsolationIndex;
+      for (int i = closestIsolationIndex; i < indexRange.maxExclusive() && i >= indexRange.min();
+          i += searchDirection) {
+        final double intensity = trace.getIntensity(i);
+        if (intensity > maxIntensity) {
+          maxIntensity = intensity;
+          maxIndex = i;
+        } else {
+          break;
+        }
+      }
+
+      if (Math.abs(maxIndex - closestIsolationIndex) <= maxToleranceWindow) {
+        traceMaxIndices.put(trace, maxIndex);
       }
     }
+    return traceMaxIndices;
   }
 
   private double[] getRelevantMzs(Feature feature) {
