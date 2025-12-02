@@ -22,46 +22,22 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.datamodel;
+package io.github.mzmine.modules.dataprocessing.filter_diams2.sliding_mz;
 
-import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
-import org.jetbrains.annotations.NotNull;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaCorrelationOptions;
+import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnumComboParameter;
 
-public enum PseudoSpectrumType implements UniqueIdSupplier {
-  /**
-   * Use case: RT correlated, or RT correlated and mobility filtered (=Same IMS window)
-   */
-  LC_DIA,
-  /**
-   * Pseudo spectrum after GC EI deconvolution
-   */
-  GC_EI,
-  /**
-   * Use case: e.g. all correlated features in MALDI
-   */
-  MALDI_IMAGING,
-  /**
-   * Use case: the closest DIA/MSe/MS^ALL spectrum for an LC precursor
-   */
-  UNCORRELATED,
-  /**
-   * Use case: Sliding m/z window, same maxima. No RT correlation
-   */
-  SLIDING_MZ_NO_RT,
-  /**
-   * Use case: Sliding m/z window, same maxima and RT correlation.
-   */
-  SLIDING_MZ_RT_CORR;
+public class DiaSlidingMzParameters extends SimpleParameterSet {
 
-  @Override
-  public @NotNull String getUniqueID() {
-    return switch (this) {
-      case LC_DIA -> "LC_DIA";
-      case GC_EI -> "GC_EI";
-      case MALDI_IMAGING -> "MALDI_IMAGING";
-      case UNCORRELATED -> "UNCORRELATED";
-      case SLIDING_MZ_NO_RT -> "SLIDING_MZ_NO_RT";
-      case SLIDING_MZ_RT_CORR -> "SLIDING_MZ_RT_CORR";
-    };
+  public static final ModuleOptionsEnumComboParameter<DiaCorrelationOptions> pregrouping = new ModuleOptionsEnumComboParameter<>(
+      "Pre-grouping",
+      "Select the algorithm you want to use to pair pseudo-MS2 spectra.\n%s".formatted(
+          DiaCorrelationOptions.getDescriptions()),
+      new DiaCorrelationOptions[]{DiaCorrelationOptions.NO_CORRELATION,
+          DiaCorrelationOptions.RT_CORRELATION}, DiaCorrelationOptions.RT_CORRELATION);
+
+  public DiaSlidingMzParameters() {
+    super(pregrouping);
   }
 }

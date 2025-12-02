@@ -22,46 +22,33 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.datamodel;
+package io.github.mzmine.modules.dataprocessing.filter_diams2.sliding_mz;
 
-import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaCorrelationModule;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrTask;
+import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.taskcontrol.operations.TaskSubProcessor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public enum PseudoSpectrumType implements UniqueIdSupplier {
-  /**
-   * Use case: RT correlated, or RT correlated and mobility filtered (=Same IMS window)
-   */
-  LC_DIA,
-  /**
-   * Pseudo spectrum after GC EI deconvolution
-   */
-  GC_EI,
-  /**
-   * Use case: e.g. all correlated features in MALDI
-   */
-  MALDI_IMAGING,
-  /**
-   * Use case: the closest DIA/MSe/MS^ALL spectrum for an LC precursor
-   */
-  UNCORRELATED,
-  /**
-   * Use case: Sliding m/z window, same maxima. No RT correlation
-   */
-  SLIDING_MZ_NO_RT,
-  /**
-   * Use case: Sliding m/z window, same maxima and RT correlation.
-   */
-  SLIDING_MZ_RT_CORR;
+public class DiaSlidingMzModule implements DiaCorrelationModule {
 
   @Override
-  public @NotNull String getUniqueID() {
-    return switch (this) {
-      case LC_DIA -> "LC_DIA";
-      case GC_EI -> "GC_EI";
-      case MALDI_IMAGING -> "MALDI_IMAGING";
-      case UNCORRELATED -> "UNCORRELATED";
-      case SLIDING_MZ_NO_RT -> "SLIDING_MZ_NO_RT";
-      case SLIDING_MZ_RT_CORR -> "SLIDING_MZ_RT_CORR";
-    };
+  public TaskSubProcessor createLogicTask(@NotNull ModularFeatureList flist,
+      @NotNull DiaMs2CorrParameters mainParam, @NotNull ParameterSet moduleParam,
+      @NotNull DiaMs2CorrTask mainTask) {
+    return new DiaSlidingMzTask(flist, mainParam, moduleParam, mainTask);
+  }
+
+  @Override
+  public @NotNull String getName() {
+    return "Sliding m/z isolation";
+  }
+
+  @Override
+  public @Nullable Class<? extends ParameterSet> getParameterSetClass() {
+    return DiaSlidingMzParameters.class;
   }
 }

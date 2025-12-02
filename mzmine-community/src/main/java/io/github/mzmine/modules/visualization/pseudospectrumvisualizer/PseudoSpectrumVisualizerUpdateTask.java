@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,7 +27,6 @@ package io.github.mzmine.modules.visualization.pseudospectrumvisualizer;
 import static java.util.Objects.requireNonNullElse;
 
 import io.github.mzmine.datamodel.PseudoSpectrum;
-import io.github.mzmine.datamodel.PseudoSpectrumType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.Feature;
@@ -44,7 +42,8 @@ public class PseudoSpectrumVisualizerUpdateTask extends
     FxUpdateTask<PseudoSpectrumVisualizerModel> {
 
   private final FeatureListRow row;
-  private final List<DatasetAndRenderer> datasets = new ArrayList<>();
+  private final List<DatasetAndRenderer> ticDatasets = new ArrayList<>();
+  private final List<DatasetAndRenderer> mzDatasets = new ArrayList<>();
   private Scan scan;
   private RawDataFile rawFile;
 
@@ -77,17 +76,24 @@ public class PseudoSpectrumVisualizerUpdateTask extends
     final Color color = requireNonNullElse(model.getColor(), rawFile.getColor());
     final PseudoSpectrumFeatureDataSetCalculationTask task = new PseudoSpectrumFeatureDataSetCalculationTask(
         rawFile, scan, feature, mzTol, color);
+
     task.run();
     if (task.isFinished()) {
-      datasets.addAll(task.getDatasets());
+      ticDatasets.addAll(task.getDatasets());
+    }
+
+    if (scan instanceof PseudoSpectrum ps) {
+      final ExtractMzIsolationsTask mzs = new ExtractMzIsolationsTask(feature, ps);
+      mzDatasets.addAll(mzs.get());
     }
   }
 
   @Override
   protected void updateGuiModel() {
     model.selectedFilesProperty().setValue(rawFile == null ? List.of() : List.of(rawFile));
-    model.setTicDatasets(datasets);
+    model.setTicDatasets(ticDatasets);
     model.setPseudoSpec(scan);
+    model.mzDatasetsProperty().setValue(mzDatasets);
   }
 
   @Override
