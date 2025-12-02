@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -57,6 +56,7 @@ public class PseudoSpectrumVisualizerModel {
   // the final data to be shown
   private final Property<Scan> pseudoSpec = new SimpleObjectProperty<>();
   private final ObjectProperty<List<DatasetAndRenderer>> ticDatasets = new SimpleObjectProperty<>();
+  private final ObjectProperty<List<DatasetAndRenderer>> mzDatasets = new SimpleObjectProperty<>();
 
 
   public PseudoSpectrumVisualizerModel() {
@@ -151,5 +151,13 @@ public class PseudoSpectrumVisualizerModel {
 
   public ObjectProperty<List<RawDataFile>> selectedFilesProperty() {
     return selectedFiles;
+  }
+
+  public List<DatasetAndRenderer> getMzDatasets() {
+    return mzDatasets.get();
+  }
+
+  public ObjectProperty<List<DatasetAndRenderer>> mzDatasetsProperty() {
+    return mzDatasets;
   }
 }

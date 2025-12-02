@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -25,12 +24,18 @@
 
 package io.github.mzmine.modules.visualization.pseudospectrumvisualizer;
 
+import io.github.mzmine.gui.chartbasics.simplechart.SimpleXYChart;
+import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
+import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.AnyXYProvider;
 import io.github.mzmine.javafx.components.factories.FxSplitPanes;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.visualization.chromatogram.TICPlot;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerTab;
+import javafx.beans.binding.Bindings;
 import javafx.geometry.Orientation;
+import javafx.scene.control.SplitPane;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
 
@@ -48,6 +53,15 @@ public class PseudoSpectrumVisualizerViewBuilder extends
     SpectraVisualizerTab spectraVisualizerTab = new SpectraVisualizerTab(null);
     final SpectraPlot spectraPlot = spectraVisualizerTab.getSpectrumPlot();
     spectraPlot.minHeight(150);
+
+    final SimpleXYChart<AnyXYProvider> mzCorrelation = new SimpleXYChart<>("Quadrupole m/z",
+        "Intensity");
+    mzCorrelation.setRangeAxisNumberFormatOverride(ConfigService.getGuiFormats().intensityFormat());
+    mzCorrelation.setDomainAxisNumberFormatOverride(ConfigService.getGuiFormats().mzFormat());
+    mzCorrelation.setMinHeight(150);
+    mzCorrelation.visibleProperty().bind(Bindings.createBooleanBinding(
+        () -> model.mzDatasetsProperty().get() != null && !model.mzDatasetsProperty().get()
+            .isEmpty(), model.mzDatasetsProperty()));
 
     model.pseudoSpecProperty().subscribe((_, spec) -> {
       spectraVisualizerTab.loadRawData(spec);
@@ -71,6 +85,29 @@ public class PseudoSpectrumVisualizerViewBuilder extends
       });
     });
 
-    return FxSplitPanes.newSplitPane(0.5, Orientation.VERTICAL, spectraPlot, ticPlot);
+    model.mzDatasetsProperty().subscribe((_, ds) -> {
+      mzCorrelation.applyWithNotifyChanges(false, () -> {
+        mzCorrelation.removeAllDatasets();
+        for (DatasetAndRenderer d : ds) {
+          mzCorrelation.addDataset(d.dataset(), d.renderer());
+        }
+        mzCorrelation.getXYPlot().clearDomainMarkers();
+        mzCorrelation.addDomainMarker(model.getSelectedRow().getAverageMZ(),
+            ConfigService.getDefaultColorPalette().getNeutralColorAWT(), 1f);
+      });
+    });
+
+    final SplitPane splitPane = FxSplitPanes.newSplitPane(0.5, Orientation.VERTICAL, spectraPlot,
+        ticPlot, mzCorrelation);
+
+    model.mzDatasetsProperty().subscribe((_, ds) -> {
+      if (ds != null && !ds.isEmpty()) {
+        splitPane.setDividerPositions(0.33, 0.66);
+      } else {
+        splitPane.setDividerPositions(0.5, 1);
+      }
+    });
+
+    return splitPane;
   }
 }
