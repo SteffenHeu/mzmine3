@@ -44,6 +44,7 @@ import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -52,7 +53,10 @@ public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float
                               double @NotNull [] isolationCenters,
                               @NotNull List<@NotNull SimpleDoubleRange> isolationRanges) {
 
-  private static final double isolationWidthFactor = 5;
+  private static final Logger logger = Logger.getLogger(CycleMassograms.class.getName());
+
+  public static final double isolationWidthFactor = 5;
+
 
   public CycleMassograms(@NotNull List<Scan> ms2Scans) {
 
@@ -95,6 +99,10 @@ public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float
         massograms.put(range, IonTimeSeries.EMPTY); // put empty since we cannot put null
         toExtract.add(range);
       }
+    }
+
+    if (toExtract.size() != relevantMzs.length) {
+      logger.finest("Computing %d/%d traces".formatted(toExtract.size(), relevantMzs.length));
     }
 
     if (!toExtract.isEmpty()) {

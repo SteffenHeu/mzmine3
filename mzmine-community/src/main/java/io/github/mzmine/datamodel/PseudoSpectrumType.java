@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2025 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -11,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,7 +28,30 @@ import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import org.jetbrains.annotations.NotNull;
 
 public enum PseudoSpectrumType implements UniqueIdSupplier {
-  LC_DIA, GC_EI, MALDI_IMAGING, UNCORRELATED;
+  /**
+   * Use case: RT correlated, or RT correlated and mobility filtered (=Same IMS window)
+   */
+  LC_DIA,
+  /**
+   * Pseudo spectrum after GC EI deconvolution
+   */
+  GC_EI,
+  /**
+   * Use case: e.g. all correlated features in MALDI
+   */
+  MALDI_IMAGING,
+  /**
+   * Use case: the closest DIA/MSe/MS^ALL spectrum for an LC precursor
+   */
+  UNCORRELATED,
+  /**
+   * Use case: Sliding m/z window, same maxima. No RT correlation
+   */
+  SLIDING_MZ_NO_RT,
+  /**
+   * Use case: Sliding m/z window, same maxima and RT correlation.
+   */
+  SLIDING_MZ_RT_CORR;
 
   @Override
   public @NotNull String getUniqueID() {
@@ -37,6 +60,8 @@ public enum PseudoSpectrumType implements UniqueIdSupplier {
       case GC_EI -> "GC_EI";
       case MALDI_IMAGING -> "MALDI_IMAGING";
       case UNCORRELATED -> "UNCORRELATED";
+      case SLIDING_MZ_NO_RT -> "SLIDING_MZ_NO_RT";
+      case SLIDING_MZ_RT_CORR -> "SLIDING_MZ_RT_CORR";
     };
   }
 }
