@@ -44,18 +44,25 @@ import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Represents a single MS2 cycle with all fragment ion traces. Use the {@link CycleMassograms(List)}
+ * constructor.
+ */
 public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float> rtRange,
                               @NotNull RangeMap<Double, @NotNull IonTimeSeries<?>> massograms,
                               double @NotNull [] isolationCenters,
                               @NotNull List<@NotNull SimpleDoubleRange> isolationRanges) {
 
-  private static final Logger logger = Logger.getLogger(CycleMassograms.class.getName());
+  public static AtomicLong allRequest = new AtomicLong();
+  public static AtomicLong cachedRequests = new AtomicLong();
 
   public static final double isolationWidthFactor = 5;
+  private static final Logger logger = Logger.getLogger(CycleMassograms.class.getName());
 
 
   public CycleMassograms(@NotNull List<Scan> ms2Scans) {
@@ -101,9 +108,8 @@ public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float
       }
     }
 
-    if (toExtract.size() != relevantMzs.length) {
-      logger.finest("Computing %d/%d traces".formatted(toExtract.size(), relevantMzs.length));
-    }
+    allRequest.getAndAdd(relevantMzs.length);
+    cachedRequests.getAndAdd(relevantMzs.length - toExtract.size());
 
     if (!toExtract.isEmpty()) {
       final ExtractMzRangesIonSeriesFunction extract = new ExtractMzRangesIonSeriesFunction(

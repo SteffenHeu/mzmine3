@@ -167,8 +167,6 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         CycleMassograms buffered = new CycleMassograms(ms2Cycle);
         massogramBuffer.put(buffered.rtRange(), buffered);
         cycleMassograms = buffered;
-      } else {
-        logger.finest("Buffer precomputed");
       }
 
       final double[] relevantMzs = getRelevantMzs(feature);
@@ -213,9 +211,9 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         continue;
       }
 
-      logger.finest(
-          "Removed %d uncorrelated signals (%d -> %d)".formatted(relevantMzs.length - mzs.size(),
-              relevantMzs.length, mzs.size()));
+//      logger.finest(
+//          "Removed %d uncorrelated signals (%d -> %d)".formatted(relevantMzs.length - mzs.size(),
+//              relevantMzs.length, mzs.size()));
 
       final MsMsInfo closestMsMsInfo = ms2Cycle.getFirst().getMsMsInfo();
       final DDAMsMsInfoImpl msmsInfo = new DDAMsMsInfoImpl(
@@ -235,6 +233,11 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         return;
       }
     }
+
+    long cached = CycleMassograms.cachedRequests.get();
+    long total = CycleMassograms.allRequest.get();
+    logger.finest("Cached: %d, Total: %d".formatted(cached, total));
+
   }
 
   private void checkMassogramShape(Object2IntArrayMap<IonTimeSeries<?>> traceMaxIndices) {
@@ -277,9 +280,9 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       }
     }
 
-    logger.finest(
-        "Removing %d/%d peaks due to not matching mass isolation shapes.".formatted(toRemove.size(),
-            traceMaxIndices.size()));
+//    logger.finest(
+//        "Removing %d/%d peaks due to not matching mass isolation shapes.".formatted(toRemove.size(),
+//            traceMaxIndices.size()));
 
     toRemove.forEach(traceMaxIndices::removeInt);
   }
