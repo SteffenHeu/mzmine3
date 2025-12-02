@@ -278,10 +278,6 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
     final ImportFile[] filesToImport = AllSpectralDataImportParameters.skipAlreadyLoadedFiles(
         project, parameters);
 
-    if (filesToImport.length == 0) {
-      return ExitCode.OK;
-    }
-
     // after skipping already loaded
     if (checkDuplicateFilesInImportListAndProject(project, filesToImport)) {
       return ExitCode.ERROR;

@@ -36,7 +36,9 @@ import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
 import io.github.mzmine.datamodel.impl.SimplePseudoSpectrum;
+import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaCorrelationOptions;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
@@ -57,6 +59,7 @@ import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -99,6 +102,31 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         flist.getRawDataFiles().get(0));
   }
 
+  public static @Nullable List<Scan> getMs2CycleForFeature(@NotNull final Feature feature,
+      List<? extends Scan> ms1Scans, List<Scan> ms2Scans) {
+    final Scan bestMs1 = feature.getRepresentativeScan();
+    final int bestMs1Index = BinarySearch.binarySearch(bestMs1.getRetentionTime(),
+        DefaultTo.CLOSEST_VALUE, ms1Scans.size(), i -> ms1Scans.get(i).getRetentionTime());
+    final int otherMs1Index =
+        bestMs1Index > 0 ? bestMs1Index - 1 : Math.min(bestMs1Index + 1, ms1Scans.size() - 1);
+    final float ms2RtRangeStart = ms1Scans.get(Math.min(bestMs1Index, otherMs1Index))
+        .getRetentionTime();
+    final float ms2RtRangeEnd = ms1Scans.get(Math.max(bestMs1Index, otherMs1Index))
+        .getRetentionTime();
+    if (bestMs1Index - otherMs1Index == 0) {
+      return null;
+    }
+    final IndexRange ms2CycleIndices = BinarySearch.indexRange(ms2RtRangeStart, ms2RtRangeEnd,
+        ms2Scans, Scan::getRetentionTime);
+    final List<Scan> ms2Cycle = ms2CycleIndices.sublist(ms2Scans);// todo create copy?
+
+    if (ms2Cycle.size() < 50) {
+      throw new RuntimeException(
+          "Sliding mz window DIA selected, but less than 50 scans in a cycle. Are you sure this is the correct DIA mode?");
+    }
+    return ms2Cycle;
+  }
+
   @Override
   public void process() {
     final RawDataFile file = flist.getRawDataFile(0);
@@ -139,6 +167,8 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         CycleMassograms buffered = new CycleMassograms(ms2Cycle);
         massogramBuffer.put(buffered.rtRange(), buffered);
         cycleMassograms = buffered;
+      } else {
+        logger.finest("Buffer precomputed");
       }
 
       final double[] relevantMzs = getRelevantMzs(feature);
@@ -159,30 +189,99 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
           cycleMassograms.isolationCenter(1) - cycleMassograms.isolationCenter(0);
       final int maxToleranceWindow = (int) Math.ceil((isolationWidth / 2) / quadStep);
 
-      logger.finest("Searching in scans %d (%.2f) - %d (%.2f) with tolerance window %d".formatted(
+      /*logger.finest("Searching in scans %d (%.2f) - %d (%.2f) with tolerance window %d".formatted(
           indexRange.min(), cycleMassograms.isolationRange(indexRange.min()).upper(),
           indexRange.maxInclusive(),
-          cycleMassograms.isolationRange(indexRange.maxInclusive()).lower(), maxToleranceWindow));
+          cycleMassograms.isolationRange(indexRange.maxInclusive()).lower(), maxToleranceWindow));*/
 
       final Object2IntArrayMap<IonTimeSeries<?>> traceMaxIndices = getTraceMaxIndices(
           closestIsolationIndex, indexRange, maxToleranceWindow, cycleMassograms, relevantMzs);
 
-      DoubleArrayList mzs = new DoubleArrayList();
-      DoubleArrayList intensities = new DoubleArrayList();
+      final DoubleArrayList mzs = new DoubleArrayList();
+      final DoubleArrayList intensities = new DoubleArrayList();
       for (Entry<IonTimeSeries<?>> seriesEntry : traceMaxIndices.object2IntEntrySet()) {
         final ModularFeature mzFeature = new ModularFeature(dummy, file,
             seriesEntry.getKey().subSeries(temp, indexRange.min(), indexRange.maxExclusive()),
             FeatureStatus.MANUAL);
-        mzs.add(mzFeature.getMZ());
-        mzs.add(mzFeature.getHeight());
+        mzs.add(mzFeature.getMZ()); // mz average across a few points
+        // intensity from where the main feature is in the center of the isolation
+        intensities.add(seriesEntry.getKey().getIntensity(closestIsolationIndex));
       }
 
-      SimplePseudoSpectrum mzCorrelatedSpectrum = new SimplePseudoSpectrum(file, 2, feature.getRT(),
-          null, mzs.toDoubleArray(), intensities.toDoubleArray(),
-          feature.getRepresentativePolarity(), null, PseudoSpectrumType.LC_DIA);
+      if (mzs.isEmpty()) {
+        feature.setAllMS2FragmentScans(List.of());
+        continue;
+      }
+
+      logger.finest(
+          "Removed %d uncorrelated signals (%d -> %d)".formatted(relevantMzs.length - mzs.size(),
+              relevantMzs.length, mzs.size()));
+
+      final MsMsInfo closestMsMsInfo = ms2Cycle.getFirst().getMsMsInfo();
+      final DDAMsMsInfoImpl msmsInfo = new DDAMsMsInfoImpl(
+          cycleMassograms.isolationCenter(closestIsolationIndex), feature.getCharge(),
+          closestMsMsInfo.getActivationEnergy(), null, null, ms2Cycle.getFirst().getMSLevel(),
+          closestMsMsInfo.getActivationMethod(),
+          cycleMassograms.isolationRange(closestIsolationIndex).guava());
+      final SimplePseudoSpectrum mzCorrelatedSpectrum = new SimplePseudoSpectrum(file, 2,
+          feature.getRT(), msmsInfo, mzs.toDoubleArray(), intensities.toDoubleArray(),
+          feature.getRepresentativePolarity(), null,
+          pregrouping.value() == DiaCorrelationOptions.RT_CORRELATION
+              ? PseudoSpectrumType.SLIDING_MZ_RT_CORR : PseudoSpectrumType.SLIDING_MZ_NO_RT);
       feature.setAllMS2FragmentScans(List.of(mzCorrelatedSpectrum));
       processed++;
+
+      if (isCanceled()) {
+        return;
+      }
     }
+  }
+
+  private void checkMassogramShape(Object2IntArrayMap<IonTimeSeries<?>> traceMaxIndices) {
+
+    final List<IonTimeSeries<?>> toRemove = new ArrayList<>();
+    for (Entry<IonTimeSeries<?>> seriesMax : traceMaxIndices.object2IntEntrySet()) {
+      final int maxIndex = seriesMax.getIntValue();
+      final IonTimeSeries<?> series = seriesMax.getKey();
+
+      final double maxIntensity = series.getIntensity(maxIndex);
+      boolean shapeCheck = true;
+      double prevIntensity = maxIntensity;
+      for (int i = maxIndex - 1; i >= maxIndex - 2 && i > 0; i--) {
+        final double currentIntensity = series.getIntensity(i);
+        if (currentIntensity > prevIntensity) {
+          shapeCheck = false;
+          break;
+        }
+        prevIntensity = currentIntensity;
+      }
+
+      if (!shapeCheck) {
+        toRemove.add(series);
+        continue;
+      }
+
+      prevIntensity = maxIntensity;
+      for (int i = maxIndex + 1; i <= maxIndex + 2 && i < series.getNumberOfValues(); i++) {
+        final double currentIntensity = series.getIntensity(i);
+        if (currentIntensity > prevIntensity) {
+          shapeCheck = false;
+          break;
+        }
+        prevIntensity = currentIntensity;
+      }
+
+      if (!shapeCheck) {
+        toRemove.add(series);
+        continue;
+      }
+    }
+
+    logger.finest(
+        "Removing %d/%d peaks due to not matching mass isolation shapes.".formatted(toRemove.size(),
+            traceMaxIndices.size()));
+
+    toRemove.forEach(traceMaxIndices::removeInt);
   }
 
   private @NotNull Object2IntArrayMap<IonTimeSeries<?>> getTraceMaxIndices(
@@ -198,18 +297,19 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       // slope at current point
       final double intensityAtClosestIsolation = trace.getIntensity(closestIsolationIndex);
       final double leftSlope =
-          trace.getIntensity(closestIsolationIndex - 1) - intensityAtClosestIsolation;
+          intensityAtClosestIsolation - trace.getIntensity(Math.max(closestIsolationIndex - 1, 0));
       final double rightSlope =
-          intensityAtClosestIsolation - trace.getIntensity(closestIsolationIndex + 1);
+          trace.getIntensity(Math.min(closestIsolationIndex + 1, trace.getNumberOfValues() - 1))
+              - intensityAtClosestIsolation;
 
       int searchDirection;
-      if (leftSlope < 0 && rightSlope < 0) {
+      if (leftSlope > 0 && rightSlope > 0) {
         // increasing, search right
         searchDirection = 1;
-      } else if (leftSlope > 0 && rightSlope > 0) {
+      } else if (leftSlope < 0 && rightSlope < 0) {
         // decreasing, search left
         searchDirection = -1;
-      } else if (leftSlope < 0 && rightSlope > 0) {
+      } else if (leftSlope > 0 && rightSlope < 0) {
         // at maximum
         searchDirection = 0;
       } else {
@@ -217,11 +317,16 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         continue;
       }
 
+      if (searchDirection == 0) {
+        traceMaxIndices.put(trace, closestIsolationIndex);
+        continue;
+      }
+
       // get maximum
       double maxIntensity = intensityAtClosestIsolation;
       int maxIndex = closestIsolationIndex;
-      for (int i = closestIsolationIndex; i < indexRange.maxExclusive() && i >= indexRange.min();
-          i += searchDirection) {
+      for (int i = closestIsolationIndex + searchDirection;
+          i < indexRange.maxExclusive() && i >= indexRange.min(); i += searchDirection) {
         final double intensity = trace.getIntensity(i);
         if (intensity > maxIntensity) {
           maxIntensity = intensity;
@@ -231,10 +336,18 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         }
       }
 
+      if (maxIndex == indexRange.min() || maxIndex == indexRange.maxInclusive()) {
+        // edge is maximum -> not valid
+        continue;
+      }
+
       if (Math.abs(maxIndex - closestIsolationIndex) <= maxToleranceWindow) {
         traceMaxIndices.put(trace, maxIndex);
       }
     }
+
+    checkMassogramShape(traceMaxIndices);
+
     return traceMaxIndices;
   }
 
@@ -246,45 +359,24 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
           SpectraMerging.defaultMs2MergeTol, IntensityMergingType.SUMMED,
           SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, null);
       relevantMzs = relevantPeaks[0];
-    } else {
+    } else if (ms2s.size() == 1) {
       relevantMzs = new double[ms2s.getFirst().getNumberOfDataPoints()];
       ms2s.getFirst().getMzValues(relevantMzs);
+    } else {
+      return new double[0];
     }
     return relevantMzs;
   }
 
-  private @Nullable List<Scan> getMs2CycleForFeature(@NotNull final Feature feature,
-      List<? extends Scan> ms1Scans, List<Scan> ms2Scans) {
-    final Scan bestMs1 = feature.getRepresentativeScan();
-    final int bestMs1Index = BinarySearch.binarySearch(bestMs1.getRetentionTime(),
-        DefaultTo.CLOSEST_VALUE, ms1Scans.size(), i -> ms1Scans.get(i).getRetentionTime());
-    final int otherMs1Index =
-        bestMs1Index > 0 ? bestMs1Index - 1 : Math.min(bestMs1Index + 1, ms1Scans.size() - 1);
-    final float ms2RtRangeStart = ms1Scans.get(Math.min(bestMs1Index, otherMs1Index))
-        .getRetentionTime();
-    final float ms2RtRangeEnd = ms1Scans.get(Math.max(bestMs1Index, otherMs1Index))
-        .getRetentionTime();
-    if (bestMs1Index - otherMs1Index == 0) {
-      return null;
-    }
-    final IndexRange ms2CycleIndices = BinarySearch.indexRange(ms2RtRangeStart, ms2RtRangeEnd,
-        ms2Scans, Scan::getRetentionTime);
-    final List<Scan> ms2Cycle = ms2CycleIndices.sublist(ms2Scans);// todo create copy?
-
-    if (ms2Cycle.size() < 50) {
-      throw new RuntimeException(
-          "Sliding mz window DIA selected, but less than 50 scans in a cycle. Are you sure this is the correct DIA mode?");
-    }
-    return ms2Cycle;
-  }
-
   @Override
   public @NotNull String getTaskDescription() {
-    return "";
+    return processed == 0 ? "Applying MS2 pre grouping by %s.".formatted(
+        pregrouping.value().toString())
+        : "Filtering MS2s by sliding quad isolation for row %d/%d".formatted(processed, totalRows);
   }
 
   @Override
   public double getFinishedPercentage() {
-    return pregroupingTask.getFinishedPercentage() * 0.5;
+    return pregroupingTask.getFinishedPercentage() * 0.5 + ((double) processed / totalRows) * 0.5;
   }
 }

@@ -195,7 +195,7 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
 
   @Override
   protected @NotNull List<RawDataFile> getProcessedDataFiles() {
-    return getImportedRawDataFiles();
+    return files;
   }
 
   @Override
