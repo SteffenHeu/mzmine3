@@ -48,6 +48,7 @@ import io.github.mzmine.modules.io.import_rawdata_mzml.ConversionUtils;
 import io.github.mzmine.modules.io.import_rawdata_mzml.msdk.data.ChromatogramType;
 import io.github.mzmine.modules.io.import_rawdata_mzml.msdk.data.MzMLCV;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.BinaryData;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.CentroidOptions;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ChannelTrace;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ControlledVocabularyParameter;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.DataProviderGrpc;
@@ -461,7 +462,8 @@ public class Wiff2DataAccess implements AutoCloseable {
     GetSpectraRequest r = GetSpectraRequest.newBuilder().setSampleId(sample.getId())
         .setExperimentId(experiment.getId())
         .setRange(TimeRange.newBuilder().setStart(0d).setEnd(Double.MAX_VALUE))
-        .setConvertToCentroid(centroid).build();
+        .setConvertToCentroid(centroid)
+        .setCentroidOption(CentroidOptions.IntensitySumAbove50Percent).build();
     return dataProvider.getSpectra(r);
   }
 
