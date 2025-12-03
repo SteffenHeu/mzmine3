@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -601,12 +600,21 @@ public class FeatureTableContextMenu extends ContextMenu {
     showDiaMirror.visibleProperty().bind(hasIonMobilityData);
     showDiaMirror.setOnAction(e -> showDiaMirror());
 
-    final MenuItem showMSMSMirrorItem = new ConditionalMenuItem("Spectral mirror (2 rows)",
-        () -> selectedRows.size() == 2 && getNumberOfRowsWithFragmentScans(selectedRows) == 2);
+    final MenuItem showMSMSMirrorItem = new ConditionalMenuItem("Spectral mirror (2 rows/features)",
+        () -> (selectedRows.size() == 2 && getNumberOfRowsWithFragmentScans(selectedRows) == 2)
+            || twoFeaturesHaveFragmentScans());
     showMSMSMirrorItem.setOnAction(e -> {
       MirrorScanWindowFXML mirrorScanTab = new MirrorScanWindowFXML();
-      mirrorScanTab.getController().setScans(selectedRows.get(0).getMostIntenseFragmentScan(),
-          selectedRows.get(1).getMostIntenseFragmentScan());
+      if (getNumberOfRowsWithFragmentScans(selectedRows) == 2) {
+        mirrorScanTab.getController().setScans(selectedRows.get(0).getMostIntenseFragmentScan(),
+            selectedRows.get(1).getMostIntenseFragmentScan());
+      } else if (twoFeaturesHaveFragmentScans()) {
+        mirrorScanTab.getController()
+            .setScans(selectedFeatures.getFirst().getMostIntenseFragmentScan(),
+                selectedFeatures.getLast().getMostIntenseFragmentScan());
+      } else {
+        return;
+      }
       mirrorScanTab.show();
     });
 
@@ -654,6 +662,11 @@ public class FeatureTableContextMenu extends ContextMenu {
             new SeparatorMenuItem(), showIsotopePatternItem, showCompoundDBResults,
             showSpectralDBResults, showMatchedLipidSignals, new SeparatorMenuItem(),
             showCorrelatedImageFeaturesItem);
+  }
+
+  private boolean twoFeaturesHaveFragmentScans() {
+    return selectedFeatures.size() == 2 && selectedFeatures.getFirst().hasMs2Fragmentation()
+        && selectedFeatures.getLast().hasMs2Fragmentation();
   }
 
   private @NotNull EventHandler<ActionEvent> open3DFeaturePlot() {
@@ -924,6 +937,7 @@ public class FeatureTableContextMenu extends ContextMenu {
   }
 
   private boolean siriusApiCheck() {
-    return selectedRow != null && selectedRows.stream().anyMatch(MzmineToSirius::isSiriusCompatible);
+    return selectedRow != null && selectedRows.stream()
+        .anyMatch(MzmineToSirius::isSiriusCompatible);
   }
 }

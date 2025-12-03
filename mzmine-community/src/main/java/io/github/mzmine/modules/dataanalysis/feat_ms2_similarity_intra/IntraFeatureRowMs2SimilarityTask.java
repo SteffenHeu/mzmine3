@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2025 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,6 +26,7 @@ package io.github.mzmine.modules.dataanalysis.feat_ms2_similarity_intra;
 
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
@@ -83,9 +83,10 @@ public class IntraFeatureRowMs2SimilarityTask extends AbstractTask {
 
   private final AtomicInteger processedRows = new AtomicInteger(0);
   private final ParameterSet parameters;
+  private final boolean oneScanPerFeature;
+  private final boolean splitByEnergy;
   private int totalRows = 0;
   private @Nullable ParallelTextWriterTask writerTask;
-  private final boolean splitByEnergy;
 
   public IntraFeatureRowMs2SimilarityTask(ParameterSet parameters,
       @NotNull Instant moduleCallDate) {
@@ -107,6 +108,8 @@ public class IntraFeatureRowMs2SimilarityTask extends AbstractTask {
         .createFilter();
     splitByEnergy = parameters.getValue(
         IntraFeatureRowMs2SimilarityParameters.splitByFragmentationEnergy);
+    oneScanPerFeature = parameters.getValue(
+        IntraFeatureRowMs2SimilarityParameters.oneScanPerFeature);
     this.parameters = parameters;
   }
 
@@ -150,7 +153,7 @@ public class IntraFeatureRowMs2SimilarityTask extends AbstractTask {
         setErrorMessage("Error during intra feature MS2 similarity export " + fileName);
         logger.log(Level.WARNING,
             "Error during compound annotations csv export of feature list: " + featureList.getName()
-            + ": " + e.getMessage(), e);
+                + ": " + e.getMessage(), e);
         if (writerTask != null) {
           writerTask.setWriteFinished();
         }
@@ -182,7 +185,9 @@ public class IntraFeatureRowMs2SimilarityTask extends AbstractTask {
    * @return number of resulting similarity pairs
    */
   public int processeRow(final FeatureListRow row) {
-    List<Scan> scans = row.getAllFragmentScans();
+    List<Scan> scans =
+        oneScanPerFeature ? row.streamFeatures().map(Feature::getMostIntenseFragmentScan)
+            .filter(Objects::nonNull).toList() : row.getAllFragmentScans();
     if (scans.isEmpty()) {
       return 0;
     }
