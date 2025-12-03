@@ -250,7 +250,8 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       final double maxIntensity = series.getIntensity(maxIndex);
       boolean shapeCheck = true;
       double prevIntensity = maxIntensity;
-      for (int i = maxIndex - 1; i >= maxIndex - 2 && i > 0; i--) {
+      final int numDecreasing = 2;
+      for (int i = maxIndex - 1; i >= maxIndex - numDecreasing && i > 0; i--) {
         final double currentIntensity = series.getIntensity(i);
         if (currentIntensity > prevIntensity) {
           shapeCheck = false;
@@ -265,7 +266,8 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       }
 
       prevIntensity = maxIntensity;
-      for (int i = maxIndex + 1; i <= maxIndex + 2 && i < series.getNumberOfValues(); i++) {
+      for (int i = maxIndex + 1; i <= maxIndex + numDecreasing && i < series.getNumberOfValues();
+          i++) {
         final double currentIntensity = series.getIntensity(i);
         if (currentIntensity > prevIntensity) {
           shapeCheck = false;
