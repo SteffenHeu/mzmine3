@@ -27,6 +27,7 @@ package io.github.mzmine.modules.io.import_rawdata_wiff2;
 import com.google.common.collect.Range;
 import com.google.protobuf.DoubleValue;
 import io.github.mzmine.datamodel.MassSpectrumType;
+import io.github.mzmine.datamodel.MetadataOnlyScan;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
@@ -34,6 +35,7 @@ import io.github.mzmine.datamodel.featuredata.OtherFeatureUtils;
 import io.github.mzmine.datamodel.features.types.otherdectectors.ChromatogramTypeType;
 import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
 import io.github.mzmine.datamodel.impl.SimpleScan;
+import io.github.mzmine.datamodel.impl.builders.SimpleBuildingScan;
 import io.github.mzmine.datamodel.msms.ActivationMethod;
 import io.github.mzmine.datamodel.msms.DIAMsMsInfoImpl;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
@@ -43,6 +45,7 @@ import io.github.mzmine.datamodel.otherdetectors.OtherFeature;
 import io.github.mzmine.datamodel.otherdetectors.OtherFeatureImpl;
 import io.github.mzmine.datamodel.otherdetectors.OtherTimeSeriesDataImpl;
 import io.github.mzmine.datamodel.otherdetectors.SimpleOtherTimeSeries;
+import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.ScanImportProcessorConfig;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.SimpleSpectralArrays;
 import io.github.mzmine.modules.io.import_rawdata_mzml.ConversionUtils;
 import io.github.mzmine.modules.io.import_rawdata_mzml.msdk.data.ChromatogramType;
@@ -108,10 +111,14 @@ public class Wiff2DataAccess implements AutoCloseable {
   @NotNull
   private final File file;
   private final boolean centroid;
+  @NotNull
+  private final ScanImportProcessorConfig scanProcessorConfig;
 
-  public Wiff2DataAccess(@NotNull final File file, final boolean centroid) throws IOException {
+  public Wiff2DataAccess(@NotNull final File file, final boolean centroid,
+      @NotNull final ScanImportProcessorConfig scanProcessorConfig) throws IOException {
     this.file = file;
     this.centroid = centroid;
+    this.scanProcessorConfig = scanProcessorConfig;
 
     final ClearcoreServer server = ClearcoreServer.getOrStart();
 
@@ -146,7 +153,7 @@ public class Wiff2DataAccess implements AutoCloseable {
 //        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\SCIEX\\ZenoTOF\\RawData\\4_Feces_SWATH-DIA\\Pos\\20230406_feces_SWATH_1-2_POS.wiff2"),
         // mrm
         "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\SCIEX\\QTRAP 7500\\240207_DBS_Berlin_Vergleichsproben\\Messung3.wiff2"),
-        true)) {
+        true, ScanImportProcessorConfig.createDefault())) {
 
       List<Sample> samples = access.getSamples();
       MemoryMapStorage storage = MemoryMapStorage.forRawDataFile();
@@ -459,15 +466,39 @@ public class Wiff2DataAccess implements AutoCloseable {
       return EmptyIterator.INSTANCE;
     }
 
-    GetSpectraRequest r = GetSpectraRequest.newBuilder().setSampleId(sample.getId())
-        .setExperimentId(experiment.getId())
-        .setRange(TimeRange.newBuilder().setStart(0d).setEnd(Double.MAX_VALUE))
-        .setConvertToCentroid(centroid)
-        .setCentroidOption(CentroidOptions.IntensitySumAbove50Percent).build();
+    final TimeRange timeRange = getTimeRangeFromProcessor();
+
+    GetSpectraRequest r = GetSpectraRequest.newBuilder() //
+        .setSampleId(sample.getId()) //
+        .setExperimentId(experiment.getId()) //
+        .setRange(timeRange).setConvertToCentroid(centroid) //
+        .setCentroidOption(CentroidOptions.IntensitySumAbove50Percent) //
+        .build();
     return dataProvider.getSpectra(r);
   }
 
-  SimpleScan spectrumToMzmineScan(@NotNull final RawDataFile file, @NotNull Sample sample,
+  private @NotNull TimeRange getTimeRangeFromProcessor() {
+    TimeRange timeRange;
+    if (scanProcessorConfig.scanFilter().isActiveFilter()) {
+      Range<Double> filterRtRange = scanProcessorConfig.scanFilter().getScanRTRange();
+      if (filterRtRange != null) {
+        timeRange = TimeRange.newBuilder().setStart(filterRtRange.lowerEndpoint())
+            .setEnd(filterRtRange.upperEndpoint()).build();
+      } else {
+        timeRange = getFullTimeRange();
+      }
+    } else {
+      timeRange = getFullTimeRange();
+    }
+    return timeRange;
+  }
+
+  /**
+   *
+   * @return Null if the spectrum does not match the {@link Wiff2DataAccess#scanProcessorConfig},
+   * the scan otherwise.
+   */
+  @Nullable SimpleScan spectrumToMzmineScan(@NotNull final RawDataFile file, @NotNull Sample sample,
       @NotNull Experiment experiment, @NotNull final Spectrum spectrum) {
 
     final int scanId = Integer.parseInt(spectrum.getId());
@@ -477,7 +508,17 @@ public class Wiff2DataAccess implements AutoCloseable {
 
     final MsMsInfo msmsInfo = getMsMsInfo(precursor, experiment);
 
-    final SimpleSpectralArrays spectralData = getSimpleSpectralArrays(spectrum);
+    final MetadataOnlyScan metadataScan = new SimpleBuildingScan(scanId, msLevel,
+        experiment.getIsPositivePolarityScan() ? PolarityType.POSITIVE : PolarityType.NEGATIVE,
+        !centroid && !experiment.getIsDataInCentroidFormat() ? MassSpectrumType.PROFILE
+            : MassSpectrumType.CENTROIDED, rt, -1, 0);
+
+    if (!scanProcessorConfig.scanFilter().matches(metadataScan)) {
+      return null;
+    }
+
+    final SimpleSpectralArrays spectralData = scanProcessorConfig.processor()
+        .processScan(metadataScan, getSimpleSpectralArrays(spectrum));
     final ScanWindow massRange = experiment.getMassRanges(0).getSelectionWindow();
 
     StringBuilder scanDesc = new StringBuilder();
@@ -487,12 +528,10 @@ public class Wiff2DataAccess implements AutoCloseable {
       scanDesc.append(" Zeno=").append(experiment.getZenoMode().toString());
     }
 
-    return new SimpleScan(file, scanId, msLevel, rt, msmsInfo, spectralData.mzs(),
-        spectralData.intensities(),
-        !centroid && !experiment.getIsDataInCentroidFormat() ? MassSpectrumType.PROFILE
-            : MassSpectrumType.CENTROIDED,
-        experiment.getIsPositivePolarityScan() ? PolarityType.POSITIVE : PolarityType.NEGATIVE,
-        scanDesc.toString(), Range.closed(massRange.getStart(), massRange.getEnd()));
+    return new SimpleScan(file, metadataScan.getScanNumber(), metadataScan.getMSLevel(),
+        metadataScan.getRetentionTime(), msmsInfo, spectralData.mzs(), spectralData.intensities(),
+        metadataScan.getSpectrumType(), metadataScan.getPolarity(), scanDesc.toString(),
+        Range.closed(massRange.getStart(), massRange.getEnd()));
 
   }
 

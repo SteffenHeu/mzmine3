@@ -31,7 +31,9 @@ import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.datamodel.otherdetectors.OtherDataFile;
 import io.github.mzmine.gui.preferences.VendorImportParameters;
+import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
+import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.ScanImportProcessorConfig;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Experiment;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Sample;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Spectrum;
@@ -59,14 +61,18 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
 
   private final File file;
   private final MZmineProject project;
+  @NotNull
+  private final ScanImportProcessorConfig scanProcessorConfig;
   private final List<RawDataFile> files = new ArrayList<>();
   private double progress = 0;
 
   public Wiff2ImportTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
-      final File file, ParameterSet parameters, MZmineProject project) {
-    super(storage, moduleCallDate, parameters, Wiff2ImportModule.class);
+      final File file, ParameterSet parameters, MZmineProject project,
+      @NotNull ScanImportProcessorConfig scanProcessorConfig) {
+    super(storage, moduleCallDate, parameters, AllSpectralDataImportModule.class);
     this.file = file;
     this.project = project;
+    this.scanProcessorConfig = scanProcessorConfig;
   }
 
   private static @NotNull String getDataFileName(File file, Sample sample, List<Sample> samples) {
@@ -112,7 +118,7 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
     }
 
     final List<File> imported = new ArrayList<>();
-    try (var access = new Wiff2DataAccess(file, true)) {
+    try (var access = new Wiff2DataAccess(file, true, ScanImportProcessorConfig.createDefault())) {
       List<Sample> samples = access.getSamples();
       for (Sample sample : samples) {
         imported.add(new File(file.getParentFile(), getDataFileName(file, sample, samples)));
@@ -138,7 +144,7 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
 
     try (Wiff2DataAccess access = new Wiff2DataAccess(file,
         parameters.getEmbeddedParameterValue(AllSpectralDataImportParameters.vendorOptions)
-            .getValue(VendorImportParameters.applyVendorCentroiding))) {
+            .getValue(VendorImportParameters.applyVendorCentroiding), scanProcessorConfig)) {
 
       final List<Sample> samples = access.getSamples();
 
@@ -161,7 +167,9 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
             final Spectrum spectrum = spectra.next();
             final SimpleScan scan = access.spectrumToMzmineScan(rawDataFile, sample, experiment,
                 spectrum);
-            scans.add(scan);
+            if (scan != null) {
+              scans.add(scan);
+            }
           }
 
           final int experimentIndex = experiments.indexOf(experiment);
@@ -201,5 +209,10 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
   @Override
   public @NotNull List<RawDataFile> getImportedRawDataFiles() {
     return isFinished() ? files : List.of();
+  }
+
+  @Override
+  protected void addAppliedMethod() {
+    super.addAppliedMethod();
   }
 }
