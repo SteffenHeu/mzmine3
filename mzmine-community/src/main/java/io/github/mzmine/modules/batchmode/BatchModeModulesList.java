@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -68,7 +67,6 @@ import io.github.mzmine.modules.dataprocessing.filter_blanksubtraction_chromatog
 import io.github.mzmine.modules.dataprocessing.filter_clearannotations.ClearFeatureAnnotationsModule;
 import io.github.mzmine.modules.dataprocessing.filter_cropfilter.CropFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrModule;
-import io.github.mzmine.modules.dataprocessing.filter_diams2_nocorr.DiaMs2NoCorrModule;
 import io.github.mzmine.modules.dataprocessing.filter_duplicatefilter.DuplicateFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_extractscans.ExtractScansModule;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.FeatureFilterModule;
@@ -197,6 +195,7 @@ import io.github.mzmine.modules.visualization.spectra.msn_tree.MSnTreeVisualizer
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerModule;
 import io.github.mzmine.modules.visualization.twod.TwoDVisualizerModule;
 import io.github.mzmine.modules.visualization.vankrevelendiagram.VanKrevelenDiagramModule;
+import io.github.mzmine.util.reporting.jasper.ReportingModule;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -384,7 +383,6 @@ public class BatchModeModulesList {
           PrecursorPurityCheckerModule.class, //
           IntraFeatureRowMs2SimilarityModule.class, //
           DiaMs2CorrModule.class, //
-          DiaMs2NoCorrModule.class, //
           MaldiGroupMS2Module.class, //
           FormulaPredictionFeatureListModule.class, //
           IsotopePeakScannerModule.class, //
@@ -437,7 +435,12 @@ public class BatchModeModulesList {
            * {@link io.github.mzmine.modules.MZmineModuleCategory.MainCategory#OTHER}
            */
           TimsTOFMaldiAcquisitionModule.class, //
-          SimsefImagingSchedulerModule.class //
+          SimsefImagingSchedulerModule.class, //
+
+          /**
+           * {@link io.github.mzmine.modules.MZmineModuleCategory.MainCategory#TOOLS}
+           */
+          ReportingModule.class //
       ));
 
   // must be modifiable so we can add more modules for mzminepro

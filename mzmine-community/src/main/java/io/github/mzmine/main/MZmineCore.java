@@ -57,6 +57,9 @@ import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.io.SemverVersionReader;
 import io.github.mzmine.util.web.ProxyChangedEvent;
+import io.github.mzmine.util.web.ProxyTestUtils;
+import io.github.mzmine.util.web.ProxyUtils;
+import io.github.mzmine.util.web.proxy.FullProxyConfig;
 import io.mzio.events.AuthRequiredEvent;
 import io.mzio.events.EventService;
 import io.mzio.mzmine.startup.MZmineCoreArgumentParser;
@@ -128,7 +131,15 @@ public final class MZmineCore {
    * called.
    */
   public void startUp(@NotNull final MZmineCoreArgumentParser argsParser) {
+    ProxyTestUtils.logProxyState("Proxy on startup:");
+    ProxyUtils.applyConfig(FullProxyConfig.defaultConfig());
+    ProxyTestUtils.logProxyState("Proxy after default config:");
+
+    // this also changes proxy settings after load
     ArgsToConfigUtils.applyArgsToConfig(argsParser);
+
+    // so log state after load
+    ProxyTestUtils.logProxyState("Auto proxy after config loading:");
 
     CurrentUserService.subscribe(user -> {
       var nickname = user == null ? null : user.getNickname();
@@ -187,7 +198,7 @@ public final class MZmineCore {
         }
       }
       if (mzEvent instanceof ProxyChangedEvent pevent) {
-        ConfigService.getPreferences().setProxy(pevent.proxy());
+        ConfigService.getPreferences().setProxy(pevent.config());
       }
     });
   }
@@ -284,6 +295,7 @@ public final class MZmineCore {
     }
 
   }
+
 
   private static void launchGui(String[] args) {
     try {
@@ -387,12 +399,11 @@ public final class MZmineCore {
 
   /**
    *
-    * @return An unmodifiable copy of the currently initialized modules.
+   * @return An unmodifiable copy of the currently initialized modules.
    */
   public static Map<String, MZmineModule> getInitializedModules() {
     return Map.copyOf(getInstance().initializedModules);
   }
-
 
   @NotNull
   public static Optional<MZmineModule> getModuleForParameterSetIfUnique(ParameterSet parameterSet) {
@@ -407,23 +418,22 @@ public final class MZmineCore {
   @NotNull
   public static List<MZmineModule> getModulesForParameterSet(ParameterSet parameterSet) {
     final String definedName = parameterSet.getModuleNameAttribute();
-    final List<MZmineModule> matches = getInitializedModules().entrySet().stream()
-        .filter(entry -> {
-          final String className = entry.getKey();
-          final MZmineModule module = entry.getValue();
-          if (module == null) {
-            return false;
-          }
-          if (definedName != null && (definedName.equals(module.getName()) || definedName.equals(
-              className))) {
-            return true;
-          }
-          // check parameterset class
-          final ParameterSet moduleParameters = ConfigService.getConfiguration()
-              .getModuleParameters(module.getClass());
-          return moduleParameters != null && moduleParameters.getClass().getName()
-              .equals(parameterSet.getClass().getName());
-        }).map(Entry::getValue).toList();
+    final List<MZmineModule> matches = getInitializedModules().entrySet().stream().filter(entry -> {
+      final String className = entry.getKey();
+      final MZmineModule module = entry.getValue();
+      if (module == null) {
+        return false;
+      }
+      if (definedName != null && (definedName.equals(module.getName()) || definedName.equals(
+          className))) {
+        return true;
+      }
+      // check parameterset class
+      final ParameterSet moduleParameters = ConfigService.getConfiguration()
+          .getModuleParameters(module.getClass());
+      return moduleParameters != null && moduleParameters.getClass().getName()
+          .equals(parameterSet.getClass().getName());
+    }).map(Entry::getValue).toList();
     return matches;
   }
 
@@ -534,7 +544,6 @@ public final class MZmineCore {
     // newTasks);
     // currentProject.logProcessingStep(auditLogEntry);
   }
-
 
   /**
    * @return headless mode or JavaFX GUI
