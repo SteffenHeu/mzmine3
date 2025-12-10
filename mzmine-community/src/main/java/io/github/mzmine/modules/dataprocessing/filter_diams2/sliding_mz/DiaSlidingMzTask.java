@@ -43,6 +43,7 @@ import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaCorrelationOptions;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrTask;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.rt_corr.DiaMs2RtCorrParameters;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.parameters.parametertypes.submodules.ValueWithParameters;
@@ -59,7 +60,6 @@ import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -80,6 +80,7 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
   private final MZTolerance mzTol = MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA;
   private final MemoryMapStorage temp = MemoryMapStorage.forFeatureList();
   private final ModularFeatureList dummy;
+  private final double minFragmentIntensity;
   private int processed = 0;
 
   protected DiaSlidingMzTask(ModularFeatureList flist, DiaMs2CorrParameters mainParam,
@@ -93,6 +94,13 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
     scanSelection = mainParam.getValue(DiaMs2CorrParameters.ms2ScanSelection);
     pregrouping = parameters.getParameter(DiaSlidingMzParameters.pregrouping)
         .getValueWithParameters();
+
+    if (pregrouping.value() == DiaCorrelationOptions.RT_CORRELATION) {
+      minFragmentIntensity = pregrouping.parameters()
+          .getValue(DiaMs2RtCorrParameters.minMs2Intensity);
+    } else {
+      minFragmentIntensity = 500;
+    }
 
     pregroupingTask = pregrouping.value()
         .createLogicTask(flist, mainParam, pregrouping.parameters(),
@@ -240,53 +248,48 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
 
   }
 
-  private void checkMassogramShape(Object2IntArrayMap<IonTimeSeries<?>> traceMaxIndices) {
+  private boolean checkMassogramShape(IonTimeSeries<?> series, final int maxIndex) {
 
-    final List<IonTimeSeries<?>> toRemove = new ArrayList<>();
-    for (Entry<IonTimeSeries<?>> seriesMax : traceMaxIndices.object2IntEntrySet()) {
-      final int maxIndex = seriesMax.getIntValue();
-      final IonTimeSeries<?> series = seriesMax.getKey();
-
-      final double maxIntensity = series.getIntensity(maxIndex);
-      boolean shapeCheck = true;
-      double prevIntensity = maxIntensity;
-      final int numDecreasing = 2;
-      for (int i = maxIndex - 1; i >= maxIndex - numDecreasing && i > 0; i--) {
-        final double currentIntensity = series.getIntensity(i);
-        if (currentIntensity > prevIntensity) {
-          shapeCheck = false;
-          break;
-        }
-        prevIntensity = currentIntensity;
-      }
-
-      if (!shapeCheck) {
-        toRemove.add(series);
-        continue;
-      }
-
-      prevIntensity = maxIntensity;
-      for (int i = maxIndex + 1; i <= maxIndex + numDecreasing && i < series.getNumberOfValues();
-          i++) {
-        final double currentIntensity = series.getIntensity(i);
-        if (currentIntensity > prevIntensity) {
-          shapeCheck = false;
-          break;
-        }
-        prevIntensity = currentIntensity;
-      }
-
-      if (!shapeCheck) {
-        toRemove.add(series);
-        continue;
-      }
+    final double maxIntensity = series.getIntensity(maxIndex);
+    if (maxIntensity < minFragmentIntensity) {
+      return false;
     }
 
+    boolean shapeCheck = true;
+    double prevIntensity = maxIntensity;
+    final int numDecreasing = 2;
+    for (int i = maxIndex - 1; i >= maxIndex - numDecreasing && i > 0; i--) {
+      final double currentIntensity = series.getIntensity(i);
+      if (currentIntensity > prevIntensity) {
+        shapeCheck = false;
+        break;
+      }
+      prevIntensity = currentIntensity;
+    }
+
+    if (!shapeCheck) {
+      return false;
+    }
+
+    prevIntensity = maxIntensity;
+    for (int i = maxIndex + 1; i <= maxIndex + numDecreasing && i < series.getNumberOfValues();
+        i++) {
+      final double currentIntensity = series.getIntensity(i);
+      if (currentIntensity > prevIntensity) {
+        shapeCheck = false;
+        break;
+      }
+      prevIntensity = currentIntensity;
+    }
+
+    if (!shapeCheck) {
+      return false;
+    }
+    return true;
 //    logger.finest(
 //        "Removing %d/%d peaks due to not matching mass isolation shapes.".formatted(toRemove.size(),
 //            traceMaxIndices.size()));
 
-    toRemove.forEach(traceMaxIndices::removeInt);
   }
 
   private @NotNull Object2IntArrayMap<IonTimeSeries<?>> getTraceMaxIndices(
@@ -347,11 +350,12 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       }
 
       if (Math.abs(maxIndex - closestIsolationIndex) <= maxToleranceWindow) {
-        traceMaxIndices.put(trace, maxIndex);
+        if (checkMassogramShape(trace, maxIndex)) {
+          traceMaxIndices.put(trace, maxIndex);
+        }
       }
     }
 
-    checkMassogramShape(traceMaxIndices);
 
     return traceMaxIndices;
   }
