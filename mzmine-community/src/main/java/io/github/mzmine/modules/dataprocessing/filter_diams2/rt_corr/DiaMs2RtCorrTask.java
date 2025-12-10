@@ -392,7 +392,7 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
           .toArray(ValueLayout.JAVA_DOUBLE);
 
       final CorrelationData correlationData = DIA.corrFeatureShape(ms1Rts, ms1Intensities, rts,
-          ms2Intensity, minCorrPoints, 2, minMs2Intensity / 5);
+          ms2Intensity, minCorrPoints, minCorrPoints < 5 ? 1 : 2, minMs2Intensity / 5);
       if (correlationData == null || !correlationData.isValid()
           || correlationData.getPearsonR() < minPearson) {
         continue;

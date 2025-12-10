@@ -24,10 +24,14 @@
 
 package io.github.mzmine.modules.dataprocessing.id_patternsearch;
 
+import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
-import io.github.mzmine.parameters.parametertypes.BooleanParameter;
+import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.StringParameter;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import org.jetbrains.annotations.NotNull;
 
 public class PatternSearchAdvancedParameters extends SimpleParameterSet {
 
@@ -36,12 +40,47 @@ public class PatternSearchAdvancedParameters extends SimpleParameterSet {
       new StringParameter("New feature list with suffix",
           "Create a new feature list instead of adding results to the selected one."), false);
 
-  public static final BooleanParameter weightWithExplainedIntensity = new BooleanParameter(
-      "Weight score with explained intensity",
-      "if selected, the score obtained from the cosine similarity comparison\n"
-          + "(comparing intensities of matched signals) will be weighted with the quotient of found/expected isotope signals");
+  public static final ComboParameter<ScoringType> scoringType = new ComboParameter<>("Scoring type",
+      ScoringType.getDescriptions(), ScoringType.values(), ScoringType.ISOTOPE);
 
   public PatternSearchAdvancedParameters() {
-    super(newFlistWithSuffix, weightWithExplainedIntensity);
+    super(newFlistWithSuffix, scoringType);
+  }
+
+  enum ScoringType implements UniqueIdSupplier {
+    COSINE, COSINE_WEIGHTED, ISOTOPE;
+
+    @Override
+    public String toString() {
+      return switch (this) {
+        case COSINE -> "Cosine similarity";
+        case COSINE_WEIGHTED -> "Weighted cosine similarty";
+        case ISOTOPE -> "Isotope similarity";
+      };
+    }
+
+    public String getDescription() {
+      return switch (this) {
+        case COSINE -> "Cosine similarity (same es spectral similarity).";
+        case COSINE_WEIGHTED -> "Explained intensity weighted cosine similarity.";
+        case ISOTOPE -> "Intensity similarity of expected vs actual intensity.";
+      };
+    }
+
+    public static String getDescriptions() {
+      return Arrays.stream(ScoringType.values())
+          .map(s -> "%s: %s".formatted(s.toString(), s.getDescription()))
+          .collect(Collectors.joining("\n"));
+    }
+
+
+    @Override
+    public @NotNull String getUniqueID() {
+      return switch (this) {
+        case COSINE -> "cosine";
+        case COSINE_WEIGHTED -> "weighted_cosine";
+        case ISOTOPE -> "isotope_intensity";
+      };
+    }
   }
 }

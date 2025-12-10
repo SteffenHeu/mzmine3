@@ -24,6 +24,7 @@
 
 package io.github.mzmine.modules.dataprocessing.id_patternsearch;
 
+import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.Scan;
@@ -32,6 +33,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.impl.SimpleDataPoint;
 import io.github.mzmine.modules.MZmineModule;
+import io.github.mzmine.modules.dataprocessing.id_patternsearch.PatternSearchAdvancedParameters.ScoringType;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -73,7 +75,7 @@ public class PatternSearchTask extends AbstractFeatureListTask {
   private final File libraryFile;
   private final Integer minMatchedSignals;
   private final String suffix;
-  private final boolean weightWithExplainedIntensity;
+  private final ScoringType scoreType;
   @NotNull
   private final MZmineProject project;
   private FeatureList flist;
@@ -103,13 +105,14 @@ public class PatternSearchTask extends AbstractFeatureListTask {
 
     similarityFunction = new WeightedCosineSpectralSimilarity(
         WeightedCosineSpectralSimilarityParameters.of(Weights.INTENSITY, minScore,
-            HandleUnmatchedSignalOptions.KEEP_LIBRARY_SIGNALS));
+            HandleUnmatchedSignalOptions.KEEP_ALL_AND_MATCH_TO_ZERO));
 
-    final AdvancedParametersParameter<PatternSearchAdvancedParameters> advancedParam = parameters.getParameter(PatternSearchParameters.advanced);
-    weightWithExplainedIntensity = advancedParam.getValueOrDefault(
-        PatternSearchAdvancedParameters.weightWithExplainedIntensity, false);
-    suffix = advancedParam.getValueOrDefault(
-        PatternSearchAdvancedParameters.newFlistWithSuffix, null);
+    final AdvancedParametersParameter<PatternSearchAdvancedParameters> advancedParam = parameters.getParameter(
+        PatternSearchParameters.advanced);
+    scoreType = advancedParam.getValueOrDefault(PatternSearchAdvancedParameters.scoringType,
+        ScoringType.ISOTOPE);
+    suffix = advancedParam.getValueOrDefault(PatternSearchAdvancedParameters.newFlistWithSuffix,
+        null);
   }
 
   private static List<DataPoint[]> getAlignedDataPoints(SpectralSimilarity similarity) {
@@ -161,25 +164,35 @@ public class PatternSearchTask extends AbstractFeatureListTask {
             shiftedDataPoints[i] = new SimpleDataPoint(mzValue + feature.getMZ(), intensityValue);
           }
 
+          // match to the surrounding DP in the correlated spectrum to filter out some signals that are just noise
+          DataPoint[] featureSpectrumDp = ScanUtils.selectDataPointsByMass(
+              ScanUtils.extractDataPoints(featureSpectrum),
+              Range.closed(shiftedDataPoints[0].getMZ() - 2,
+                  shiftedDataPoints[shiftedDataPoints.length - 1].getMZ() + 2));
+
           SpectralSimilarity similarity = similarityFunction.getSimilarity(matchingTolerance,
               Math.min(minMatchedSignals, shiftedDataPoints.length), shiftedDataPoints,
-              ScanUtils.extractDataPoints(featureSpectrum));
+              featureSpectrumDp);
 
           if (similarity == null) {
             continue;
           }
 
-          if (weightWithExplainedIntensity) {
-            if (similarity.getScore() * similarity.getExplainedLibraryIntensity()
-                >= minScore) { // re-weight score
-              similarity = new SpectralSimilarity(similarity.getFunctionName(),
-                  similarity.getScore() * similarity.getExplainedLibraryIntensity(),
-                  similarity.getOverlap(), similarity.getLibrary(), similarity.getQuery(),
-                  getAlignedDataPoints(similarity));
-            } else {
-              similarity = null;
+          similarity = switch (scoreType) {
+            case COSINE -> similarity;
+            case COSINE_WEIGHTED -> {
+              if (similarity.getScore() * similarity.getExplainedLibraryIntensity()
+                  >= minScore) { // re-weight score
+                yield new SpectralSimilarity(similarity.getFunctionName(),
+                    similarity.getScore() * similarity.getExplainedLibraryIntensity(),
+                    similarity.getOverlap(), similarity.getLibrary(), similarity.getQuery(),
+                    getAlignedDataPoints(similarity));
+              } else {
+                yield null;
+              }
             }
-          }
+            case ISOTOPE -> isotopeSimilarity(similarity);
+          };
 
           if (similarity == null) {
             continue;
@@ -191,7 +204,7 @@ public class PatternSearchTask extends AbstractFeatureListTask {
               entry.getFields(), entry.getLibrary());
 
           annotations.add(
-              new SpectralDBAnnotation(matchedEntry, similarity, featureSpectrum, null, null,
+              new SpectralDBAnnotation(matchedEntry, similarity, featureSpectrum, null, null, null,
                   null));
         }
       }
@@ -204,6 +217,31 @@ public class PatternSearchTask extends AbstractFeatureListTask {
     if (suffix != null) {
       project.addFeatureList(flist);
     }
+  }
+
+  private SpectralSimilarity isotopeSimilarity(@NotNull SpectralSimilarity cosineSimilarity) {
+    @Nullable final DataPoint[][] aligned = cosineSimilarity.getAlignedDataPoints();
+    final double libraryTic = ScanUtils.getTIC(cosineSimilarity.getLibrary(), 0);
+    final double queryTic = ScanUtils.getTIC(cosineSimilarity.getAlignedDataPoints()[1], 0);
+
+    double unexplained = 0;
+    for (int i = 0; i < aligned[0].length; i++) {
+      final DataPoint library = aligned[0][i];
+      final DataPoint query = aligned[1][i];
+
+      final double libraryIntensity = library.getIntensity() / libraryTic;
+      final double queryIntensity = query.getIntensity() / queryTic;
+
+      unexplained += Math.abs(libraryIntensity - queryIntensity);
+    }
+
+    if (1 - unexplained < minScore) {
+      return null;
+    }
+
+    return new SpectralSimilarity("Isotope score", 1 - unexplained, cosineSimilarity.getOverlap(),
+        cosineSimilarity.getLibrary(), cosineSimilarity.getQuery(),
+        getAlignedDataPoints(cosineSimilarity));
   }
 
   /*@Nullable
