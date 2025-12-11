@@ -24,11 +24,14 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_diams2.no_corr;
 
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrModule;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
+import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class DiaMs2NoCorrParameters extends SimpleParameterSet {
 
@@ -38,8 +41,11 @@ public class DiaMs2NoCorrParameters extends SimpleParameterSet {
       May be useful to first pair high-confidence DIA-MS2s by the %s module and then add 
       additional MS2s to features without high quality MS2s.""".formatted(DiaMs2CorrModule.NAME));
 
+  public static final DoubleParameter minIntensity = new DoubleParameter("Minimum intensity", "",
+      ConfigService.getGuiFormats().intensityFormat(), 1E3, 0d, Double.POSITIVE_INFINITY);
+
   public DiaMs2NoCorrParameters() {
-    super(replaceExisting);
+    super(replaceExisting, minIntensity);
   }
 
   @Override
@@ -47,4 +53,16 @@ public class DiaMs2NoCorrParameters extends SimpleParameterSet {
     return IonMobilitySupport.SUPPORTED;
   }
 
+  @Override
+  public int getVersion() {
+    return 2;
+  }
+
+  @Override
+  public @Nullable String getVersionMessage(int version) {
+    return switch (version) {
+      case 2 -> "Added a minimum intensity threshold to retain signals in the pseudo MS2 spectrum";
+      default -> null;
+    };
+  }
 }

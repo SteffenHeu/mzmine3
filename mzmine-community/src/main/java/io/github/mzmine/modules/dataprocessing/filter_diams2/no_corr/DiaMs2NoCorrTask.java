@@ -44,6 +44,7 @@ import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrTask;
+import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.SimpleSpectralArrays;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.taskcontrol.operations.AbstractTaskSubProcessor;
@@ -70,6 +71,7 @@ public class DiaMs2NoCorrTask extends AbstractTaskSubProcessor {
   private final ScanSelection scanSelection;
   private final long totalItems;
   private final AtomicLong finishedItems = new AtomicLong(0);
+  private final double minIntensity;
 
   protected DiaMs2NoCorrTask(@NotNull final ModularFeatureList flist,
       DiaMs2CorrParameters mainParam, ParameterSet moduleParam,
@@ -77,6 +79,7 @@ public class DiaMs2NoCorrTask extends AbstractTaskSubProcessor {
     super(mainTask);
     this.flist = flist;
     replaceExisting = moduleParam.getValue(DiaMs2NoCorrParameters.replaceExisting);
+    minIntensity = moduleParam.getValue(DiaMs2NoCorrParameters.minIntensity);
     scanSelection = mainParam.getValue(DiaMs2CorrParameters.ms2ScanSelection);
 
     totalItems = (long) flist.getNumberOfRows() * flist.getNumberOfRawDataFiles();
@@ -187,7 +190,8 @@ public class DiaMs2NoCorrTask extends AbstractTaskSubProcessor {
                 ms2Frame.getMobilityScans().stream()
                     .filter(s -> mobilityRange.contains((float) s.getMobility()))
                     .map(MobilityScan::getMassList).toList(), SpectraMerging.pasefMS2MergeTol,
-                IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, 2);
+                IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, null,
+                minIntensity, 2);
 
             final SimplePseudoSpectrum ms2 = new SimplePseudoSpectrum(file, ms2Frame.getMSLevel(),
                 ms2Frame.getRetentionTime(), null, mzIntensity[0], mzIntensity[1],
@@ -201,11 +205,12 @@ public class DiaMs2NoCorrTask extends AbstractTaskSubProcessor {
             ms2.setMsMsInfo(builtMs2Info);
             pseudoSpectra.add(ms2);
           } else {
-
+            final SimpleSpectralArrays data = new SimpleSpectralArrays(ms2Scan).filterGreaterNoise(
+                minIntensity);
             final SimplePseudoSpectrum ms2 = new SimplePseudoSpectrum(file, ms2Scan.getMSLevel(),
-                ms2Scan.getRetentionTime(), null, ms2Scan.getMzValues(new double[0]),
-                ms2Scan.getIntensityValues(new double[0]), ms2Scan.getPolarity(),
-                "Pseudo spectrum (uncorrelated)", PseudoSpectrumType.UNCORRELATED);
+                ms2Scan.getRetentionTime(), null, data.mzs(), data.intensities(),
+                ms2Scan.getPolarity(), "Pseudo spectrum (uncorrelated)",
+                PseudoSpectrumType.UNCORRELATED);
             pseudoSpectra.add(ms2);
           }
           feature.setAllMS2FragmentScans(ImmutableList.copyOf(pseudoSpectra));
