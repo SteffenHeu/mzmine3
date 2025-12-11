@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -35,7 +34,6 @@ import io.github.mzmine.datamodel.featuredata.impl.StorageUtils;
 import io.github.mzmine.datamodel.featuredata.impl.SummedIntensityMobilitySeries;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.ModularFeature;
-import io.github.mzmine.datamodel.features.types.otherdectectors.AreaPercentType;
 import io.github.mzmine.datamodel.features.types.numbers.AreaType;
 import io.github.mzmine.datamodel.features.types.numbers.AsymmetryFactorType;
 import io.github.mzmine.datamodel.features.types.numbers.FwhmType;
@@ -45,6 +43,7 @@ import io.github.mzmine.datamodel.features.types.numbers.MZRangeType;
 import io.github.mzmine.datamodel.features.types.numbers.RTRangeType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.datamodel.features.types.numbers.TailingFactorType;
+import io.github.mzmine.datamodel.features.types.otherdectectors.AreaPercentType;
 import io.github.mzmine.datamodel.features.types.otherdectectors.ChromatogramTypeType;
 import io.github.mzmine.datamodel.features.types.otherdectectors.OtherFileType;
 import io.github.mzmine.datamodel.features.types.otherdectectors.RawTraceType;
@@ -284,13 +283,18 @@ public class FeatureDataUtils {
    * {@link IonMobilogramTimeSeries}, the intensities in one frame are summed.).
    */
   public static float calculateArea(IntensityTimeSeries series) {
-    if (series.getNumberOfValues() <= 1) {
+    return calculateArea(series, 0, series.getNumberOfValues());
+  }
+
+  public static float calculateArea(IntensityTimeSeries series, final int startInclusive,
+      final int endExclusive) {
+    if (series.getNumberOfValues() <= 1 || endExclusive - startInclusive <= 1) {
       return 0f;
     }
     float area = 0f;
     double lastIntensity = series.getIntensity(0);
     float lastRT = series.getRetentionTime(0);
-    for (int i = 1; i < series.getNumberOfValues(); i++) {
+    for (int i = startInclusive + 1; i < endExclusive; i++) {
       final double thisIntensity = series.getIntensity(i);
       final float thisRT = series.getRetentionTime(i);
       area += (thisRT - lastRT) * ((float) (thisIntensity + lastIntensity)) / 2.0;
@@ -361,8 +365,9 @@ public class FeatureDataUtils {
     if (rawTrace != null) {
       final OtherFeature preProcessed = featureData.getTimeSeriesData()
           .getPreProcessedFeatureForTrace(rawTrace);
-      if(preProcessed != null && preProcessed.get(AreaType.class) != null) {
-        feature.set(AreaPercentType.class, feature.get(AreaType.class) / preProcessed.get(AreaType.class));
+      if (preProcessed != null && preProcessed.get(AreaType.class) != null) {
+        feature.set(AreaPercentType.class,
+            feature.get(AreaType.class) / preProcessed.get(AreaType.class));
       }
     }
   }

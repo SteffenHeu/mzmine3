@@ -27,11 +27,16 @@ package io.github.mzmine.modules.dataprocessing.filter_diams2.sliding_mz;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
+import io.github.mzmine.datamodel.FeatureStatus;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.SimpleRange.SimpleDoubleRange;
 import io.github.mzmine.datamodel.data_access.EfficientDataAccess.ScanDataType;
+import io.github.mzmine.datamodel.featuredata.FeatureDataUtils;
 import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
 import io.github.mzmine.datamodel.featuredata.impl.BuildingIonSeries;
+import io.github.mzmine.datamodel.features.ModularFeature;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.datamodel.features.types.FeatureDataType;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -54,18 +59,18 @@ import org.jetbrains.annotations.Nullable;
  * constructor.
  */
 public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float> rtRange,
-                              @NotNull RangeMap<Double, @NotNull IonTimeSeries<?>> massograms,
+                              @NotNull RangeMap<Double, @NotNull ModularFeature> massograms,
                               double @NotNull [] isolationCenters,
-                              @NotNull List<@NotNull SimpleDoubleRange> isolationRanges) {
-
-  public static AtomicLong allRequest = new AtomicLong();
-  public static AtomicLong cachedRequests = new AtomicLong();
+                              @NotNull List<@NotNull SimpleDoubleRange> isolationRanges,
+                              ModularFeatureList dummyFlist) {
 
   public static final double isolationWidthFactor = 5;
   private static final Logger logger = Logger.getLogger(CycleMassograms.class.getName());
+  public static AtomicLong allRequest = new AtomicLong();
+  public static AtomicLong cachedRequests = new AtomicLong();
 
 
-  public CycleMassograms(@NotNull List<Scan> ms2Scans) {
+  public CycleMassograms(@NotNull List<Scan> ms2Scans, ModularFeatureList dummyFlist) {
 
     final List<SimpleDoubleRange> isolationRanges = new ArrayList<>();
     final double[] isolationCenters = new double[ms2Scans.size()];
@@ -89,21 +94,22 @@ public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float
 
     this(ms2Scans,
         Range.closed(ms2Scans.getFirst().getRetentionTime(), ms2Scans.getLast().getRetentionTime()),
-        TreeRangeMap.create(), isolationCenters, isolationRanges);
+        TreeRangeMap.create(), isolationCenters, isolationRanges, dummyFlist);
   }
 
-  public Double2ObjectMap<IonTimeSeries<?>> getTraces(final double[] relevantMzs,
+  public Double2ObjectMap<ModularFeature> getTraces(final double[] relevantMzs,
       final MZTolerance tolerance, @Nullable MemoryMapStorage storage) {
 
     final List<Range<Double>> toExtract = new ArrayList<>();
 
     for (double mz : relevantMzs) {
-      final IonTimeSeries<?> series = massograms.get(mz);
+      final ModularFeature series = massograms.get(mz);
       if (series == null) {
         Range<Double> range = SpectraMerging.createNewNonOverlappingRange(massograms,
             tolerance.getToleranceRange(mz));
         // need to put the actual range so we dont create overlaps due to them being absent
-        massograms.put(range, IonTimeSeries.EMPTY); // put empty since we cannot put null
+        massograms.put(range, new ModularFeature(dummyFlist, ms2Scans.getFirst().getDataFile(),
+            FeatureStatus.DETECTED)); // put empty since we cannot put null
         toExtract.add(range);
       }
     }
@@ -116,16 +122,19 @@ public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float
           ms2Scans.getFirst().getDataFile(), ms2Scans, toExtract, ScanDataType.MASS_LIST, null);
       @NotNull BuildingIonSeries[] buildingIonSeries = extract.get();
       List<? extends IonTimeSeries<? extends Scan>> result = Arrays.stream(buildingIonSeries)
+          // important to use full ion time series, so we can refer to the same index all the time
           .map(b -> b.toFullIonTimeSeries(storage, ms2Scans)).toList();
       for (int i = 0; i < result.size(); i++) {
-        massograms.put(toExtract.get(i), result.get(i));
+        ModularFeature massogram = massograms.get(RangeUtils.rangeCenter(toExtract.get(i)));
+        massogram.set(FeatureDataType.class, result.get(i));
+        FeatureDataUtils.recalculateIonSeriesDependingTypes(massogram,
+            FeatureDataUtils.DEFAULT_CENTER_FUNCTION, false);
       }
     }
 
-    final Double2ObjectMap<IonTimeSeries<?>> result = new Double2ObjectArrayMap<>(
-        relevantMzs.length);
+    final Double2ObjectMap<ModularFeature> result = new Double2ObjectArrayMap<>(relevantMzs.length);
     for (double mzs : relevantMzs) {
-      final IonTimeSeries<?> series = massograms.get(mzs);
+      final ModularFeature series = massograms.get(mzs);
       result.put(mzs, series);
     }
 
