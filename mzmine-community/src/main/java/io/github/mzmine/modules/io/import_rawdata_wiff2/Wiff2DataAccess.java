@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -67,6 +67,7 @@ import io.github.mzmine.modules.io.import_rawdata_wiff2.api.MrmXic;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Precursor;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Sample;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.ScanWindow;
+import io.github.mzmine.modules.io.import_rawdata_wiff2.api.SmoothingOptions;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.SourceFile;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.Spectrum;
 import io.github.mzmine.modules.io.import_rawdata_wiff2.api.TimeRange;
@@ -472,7 +473,9 @@ public class Wiff2DataAccess implements AutoCloseable {
         .setSampleId(sample.getId()) //
         .setExperimentId(experiment.getId()) //
         .setRange(timeRange).setConvertToCentroid(centroid) //
+        .setSmoothingOption(SmoothingOptions.Moderate) //
         .setCentroidOption(CentroidOptions.IntensitySumAbove50Percent) //
+        .setIncludeIsolatedPointsAsPeaks(false) //
         .build();
     return dataProvider.getSpectra(r);
   }
