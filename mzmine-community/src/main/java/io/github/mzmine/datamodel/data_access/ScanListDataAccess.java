@@ -54,7 +54,9 @@ public class ScanListDataAccess extends ScanDataAccess {
    */
   protected ScanListDataAccess(RawDataFile dataFile, ScanDataType type,
       @NotNull List<? extends Scan> scans) {
-    super(dataFile, type);
+    int length = scans.stream().mapToInt(s -> type == ScanDataType.RAW ? s.getNumberOfDataPoints()
+        : s.getMassList().getNumberOfDataPoints()).max().orElse(0);
+    super(dataFile, type, length);
     this.scans = scans;
     totalScans = scans.size();
   }

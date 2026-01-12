@@ -90,9 +90,9 @@ public class ExtractMzIsolationsTask extends AbstractTaskSubSupplier<List<Datase
       return List.of();
     }
 
-    final List<Scan> ms2Cycle = DiaSlidingMzTask.getMs2CycleForFeature(feature,
+    final List<Scan> ms2Cycle = DiaSlidingMzTask.getMs2CycleForRt(feature.getRT(),
         feature.getFeatureData().getSpectra(),
-        ms2Scans.getMatchingScans(feature.getRawDataFile().getScans()));
+        ms2Scans.getMatchingScans(feature.getRawDataFile().getScans()), null);
 //    final double isolationWidth =
 //        RangeUtils.rangeLength(fullMs2Cycle.getFirst().getMsMsInfo().getIsolationWindow())
 //            * CycleMassograms.isolationWidthFactor * 3; // dont divide by 2 to capture a bit more

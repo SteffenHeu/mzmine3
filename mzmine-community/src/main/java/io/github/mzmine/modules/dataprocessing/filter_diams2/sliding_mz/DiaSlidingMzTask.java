@@ -24,8 +24,10 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_diams2.sliding_mz;
 
-import com.google.common.collect.TreeRangeMap;
+import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.FeatureStatus;
+import io.github.mzmine.datamodel.MergedMassSpectrum;
+import io.github.mzmine.datamodel.MergedMassSpectrum.MergingType;
 import io.github.mzmine.datamodel.PseudoSpectrumType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
@@ -63,7 +65,10 @@ import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
@@ -113,28 +118,36 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         flist.getRawDataFiles().get(0));
   }
 
-  public static @Nullable List<Scan> getMs2CycleForFeature(@NotNull final Feature feature,
-      List<? extends Scan> ms1Scans, List<Scan> ms2Scans) {
-    final Scan bestMs1 = feature.getRepresentativeScan();
-    final int bestMs1Index = BinarySearch.binarySearch(bestMs1.getRetentionTime(),
-        DefaultTo.CLOSEST_VALUE, ms1Scans.size(), i -> ms1Scans.get(i).getRetentionTime());
-    final int otherMs1Index =
-        bestMs1Index > 0 ? bestMs1Index - 1 : Math.min(bestMs1Index + 1, ms1Scans.size() - 1);
-    final float ms2RtRangeStart = ms1Scans.get(Math.min(bestMs1Index, otherMs1Index))
-        .getRetentionTime();
-    final float ms2RtRangeEnd = ms1Scans.get(Math.max(bestMs1Index, otherMs1Index))
-        .getRetentionTime();
-    if (bestMs1Index - otherMs1Index == 0) {
-      return null;
-    }
+  public static @Nullable List<Scan> getMs2CycleForRt(final float rt, List<? extends Scan> ms1Scans,
+      List<Scan> ms2Scans, @Nullable MemoryMapStorage temp) {
+    final int bestMs1Index = BinarySearch.binarySearch(rt, DefaultTo.CLOSEST_VALUE, ms1Scans.size(),
+        i -> ms1Scans.get(i).getRetentionTime());
+
+    final int startIndex = Math.max(bestMs1Index - 1, 0);
+    final int endIndex = Math.min(bestMs1Index + 2, ms1Scans.size());
+
+    final double ms2RtRangeStart = ms1Scans.get(startIndex).getRetentionTime();
+    final double ms2RtRangeEnd = ms1Scans.get(endIndex).getRetentionTime();
+
     final IndexRange ms2CycleIndices = BinarySearch.indexRange(ms2RtRangeStart, ms2RtRangeEnd,
         ms2Scans, Scan::getRetentionTime);
-    final List<Scan> ms2Cycle = ms2CycleIndices.sublist(ms2Scans);// todo create copy?
+    final var threeMs2Cycles = ms2CycleIndices.sublist(ms2Scans);
 
-    if (ms2Cycle.size() < 50) {
+    if (threeMs2Cycles.size() < 50 * 3) {
       throw new RuntimeException(
           "Sliding mz window DIA selected, but less than 50 scans in a cycle. Are you sure this is the correct DIA mode?");
     }
+
+    Map<@Nullable Range<Double>, List<Scan>> groupedByWindow = threeMs2Cycles.stream()
+        .collect(Collectors.groupingBy(s -> s.getMsMsInfo().getIsolationWindow()));
+
+    var ms2Cycle = groupedByWindow.entrySet().stream().map(e -> {
+      MergedMassSpectrum merged = SpectraMerging.mergeSpectra(e.getValue(),
+          SpectraMerging.defaultMs2MergeTol, IntensityMergingType.SUMMED, MergingType.ALL_ENERGIES,
+          SpectraMerging.DEFAULT_CENTER_FUNCTION, temp);
+      return (Scan) merged;
+    }).sorted(Comparator.comparing(Scan::getRetentionTime)).toList();
+//    logger.finest("Merged for scan index " + bestMs1Index);
     return ms2Cycle;
   }
 
@@ -158,7 +171,8 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
 
     final List<FeatureListRow> rows = flist.getRowsCopy();
 
-    final TreeRangeMap<Float, CycleMassograms> massogramBuffer = TreeRangeMap.create();
+//    final TreeRangeMap<Float, CycleMassograms> massogramBuffer = TreeRangeMap.create();
+    final HashMap<Float, CycleMassograms> massogramBuffer = new HashMap<>();
 
     for (final FeatureListRow row : rows) {
       final Feature feature = row.getFeature(file);
@@ -167,16 +181,14 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         continue;
       }
 
-      final List<Scan> ms2Cycle = getMs2CycleForFeature(feature, ms1Scans, ms2Scans);
-      if (ms2Cycle == null) {
-        continue;
-      }
-
-      CycleMassograms cycleMassograms = massogramBuffer.get(
-          ms2Cycle.get(ms2Cycle.size() / 2).getRetentionTime());
+      CycleMassograms cycleMassograms = massogramBuffer.get(feature.getRT());
       if (cycleMassograms == null) {
+        final List<Scan> ms2Cycle = getMs2CycleForRt(feature.getRT(), ms1Scans, ms2Scans, temp);
+        if (ms2Cycle == null) {
+          continue;
+        }
         CycleMassograms buffered = new CycleMassograms(ms2Cycle, dummy);
-        massogramBuffer.put(buffered.rtRange(), buffered);
+        massogramBuffer.put(feature.getRT(), buffered);
         cycleMassograms = buffered;
       }
 
@@ -230,11 +242,11 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
 //          "Removed %d uncorrelated signals (%d -> %d)".formatted(relevantMzs.length - mzs.size(),
 //              relevantMzs.length, mzs.size()));
 
-      final MsMsInfo closestMsMsInfo = ms2Cycle.getFirst().getMsMsInfo();
+      final MsMsInfo closestMsMsInfo = cycleMassograms.ms2Scans().getFirst().getMsMsInfo();
       final DDAMsMsInfoImpl msmsInfo = new DDAMsMsInfoImpl(
           cycleMassograms.isolationCenter(closestIsolationIndex), feature.getCharge(),
-          closestMsMsInfo.getActivationEnergy(), null, null, ms2Cycle.getFirst().getMSLevel(),
-          closestMsMsInfo.getActivationMethod(),
+          closestMsMsInfo.getActivationEnergy(), null, null,
+          cycleMassograms.ms2Scans().getFirst().getMSLevel(), closestMsMsInfo.getActivationMethod(),
           cycleMassograms.isolationRange(closestIsolationIndex).guava());
       final SimplePseudoSpectrum mzCorrelatedSpectrum = new SimplePseudoSpectrum(file, 2,
           feature.getRT(), msmsInfo, mzs.toDoubleArray(), intensities.toDoubleArray(),
@@ -387,7 +399,7 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       // get maximum
       double maxIntensity = intensityAtClosestIsolation;
       int maxIndex = closestIsolationIndex;
-      for (int i = closestIsolationIndex + searchDirection;
+      for (int i = closestIsolationIndex;
           i < isolationIndexRange.maxExclusive() && i >= isolationIndexRange.min();
           i += searchDirection) {
         final double intensity = trace.getIntensity(i);

@@ -61,6 +61,22 @@ public abstract class ScanDataAccess implements Scan {
   protected int scanIndex = -1;
 
   /**
+   * Custom constructor for different length in case a {@link ScanListDataAccess} uses custom scans
+   * (e.g. merged scans).
+   *
+   * @param dataFile target data file to loop over all scans or mass lists
+   * @param type     processed or raw data
+   */
+  protected ScanDataAccess(RawDataFile dataFile, ScanDataType type, int length) {
+    this.dataFile = dataFile;
+    this.type = type;
+    // might even use the maximum number of data points in the selected scans
+    // but seems unnecessary
+    mzs = new double[length];
+    intensities = new double[length];
+  }
+
+  /**
    * The intended use of this memory access is to loop over all scans and access data points via
    * {@link #getMzValue(int)} and {@link #getIntensityValue(int)}
    *

@@ -54,15 +54,17 @@ public class ClearcoreServer {
   private ClearcoreServer() throws IOException {
     final File appsettings = FileAndPathUtil.resolveInExternalToolsDir(getAppSettingsPath());
     Map<String, String> o = JsonUtils.readValueOrThrow(appsettings);
-    port = Integer.parseInt(o.get("Port"));
+    port = Integer.parseInt(o.get("port"));
     address = o.get("Host");
 
-    if(address == null) {
+    if (address == null) {
       throw new RuntimeException("Cannot determine address of SCIEX clearcore service.");
     }
 
     final File dataAccessExe = FileAndPathUtil.resolveInExternalToolsDir(getDataAccessPath());
-    ProcessBuilder b = new ProcessBuilder(dataAccessExe.getAbsolutePath(), "--console").inheritIO();
+    ProcessBuilder b = new ProcessBuilder(dataAccessExe.getAbsolutePath(),
+        "--console").redirectErrorStream(true);
+    b = b.directory(dataAccessExe.getParentFile());
     process = b.start();
   }
 
@@ -78,7 +80,7 @@ public class ClearcoreServer {
   }
 
   public static void terminateSeverIfRunning() {
-    if(getInstance() != null) {
+    if (getInstance() != null) {
       getInstance().terminateClearcoreInstance();
     }
   }
