@@ -64,6 +64,7 @@ public class ClearcoreServer {
 
     final File dataAccessExe = FileAndPathUtil.resolveInExternalToolsDir(getDataAccessPath());
     ProcessBuilder b = new ProcessBuilder(dataAccessExe.getAbsolutePath(), "--console").inheritIO();
+    b.directory(dataAccessExe.getParentFile());
     process = b.start();
   }
 
