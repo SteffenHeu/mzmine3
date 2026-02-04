@@ -10,11 +10,11 @@ import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public final class RtStandard {
+public class RtStandard {
 
-  private final HashMap<@NotNull RawDataFile, @Nullable FeatureListRow> standards; // must be a hash map. supports null values.
-  private Float medianRt = null;
-  private Float avgRt = null;
+  protected final HashMap<@NotNull RawDataFile, @Nullable FeatureListRow> standards; // must be a hash map. supports null values.
+  protected Float medianRt = null;
+  protected Float avgRt = null;
 
   public RtStandard(HashMap<RawDataFile, FeatureListRow> standards) {
     this.standards = standards;
@@ -67,4 +67,8 @@ public final class RtStandard {
     return "RtStandard[" + "standards=" + standards + ']';
   }
 
+  public double getAverageMz() {
+    return standards().values().stream().filter(Objects::nonNull)
+        .mapToDouble(FeatureListRow::getAverageMZ).average().orElse(0);
+  }
 }

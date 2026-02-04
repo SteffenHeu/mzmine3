@@ -122,7 +122,7 @@ public class MultiLinearRtCorrectionFunction extends AbstractRtCorrectionFunctio
   }
 
   @NotNull
-  private PolynomialSplineFunction getInterpolatorIteratively(double initialBandwidth,
+  protected PolynomialSplineFunction getInterpolatorIteratively(double initialBandwidth,
       DoubleArrayList calibratedRtValues, DoubleArrayList thisRtValues) {
     final RawDataFile file = getRawDataFilePlaceholder().getMatchingFile();
     final double[] subtracted = AsymmetricLeastSquaresCorrection.subtract(

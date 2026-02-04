@@ -40,7 +40,7 @@ import org.w3c.dom.Element;
  * {@link MZmineModule} interface for retention time correction modules.
  */
 public sealed interface RawFileRtCorrectionModule extends MZmineModule, UniqueIdSupplier permits
-    MultilinearRawFileRtCorrectionModule {
+    MultilinearRawFileRtCorrectionModule, MultilinearStandardRtCorrectionModule {
 
   /**
    * Creates an interpolated RT correction function based on two other correction functions. The two
@@ -69,11 +69,13 @@ public sealed interface RawFileRtCorrectionModule extends MZmineModule, UniqueId
    *                          function for.
    * @param rtSortedStandards The standards. Must contain the standards from the specific raw file
    * @param parameters        The parameters of this {@link RawFileRtCorrectionModule}
+   * @param mainParameters
    * @return A new correction function.
    */
   AbstractRtCorrectionFunction createFromStandards(@NotNull final FeatureList flist,
       @NotNull final List<@NotNull RtStandard> rtSortedStandards,
-      @NotNull final RTMeasure rtMeasure, @NotNull final ParameterSet parameters);
+      @NotNull final RTMeasure rtMeasure, @NotNull final ParameterSet parameters,
+      @NotNull ParameterSet mainParameters);
 
   /**
    * Loads a function from XML during project load.

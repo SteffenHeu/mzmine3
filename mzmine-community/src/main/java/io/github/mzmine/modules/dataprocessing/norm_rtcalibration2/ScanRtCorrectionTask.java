@@ -128,14 +128,15 @@ class ScanRtCorrectionTask extends AbstractTask {
   static @NotNull List<AbstractRtCorrectionFunction> interpolateMissingCalibrations(
       List<FeatureList> referenceFlists, List<FeatureList> allFeatureLists, MetadataTable metadata,
       List<RtStandard> monotonousStandards, RawFileRtCorrectionModule correctionModule,
-      @NotNull final RTMeasure rtMeasure, ParameterSet correctionModuleParameters) {
+      @NotNull final RTMeasure rtMeasure, ParameterSet correctionModuleParameters,
+      ParameterSet mainParameters) {
     if (monotonousStandards.isEmpty()) {
       return List.of();
     }
 
     final Map<RawDataFile, AbstractRtCorrectionFunction> referenceCalibrations = referenceFlists.stream()
         .map(flist -> correctionModule.createFromStandards(flist, monotonousStandards, rtMeasure,
-            correctionModuleParameters))
+            correctionModuleParameters, mainParameters))
         .collect(Collectors.toMap(AbstractRtCorrectionFunction::getRawDataFile, cali -> cali));
 
     final List<AbstractRtCorrectionFunction> allCalibrations = new ArrayList<>(
@@ -407,7 +408,7 @@ class ScanRtCorrectionTask extends AbstractTask {
 
     final List<AbstractRtCorrectionFunction> allCalibrations = interpolateMissingCalibrations(
         referenceFlistsByNumRows, flists, project.getProjectMetadata(), monotonousStandards,
-        calibrationModule, rtMeasure, calibrationModuleParameters);
+        calibrationModule, rtMeasure, calibrationModuleParameters, parameters);
 
     ApplyRtCorrectionToRawFileModule.applyOnThisThread(allCalibrations);
 

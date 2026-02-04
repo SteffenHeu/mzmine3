@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -12,6 +11,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -24,21 +24,24 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.methods;
 
-import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnum;
+import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.features.compoundannotations.CompoundDBAnnotation;
+import io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.RtStandard;
+import java.util.HashMap;
+import org.jetbrains.annotations.NotNull;
 
-public enum RtCorrectionFunctions implements ModuleOptionsEnum<RawFileRtCorrectionModule> {
-  MultiLinearCorrection, MultilinearStandardCorrection;
+class InternalRtStandard extends RtStandard {
 
-  @Override
-  public Class<? extends RawFileRtCorrectionModule> getModuleClass() {
-    return switch (this) {
-      case MultiLinearCorrection -> MultilinearRawFileRtCorrectionModule.class;
-      case MultilinearStandardCorrection -> MultilinearStandardRtCorrectionModule.class;
-    };
+  @NotNull
+  private final CompoundDBAnnotation internalStd;
+
+  InternalRtStandard(HashMap<RawDataFile, FeatureListRow> standards, CompoundDBAnnotation internalStd) {
+    super(standards);
+    this.internalStd = internalStd;
+    float internalStdRt = internalStd.getRT();
+    this.avgRt = internalStdRt;
+    this.medianRt = internalStdRt;
   }
 
-  @Override
-  public String getStableId() {
-    return getModuleInstance().getUniqueID();
-  }
 }

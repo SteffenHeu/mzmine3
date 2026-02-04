@@ -56,7 +56,7 @@ public final class MultilinearRawFileRtCorrectionModule implements RawFileRtCorr
   @Override
   public AbstractRtCorrectionFunction createFromStandards(@NotNull FeatureList flist,
       @NotNull List<@NotNull RtStandard> rtSortedStandards, @NotNull final RTMeasure rtMeasure,
-      @NotNull ParameterSet parameters) {
+      @NotNull ParameterSet parameters, @NotNull ParameterSet mainParameters) {
     return new MultiLinearRtCorrectionFunction(flist, rtSortedStandards,
         parameters.getValue(MultilinearRawFileRtCalibrationParameters.correctionBandwidth),
         rtMeasure);

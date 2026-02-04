@@ -161,7 +161,7 @@ public class ScanRtCorrectionPreviewPane extends AbstractPreviewPane<List<Featur
     }
     final List<AbstractRtCorrectionFunction> allCalibrations = interpolateMissingCalibrations(
         referenceFlistsByNumRows, flists, ProjectService.getMetadata(), monotonousStandards,
-        calibrationModule, rtMeasure, calibrationModuleParameters);
+        calibrationModule, rtMeasure, calibrationModuleParameters, parameters);
 
     // use different shapes to make it more obvious which belong together
     final DefaultDrawingSupplier drawingSupplier = JFreeChartUtils.createDefaultDrawingSupplier();
