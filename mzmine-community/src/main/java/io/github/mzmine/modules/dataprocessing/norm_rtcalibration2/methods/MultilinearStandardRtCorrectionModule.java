@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -92,9 +93,6 @@ public final class MultilinearStandardRtCorrectionModule implements RawFileRtCor
     final List<CompoundDBAnnotation> annotations = standardsResult.annotations().stream()
         .filter(a -> a.getPrecursorMZ() != null && a.getRT() != null)
         .sorted(Comparator.comparingDouble(CompoundDBAnnotation::getPrecursorMZ)).toList();
-
-    final List<RtStandard> mzSortedStandards = rtSortedStandards.stream()
-        .sorted(Comparator.comparingDouble(RtStandard::getAverageMz)).toList();
 
     for (CompoundDBAnnotation annotation : annotations) {
       final IndexRange matchingRts = BinarySearch.indexRange(
