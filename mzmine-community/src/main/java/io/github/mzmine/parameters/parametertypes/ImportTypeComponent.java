@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,6 +27,7 @@ package io.github.mzmine.parameters.parametertypes;
 
 import java.util.ArrayList;
 import java.util.List;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -34,6 +35,7 @@ import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.BorderPane;
 import javafx.util.StringConverter;
+import org.jetbrains.annotations.NotNull;
 
 public class ImportTypeComponent extends BorderPane {
 
@@ -43,8 +45,8 @@ public class ImportTypeComponent extends BorderPane {
     super();
 
     table.setEditable(true);
-    setMaxHeight(400);
-    setMinHeight(200);
+    setMaxHeight(300);
+    setMinHeight(60);
 
     final TableColumn<ImportType<?>, Boolean> importColumn = new TableColumn<>("Import");
     importColumn.setCellFactory(column -> new CheckBoxTableCell());
@@ -73,6 +75,7 @@ public class ImportTypeComponent extends BorderPane {
 
     table.getColumns().addAll(importColumn, nameInFile, dataTypeColumn);
 
+    table.prefHeightProperty().bind(Bindings.size(table.getItems()).multiply(35).add(40));
     setCenter(table);
   }
 
@@ -80,7 +83,7 @@ public class ImportTypeComponent extends BorderPane {
     return new ArrayList<>(table.getItems());
   }
 
-  public void setValue(List<ImportType<?>> value) {
+  public void setValue(List<@NotNull ImportType<?>> value) {
     table.getItems().clear();
     if (value == null) {
       return;
