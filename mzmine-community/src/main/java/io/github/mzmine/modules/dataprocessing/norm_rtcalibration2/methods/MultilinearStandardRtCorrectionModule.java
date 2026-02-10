@@ -25,6 +25,8 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.methods;
 
+import static io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.ScanRtCorrectionTask.removeNonMonotonousStandards;
+
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.compoundannotations.CompoundDBAnnotation;
@@ -72,48 +74,9 @@ public final class MultilinearStandardRtCorrectionModule implements RawFileRtCor
       @NotNull List<@NotNull RtStandard> rtSortedStandards, @NotNull final RTMeasure rtMeasure,
       @NotNull ParameterSet correctionModuleParameters, @NotNull ParameterSet mainParameters) {
 
-    File standardsFile = correctionModuleParameters.getValue(
-        MultilinearStandardRtCalibrationParameters.standardsList);
-    List<ImportType<?>> types = correctionModuleParameters.getValue(
-        MultilinearStandardRtCalibrationParameters.importTypes);
-    final Character separator = CSVParsingUtils.autoDetermineSeparatorDefaultFallback(
-        standardsFile);
-    CompoundDbLoadResult standardsResult = CSVParsingUtils.getAnnotationsFromCsvFile(standardsFile,
-        separator.toString(), types, null);
-
-    final MZTolerance mzTol = mainParameters.getValue(RTCorrectionParameters.MZTolerance);
-    final RTTolerance rtTol = mainParameters.getValue(RTCorrectionParameters.RTTolerance);
-
-    if (standardsResult.status() != TaskStatus.FINISHED) {
-      throw new IllegalStateException(standardsResult.errorMessage());
-    }
-
-    final List<RtStandard> internalStandards = new ArrayList<>();
-
-    final List<CompoundDBAnnotation> annotations = standardsResult.annotations().stream()
-        .filter(a -> a.getPrecursorMZ() != null && a.getRT() != null)
-        .sorted(Comparator.comparingDouble(CompoundDBAnnotation::getPrecursorMZ)).toList();
-
-    for (CompoundDBAnnotation annotation : annotations) {
-      final IndexRange matchingRts = BinarySearch.indexRange(
-          rtTol.getToleranceRange(annotation.getRT()), rtSortedStandards, s -> s.getRt(rtMeasure));
-
-      final double annotationMz = annotation.getPrecursorMZ();
-      final RtStandard bestStandard = matchingRts.sublist(rtSortedStandards).stream()
-          .min(Comparator.comparingDouble(std -> {
-            final double stdMz = std.getAverageMz();
-            return Math.abs(stdMz - annotationMz);
-          })).orElse(null);
-      if (bestStandard == null) {
-        continue;
-      }
-      internalStandards.add(new InternalRtStandard(bestStandard.standards(), annotation));
-    }
-
-    return new MultiLinearRtCorrectionFunction(flist,
-        internalStandards.stream().sorted(Comparator.comparingDouble(s -> s.getRt(rtMeasure)))
-            .toList(), correctionModuleParameters.getValue(
-        MultilinearRawFileRtCalibrationParameters.correctionBandwidth), rtMeasure);
+    return new MultiLinearRtCorrectionFunction(flist, rtSortedStandards,
+        correctionModuleParameters.getValue(
+            MultilinearRawFileRtCalibrationParameters.correctionBandwidth), rtMeasure);
   }
 
   @Override
@@ -138,5 +101,66 @@ public final class MultilinearStandardRtCorrectionModule implements RawFileRtCor
   @Override
   public @Nullable Class<? extends ParameterSet> getParameterSetClass() {
     return MultilinearStandardRtCalibrationParameters.class;
+  }
+
+  @Override
+  public @NotNull List<RtStandard> prefilterStandards(@NotNull List<RtStandard> rtSortedStandards,
+      @NotNull List<FeatureList> referenceFlists, @NotNull ParameterSet mainParameters,
+      @NotNull ParameterSet correctionModuleParameters) {
+
+    final RTMeasure rtMeasure = mainParameters.getValue(RTCorrectionParameters.rtMeasure);
+
+    File standardsFile = correctionModuleParameters.getValue(
+        MultilinearStandardRtCalibrationParameters.standardsList);
+    List<ImportType<?>> types = correctionModuleParameters.getValue(
+        MultilinearStandardRtCalibrationParameters.importTypes);
+    final Character separator = CSVParsingUtils.autoDetermineSeparatorDefaultFallback(
+        standardsFile);
+    CompoundDbLoadResult standardsResult = CSVParsingUtils.getAnnotationsFromCsvFile(standardsFile,
+        separator.toString(), types, null);
+
+    final MZTolerance mzTol = mainParameters.getValue(RTCorrectionParameters.MZTolerance);
+    final RTTolerance rtTol = mainParameters.getValue(RTCorrectionParameters.RTTolerance);
+
+    if (standardsResult.status() != TaskStatus.FINISHED) {
+      throw new IllegalStateException(standardsResult.errorMessage());
+    }
+
+    final List<RtStandard> internalStandards = new ArrayList<>();
+
+    final List<CompoundDBAnnotation> annotations = standardsResult.annotations().stream()
+        .filter(a -> a.getPrecursorMZ() != null && a.getRT() != null)
+        .sorted(Comparator.comparingDouble(CompoundDBAnnotation::getPrecursorMZ)).toList();
+
+    for (CompoundDBAnnotation annotation : annotations) {
+      if (annotation.getPrecursorMZ() == null || annotation.getRT() == null) {
+        continue;
+      }
+
+      final IndexRange matchingRts = BinarySearch.indexRange(
+          rtTol.getToleranceRange(annotation.getRT()), rtSortedStandards, s -> s.getRt(rtMeasure));
+
+      final double annotationMz = annotation.getPrecursorMZ();
+      final List<RtStandard> inMzRange = matchingRts.sublist(rtSortedStandards).stream()
+          .filter(standard -> mzTol.checkWithinTolerance(standard.getAverageMz(), annotationMz))
+          .toList();
+      final RtStandard bestStandard = inMzRange.stream()
+          .min(Comparator.comparingDouble(std -> Math.abs(std.getAverageMz() - annotationMz)))
+          .orElse(null);
+
+      if (bestStandard == null) {
+        continue;
+      }
+
+      internalStandards.add(new InternalRtStandard(bestStandard.standards(), annotation));
+    }
+
+    List<RtStandard> rtSortedInternalStandards = internalStandards.stream()
+        .sorted(Comparator.comparingDouble(s -> s.getRt(rtMeasure))).toList();
+
+    // resetting the RTs to external ones may change the monotonicity, reapply filtering
+    List<RtStandard> filtered = removeNonMonotonousStandards(rtSortedInternalStandards,
+        referenceFlists, rtMeasure);
+    return filtered;
   }
 }

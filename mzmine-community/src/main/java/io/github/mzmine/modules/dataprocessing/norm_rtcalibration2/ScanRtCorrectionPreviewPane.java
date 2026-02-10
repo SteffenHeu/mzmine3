@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -154,13 +154,18 @@ public class ScanRtCorrectionPreviewPane extends AbstractPreviewPane<List<Featur
     final List<RtStandard> monotonousStandards = removeNonMonotonousStandards(goodStandards,
         referenceFlistsByNumRows, rtMeasure);
 
-    if (monotonousStandards.isEmpty()) {
+    final List<RtStandard> preFilteredStandards = calibrationModule.prefilterStandards(
+            monotonousStandards, referenceFlistsByNumRows, parameters, calibrationModuleParameters)
+        .stream().sorted(Comparator.comparingDouble(rtMeasure::getRt)).toList();
+
+    if (monotonousStandards.isEmpty() || preFilteredStandards.isEmpty()) {
       messages.add(FxTexts.boldText(
           "No monotonous standards found. Maybe widen the RT tolerance and other parameters. Make sure the feature lists contain features. "));
       return List.of();
     }
+
     final List<AbstractRtCorrectionFunction> allCalibrations = interpolateMissingCalibrations(
-        referenceFlistsByNumRows, flists, ProjectService.getMetadata(), monotonousStandards,
+        referenceFlistsByNumRows, flists, ProjectService.getMetadata(), preFilteredStandards,
         calibrationModule, rtMeasure, calibrationModuleParameters, parameters);
 
     // use different shapes to make it more obvious which belong together
@@ -178,9 +183,9 @@ public class ScanRtCorrectionPreviewPane extends AbstractPreviewPane<List<Featur
       if (sampleTypeFilter.matches(file)) {
         final AnyXYProvider medianVsOriginal = new AnyXYProvider(clr,
             file.getName() + " standard shift vs %s RT".formatted(rtMeasure.toString()),
-            monotonousStandards.size(), i -> (double) rtMeasure.getRt(monotonousStandards.get(i)),
-            i -> (monotonousStandards.get(i).standards().get(file).getAverageRT().doubleValue()
-                - rtMeasure.getRt(monotonousStandards.get(i))));
+            preFilteredStandards.size(), i -> (double) rtMeasure.getRt(preFilteredStandards.get(i)),
+            i -> (preFilteredStandards.get(i).standards().get(file).getAverageRT().doubleValue()
+                - rtMeasure.getRt(preFilteredStandards.get(i))));
         datasets.add(
             new DatasetAndRenderer(new ColoredXYDataset(medianVsOriginal, RunOption.THIS_THREAD),
                 new ColoredXYShapeRenderer(true, drawingSupplier.getNextShape())));

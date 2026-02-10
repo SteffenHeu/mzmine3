@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -70,7 +70,7 @@ import javafx.scene.control.Alert.AlertType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-class ScanRtCorrectionTask extends AbstractTask {
+public class ScanRtCorrectionTask extends AbstractTask {
 
   private static final Logger logger = Logger.getLogger(ScanRtCorrectionTask.class.getName());
 
@@ -190,7 +190,7 @@ class ScanRtCorrectionTask extends AbstractTask {
    * of non linear shifts that cause standards of order A and B to appear in order of B and A in
    * another feature list.
    */
-  static List<RtStandard> removeNonMonotonousStandards(List<RtStandard> goodStandardsByRt,
+  public static List<RtStandard> removeNonMonotonousStandards(List<RtStandard> goodStandardsByRt,
       List<FeatureList> referenceFlists, RTMeasure rtMeasure) {
     final List<RtStandard> monotonousStandards = new ArrayList<>(goodStandardsByRt);
     for (int i = 1; i < monotonousStandards.size(); i++) {
@@ -406,8 +406,12 @@ class ScanRtCorrectionTask extends AbstractTask {
       return;
     }
 
+    final List<RtStandard> preFilteredStandards = calibrationModule.prefilterStandards(
+            monotonousStandards, referenceFlistsByNumRows, parameters, calibrationModuleParameters)
+        .stream().sorted(Comparator.comparingDouble(rtMeasure::getRt)).toList();
+
     final List<AbstractRtCorrectionFunction> allCalibrations = interpolateMissingCalibrations(
-        referenceFlistsByNumRows, flists, project.getProjectMetadata(), monotonousStandards,
+        referenceFlistsByNumRows, flists, project.getProjectMetadata(), preFilteredStandards,
         calibrationModule, rtMeasure, calibrationModuleParameters, parameters);
 
     ApplyRtCorrectionToRawFileModule.applyOnThisThread(allCalibrations);
