@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -34,6 +35,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
+import io.github.mzmine.gui.preferences.VendorImportParameters;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.align_common.BaseFeatureListAligner;
 import io.github.mzmine.modules.dataprocessing.align_common.FeatureCloner.SimpleFeatureCloner;
@@ -78,9 +80,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class OptimizationUtils {
 
-  public static List<RawDataFile> importFilesBlocking(File[] filesToImport, @Nullable File metadata) {
-    final ParameterSet importParam = AllSpectralDataImportParameters.create(true, filesToImport,
-        metadata, null);
+  public static List<RawDataFile> importFilesBlocking(File[] filesToImport,
+      @Nullable File metadata) {
+    final ParameterSet importParam = AllSpectralDataImportParameters.create(
+        VendorImportParameters.createDefault(), filesToImport, metadata, null);
     final List<Task> tasks = new ArrayList<>();
     final MZmineProject project = ProjectService.getProject();
     MZmineCore.getModuleInstance(AllSpectralDataImportModule.class)
