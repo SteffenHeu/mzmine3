@@ -461,6 +461,7 @@ public class BatchTask extends AbstractTask {
     createdFeatureLists = new ArrayList<>(project.getCurrentFeatureLists());
     createdDataFiles.removeAll(beforeDataFiles);
     createdFeatureLists.removeAll(beforeFeatureLists);
+    createdFeatureLists.removeIf(FeatureList::isExcludedFromBatchLastSelection);
 
     // special option to skip already imported files in the AllSpectralDataImportParameters
     // add skipped files

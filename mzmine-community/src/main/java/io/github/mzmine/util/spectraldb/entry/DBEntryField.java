@@ -30,6 +30,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.JsonStringType;
+import io.github.mzmine.datamodel.features.types.RIRecordType;
 import io.github.mzmine.datamodel.features.types.abstr.StringType;
 import io.github.mzmine.datamodel.features.types.annotations.AcquisitionMethodType;
 import io.github.mzmine.datamodel.features.types.annotations.CommentType;
@@ -371,6 +372,7 @@ public enum DBEntryField {
       case InternalIdType _ -> INTERNAL_ID;
       case JsonStringType _ -> JSON_STRING;
       case AcquisitionMethodType _ -> ACQUISITION_METHOD;
+      case RIRecordType _ -> RETENTION_INDEX;
 //        case SynonymType _ -> DBEntryField.SYNONYM;
       default -> UNSPECIFIED;
     };
@@ -407,8 +409,8 @@ public enum DBEntryField {
            SIRIUS_MERGED_SCANS, SIRIUS_MERGED_STATS, OTHER_MATCHED_COMPOUNDS_N,
            OTHER_MATCHED_COMPOUNDS_NAMES, //
            MERGED_SPEC_TYPE, MSN_COLLISION_ENERGIES, MSN_PRECURSOR_MZS, MSN_FRAGMENTATION_METHODS,
-           MSN_ISOLATION_WINDOWS, IMS_TYPE, FEATURE_FULL_ID, FEATURELIST_NAME_FEATURE_ID,
-           RETENTION_INDEX -> StringType.class;
+           MSN_ISOLATION_WINDOWS, IMS_TYPE, FEATURE_FULL_ID, FEATURELIST_NAME_FEATURE_ID ->
+          StringType.class;
       case COMMENT -> CommentType.class;
       case CAS -> CASType.class;
       case PUBCHEM -> PubChemIdType.class;
@@ -451,6 +453,7 @@ public enum DBEntryField {
       case IUPAC_NAME -> IupacNameType.class;
       case INTERNAL_ID -> InternalIdType.class;
       case JSON_STRING -> JsonStringType.class;
+      case RETENTION_INDEX -> RIRecordType.class;
     };
   }
 
@@ -864,10 +867,17 @@ public enum DBEntryField {
    * @throws NumberFormatException if the object class was specified as number but was not parsable
    */
   public Object convertValue(String content) throws NumberFormatException {
-    if (this == MS_LEVEL && content.toLowerCase().startsWith("ms")) {
-      // sometimes for example in MS the ms level is gives as MS or MS2
-      final String prepared = content.substring(2);
-      return prepared.isBlank() ? 1 : Integer.parseInt(prepared);
+    if (this == MS_LEVEL) {
+      if (content.toLowerCase().startsWith("ms")) {
+        // sometimes for example in MS the ms level is gives as MS or MS2
+        final String prepared = content.substring(2);
+        return prepared.isBlank() ? 1 : Integer.parseInt(prepared);
+      }
+      try {
+        return Integer.parseInt(content);
+      } catch (NumberFormatException e) {
+        return content;
+      }
     }
     if (this == RT) {
       if ("-1".equals(content)) {
@@ -915,7 +925,7 @@ public enum DBEntryField {
     }
 
     if (getObjectClass().equals(RIRecord.class)) {
-      return new RIRecord(content);
+      return RIRecord.fromString(content);
     }
     // TODO currently we can only parse this as list of strings - should be either json list or java object list
     // FloatArrayList IntArrayList and other specialized classes help to load numbers

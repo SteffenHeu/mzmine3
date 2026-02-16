@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,6 +25,8 @@
 
 package io.github.mzmine.parameters;
 
+import io.github.mzmine.modules.presets.ModulePreset;
+import io.github.mzmine.modules.presets.ModulePresetStore;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.parametertypes.EmbeddedParameterSet;
 import io.github.mzmine.parameters.parametertypes.HiddenParameter;
@@ -35,6 +37,7 @@ import io.github.mzmine.parameters.parametertypes.submodules.OptionalModuleParam
 import io.github.mzmine.util.ExitCode;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -159,7 +162,8 @@ public interface ParameterSet extends ParameterContainer {
   /**
    * This method is called after successfully loading parameters (e.g., from xml). This allows to
    * load old legacy parameters and map their values to new parameters or load parameters and apply
-   * their value also to other parameters that were added later.
+   * their value also to other parameters that were added later. Use
+   * {@link #setParameter(Parameter, Object)} to map old to new parameter values.
    *
    * @param loadedParams  map of parameter name to actually loaded parameters
    * @param loadedVersion the version of the loaded parameter set
@@ -297,7 +301,33 @@ public interface ParameterSet extends ParameterContainer {
         .map(parameterClass::cast);
   }
 
+  /**
+   *
+   * @return A message that is displayed in an accordion at the top of a parameter dialog.
+   */
   default @Nullable Region getMessage() {
     return null;
   }
+
+  /**
+   * Presets that are shown in the {@link io.github.mzmine.modules.presets.ModulePresetStore} unless
+   * no user presets are available.
+   *
+   * @return List of presets.
+   * @see ModulePresetStore#createDefaults()
+   */
+  default @NotNull List<ModulePreset> createDefaultPresets() {
+    return List.of();
+  }
+
+  /**
+   * A string containing all messages/hints for old parameters while loading this module from xml.
+   * This message is discarded on clone.
+   * <p>
+   * This also contains all messages from internal embedded {@link EmbeddedParameterSet}.
+   *
+   * @return A string containing all messages/hints for old parameters while loading this module
+   * from xml. Empty if no messages, not null.
+   */
+  @NotNull String getLoadingVersionMessages();
 }

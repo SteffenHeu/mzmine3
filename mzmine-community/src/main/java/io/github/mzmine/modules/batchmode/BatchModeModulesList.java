@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -35,6 +34,7 @@ import io.github.mzmine.modules.dataanalysis.spec_chimeric_precursor.PrecursorPu
 import io.github.mzmine.modules.dataanalysis.statsdashboard.StatsDasboardModule;
 import io.github.mzmine.modules.dataanalysis.volcanoplot.VolcanoPlotModule;
 import io.github.mzmine.modules.dataanalysis.volcanoplot.VolcanoPlotRegionExtractionModule;
+import io.github.mzmine.modules.dataprocessing.align_append_rows.MergeAlignerModule;
 import io.github.mzmine.modules.dataprocessing.align_gc.GCAlignerModule;
 import io.github.mzmine.modules.dataprocessing.align_join.JoinAlignerModule;
 import io.github.mzmine.modules.dataprocessing.align_lcimage.LcImageAlignerModule;
@@ -86,6 +86,7 @@ import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModul
 import io.github.mzmine.modules.dataprocessing.filter_scan_signals.ScanSignalRemovalModule;
 import io.github.mzmine.modules.dataprocessing.filter_scanfilters.ScanFiltersModule;
 import io.github.mzmine.modules.dataprocessing.filter_scansmoothing.ScanSmoothingModule;
+import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingModule;
 import io.github.mzmine.modules.dataprocessing.filter_splitaligned.SplitAlignedFeatureListModule;
 import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.PeakFinderModule;
 import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.MultiThreadPeakFinderModule;
@@ -195,6 +196,7 @@ import io.github.mzmine.modules.visualization.spectra.msn_tree.MSnTreeVisualizer
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerModule;
 import io.github.mzmine.modules.visualization.twod.TwoDVisualizerModule;
 import io.github.mzmine.modules.visualization.vankrevelendiagram.VanKrevelenDiagramModule;
+import io.github.mzmine.util.reporting.jasper.ReportingModule;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -310,6 +312,7 @@ public class BatchModeModulesList {
           PathAlignerModule.class, //
           RansacAlignerModule.class, //
           LcImageAlignerModule.class, //
+          MergeAlignerModule.class, //
 
           /*
            * {@link io.github.mzmine.modules.MZmineModuleCategory.MainCategory#FEATURE_DETECTION}
@@ -336,6 +339,7 @@ public class BatchModeModulesList {
           VolcanoPlotRegionExtractionModule.class, //
           PCALoadingsExtractionModule.class, //
           SplitAlignedFeatureListModule.class, //
+          PreferredAnnotationRankingModule.class, //
 
           /*
            * {@link io.github.mzmine.modules.MZmineModuleCategory.MainCategory#FEATURE_PROCESSING}
@@ -432,7 +436,12 @@ public class BatchModeModulesList {
            * {@link io.github.mzmine.modules.MZmineModuleCategory.MainCategory#OTHER}
            */
           TimsTOFMaldiAcquisitionModule.class, //
-          SimsefImagingSchedulerModule.class //
+          SimsefImagingSchedulerModule.class, //
+
+          /**
+           * {@link io.github.mzmine.modules.MZmineModuleCategory.MainCategory#TOOLS}
+           */
+          ReportingModule.class //
       ));
 
   // must be modifiable so we can add more modules for mzminepro

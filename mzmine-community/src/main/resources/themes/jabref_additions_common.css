@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -22,6 +22,63 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+
+ /* children of this css can overwrite the color and this will effect the defined classes */
+ .root {
+   -error-text-color: #cc0033;
+   -warning-text-color: #CC9900;
+   -contrast-text-color: #BF2C84;
+    /* set background color of scene root node so that stages have correct color
+     most panes are transparent - so root needs to have base color */
+   -fx-background-color: -jr-base;
+ }
+
+.error-label {
+  -fx-text-fill: -error-text-color;
+  -fx-icon-color: -error-text-color;
+}
+Text.error-label {
+  /* Text uses fill instead of text fill */
+  -fx-fill: -error-text-color;
+}
+
+.warning-label {
+  -fx-text-fill: -warning-text-color;
+  -fx-icon-color: -warning-text-color;
+}
+
+Text.warning-label {
+  /* Text uses fill instead of text fill */
+  -fx-fill: -warning-text-color;
+}
+
+.contrast-label {
+  -fx-text-fill: -contrast-text-color;
+  -fx-icon-color: -contrast-text-color;
+}
+
+Text.contrast-label {
+  -fx-fill: -contrast-text-color;
+  -fx-icon-color: -contrast-text-color;
+}
+
+/* Option to set all Text children in TextFlow to yellow */
+#warningTextFlow > Text {
+  -fx-fill: -warning-text-color;
+}
+#warningTextFlow > Label {
+  -fx-text-fill: -warning-text-color;
+}
+
+.outlined-panel {
+    -fx-border-color: -jr-accent;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px;
+    -fx-background-color: -jr-base;
+    /*-fx-effect: dropshadow(gaussian, rgba(183,232,255,0.8), 5, 0.2, 0, 5);*/
+}
 
 .notification-bar > .pane {
   -fx-background-color: -jr-base;
@@ -56,6 +113,16 @@
     -fx-font-weight: bold;
 }
 
+/* this was somehow forgotten in jabref_light.css which is the base for many styles
+ This led to toggle button hard to make out as button. */
+.toggle-button {
+    -fx-background-color: transparent;
+    -fx-border-color: -fx-outer-border; /* rgba(0, 0, 0, 0.23); */
+    -fx-border-width: 1px;
+    -fx-border-radius: 4px;
+    -fx-padding: 0.5em 1em 0.5em 1em;
+}
+
 .text-field {
   -fx-prompt-text-fill: gray;
 }
@@ -66,7 +133,7 @@
 
 /* controlsfx ValidationSupport uses this */
 .warning {
-    -fx-effect: dropshadow(three-pass-box, gold, 14, 0, 0, 0);
+    -fx-effect: dropshadow(three-pass-box, -warning-text-color, 14, 0, 0, 0);
 }
 
 /* controlsfx ValidationSupport uses this */
@@ -74,6 +141,25 @@
     -fx-effect: dropshadow(three-pass-box, skyblue, 14, 0, 0, 0);
 }
 
+/* make annotation summary tooltip white text */
+.tooltip > HBox > VBox > Text {
+    -fx-fill: -jr-tooltip-fg;
+}
+.tooltip > HBox > VBox > Label {
+    -fx-text-fill: -jr-tooltip-fg;
+}
+.tooltip > Text {
+    -fx-fill: -jr-tooltip-fg;
+}
+.tooltip > Label {
+    -fx-text-fill: -jr-tooltip-fg;
+}
+.tooltip > TextFlow > Text {
+    -fx-fill: -jr-tooltip-fg;
+}
+.tooltip > TextFlow > Label {
+    -fx-text-fill: -jr-tooltip-fg;
+}
 
 .tooltip-error {
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.8), 5, 0, 0, 5);
@@ -82,8 +168,8 @@
     -fx-border-width: 1;
 
     -fx-background-color: #FBEFEF;
-    -fx-text-fill: #cc0033;
-    -fx-border-color: #cc0033;
+    -fx-text-fill: -error-text-color;
+    -fx-border-color: -error-text-color;
 }
 
 .tooltip-warning {
@@ -93,8 +179,8 @@
     -fx-border-width: 1;
 
     -fx-background-color: #FFFFCC;
-    -fx-text-fill: #CC9900;
-    -fx-border-color: #CC9900;
+    -fx-text-fill: -warning-text-color;
+    -fx-border-color: -warning-text-color;
 }
 
 .tooltip-info {
@@ -115,9 +201,9 @@
 }
 
 .popover > .border {
-  -fx-stroke: linear-gradient(to bottom, rgba(0, 0, 0, .3), rgba(0, 0, 0, .7));
-  -fx-stroke-width: 1;
-  -fx-fill: rgba(255.0, 255.0, 255.0, .95);
+  -fx-stroke: -fx-outer-border !important;
+  -fx-stroke-width: 2;
+  -fx-fill: derive(-fx-control-inner-background, 5%) !important;
   -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, .2), 10.0, 0.5, 2.0, 2.0);
 }
 
@@ -148,6 +234,7 @@
   -fx-stroke: white;
   -fx-stroke-width: 2;
 }
+
 
 .icon-button:flash .ikonli-font-icon {
   -fx-icon-color: -jr-selected;

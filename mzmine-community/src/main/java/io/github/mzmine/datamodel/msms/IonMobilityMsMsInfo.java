@@ -36,7 +36,7 @@ public interface IonMobilityMsMsInfo extends MsMsInfo {
   /**
    * @return The range of spectra numbers in this frame where this precursor was fragmented in.
    */
-  Range<Integer> getSpectrumNumberRange();
+  @Nullable Range<Integer> getSpectrumNumberRange();
 
   @Nullable
   default Range<Float> getMobilityRange() {
@@ -45,6 +45,9 @@ public interface IonMobilityMsMsInfo extends MsMsInfo {
       return null;
     }
     final Range<Integer> spectrumNumberRange = getSpectrumNumberRange();
+    if (spectrumNumberRange == null) {
+      return null;
+    }
     final double lower = msMsFrame.getMobilityForMobilityScanNumber(
         spectrumNumberRange.lowerEndpoint());
     final double upper = msMsFrame.getMobilityForMobilityScanNumber(
@@ -54,14 +57,6 @@ public interface IonMobilityMsMsInfo extends MsMsInfo {
 
   Frame getMsMsFrame();
 
-  default void checkSpectrumRanges() {
-    if (getSpectrumNumberRange() != null && getMsMsFrame() != null && (
-        getSpectrumNumberRange().lowerEndpoint() < 0
-            || getSpectrumNumberRange().upperEndpoint() > getMsMsFrame().getNumberOfMobilityScans())) {
-      throw new RuntimeException(
-          "Invalid spectrum number range (%d-%d) for frame with %d mobility scans.".formatted(
-              getSpectrumNumberRange().lowerEndpoint(), getSpectrumNumberRange().upperEndpoint(),
-              getMsMsFrame().getNumberOfMobilityScans()));
-    }
-  }
+  @Override
+  IonMobilityMsMsInfo createCopy();
 }

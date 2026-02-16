@@ -29,38 +29,21 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.types.numbers.scores.CvType;
 import io.github.mzmine.datamodel.statistics.FeaturesDataTable;
-import io.github.mzmine.parameters.parametertypes.metadata.MetadataGroupSelection;
+import io.github.mzmine.parameters.parametertypes.metadata.Metadata1GroupSelection;
 import io.github.mzmine.util.MathUtils;
 import java.util.List;
-import java.util.Objects;
 
 /**
- *
+ * @param group
+ * @param dataTable        data table that only contains the data files that are grouped and
+ *                         selected
+ * @param maxMissingValues
+ * @param maxCvPercent
+ * @param keepUndetected
  */
-public final class RsdFilter {
-
-  private final MetadataGroupSelection group;
-  private final FeaturesDataTable dataTable;
-  private final double maxMissingValues;
-  private final double maxCvPercent;
-  private final boolean keepUndetected;
-
-  /**
-   * @param group
-   * @param dataTable        data table that only contains the data files that are grouped and
-   *                         selected
-   * @param maxMissingValues
-   * @param maxCvPercent
-   * @param keepUndetected
-   */
-  RsdFilter(MetadataGroupSelection group, FeaturesDataTable dataTable, double maxMissingValues,
-      double maxCvPercent, boolean keepUndetected) {
-    this.group = group;
-    this.dataTable = dataTable;
-    this.maxMissingValues = maxMissingValues;
-    this.maxCvPercent = maxCvPercent;
-    this.keepUndetected = keepUndetected;
-  }
+record RsdFilter(Metadata1GroupSelection group,
+                 FeaturesDataTable dataTable, double maxMissingValues, double maxCvPercent,
+                 boolean keepUndetected) {
 
   /**
    * @return True if the row passes the filter and is thereby below the set {@link #maxCvPercent}.
@@ -93,53 +76,5 @@ public final class RsdFilter {
   public List<RawDataFile> getGroupDataFiles() {
     return dataTable.getRawDataFiles();
   }
-
-  public MetadataGroupSelection group() {
-    return group;
-  }
-
-  public FeaturesDataTable dataTable() {
-    return dataTable;
-  }
-
-  public double maxMissingValues() {
-    return maxMissingValues;
-  }
-
-  public double maxCvPercent() {
-    return maxCvPercent;
-  }
-
-  public boolean keepUndetected() {
-    return keepUndetected;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (obj == this) {
-      return true;
-    }
-    if (obj == null || obj.getClass() != this.getClass()) {
-      return false;
-    }
-    var that = (RsdFilter) obj;
-    return Objects.equals(this.group, that.group) && Objects.equals(this.dataTable, that.dataTable)
-        && Double.doubleToLongBits(this.maxMissingValues) == Double.doubleToLongBits(that.maxMissingValues)
-        && Double.doubleToLongBits(this.maxCvPercent) == Double.doubleToLongBits(that.maxCvPercent)
-        && this.keepUndetected == that.keepUndetected;
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(group, dataTable, maxMissingValues, maxCvPercent, keepUndetected);
-  }
-
-  @Override
-  public String toString() {
-    return "RsdFilter[" + "group=" + group + ", " + "dataTable=" + dataTable + ", "
-        + "maxMissingValues=" + maxMissingValues + ", " + "maxCvPercent=" + maxCvPercent + ", "
-        + "keepUndetected=" + keepUndetected + ']';
-  }
-
 
 }

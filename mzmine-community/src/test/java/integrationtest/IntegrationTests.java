@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -224,6 +224,7 @@ public class IntegrationTests {
     }
     Assertions.assertEquals(0,
         IntegrationTest.builder("rawdatafiles/integration_tests/lc_tims", "lc_tims_local.mzbatch")
+            .specLibsFullPath("spectral_libraries/integration_tests/matches_for_tims-full.json")
             .tempDir(tempDir).build()
             .runBatchGetCheckResults("rawdatafiles/integration_tests/lc_tims/expected_results.csv")
             .size());
@@ -314,9 +315,9 @@ public class IntegrationTests {
 //            "trp_batch.mzbatch").tempDir(tempDir).build()
 //        .runBatchGetCheckResults("rawdatafiles/integration_tests/thermo_import/test_trp_old.csv")
 //        .size());
-    Assertions.assertEquals(0, IntegrationTest.builder("rawdatafiles/integration_tests/thermo_import",
-            "trp_batch.mzbatch").tempDir(tempDir).build()
-        .runBatchGetCheckResults("rawdatafiles/integration_tests/thermo_import/test_msconvert.csv")
-        .size());
+    Assertions.assertEquals(0,
+        IntegrationTest.builder("rawdatafiles/integration_tests/thermo_import", "trp_batch.mzbatch")
+            .tempDir(tempDir).build().runBatchGetCheckResults(
+                "rawdatafiles/integration_tests/thermo_import/test_msconvert.csv").size());
   }
 }
