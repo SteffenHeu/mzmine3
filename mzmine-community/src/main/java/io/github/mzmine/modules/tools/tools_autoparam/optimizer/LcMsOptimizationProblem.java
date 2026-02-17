@@ -97,7 +97,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final boolean maximizeFeaturesWithIsos;
   private final boolean minimizeDoublePeaks;
   private final boolean maximizeFillRatio;
-  private final OptimizerParameterParameters paramToOptimize;
+  private final List<WizardParameterPrototype> paramToOptimize;
 
   private final @NotNull File[] files;
   private final WizardParameterSolutionBuilder builder;
@@ -123,10 +123,10 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
 
-    super(param.getValue(OptimizerParameters.paramToOptimize).getNumSelected(),
+    super(param.getValue(OptimizerParameters.paramToOptimize).size(),
         calculateNumberOfObjectives(param, stats));
 
-    this.NUM_PARAM = paramToOptimize.getNumSelected();
+    this.NUM_PARAM = paramToOptimize.size();
 
     this.initialSequence = initialSequence;
     files = stats.stream().map(DataFileStatistics::file).map(RawDataFile::getAbsoluteFilePath)
@@ -291,23 +291,10 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     int index = 0;
     final List<WizardParameterSolution> param = new ArrayList<>();
 
-    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeNoiseLevel)) {
-      param.add(builder.buildMs1NoiseSolution(index++));
-    }
-    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeScanToScanMzTolerance)) {
-      param.add(builder.buildScanToScanToleranceSolution(index++));
-    }
-    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeMinHeight)) {
-      param.add(builder.buildMinHeightSolution(index++));
-    }
-    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeMinConsecutive)) {
-      param.add(builder.buildMinConsecutiveSolution(index++));
-    }
-    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeFWHM)) {
-      param.add(builder.buildFwhmSolution(index++));
-    }
-    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeRtSampleToSample)) {
-      param.add(builder.buildSampleToSampleRtTolSolution(index++));
+    for (WizardParameterPrototype factory : paramToOptimize) {
+      if (factory instanceof WizardParameterPrototype.WizardBuilderParameterSolution wbs) {
+        param.add(wbs.toRealSolution(builder, index++));
+      }
     }
 
     return param;
@@ -318,11 +305,10 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     final List<BatchParameterSolution> param = new ArrayList<>();
 
-    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeTopEdge)) {
-      param.add(BatchParameterSolutionBuilder.buildTopToEdgeRatio(index++));
-    }
-    if (paramToOptimize.getValue(OptimizerParameterParameters.optimizeChromThreshold)) {
-      param.add(BatchParameterSolutionBuilder.buildChromThreshold(index++));
+    for (WizardParameterPrototype factory : paramToOptimize) {
+      if (factory instanceof WizardParameterPrototype.BatchWizardParameterSolution bws) {
+        param.add(bws.toBatchParameterSolution(index++));
+      }
     }
 
     return param;
@@ -424,14 +410,14 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final WizardStepParameters dataParam = initialSequence.get(WizardPart.DATA_IMPORT).get()
         .getFactory().create();
     final WizardStepParameters lcParam = initialSequence.get(WizardPart.ION_INTERFACE).get()
-        .getFactory().create();
+        .createDefaultParameterPreset().getFactory().create();
     final WizardStepParameters filterParam = initialSequence.get(WizardPart.FILTER).get()
-        .getFactory().create();
+        .createDefaultParameterPreset().getFactory().create();
     filterParam.setParameter(FilterWizardParameters.goodPeaksOnly, true);
-    final WizardStepParameters imsParam = initialSequence.get(WizardPart.IMS).get().getFactory()
-        .create();
-    final WizardStepParameters msParam = initialSequence.get(WizardPart.MS).get().getFactory()
-        .create();
+    final WizardStepParameters imsParam = initialSequence.get(WizardPart.IMS).get()
+        .createDefaultParameterPreset().getFactory().create();
+    final WizardStepParameters msParam = initialSequence.get(WizardPart.MS).get()
+        .createDefaultParameterPreset().getFactory().create();
     final WizardStepParameters annotationParam = initialSequence.get(WizardPart.ANNOTATION).get()
         .getFactory().create();
     final WizardStepParameters workflowParam = initialSequence.get(WizardPart.WORKFLOW).get()
@@ -458,8 +444,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
       msParam.setParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance,
           mzSampleToSampleTolerance);
     }
-    if (rtSampleToSampleTolerance != null && !paramToOptimize.getValue(
-        OptimizerParameterParameters.optimizeRtSampleToSample)) {
+    if (rtSampleToSampleTolerance != null && paramToOptimize.stream()
+        .noneMatch(s -> "Inter sample RT tolerance".equals(s.name()))) {
       lcParam.setParameter(IonInterfaceHplcWizardParameters.interSampleRTTolerance,
           rtSampleToSampleTolerance);
     }

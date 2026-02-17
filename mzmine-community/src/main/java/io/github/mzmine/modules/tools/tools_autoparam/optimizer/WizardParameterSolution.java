@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -34,6 +35,12 @@ import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
 
+/**
+ * A fully-initialised optimization parameter that can apply itself to a wizard step. Instances are
+ * created by {@link WizardParameterSolutionBuilder} during optimisation — they carry real data
+ * ranges and a correct solution-vector index. Prototype / factory counterparts live in
+ * {@link WizardParameterPrototype}.
+ */
 public sealed interface WizardParameterSolution {
 
   int index();
@@ -43,6 +50,10 @@ public sealed interface WizardParameterSolution {
   TriConsumer<WizardStepParameters, Solution, Integer> setToParameters();
 
   Supplier<? extends Variable> variable();
+
+  default String name() {
+    return variable().get().getName();
+  }
 
   record IntegerWizardParameterSolution(int index, WizardPart part,
                                         TriConsumer<WizardStepParameters, Solution, Integer> setToParameters,

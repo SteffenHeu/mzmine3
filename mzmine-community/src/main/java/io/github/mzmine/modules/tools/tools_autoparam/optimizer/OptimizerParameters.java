@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,6 +28,9 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 import io.github.mzmine.datamodel.features.types.numbers.MZType;
 import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.BatchWizardParameterSolution;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.WizardBuilderParameterSolution;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
@@ -37,11 +41,10 @@ import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileSelectionType;
-import io.github.mzmine.parameters.parametertypes.submodules.ParameterSetParameter;
 import io.github.mzmine.util.files.ExtensionFilters;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 public class OptimizerParameters extends SimpleParameterSet {
 
   public static final BooleanParameter maximizeCv20 = new BooleanParameter(
@@ -60,8 +63,8 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static final BooleanParameter maximizeNumberOfBenchmarkFeatures = new BooleanParameter(
       "Maximize number of benchmark features", """
       Maximizes the number of benchmark features. Benchmark features are classified as two-fold:
-      1. All data files are searched for their base peak m/z (=most intense signal in a scan). 
-         A chromatogram is build for each base peak and cut at 5% relative height. The RT range is 
+      1. All data files are searched for their base peak m/z (=most intense signal in a scan).
+         A chromatogram is build for each base peak and cut at 5% relative height. The RT range is
          then increased by 3*the FWHM of the peak. Additionally, the 13C isotopes are extracted in
          the same RT range and used, if they have a correlation factor > 90%.
       2. Additional benchmark features may be user defined by the file given below.""", true);
@@ -88,13 +91,41 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
       "Optimizer", "", OptimizerOptions.values(), OptimizerOptions.MOEAD);
 
-  public static final ParameterSetParameter<OptimizerParameterParameters> paramToOptimize = new ParameterSetParameter<>(
-      "Parameters to optimize", "", new OptimizerParameterParameters());
+  /**
+   * All available optimization targets as {@link WizardParameterPrototype} prototypes. Wizard
+   * entries use a default-range dummy builder solely for display/XML. Batch entries wrap
+   * {@link BatchParameterSolutionBuilder} method references.
+   */
+  private static final List<WizardParameterPrototype> ALL_SOLUTIONS = createAllSolutions();
+
+  public static final WizardParameterSolutionCheckListParameter paramToOptimize = new WizardParameterSolutionCheckListParameter(
+      "Parameters to optimize", "Select which parameters should be optimized.", ALL_SOLUTIONS,
+      new ArrayList<>(ALL_SOLUTIONS));
 
   public OptimizerParameters() {
     super(maximizeCv20, maximizeFeaturesWithIsotopes, minimizeDoublePeaks, maximizeRowFillRatio,
-        maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
-        paramToOptimize);
+        maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers,
+        iterations, paramToOptimize);
+  }
+
+  private static List<WizardParameterPrototype> createAllSolutions() {
+    final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
+        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL);
+
+    return List.of(new WizardBuilderParameterSolution(dummy.buildMs1NoiseSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildMs1NoiseSolution),
+        new WizardBuilderParameterSolution(dummy.buildScanToScanToleranceSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildScanToScanToleranceSolution),
+        new WizardBuilderParameterSolution(dummy.buildMinHeightSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildMinHeightSolution),
+        new WizardBuilderParameterSolution(dummy.buildMinConsecutiveSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
+        new WizardBuilderParameterSolution(dummy.buildFwhmSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildFwhmSolution),
+        new WizardBuilderParameterSolution(dummy.buildSampleToSampleRtTolSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution),
+        new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildTopToEdgeRatio),
+        new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildChromThreshold));
   }
 
   public static ParameterSet create(boolean maxCv20, boolean maxFeaturesWithIsotopes,
@@ -110,10 +141,7 @@ public class OptimizerParameters extends SimpleParameterSet {
     param.setParameter(benchmarkFeatureTypes, false);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
-
-    final OptimizerParameterParameters optimizerParameterParameters = OptimizerParameterParameters.create(
-        true, true, true, true, true, true, true, true);
-    param.setParameter(paramToOptimize, optimizerParameterParameters);
+    param.setParameter(paramToOptimize, new ArrayList<>(ALL_SOLUTIONS));
 
     return param;
   }
