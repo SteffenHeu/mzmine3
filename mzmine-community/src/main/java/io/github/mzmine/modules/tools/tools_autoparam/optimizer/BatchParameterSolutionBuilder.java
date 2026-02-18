@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -26,7 +27,7 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverParameters;
-import io.github.mzmine.modules.tools.batchwizard.postsetter.FirstModule;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.ApplicationScope;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchParameterSolution.DoubleBatchParameterSolution;
 import org.moeaframework.core.variable.RealVariable;
 
@@ -34,13 +35,14 @@ public class BatchParameterSolutionBuilder {
 
   public static BatchParameterSolution buildTopToEdgeRatio(int index) {
     return new DoubleBatchParameterSolution(MinimumSearchFeatureResolverModule.class,
-        MinimumSearchFeatureResolverParameters.MIN_RATIO, index, new FirstModule(),
+        MinimumSearchFeatureResolverParameters.MIN_RATIO, index, ApplicationScope.FIRST,
         () -> new RealVariable("Top-to-edge ratio", 1.3, 3));
   }
 
   public static BatchParameterSolution buildChromThreshold(int index) {
     return new DoubleBatchParameterSolution(MinimumSearchFeatureResolverModule.class,
-        MinimumSearchFeatureResolverParameters.CHROMATOGRAPHIC_THRESHOLD_LEVEL, index, new FirstModule(),
+        MinimumSearchFeatureResolverParameters.CHROMATOGRAPHIC_THRESHOLD_LEVEL, index,
+        ApplicationScope.FIRST,
         () -> new RealVariable("Chrom. Threshold", 0.7, 0.97));
   }
 }

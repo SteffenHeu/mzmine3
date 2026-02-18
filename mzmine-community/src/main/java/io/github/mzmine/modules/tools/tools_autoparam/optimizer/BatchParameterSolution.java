@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -25,12 +26,10 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.modules.MZmineProcessingModule;
-import io.github.mzmine.modules.batchmode.BatchQueue;
-import io.github.mzmine.modules.tools.batchwizard.postsetter.ModuleParameterPostSetter;
-import io.github.mzmine.modules.tools.batchwizard.postsetter.ModuleSelectionRule;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.ApplicationScope;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
 import io.github.mzmine.parameters.UserParameter;
 import java.util.function.Supplier;
-import org.apache.commons.lang3.function.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.variable.RealVariable;
@@ -40,25 +39,21 @@ public sealed interface BatchParameterSolution {
 
   int index();
 
-  TriConsumer<BatchQueue, Solution, Integer> setToQueue();
+  ParameterOverride toParameterOverride(Solution solution);
 
   Supplier<? extends Variable> variable();
 
   public final record DoubleBatchParameterSolution(
       @NotNull Class<? extends MZmineProcessingModule> module, UserParameter<Double, ?> param,
-      int index, ModuleSelectionRule rule, Supplier<? extends Variable> variable) implements
+      int index, ApplicationScope scope, Supplier<? extends Variable> variable) implements
       BatchParameterSolution {
 
     @Override
-    public TriConsumer<BatchQueue, Solution, Integer> setToQueue() {
-      return (q, solution, index) -> {
-        final RealVariable variable = (RealVariable) solution.getVariable(index);
-        final double value = variable.getValue();
-
-        final ModuleParameterPostSetter<Double> setter = new ModuleParameterPostSetter<>(module,
-            param, value, rule);
-        setter.apply(q);
-      };
+    public ParameterOverride toParameterOverride(Solution solution) {
+      final double value = ((RealVariable) solution.getVariable(index)).getValue();
+      final UserParameter<Double, ?> cloned = param.cloneParameter();
+      cloned.setValue(value);
+      return new ParameterOverride(module.getName(), module.getSimpleName(), cloned, scope);
     }
   }
 }

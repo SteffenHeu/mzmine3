@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -33,7 +34,6 @@ import io.github.mzmine.datamodel.features.compoundannotations.SimpleCompoundDBA
 import io.github.mzmine.datamodel.features.types.annotations.CompoundNameType;
 import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.MZmineGUI;
-import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.javafx.mvci.FxController;
@@ -63,14 +63,11 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.logging.Level;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.moeaframework.core.Solution;
 import org.moeaframework.core.population.NondominatedPopulation;
 import org.moeaframework.util.format.TableFormat;
 
@@ -151,7 +148,6 @@ public class OptimizationResultsController extends FxController<OptimizationResu
     try {
       q = ((WorkflowWizardParameterFactory) workflow.get().getFactory()).getBatchBuilder(
           sequenceSteps).createQueue();
-      optimization.applySolutionParametersToBatch(model.getSelectedSolution(), q);
     } catch (Exception e) {
       DialogLoggerUtil.showErrorDialog("Cannot create batch", e.getMessage());
       q = null;

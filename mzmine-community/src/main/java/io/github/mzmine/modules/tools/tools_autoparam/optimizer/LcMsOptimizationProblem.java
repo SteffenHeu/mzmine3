@@ -53,9 +53,11 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.Lip
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.CustomizationWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
@@ -322,8 +324,6 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final BatchQueue optimizedQueue = ((WorkflowWizardParameterFactory) wizardSequence.get(
         WizardPart.WORKFLOW).get().getFactory()).getBatchBuilder(wizardSequence).createQueue();
 
-    applySolutionParametersToBatch(solution, optimizedQueue);
-
     // gap filling screws with the optimized feature detection
     // also remove other unnecessary steps
     optimizedQueue.removeIf(step -> step.getModule() instanceof MultiThreadPeakFinderModule);
@@ -396,11 +396,16 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     project.removeFeatureLists(project.getCurrentFeatureLists());
   }
 
-  public void applySolutionParametersToBatch(Solution solution, BatchQueue optimizedQueue) {
-    final List<BatchParameterSolution> batchParameters = createBatchParameters();
-    for (BatchParameterSolution bp : batchParameters) {
-      bp.setToQueue().accept(optimizedQueue, solution, bp.index());
+  public void applyBatchOverridesToSequence(Solution solution, WizardSequence sequence) {
+    final List<ParameterOverride> overrides = createBatchParameters().stream()
+        .map(bp -> bp.toParameterOverride(solution)).toList();
+
+    if (overrides.isEmpty()) {
+      return;
     }
+    final WizardStepParameters customization = sequence.get(WizardPart.CUSTOMIZATION).get();
+    customization.setParameter(CustomizationWizardParameters.enabled, true);
+    customization.setParameter(CustomizationWizardParameters.overrides, overrides);
   }
 
   public @NotNull WizardSequence createWizardSequenceFromSolution(Solution solution) {
@@ -422,6 +427,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
         .getFactory().create();
     final WizardStepParameters workflowParam = initialSequence.get(WizardPart.WORKFLOW).get()
         .getFactory().create();
+    final WizardStepParameters customizationParameters = initialSequence.get(
+        WizardPart.CUSTOMIZATION).get().createDefaultParameterPreset().getFactory().create();
 
     wizardSequence.add(dataParam);
     wizardSequence.add(lcParam);
@@ -430,6 +437,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     wizardSequence.add(msParam);
     wizardSequence.add(annotationParam);
     wizardSequence.add(workflowParam);
+    wizardSequence.add(customizationParameters);
 
 //    dataParam.setParameter(DataImportWizardParameters.fileNames, files);
 
@@ -439,6 +447,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     }
 
     workflowParam.setParameter(WorkflowDdaWizardParameters.exportPath, false);
+
+    applyBatchOverridesToSequence(solution, wizardSequence);
 
     if (mzSampleToSampleTolerance != null) {
       msParam.setParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance,
