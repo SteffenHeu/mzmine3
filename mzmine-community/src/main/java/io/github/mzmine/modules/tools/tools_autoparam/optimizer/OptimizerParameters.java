@@ -45,6 +45,7 @@ import io.github.mzmine.util.files.ExtensionFilters;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
 public class OptimizerParameters extends SimpleParameterSet {
 
   public static final BooleanParameter maximizeCv20 = new BooleanParameter(
@@ -76,6 +77,10 @@ public class OptimizerParameters extends SimpleParameterSet {
       Then checks how many features were actually detected and divides it by the maximum.
       """, true);
 
+  public static final BooleanParameter maximizeCv20WithIsos = new BooleanParameter(
+      "Maximize rows with isotopes and RSD < 20",
+      "Attempts to maximize the number of rows that have an area RSD of < 20%", true);
+
   public static final OptionalParameter<ImportTypeParameter> benchmarkFeatureTypes = new OptionalParameter<>(
       new ImportTypeParameter("Benchmark feature csv column names", "",
           List.of(new ImportType(true, "mz", new MZType()),
@@ -103,9 +108,9 @@ public class OptimizerParameters extends SimpleParameterSet {
       new ArrayList<>(ALL_SOLUTIONS));
 
   public OptimizerParameters() {
-    super(maximizeCv20, maximizeFeaturesWithIsotopes, minimizeDoublePeaks, maximizeRowFillRatio,
-        maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers,
-        iterations, paramToOptimize);
+    super(maximizeCv20, maximizeFeaturesWithIsotopes, maximizeCv20WithIsos, minimizeDoublePeaks,
+        maximizeRowFillRatio, maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes,
+        benchmarkFeaturesFile, optimizers, iterations, paramToOptimize);
   }
 
   private static List<WizardParameterPrototype> createAllSolutions() {

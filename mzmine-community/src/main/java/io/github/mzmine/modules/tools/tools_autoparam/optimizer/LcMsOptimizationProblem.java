@@ -112,6 +112,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final int numWizardParam;
   private final int numBatchParam;
   private final @Nullable List<FeatureRecord> fileOnlyBenchmarkFeatures;
+  private final boolean maximizeCv20WithIsos;
 
   public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param) {
@@ -123,6 +124,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
     minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
     maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
+    maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
 
     super(param.getValue(OptimizerParameters.paramToOptimize).size(),
@@ -246,6 +248,25 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     solution.setObjectiveValue(index, (double) matchingRows);
   }
 
+  private static void calculateAndWriteRsdWithIsosResult(int index, Solution solution,
+      FeatureList newest, FeaturesDataTable dataTable) {
+
+    // dont use rsd filter here, because we just use all data files here. they may not be of a specific sample type.
+    long matchingRows = 0;
+    for (int i = 0; i < newest.getNumberOfRows(); i++) {
+      if (newest.getRow(i).getBestIsotopePattern() == null) {
+        continue;
+      }
+      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
+      final double rsd = MathUtils.calcRelativeStd(abundances);
+      if (rsd <= 0.2) {
+        matchingRows++;
+      }
+    }
+
+    solution.setObjectiveValue(index, (double) matchingRows);
+  }
+
   private static void calculateAndWriteFeaturesWithIsotopes(int index, Solution solution,
       FeatureList newest) {
     final long featuresWithIsotopes = newest.streamFeatures()
@@ -282,8 +303,10 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     var maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
     var minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
     var maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
+    var maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
     final int numObjectives = (int) Stream.of(maximizeCv20, maximizeFeaturesWithIsos,
-            minimizeDoublePeaks, maximizeFillRatio, maximizeNumBenchmark && stats != null)
+            minimizeDoublePeaks, maximizeFillRatio, maximizeCv20WithIsos,
+            maximizeNumBenchmark && stats != null)
         .filter(Boolean::booleanValue).count();
     return numObjectives;
   }
@@ -382,6 +405,10 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     if (maximizeNumBenchmark && target != null) {
       final long foundTargets = target.stream().parallel().filter(r -> r.isPresent(rows)).count();
       solution.setObjectiveValue(objectiveIndex++, foundTargets);
+    }
+
+    if (maximizeCv20WithIsos) {
+      calculateAndWriteRsdWithIsosResult(objectiveIndex++, solution, newest, dataTable);
     }
 
 //    calculateAndSetRsds(solution, newest, dataTable);
@@ -491,6 +518,9 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     }
     if (target != null && maximizeNumBenchmark) {
       solution.setObjective(objectiveIndex++, new Maximize("Found targets"));
+    }
+    if (maximizeCv20WithIsos) {
+      solution.setObjective(objectiveIndex++, new Maximize("Rows < CV 20 with isos"));
     }
     return solution;
   }
