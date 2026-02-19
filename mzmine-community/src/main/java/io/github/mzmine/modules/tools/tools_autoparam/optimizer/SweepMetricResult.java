@@ -25,6 +25,8 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.variable.Variable;
@@ -48,6 +50,31 @@ public record SweepMetricResult(@NotNull ParameterSweepResult sweepResult,
       scores[i] = metrics.get(i).evaluate(result);
     }
     return new SweepMetricResult(result, metrics, scores);
+  }
+
+  /**
+   * Returns a new list of {@link SweepMetricResult}s in which {@code metric} and its pre-computed
+   * {@code scores} are appended to every element. The {@code scores} array must have the same
+   * length as {@code results}.
+   *
+   * @param results existing result list (not modified)
+   * @param metric  the additional metric to append
+   * @param scores  pre-computed scores, one entry per element in {@code results}
+   * @return new list with the metric appended at the last index
+   */
+  public static @NotNull List<SweepMetricResult> withAdditionalMetric(
+      @NotNull List<SweepMetricResult> results, @NotNull SweepMetric metric,
+      double @NotNull [] scores) {
+    final List<SweepMetricResult> extended = new ArrayList<>(results.size());
+    for (int i = 0; i < results.size(); i++) {
+      final SweepMetricResult r = results.get(i);
+      final List<SweepMetric> newMetrics = new ArrayList<>(r.metrics());
+      newMetrics.add(metric);
+      final double[] newScores = Arrays.copyOf(r.scores(), r.scores().length + 1);
+      newScores[newScores.length - 1] = scores[i];
+      extended.add(new SweepMetricResult(r.sweepResult(), List.copyOf(newMetrics), newScores));
+    }
+    return List.copyOf(extended);
   }
 
   /**

@@ -109,12 +109,36 @@ public class ParameterSweepMainTask extends AbstractTask {
     final List<ParameterSweepResult> sweepResults = runner.sweep(n, completedRuns);
 
     final List<SweepMetric> metrics = buildMetrics(benchmarkFeatures);
-    final List<SweepMetricResult> evaluated = sweepResults.stream()
+    List<SweepMetricResult> evaluated = sweepResults.stream()
         .map(r -> SweepMetricResult.of(r, metrics)).toList();
 
+    // Harmonic metric: normalize each component to [0,1] across the full result set first,
+    // then compute the harmonic mean. This cannot be done per-result in evaluate().
+    // Only computed when both component metrics are also selected.
+    if (params.getValue(OptimizerParameters.harmonicSlawIsotopes) && params.getValue(
+        OptimizerParameters.slawIntegrationScore) && params.getValue(
+        OptimizerParameters.maximizeFeaturesWithIsotopes)) {
+      final int slawIdx = ParameterSweepRunner.findMetricIndex(metrics,
+          SweepMetric.SlawIntegrationScore.class);
+      final int isoIdx = ParameterSweepRunner.findMetricIndex(metrics,
+          SweepMetric.FeaturesWithIsotopes.class);
+      if (slawIdx >= 0 && isoIdx >= 0) {
+        final double[] slawScores = evaluated.stream().mapToDouble(r -> r.getScore(slawIdx))
+            .toArray();
+        final double[] isoScores = evaluated.stream().mapToDouble(r -> r.getScore(isoIdx))
+            .toArray();
+        final double[] harmonicScores = SweepMetric.HarmonicSlawIsotopes.computeNormalizedScores(
+            slawScores, isoScores);
+        evaluated = SweepMetricResult.withAdditionalMetric(evaluated,
+            SweepMetric.HARMONIC_SLAW_ISOTOPES, harmonicScores);
+      }
+    }
+
+    List<SweepMetricResult> finalEvaluated = evaluated;
     FxThread.runLater(() -> {
       final Stage stage = new Stage();
-      final SweepResultsController controller = new SweepResultsController(tab, runner, evaluated,
+      final SweepResultsController controller = new SweepResultsController(tab, runner,
+          finalEvaluated,
           stage);
       final Region region = controller.buildView();
       stage.setTitle("Parameter Sweep Results");
@@ -130,6 +154,12 @@ public class ParameterSweepMainTask extends AbstractTask {
 
   /**
    * Builds the metric list based on the enabled objectives in {@link OptimizerParameters}.
+   * <p>
+   * Note: {@link SweepMetric.HarmonicSlawIsotopes} is intentionally <em>not</em> added here. Its
+   * scores are computed as a post-processing step after all results are available, because the
+   * component metrics must be normalised to [0, 1] across the full result set before combining
+   * them. The harmonic metric is only computed when both {@link SweepMetric.SlawIntegrationScore}
+   * and {@link SweepMetric.FeaturesWithIsotopes} are also enabled.
    */
   private List<SweepMetric> buildMetrics(@NotNull List<FeatureRecord> benchmarkFeatures) {
     final List<SweepMetric> metrics = new ArrayList<>();
@@ -150,9 +180,6 @@ public class ParameterSweepMainTask extends AbstractTask {
     }
     if (params.getValue(OptimizerParameters.slawIntegrationScore)) {
       metrics.add(SweepMetric.CV20_ISO_ROWS_RATIO);
-    }
-    if (params.getValue(OptimizerParameters.harmonicSlawIsotopes)) {
-      metrics.add(SweepMetric.HARMONIC_SLAW_ISOTOPES);
     }
     if (!benchmarkFeatures.isEmpty() || params.getValue(
         OptimizerParameters.maximizeNumberOfBenchmarkFeatures)) {

@@ -351,6 +351,10 @@ public sealed interface SweepMetric {
    * scores. The harmonic mean rewards solutions that perform well on <em>both</em> components
    * simultaneously and penalises extreme imbalances between the two.
    * <p>
+   * {@link #evaluate} computes the raw harmonic mean (used by the MOEA optimizer). For the
+   * parameter sweep, use {@link #computeNormalizedScores} instead, which min-max normalises each
+   * component to [0, 1] across all results before combining them.
+   * <p>
    * Returns {@link Double#NaN} when the feature list is {@code null} or when either component score
    * is NaN. Returns 0 when both components are 0.
    */
@@ -366,6 +370,10 @@ public sealed interface SweepMetric {
       return true;
     }
 
+    /**
+     * Raw harmonic mean of the two component scores (used by the MOEA optimizer). For the parameter
+     * sweep, prefer {@link #computeNormalizedScores} instead.
+     */
     @Override
     public double evaluate(@NotNull ParameterSweepResult result) {
       final double slawScore = CV20_ISO_ROWS_RATIO.evaluate(result);
@@ -375,6 +383,50 @@ public sealed interface SweepMetric {
       }
       final double sum = slawScore + isoScore;
       return sum == 0.0 ? 0.0 : 2.0 * slawScore * isoScore / sum;
+    }
+
+    /**
+     * Computes normalised harmonic mean scores across all results. Each component ({@code slaw} and
+     * {@code iso}) is min-max normalised to [0, 1] across the full result set before the harmonic
+     * mean is applied. This avoids the combined score being dominated by whichever component has
+     * larger raw values.
+     * <p>
+     * NaN entries in either input propagate to NaN in the output. When the range of a component is
+     * 0 (all values identical) the normalised value is treated as 1 for every result.
+     *
+     * @param slawScores pre-computed {@link SlawIntegrationScore} values, one per result
+     * @param isoScores  pre-computed {@link FeaturesWithIsotopes} values, one per result
+     * @return array of length {@code slawScores.length} with the normalised harmonic scores
+     */
+    public static double @NotNull [] computeNormalizedScores(double @NotNull [] slawScores,
+        double @NotNull [] isoScores) {
+      double slawMin = Double.MAX_VALUE, slawMax = -Double.MAX_VALUE;
+      double isoMin = Double.MAX_VALUE, isoMax = -Double.MAX_VALUE;
+      for (int i = 0; i < slawScores.length; i++) {
+        if (!Double.isNaN(slawScores[i])) {
+          slawMin = Math.min(slawMin, slawScores[i]);
+          slawMax = Math.max(slawMax, slawScores[i]);
+        }
+        if (!Double.isNaN(isoScores[i])) {
+          isoMin = Math.min(isoMin, isoScores[i]);
+          isoMax = Math.max(isoMax, isoScores[i]);
+        }
+      }
+      final double slawRange = slawMax - slawMin;
+      final double isoRange = isoMax - isoMin;
+
+      final double[] result = new double[slawScores.length];
+      for (int i = 0; i < slawScores.length; i++) {
+        if (Double.isNaN(slawScores[i]) || Double.isNaN(isoScores[i])) {
+          result[i] = Double.NaN;
+          continue;
+        }
+        final double normSlaw = slawRange > 0 ? (slawScores[i] - slawMin) / slawRange : 1.0;
+        final double normIso = isoRange > 0 ? (isoScores[i] - isoMin) / isoRange : 1.0;
+        final double sum = normSlaw + normIso;
+        result[i] = sum == 0.0 ? 0.0 : 2.0 * normSlaw * normIso / sum;
+      }
+      return result;
     }
   }
 }
