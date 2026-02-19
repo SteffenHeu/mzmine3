@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -109,6 +109,7 @@ import io.github.mzmine.modules.tools.timstofmaldiacq.TimsTOFMaldiAcquisitionMod
 import io.github.mzmine.modules.tools.timstofmaldiacq.imaging.SimsefImagingSchedulerModule;
 import io.github.mzmine.modules.visualization.chromatogram.ChromatogramVisualizerModule;
 import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashboardModule;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModule;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberModule;
 import io.github.mzmine.modules.visualization.feat_histogram.FeatureHistogramPlotModule;
 import io.github.mzmine.modules.visualization.frames.FrameVisualizerModule;
@@ -343,7 +344,7 @@ public abstract class AbstractWorkspace implements Workspace {
     addModuleMenuItems(featureVis, "Lipids", EquivalentCarbonNumberModule.class,
         LipidAnnotationSummaryModule.class);
     addModuleMenuItems(featureVis, "Dashboards", IntegrationDashboardModule.class,
-        StatsDasboardModule.class);
+        LipidAnnotationQCDashboardModule.class, StatsDasboardModule.class);
     // end of feature visualization
     // back to main visualization menu
     addModuleMenuItems(menu, MSnTreeVisualizerModule.class);

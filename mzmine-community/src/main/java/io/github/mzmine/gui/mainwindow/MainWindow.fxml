@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-  ~ Copyright (c) 2004-2024 The mzmine Development Team
+  ~ Copyright (c) 2004-2026 The mzmine Development Team
   ~
   ~ Permission is hereby granted, free of charge, to any person
   ~ obtaining a copy of this software and associated documentation
@@ -27,6 +27,7 @@
 
 <!--<?import io.github.mzmine.gui.colorpicker.ColorPickerMenuItem?>-->
 
+<?import impl.org.controlsfx.skin.DecorationPane?>
 <?import io.github.mzmine.util.javafx.groupablelistview.GroupableListView?>
 <?import java.net.URL?>
 <?import javafx.scene.control.ContextMenu?>
@@ -49,7 +50,6 @@
 <?import javafx.stage.Screen?>
 <?import org.controlsfx.control.NotificationPane?>
 <?import org.controlsfx.control.StatusBar?>
-<?import impl.org.controlsfx.skin.DecorationPane?>
 <Scene xmlns:fx="http://javafx.com/fxml" xmlns="http://javafx.com/javafx"
   fx:controller="io.github.mzmine.gui.mainwindow.MainWindowController"
   fx:id="mainScene">
@@ -160,6 +160,8 @@
                               <MenuItem onAction="#handleShowStatisticsDashboard" text="Show statistics dashboard"/>
                               <MenuItem onAction="#handleShowIntegrationDashboard"
                                 text="Show integration dashboard"/>
+                              <MenuItem onAction="#handleShowLipidAnnotationQCDashboard"
+                                text="Show lipid annotation QC dashboard"/>
                               <SeparatorMenuItem/>
                               <MenuItem onAction="#handleFeatureListsSort"
                                 text="Sort alphabetically"/>

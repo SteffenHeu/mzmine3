@@ -68,6 +68,9 @@ import io.github.mzmine.modules.dataprocessing.id_addmanualcomp.CompoundAnnotati
 import io.github.mzmine.modules.dataprocessing.id_biotransformer.BioTransformerModule;
 import io.github.mzmine.modules.dataprocessing.id_formulaprediction.FormulaPredictionModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_nist.NistMsSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_pubchemsearch.gui.PubChemResultsController;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule;
@@ -287,9 +290,47 @@ public class FeatureTableContextMenu extends ContextMenu {
       }
     });
 
+    final Menu lipidAnnotationsMenu = new Menu("Lipid Annotations");
+    final MenuItem preferSpeciesLevel = new ConditionalMenuItem("Prefer species level",
+        () -> !selectedRows.isEmpty() && selectedRows.stream().anyMatch(this::rowHasMatchedLipidSignals));
+    preferSpeciesLevel.setOnAction(_ -> applyPreferredLipidLevel(LipidAnnotationLevel.SPECIES_LEVEL));
+
+    final MenuItem preferMolecularSpeciesLevel = new ConditionalMenuItem(
+        "Prefer molecular species level",
+        () -> !selectedRows.isEmpty() && selectedRows.stream().anyMatch(this::rowHasMatchedLipidSignals));
+    preferMolecularSpeciesLevel.setOnAction(
+        _ -> applyPreferredLipidLevel(LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL));
+    lipidAnnotationsMenu.getItems().addAll(preferSpeciesLevel, preferMolecularSpeciesLevel);
+
     idsMenu.getItems()
         .addAll(annotateManually, openCompoundIdUrl, copyIdsItem, pasteIdsItem, clearIdsItem,
-            bioTransformerItem, clearAnnotationsMenu);
+            bioTransformerItem, lipidAnnotationsMenu, clearAnnotationsMenu);
+  }
+
+  private void applyPreferredLipidLevel(@NotNull LipidAnnotationLevel level) {
+    for (final ModularFeatureListRow row : selectedRows) {
+      final List<MatchedLipid> matches = row.getLipidMatches();
+      if (matches.isEmpty()) {
+        continue;
+      }
+      final List<MatchedLipid> preferredLevel = matches.stream()
+          .filter(match -> isMatchingLevel(match, level)).toList();
+      if (preferredLevel.isEmpty()) {
+        continue;
+      }
+      final List<MatchedLipid> reordered = new ArrayList<>(preferredLevel);
+      reordered.addAll(matches.stream().filter(match -> !isMatchingLevel(match, level)).toList());
+      row.setLipidAnnotations(reordered);
+    }
+    table.refresh();
+  }
+
+  private boolean isMatchingLevel(@NotNull MatchedLipid match, @NotNull LipidAnnotationLevel level) {
+    return switch (level) {
+      case SPECIES_LEVEL -> match.getLipidAnnotation() instanceof SpeciesLevelAnnotation;
+      case MOLECULAR_SPECIES_LEVEL ->
+          match.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation;
+    };
   }
 
   /**
