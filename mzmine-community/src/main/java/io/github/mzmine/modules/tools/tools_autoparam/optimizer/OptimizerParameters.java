@@ -81,6 +81,15 @@ public class OptimizerParameters extends SimpleParameterSet {
       "Maximize rows with isotopes and RSD < 20",
       "Attempts to maximize the number of rows that have an area RSD of < 20%", true);
 
+  public static final BooleanParameter slawIntegrationScore = new BooleanParameter(
+      "Slaw integration score",
+      "Attempts to maximize the number of rows that have an area RSD of < 20%", true);
+
+  public static final BooleanParameter harmonicSlawIsotopes = new BooleanParameter(
+      "Harmonic slaw-isotopes score",
+      "Harmonic mean of the slaw integration score and the features-with-isotopes score. "
+          + "Rewards solutions that perform well on both components simultaneously.", true);
+
   public static final OptionalParameter<ImportTypeParameter> benchmarkFeatureTypes = new OptionalParameter<>(
       new ImportTypeParameter("Benchmark feature csv column names", "",
           List.of(new ImportType(true, "mz", new MZType()),
@@ -92,6 +101,10 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public static final IntegerParameter iterations = new IntegerParameter("Iterations",
       "Number of iterations during optimization.", 100, 100, 10_000);
+
+  public static final IntegerParameter samplesPerParam = new IntegerParameter(
+      "Samples per parameter",
+      "Number of evenly-spaced values to sample for each parameter in the sweep.", 7, 3, 50);
 
   public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
       "Optimizer", "", OptimizerOptions.values(), OptimizerOptions.MOEAD);
@@ -109,8 +122,9 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public OptimizerParameters() {
     super(maximizeCv20, maximizeFeaturesWithIsotopes, maximizeCv20WithIsos, minimizeDoublePeaks,
-        maximizeRowFillRatio, maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes,
-        benchmarkFeaturesFile, optimizers, iterations, paramToOptimize);
+        maximizeRowFillRatio, slawIntegrationScore, harmonicSlawIsotopes,
+        maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers,
+        iterations, samplesPerParam, paramToOptimize);
   }
 
   private static List<WizardParameterPrototype> createAllSolutions() {
@@ -135,7 +149,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public static ParameterSet create(boolean maxCv20, boolean maxFeaturesWithIsotopes,
       boolean minDoublePeaks, boolean maxNumberOfBenchmarkFeatures, boolean maxFillRatio,
-      int numIterations) {
+      boolean maximizeCv20WithIsosRatio, int numIterations) {
     final ParameterSet param = new OptimizerParameters().cloneParameterSet();
 
     param.setParameter(maximizeCv20, maxCv20);
@@ -143,9 +157,11 @@ public class OptimizerParameters extends SimpleParameterSet {
     param.setParameter(minimizeDoublePeaks, minDoublePeaks);
     param.setParameter(maximizeNumberOfBenchmarkFeatures, maxNumberOfBenchmarkFeatures);
     param.setParameter(maximizeRowFillRatio, maxFillRatio);
+    param.setParameter(OptimizerParameters.slawIntegrationScore, maximizeCv20WithIsosRatio);
     param.setParameter(benchmarkFeatureTypes, false);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
+    param.setParameter(samplesPerParam, 7);
     param.setParameter(paramToOptimize, new ArrayList<>(ALL_SOLUTIONS));
 
     return param;

@@ -29,6 +29,7 @@ import com.opencsv.exceptions.CsvException;
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
@@ -113,6 +114,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final int numBatchParam;
   private final @Nullable List<FeatureRecord> fileOnlyBenchmarkFeatures;
   private final boolean maximizeCv20WithIsos;
+  private final boolean maximizeSlawIntegrationScore;
+  private final boolean maximizeHarmonicSlawIsotopes;
 
   public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param) {
@@ -125,6 +128,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
     maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
     maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
+    maximizeSlawIntegrationScore = param.getValue(OptimizerParameters.slawIntegrationScore);
+    maximizeHarmonicSlawIsotopes = param.getValue(OptimizerParameters.harmonicSlawIsotopes);
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
 
     super(param.getValue(OptimizerParameters.paramToOptimize).size(),
@@ -156,7 +161,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     }
   }
 
-  private static @Nullable List<FeatureRecord> statsToTargetList(
+  public static @Nullable List<FeatureRecord> statsToTargetList(
       @Nullable List<@NotNull DataFileStatistics> stats) {
     if (stats == null) {
       return null;
@@ -267,11 +272,98 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     solution.setObjectiveValue(index, (double) matchingRows);
   }
 
+  private static void calculateSlawIntegrationScore(int index, Solution solution,
+      FeatureList newest, FeaturesDataTable dataTable) {
+
+    // dont use rsd filter here, because we just use all data files here. they may not be of a specific sample type.
+    long matchingRows = 0;
+    for (int i = 0; i < newest.getNumberOfRows(); i++) {
+      if (newest.getRow(i).getNumberOfFeatures() != newest.getNumberOfRawDataFiles()) {
+        continue;
+      }
+      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
+      final double rsd = MathUtils.calcRelativeStd(abundances);
+      if (rsd <= 0.2) {
+        matchingRows++;
+      }
+    }
+
+    solution.setObjectiveValue(index,
+        (double) (matchingRows * matchingRows) / newest.getNumberOfRows());
+  }
+
+  /**
+   * Harmonic mean of the slaw integration score and the features-with-isotopes score. Both
+   * component scores are computed inline and combined as {@code 2*a*b / (a+b)}.
+   */
+  private static void calculateHarmonicSlawIsotopes(int index, @NotNull Solution solution,
+      @NotNull FeatureList newest, @NotNull FeaturesDataTable dataTable) {
+    // --- slaw component ---
+    long matchingRows = 0;
+    for (int i = 0; i < newest.getNumberOfRows(); i++) {
+      if (newest.getRow(i).getNumberOfFeatures() != newest.getNumberOfRawDataFiles()) {
+        continue;
+      }
+      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
+      if (MathUtils.calcRelativeStd(abundances) <= 0.2) {
+        matchingRows++;
+      }
+    }
+    final double slawScore = newest.getNumberOfRows() == 0 ? 0.0
+        : (double) (matchingRows * matchingRows) / newest.getNumberOfRows();
+
+    // --- features-with-isotopes component ---
+    final double noise = MathUtils.calcQuantile(
+        newest.streamFeatures(false).mapToDouble(Feature::getHeight).toArray(), 0.03);
+    long isoScore = 0;
+    for (RawDataFile file : newest.getRawDataFiles()) {
+      int numPeaks = 0;
+      int numWithIsos = 0;
+      for (FeatureListRow row : newest.getRows()) {
+        final Feature f = row.getFeature(file);
+        if (f == null || f.getHeight() < noise) {
+          continue;
+        }
+        numPeaks++;
+        if (f.getIsotopePattern() != null) {
+          numWithIsos++;
+        }
+      }
+      if (numPeaks > 0) {
+        isoScore += (long) numWithIsos * numWithIsos / numPeaks;
+      }
+    }
+
+    // --- harmonic mean ---
+    final double sum = slawScore + isoScore;
+    solution.setObjectiveValue(index, sum == 0.0 ? 0.0 : 2.0 * slawScore * isoScore / sum);
+  }
+
   private static void calculateAndWriteFeaturesWithIsotopes(int index, Solution solution,
       FeatureList newest) {
-    final long featuresWithIsotopes = newest.streamFeatures()
-        .filter(f -> f.getIsotopePattern() != null).count();
-    solution.setObjectiveValue(index, featuresWithIsotopes);
+//    final long featuresWithIsotopes = newest.streamFeatures()
+//        .filter(f -> f.getIsotopePattern() != null).count();
+
+    final double noise = MathUtils.calcQuantile(
+        newest.streamFeatures(false).mapToDouble(Feature::getHeight).toArray(), 0.03);
+
+    long score = 0;
+    for (RawDataFile file : newest.getRawDataFiles()) {
+      int numPeaks = 0;
+      int numWithIsos = 0;
+      for (FeatureListRow row : newest.getRows()) {
+        Feature f = row.getFeature(file);
+        if (f == null || f.getHeight() < noise) {
+          continue;
+        }
+        numPeaks++;
+        if (f.getIsotopePattern() != null) {
+          numWithIsos++;
+        }
+      }
+      score += (long) numWithIsos * numWithIsos / numPeaks;
+    }
+    solution.setObjectiveValue(index, score);
   }
 
   /**
@@ -304,9 +396,11 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     var minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
     var maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
     var maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
+    var slawIntegrationScore = param.getValue(OptimizerParameters.slawIntegrationScore);
+    var harmonicSlawIsotopes = param.getValue(OptimizerParameters.harmonicSlawIsotopes);
     final int numObjectives = (int) Stream.of(maximizeCv20, maximizeFeaturesWithIsos,
-            minimizeDoublePeaks, maximizeFillRatio, maximizeCv20WithIsos,
-            maximizeNumBenchmark && stats != null)
+            minimizeDoublePeaks, maximizeFillRatio, maximizeCv20WithIsos, slawIntegrationScore,
+            harmonicSlawIsotopes, maximizeNumBenchmark && stats != null)
         .filter(Boolean::booleanValue).count();
     return numObjectives;
   }
@@ -409,6 +503,14 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     if (maximizeCv20WithIsos) {
       calculateAndWriteRsdWithIsosResult(objectiveIndex++, solution, newest, dataTable);
+    }
+
+    if (maximizeSlawIntegrationScore) {
+      calculateSlawIntegrationScore(objectiveIndex++, solution, newest, dataTable);
+    }
+
+    if (maximizeHarmonicSlawIsotopes) {
+      calculateHarmonicSlawIsotopes(objectiveIndex++, solution, newest, dataTable);
     }
 
 //    calculateAndSetRsds(solution, newest, dataTable);
@@ -521,6 +623,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     }
     if (maximizeCv20WithIsos) {
       solution.setObjective(objectiveIndex++, new Maximize("Rows < CV 20 with isos"));
+    }
+    if (maximizeSlawIntegrationScore) {
+      solution.setObjective(objectiveIndex++, new Maximize("Slaw integration score"));
+    }
+    if (maximizeHarmonicSlawIsotopes) {
+      solution.setObjective(objectiveIndex++, new Maximize("Harmonic slaw-isotopes"));
     }
     return solution;
   }

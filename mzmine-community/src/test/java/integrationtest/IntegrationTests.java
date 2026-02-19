@@ -27,8 +27,6 @@ package integrationtest;
 
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.AnnotationWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.DataImportWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.FilterWizardParameterFactory;
@@ -274,8 +272,9 @@ public class IntegrationTests {
     final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, null);
     final MemoryMapStorage storage = MemoryMapStorage.forRawDataFile();
     final List<DataFileStatistics> stats = importedFiles.stream().map(
-        file -> new AutoParamTask(storage, Instant.now(), AutoParamParameters.of(importedFiles),
-            AutoParamModule.class, file, List.of())).parallel().map(AutoParamTask::runAndGet).toList();
+            file -> new AutoParamTask(storage, Instant.now(), AutoParamParameters.of(importedFiles),
+                AutoParamModule.class, file, List.of())).parallel().map(AutoParamTask::runAndGet)
+        .toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
     final WizardSequence sequence = new WizardSequence();
@@ -287,7 +286,7 @@ public class IntegrationTests {
     sequence.add(AnnotationWizardParameterFactory.Annotation.create());
     sequence.add(new WorkflowDDA().create());
 
-    final ParameterSet param = OptimizerParameters.create(true, true, true, true, true, 100);
+    final ParameterSet param = OptimizerParameters.create(true, true, true, true, true, true, 100);
 
     final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(sequence, stats, param);
 
