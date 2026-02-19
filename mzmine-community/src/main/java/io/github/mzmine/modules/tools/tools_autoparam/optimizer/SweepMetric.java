@@ -387,12 +387,13 @@ public sealed interface SweepMetric {
 
     /**
      * Computes normalised harmonic mean scores across all results. Each component ({@code slaw} and
-     * {@code iso}) is min-max normalised to [0, 1] across the full result set before the harmonic
-     * mean is applied. This avoids the combined score being dominated by whichever component has
-     * larger raw values.
+     * {@code iso}) is normalised to [0, 1] by dividing by the maximum value across all results
+     * before the harmonic mean is applied. This avoids the combined score being dominated by
+     * whichever component has larger raw values, while keeping scores proportional (the score is 0
+     * only when the raw component value is 0, not merely when it is the minimum in the population).
      * <p>
-     * NaN entries in either input propagate to NaN in the output. When the range of a component is
-     * 0 (all values identical) the normalised value is treated as 1 for every result.
+     * NaN entries in either input propagate to NaN in the output. When the maximum of a component
+     * is 0 (all values are 0) the normalised value is treated as 1 for every result.
      *
      * @param slawScores pre-computed {@link SlawIntegrationScore} values, one per result
      * @param isoScores  pre-computed {@link FeaturesWithIsotopes} values, one per result
@@ -400,20 +401,16 @@ public sealed interface SweepMetric {
      */
     public static double @NotNull [] computeNormalizedScores(double @NotNull [] slawScores,
         double @NotNull [] isoScores) {
-      double slawMin = Double.MAX_VALUE, slawMax = -Double.MAX_VALUE;
-      double isoMin = Double.MAX_VALUE, isoMax = -Double.MAX_VALUE;
+      double slawMax = 0;
+      double isoMax = 0;
       for (int i = 0; i < slawScores.length; i++) {
         if (!Double.isNaN(slawScores[i])) {
-          slawMin = Math.min(slawMin, slawScores[i]);
           slawMax = Math.max(slawMax, slawScores[i]);
         }
         if (!Double.isNaN(isoScores[i])) {
-          isoMin = Math.min(isoMin, isoScores[i]);
           isoMax = Math.max(isoMax, isoScores[i]);
         }
       }
-      final double slawRange = slawMax - slawMin;
-      final double isoRange = isoMax - isoMin;
 
       final double[] result = new double[slawScores.length];
       for (int i = 0; i < slawScores.length; i++) {
@@ -421,8 +418,8 @@ public sealed interface SweepMetric {
           result[i] = Double.NaN;
           continue;
         }
-        final double normSlaw = slawRange > 0 ? (slawScores[i] - slawMin) / slawRange : 1.0;
-        final double normIso = isoRange > 0 ? (isoScores[i] - isoMin) / isoRange : 1.0;
+        final double normSlaw = slawMax > 0 ? slawScores[i] / slawMax : 1.0;
+        final double normIso = isoMax > 0 ? isoScores[i] / isoMax : 1.0;
         final double sum = normSlaw + normIso;
         result[i] = sum == 0.0 ? 0.0 : 2.0 * normSlaw * normIso / sum;
       }

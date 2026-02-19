@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,19 +28,29 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SweepMetric;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.scene.control.TableColumn;
 import javafx.scene.paint.Color;
+import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.objective.Minimize;
 import org.moeaframework.core.objective.Objective;
 import org.moeaframework.core.population.NondominatedPopulation;
 
 public record ObjectiveWrapper(String name, int index, Color color) {
+
+  /**
+   * Objective name used by {@link LcMsOptimizationProblem} for the harmonic metric.
+   */
+  private static final String HARMONIC_OBJECTIVE_NAME = "Harmonic slaw-isotopes";
 
   public static List<ObjectiveWrapper> extract(NondominatedPopulation result) {
     final Solution solution = result.get(0);
@@ -55,6 +66,13 @@ public record ObjectiveWrapper(String name, int index, Color color) {
     return objectives;
   }
 
+  /**
+   * Returns {@code true} when this wrapper represents the harmonic slaw-isotopes objective.
+   */
+  public boolean isHarmonic() {
+    return HARMONIC_OBJECTIVE_NAME.equals(name());
+  }
+
   public TableColumn<Solution, Number> createColumn() {
     final TableColumn<Solution, Number> column = TableColumns.createColumn(name(), 140,
         new DecimalFormat("0.###"), ColumnAlignment.RIGHT,
@@ -63,5 +81,42 @@ public record ObjectiveWrapper(String name, int index, Color color) {
     column.setCellFactory(_ -> new BarTableCell(color, new DecimalFormat("0.###")));
 
     return column;
+  }
+
+  /**
+   * Creates a column for the harmonic objective that displays scores normalised to [0, 1] across
+   * the full population. The raw slaw and iso component values stored as solution attributes
+   * ({@link LcMsOptimizationProblem#ATTR_HARMONIC_SLAW} /
+   * {@link LcMsOptimizationProblem#ATTR_HARMONIC_ISO}) are min-max normalised across the population
+   * before the harmonic mean is computed.
+   */
+  public @NotNull TableColumn<Solution, Number> createNormalizedHarmonicColumn(
+      @NotNull NondominatedPopulation population) {
+    final List<Solution> solutions = population.asList();
+
+    final double[] slawRaw = solutions.stream()
+        .mapToDouble(s -> attributeAsDouble(s, LcMsOptimizationProblem.ATTR_HARMONIC_SLAW))
+        .toArray();
+    final double[] isoRaw = solutions.stream()
+        .mapToDouble(s -> attributeAsDouble(s, LcMsOptimizationProblem.ATTR_HARMONIC_ISO))
+        .toArray();
+    final double[] normalized = SweepMetric.HarmonicSlawIsotopes.computeNormalizedScores(slawRaw,
+        isoRaw);
+
+    final Map<Solution, Double> scoreMap = new IdentityHashMap<>(solutions.size());
+    for (int i = 0; i < solutions.size(); i++) {
+      scoreMap.put(solutions.get(i), normalized[i]);
+    }
+
+    final TableColumn<Solution, Number> column = TableColumns.createColumn(name(), 140,
+        new DecimalFormat("0.###"), ColumnAlignment.RIGHT,
+        s -> new ReadOnlyDoubleWrapper(scoreMap.getOrDefault(s, Double.NaN)));
+    column.setCellFactory(_ -> new BarTableCell(color, new DecimalFormat("0.###")));
+    return column;
+  }
+
+  private static double attributeAsDouble(@NotNull Solution s, @NotNull String key) {
+    final Object val = s.getAttribute(key);
+    return val instanceof Number n ? n.doubleValue() : Double.NaN;
   }
 }

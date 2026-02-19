@@ -334,10 +334,24 @@ public class LcMsOptimizationProblem extends AbstractProblem {
       }
     }
 
-    // --- harmonic mean ---
+    // Store raw components as private attributes so the results table can normalise them
+    // across the full population before displaying the harmonic score.
+    solution.setAttribute(ATTR_HARMONIC_SLAW, slawScore);
+    solution.setAttribute(ATTR_HARMONIC_ISO, (double) isoScore);
+
+    // --- harmonic mean (raw, not normalised — used by the MOEA optimizer) ---
     final double sum = slawScore + isoScore;
     solution.setObjectiveValue(index, sum == 0.0 ? 0.0 : 2.0 * slawScore * isoScore / sum);
   }
+
+  /**
+   * Attribute key under which the raw slaw component of the harmonic objective is stored.
+   */
+  public static final String ATTR_HARMONIC_SLAW = "_harmonic_slaw";
+  /**
+   * Attribute key under which the raw iso component of the harmonic objective is stored.
+   */
+  public static final String ATTR_HARMONIC_ISO = "_harmonic_iso";
 
   private static void calculateAndWriteFeaturesWithIsotopes(int index, Solution solution,
       FeatureList newest) {
