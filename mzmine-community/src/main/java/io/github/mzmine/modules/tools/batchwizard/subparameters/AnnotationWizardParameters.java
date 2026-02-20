@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -54,7 +54,7 @@ public final class AnnotationWizardParameters extends WizardStepParameters {
   public static final BooleanParameter lipidAnnotation = new BooleanParameter("Annotate lipids", """
       Lipid annotation can be applied on MS1 only data (including imaging),
       or in combination with MS2 information from either DDA or DIA experiments.
-      """, true);
+      """, false);
 
   public static final OptionalParameter<DoubleParameter> formulaPrediction = new OptionalParameter<>(
       new DoubleParameter("Formula prediction (for m/z < X)", """

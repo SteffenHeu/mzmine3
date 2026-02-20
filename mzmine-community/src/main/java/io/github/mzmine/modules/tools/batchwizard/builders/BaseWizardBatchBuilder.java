@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -1413,36 +1414,43 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
     q.add(step);
   }
 
-  protected void makeAndAddLipidAnnotationStep(final BatchQueue q) {
+  protected void makeAndAddLipidAnnotationStep(final @NotNull BatchQueue q) {
     if (!annotateLipids) {
       return;
     }
 
-    var param = MZmineCore.getConfiguration().getModuleParameters(LipidAnnotationModule.class)
+    final var param = MZmineCore.getConfiguration().getModuleParameters(LipidAnnotationModule.class)
         .cloneParameterSet();
 
     param.setParameter(LipidAnnotationParameters.featureLists,
         new FeatureListsSelection(FeatureListsSelectionType.BATCH_LAST_FEATURELISTS));
     param.setParameter(LipidAnnotationParameters.lipidClasses,
         LipidClassesProvider.getListOfAllLipidClasses().toArray());
-    param.setParameter(LipidAnnotationParameters.lipidChainParameters,
-        new LipidAnnotationChainParameters());
-    param.setParameter(LipidAnnotationParameters.mzTolerance, mzTolInterSample);
+    final var chainParams = new LipidAnnotationChainParameters();
+    chainParams.setParameter(LipidAnnotationChainParameters.minChainLength, 4);
+    param.setParameter(LipidAnnotationParameters.lipidChainParameters, chainParams);
+    final var instrumentPreset = (MassSpectrometerWizardParameterFactory) steps.get(WizardPart.MS)
+        .get().getFactory();
+    final MZTolerance lipidMzTolerance = switch (instrumentPreset) {
+      case QTOF -> new MZTolerance(mzTolInterSample.getMzTolerance(), 5);
+      case Orbitrap, Orbitrap_Astral, FTICR, LOW_RES -> mzTolInterSample;
+    };
+    param.setParameter(LipidAnnotationParameters.mzTolerance, lipidMzTolerance);
     param.setParameter(LipidAnnotationParameters.searchForMSMSFragments, true);
     param.setParameter(LipidAnnotationParameters.customLipidClasses, false);
-    var ms2Param = param.getParameter(LipidAnnotationParameters.searchForMSMSFragments)
+    final var ms2Param = param.getParameter(LipidAnnotationParameters.searchForMSMSFragments)
         .getEmbeddedParameters();
     // all input scans as default to avoid to many chimeric merged spectra in lipids
     ms2Param.getParameter(LipidAnnotationMSMSParameters.spectraMergeSelect)
         .setUseInputScans(SelectInputScans.ALL_SCANS);
     ms2Param.setParameter(LipidAnnotationMSMSParameters.keepUnconfirmedAnnotations, isImaging);
-    ms2Param.setParameter(LipidAnnotationMSMSParameters.minimumMsMsScore, 0.6);
+    ms2Param.setParameter(LipidAnnotationMSMSParameters.minimumMsMsScore, 0.1);
     ms2Param.setParameter(LipidAnnotationMSMSParameters.mzToleranceMS2, mzTolScans);
     param.setParameter(LipidAnnotationParameters.advanced, false);
-    var advanced = param.getEmbeddedParameterValue(LipidAnnotationParameters.advanced);
+    final var advanced = param.getEmbeddedParameterValue(LipidAnnotationParameters.advanced);
     advanced.setParameter(AdvancedLipidAnnotationParameters.IONS_TO_IGNORE,
         IonizationType.values());
-    MZmineProcessingStep<MZmineProcessingModule> step = new MZmineProcessingStepImpl<>(
+    final MZmineProcessingStep<MZmineProcessingModule> step = new MZmineProcessingStepImpl<>(
         MZmineCore.getModuleInstance(LipidAnnotationModule.class), param);
     q.add(step);
   }
