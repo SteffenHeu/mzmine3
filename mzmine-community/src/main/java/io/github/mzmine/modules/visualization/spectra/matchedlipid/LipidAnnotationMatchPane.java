@@ -139,7 +139,7 @@ public class LipidAnnotationMatchPane extends AbstractFeatureListRowsPane {
       var pnTitle = createTitlePane();
       metaDataScroll = createMetaDataPane();
 
-      lipidSpectrumPlot = new LipidSpectrumPlot(matchedLipid, true, RunOption.THIS_THREAD);
+      lipidSpectrumPlot = new LipidSpectrumPlot(matchedLipid, true, RunOption.THIS_THREAD, false);
 
       // put into main
       ColumnConstraints ccSpectrum = new ColumnConstraints(400, -1, Region.USE_COMPUTED_SIZE,
