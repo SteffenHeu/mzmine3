@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -534,11 +534,10 @@ class AddCustomLipidClassSetupDialog extends ParameterSetupDialog {
     param.setParameter(LipidAnnotationParameters.lipidChainParameters,
         (LipidAnnotationChainParameters) chainParam);
     param.setParameter(LipidAnnotationParameters.mzTolerance, new MZTolerance(1000, 1));
+    param.setParameter(LipidAnnotationParameters.minimumOverallQualityScore, 40.0);
     param.setParameter(LipidAnnotationParameters.searchForMSMSFragments, true);
     param.getParameter(LipidAnnotationParameters.searchForMSMSFragments).getEmbeddedParameters()
         .setParameter(LipidAnnotationMSMSParameters.keepUnconfirmedAnnotations, false);
-    param.getParameter(LipidAnnotationParameters.searchForMSMSFragments).getEmbeddedParameters()
-        .setParameter(LipidAnnotationMSMSParameters.minimumMsMsScore, 0.0);
     param.getParameter(LipidAnnotationParameters.searchForMSMSFragments).getEmbeddedParameters()
         .setParameter(LipidAnnotationMSMSParameters.mzToleranceMS2, new MZTolerance(1000, 1));
     return param;

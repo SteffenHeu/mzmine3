@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -24,6 +24,8 @@
  */
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules;
+
+import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.clampToUnit;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.DataPoint;
@@ -66,6 +68,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
@@ -143,11 +146,13 @@ public class LipidAnnotationUtils {
     }
   }
 
-  public static void findPossibleLipid(LipidIon lipidIon, FeatureListRow row,
-      ParameterSet parameters, MZTolerance mzTolerance, MZTolerance mzToleranceMS2,
-      boolean searchForMSMSFragments, double minMsMsScore, boolean keepUnconfirmedAnnotations,
-      LipidCategories lipidCategory, final FragmentScanSelection scanMergeSelect) {
-    Set<MatchedLipid> possibleRowAnnotations = new HashSet<>();
+  public static void findPossibleLipid(final @NotNull LipidIon lipidIon,
+      final @NotNull FeatureListRow row, final @NotNull ParameterSet parameters,
+      final @NotNull MZTolerance mzTolerance, final @NotNull MZTolerance mzToleranceMS2,
+      final boolean searchForMSMSFragments, final boolean keepUnconfirmedAnnotations,
+      final @NotNull LipidCategories lipidCategory,
+      final @NotNull FragmentScanSelection scanMergeSelect,
+      final @NotNull Set<MatchedLipid> possibleRowAnnotations) {
 
     if (Objects.equals(row.getRepresentativePolarity(), lipidIon.ionizationType().getPolarity())) {
       Range<Double> mzTolRange12C = mzTolerance.getToleranceRange(row.getAverageMZ());
@@ -159,19 +164,16 @@ public class LipidAnnotationUtils {
         if (searchForMSMSFragments) {
           possibleRowAnnotations.addAll(
               searchMsmsFragments(row, lipidIon.ionizationType(), lipidIon.lipidAnnotation(),
-                  parameters, mzToleranceMS2, minMsMsScore, keepUnconfirmedAnnotations,
-                  lipidCategory, scanMergeSelect));
+                  parameters, mzToleranceMS2, keepUnconfirmedAnnotations, lipidCategory,
+                  scanMergeSelect));
         } else {
 
           // make MS1 annotation
-          MatchedLipid matchedLipid = new MatchedLipid(lipidIon.lipidAnnotation(),
+          final MatchedLipid matchedLipid = new MatchedLipid(lipidIon.lipidAnnotation(),
               row.getAverageMZ(), lipidIon.ionizationType(), null, 0.0,
               MatchedLipidStatus.UNCONFIRMED);
           possibleRowAnnotations.add(matchedLipid);
         }
-      }
-      if (!possibleRowAnnotations.isEmpty()) {
-        addAnnotationsToFeatureList(row, possibleRowAnnotations);
       }
     }
   }
@@ -179,53 +181,54 @@ public class LipidAnnotationUtils {
   /**
    * This method searches for MS/MS fragments. A mass list for MS2 scans will be used if present.
    */
-  private static Set<MatchedLipid> searchMsmsFragments(FeatureListRow row,
-      IonizationType ionization, ILipidAnnotation lipid, ParameterSet parameters,
-      MZTolerance mzToleranceMS2, double minMsMsScore, boolean keepUnconfirmedAnnotations,
-      LipidCategories lipidCategory, final FragmentScanSelection scanMergeSelect) {
-    Set<MatchedLipid> matchedLipids = new HashSet<>();
-    LipidFragmentationRule[] rules = lipid.getLipidClass().getFragmentationRules();
-    List<Scan> msmsScans = scanMergeSelect.getAllFragmentSpectra(row);
+  private static @NotNull Set<MatchedLipid> searchMsmsFragments(final @NotNull FeatureListRow row,
+      final @NotNull IonizationType ionization, final @NotNull ILipidAnnotation lipid,
+      final @NotNull ParameterSet parameters, final @NotNull MZTolerance mzToleranceMS2,
+      final boolean keepUnconfirmedAnnotations, final @NotNull LipidCategories lipidCategory,
+      final @NotNull FragmentScanSelection scanMergeSelect) {
+    final Set<MatchedLipid> matchedLipids = new HashSet<>();
+    final LipidFragmentationRule[] rules = lipid.getLipidClass().getFragmentationRules();
+    final List<Scan> msmsScans = scanMergeSelect.getAllFragmentSpectra(row);
 
     if (!msmsScans.isEmpty() || keepUnconfirmedAnnotations) {
-      for (Scan msmsScan : msmsScans) {
-        Set<MatchedLipid> matchedLipidsInScan = new HashSet<>();
+      for (final Scan msmsScan : msmsScans) {
+        final Set<MatchedLipid> matchedLipidsInScan = new HashSet<>();
         if (msmsScan.getMassList() == null) {
           return new HashSet<>();
         }
-        DataPoint[] dataPoints = null;
-        dataPoints = msmsScan.getMassList().getDataPoints();
-        Set<LipidFragment> annotatedFragments = new HashSet<>();
+        final DataPoint[] dataPoints = msmsScan.getMassList().getDataPoints();
+        final Set<LipidFragment> annotatedFragments = new HashSet<>();
         if (rules != null && rules.length > 0) {
-          ILipidFragmentFactory lipidFragmentFactory = new LipidFragmentFactory(mzToleranceMS2,
+          final ILipidFragmentFactory lipidFragmentFactory = new LipidFragmentFactory(
+              mzToleranceMS2,
               lipid, ionization, rules, msmsScan,
               parameters.getParameter(LipidAnnotationParameters.lipidChainParameters)
                   .getEmbeddedParameters());
-          List<LipidFragment> annotatedFragmentsForDataPoint = lipidFragmentFactory.findLipidFragments();
+          final List<LipidFragment> annotatedFragmentsForDataPoint = lipidFragmentFactory.findLipidFragments();
           if (annotatedFragmentsForDataPoint != null && !annotatedFragmentsForDataPoint.isEmpty()) {
             annotatedFragments.addAll(annotatedFragmentsForDataPoint);
           }
         }
         if (!annotatedFragments.isEmpty()) {
-          ISpeciesLevelMatchedLipidFactory matchedLipidFactory = getSpeciesLevelMatchedLipidFactory(
+          final ISpeciesLevelMatchedLipidFactory matchedLipidFactory = getSpeciesLevelMatchedLipidFactory(
               lipidCategory);
-          MatchedLipid matchedSpeciesLevelLipid = matchedLipidFactory.validateSpeciesLevelAnnotation(
-              row.getAverageMZ(), lipid, annotatedFragments, dataPoints, minMsMsScore,
+          final MatchedLipid matchedSpeciesLevelLipid = matchedLipidFactory.validateSpeciesLevelAnnotation(
+              row.getAverageMZ(), lipid, annotatedFragments, dataPoints, 0d,
               mzToleranceMS2, ionization);
           if (matchedSpeciesLevelLipid != null) {
             matchedLipidsInScan.add(matchedSpeciesLevelLipid);
           }
 
-          IMolecularSpeciesLevelMatchedLipidFactory matchedMolecularSpeciesLipidFactory = getMolecularSpeciesLevelMatchedLipidFactory(
+          final IMolecularSpeciesLevelMatchedLipidFactory matchedMolecularSpeciesLipidFactory = getMolecularSpeciesLevelMatchedLipidFactory(
               lipidCategory);
-          Set<MatchedLipid> molecularSpeciesLevelMatchedLipids = matchedMolecularSpeciesLipidFactory.predictMolecularSpeciesLevelMatches(
-              annotatedFragments, lipid, row.getAverageMZ(), dataPoints, minMsMsScore,
+          final Set<MatchedLipid> molecularSpeciesLevelMatchedLipids = matchedMolecularSpeciesLipidFactory.predictMolecularSpeciesLevelMatches(
+              annotatedFragments, lipid, row.getAverageMZ(), dataPoints, 0d,
               mzToleranceMS2, ionization);
           if (molecularSpeciesLevelMatchedLipids != null
               && !molecularSpeciesLevelMatchedLipids.isEmpty()) {
             //Add species level fragments to score
             if (matchedSpeciesLevelLipid != null) {
-              for (MatchedLipid molecularSpeciesLevelMatchedLipid : molecularSpeciesLevelMatchedLipids) {
+              for (final MatchedLipid molecularSpeciesLevelMatchedLipid : molecularSpeciesLevelMatchedLipids) {
                 molecularSpeciesLevelMatchedLipid.getMatchedFragments()
                     .addAll(matchedSpeciesLevelLipid.getMatchedFragments());
               }
@@ -234,7 +237,7 @@ public class LipidAnnotationUtils {
               //check MSMS score
               molecularSpeciesLevelMatchedLipid = matchedMolecularSpeciesLipidFactory.validateMolecularSpeciesLevelAnnotation(
                   row.getAverageMZ(), molecularSpeciesLevelMatchedLipid.getLipidAnnotation(),
-                  molecularSpeciesLevelMatchedLipid.getMatchedFragments(), dataPoints, minMsMsScore,
+                  molecularSpeciesLevelMatchedLipid.getMatchedFragments(), dataPoints, 0d,
                   mzToleranceMS2, ionization);
               if (molecularSpeciesLevelMatchedLipid != null) {
                 matchedLipidsInScan.add(molecularSpeciesLevelMatchedLipid);
@@ -245,14 +248,14 @@ public class LipidAnnotationUtils {
         matchedLipids.addAll(matchedLipidsInScan);
       }
       if (keepUnconfirmedAnnotations && matchedLipids.isEmpty()) {
-        MatchedLipid unconfirmedMatchedLipid = new MatchedLipid(lipid, row.getAverageMZ(),
+        final MatchedLipid unconfirmedMatchedLipid = new MatchedLipid(lipid, row.getAverageMZ(),
             ionization, null, 0.0, MatchedLipidStatus.UNCONFIRMED);
         unconfirmedMatchedLipid.setComment(
             "Warning, this annotation is based on MS1 mass accuracy only!");
         matchedLipids.add(unconfirmedMatchedLipid);
       }
       if (!matchedLipids.isEmpty() && matchedLipids.size() > 1) {
-        onlyKeepBestAnnotations(matchedLipids);
+        onlyKeepBestAnnotations(row, matchedLipids, true);
       }
     }
 
@@ -319,24 +322,27 @@ public class LipidAnnotationUtils {
 
   }
 
-  private static void onlyKeepBestAnnotations(Set<MatchedLipid> matchedLipids) {
-    Map<String, List<MatchedLipid>> matchedLipidsByAnnotation = matchedLipids.stream()
+  private static void onlyKeepBestAnnotations(final @NotNull FeatureListRow row,
+      final @NotNull Set<MatchedLipid> matchedLipids, final boolean includeMs2Score) {
+    final Map<String, List<MatchedLipid>> matchedLipidsByAnnotation = matchedLipids.stream()
         .filter(Objects::nonNull).collect(Collectors.groupingBy(
             matchedLipid -> matchedLipid.getLipidAnnotation().getAnnotation()));
 
-    List<List<MatchedLipid>> duplicateMatchedLipids = matchedLipidsByAnnotation.values().stream()
+    final List<List<MatchedLipid>> duplicateMatchedLipids = matchedLipidsByAnnotation.values()
+        .stream()
         .filter(group -> group.size() > 1).toList();
 
-    for (List<MatchedLipid> matchedLipidGroup : duplicateMatchedLipids) {
+    for (final List<MatchedLipid> matchedLipidGroup : duplicateMatchedLipids) {
       if (matchedLipidGroup.size() > 1) {
-        MatchedLipid bestMatch = matchedLipidGroup.stream()
-            .max(Comparator.comparingDouble(MatchedLipid::getMsMsScore)).orElse(null);
+        final MatchedLipid bestMatch = matchedLipidGroup.stream().max(Comparator.comparingDouble(
+                matchedLipid -> preResolverRankingScore(row, matchedLipid, includeMs2Score)))
+            .orElse(null);
         matchedLipidGroup.remove(bestMatch);
 
-        for (MatchedLipid matchedLipidToRemove : matchedLipidGroup) {
-          Iterator<MatchedLipid> iterator = matchedLipids.iterator();
+        for (final MatchedLipid matchedLipidToRemove : matchedLipidGroup) {
+          final Iterator<MatchedLipid> iterator = matchedLipids.iterator();
           while (iterator.hasNext()) {
-            MatchedLipid item = iterator.next();
+            final MatchedLipid item = iterator.next();
             if (item != null && item.equals(matchedLipidToRemove)) {
               iterator.remove();
             }
@@ -346,14 +352,18 @@ public class LipidAnnotationUtils {
     }
   }
 
-  private static void addAnnotationsToFeatureList(FeatureListRow row,
-      Set<MatchedLipid> possibleRowAnnotations) {
+  public static void addAnnotationsToFeatureList(final @NotNull FeatureListRow row,
+      final @NotNull Set<MatchedLipid> possibleRowAnnotations,
+      final @NotNull LipidAnalysisType lipidAnalysisType, final boolean includeMs2Score,
+      final double minimumOverallQualityScore) {
     //consider previous annotations
-    List<MatchedLipid> previousLipidMatches = row.getLipidMatches();
+    final List<MatchedLipid> previousLipidMatches = row.getLipidMatches();
     if (!previousLipidMatches.isEmpty()) {
       possibleRowAnnotations.addAll(previousLipidMatches);
     }
-    LipidAnnotationResolver lipidAnnotationResolver = new LipidAnnotationResolver(true, true, true);
+    final LipidAnnotationResolver lipidAnnotationResolver = new LipidAnnotationResolver(true, true,
+        true, includeMs2Score, lipidAnalysisType.hasRetentionTimePattern(),
+        minimumOverallQualityScore, lipidAnalysisType);
     List<MatchedLipid> finalResults = lipidAnnotationResolver.resolveFeatureListRowMatchedLipids(
         row, possibleRowAnnotations);
 
@@ -363,6 +373,33 @@ public class LipidAnnotationUtils {
     row.setLipidAnnotations(finalResults);
   }
 
+  private static double preResolverRankingScore(final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid matchedLipid, final boolean includeMs2Score) {
+    final double ms1Score = computeMs1Score(row, matchedLipid);
+    if (includeMs2Score) {
+      return (ms1Score + safeMs2Score(matchedLipid)) / 2d;
+    }
+    return ms1Score;
+  }
+
+  private static double computeMs1Score(final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid matchedLipid) {
+    final double exactMz = MatchedLipid.getExactMass(matchedLipid);
+    final Double accurateMz = matchedLipid.getAccurateMz();
+    final double observedMz = accurateMz != null ? accurateMz : row.getAverageMZ();
+    final double ppm = (observedMz - exactMz) / exactMz * 1e6;
+    final double absPpm = Math.abs(ppm);
+    if (!Double.isFinite(absPpm)) {
+      return 0d;
+    }
+    return clampToUnit(1d - Math.min(absPpm, 5d) / 5d);
+  }
+
+  private static double safeMs2Score(final @Nullable MatchedLipid matchedLipid) {
+    if (matchedLipid == null || matchedLipid.getMsMsScore() == null) {
+      return 0d;
+    }
+    return clampToUnit(matchedLipid.getMsMsScore());
+  }
+
 }
-
-

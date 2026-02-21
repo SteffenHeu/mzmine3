@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -37,6 +37,8 @@ import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
+import io.github.mzmine.parameters.parametertypes.ComboParameter;
+import io.github.mzmine.parameters.parametertypes.PercentParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
 import io.github.mzmine.parameters.parametertypes.submodules.OptionalModuleParameter;
 import io.github.mzmine.parameters.parametertypes.submodules.ParameterSetParameter;
@@ -54,6 +56,12 @@ public class LipidAnnotationParameters extends SimpleParameterSet {
 
   public static final FeatureListsParameter featureLists = new FeatureListsParameter();
 
+  public static final ComboParameter<LipidAnalysisType> lipidAnalysisType = new ComboParameter<>(
+      "Lipid analysis type", """
+      Select the acquisition/analysis type to adapt annotation ranking.
+      LC types use retention-time trend scoring, while direct infusion and imaging do not.
+      """, LipidAnalysisType.values(), LipidAnalysisType.LC_REVERSED_PHASE);
+
   public static final LipidClassParameter<Object> lipidClasses = new LipidClassParameter<>(
       "Lipid classes", "Selection of lipid backbones",
       LipidClassesProvider.getListOfAllLipidClasses().toArray());
@@ -65,6 +73,12 @@ public class LipidAnnotationParameters extends SimpleParameterSet {
   public static final MZToleranceParameter mzTolerance = new MZToleranceParameter(
       "m/z tolerance MS1 level:",
       "Enter m/z tolerance for exact mass database matching on MS1 level", 0.005, 5);
+
+  public static final PercentParameter minimumOverallQualityScore = new PercentParameter(
+      "Minimum overall quality score [%]", """
+      Minimum QC-based lipid annotation score required to keep an annotation.
+      The score combines MS1, optional MS2, adduct, isotope, interference, and optional RT elution order.
+      """, 0.4);
 
   public static final OptionalModuleParameter<LipidAnnotationMSMSParameters> searchForMSMSFragments = new OptionalModuleParameter<>(
       "Search for lipid class specific fragments in MS/MS spectra",
@@ -80,8 +94,9 @@ public class LipidAnnotationParameters extends SimpleParameterSet {
       new AdvancedLipidAnnotationParameters());
 
   public LipidAnnotationParameters() {
-    super(new Parameter[]{featureLists, lipidClasses, lipidChainParameters, mzTolerance,
-            searchForMSMSFragments, customLipidClasses, advanced},
+    super(new Parameter[]{featureLists, lipidAnalysisType, lipidClasses, lipidChainParameters,
+            mzTolerance, minimumOverallQualityScore, searchForMSMSFragments, customLipidClasses,
+            advanced},
         "https://mzmine.github.io/mzmine_documentation/module_docs/id_lipid_annotation/lipid-annotation.html");
   }
 
@@ -105,6 +120,6 @@ public class LipidAnnotationParameters extends SimpleParameterSet {
 
   @Override
   public int getVersion() {
-    return 2;
+    return 4;
   }
 }

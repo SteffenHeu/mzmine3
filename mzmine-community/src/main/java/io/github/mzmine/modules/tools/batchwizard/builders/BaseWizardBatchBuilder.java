@@ -106,6 +106,7 @@ import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidn
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingParameters;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.refinement.IonNetworkRefinementParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.AdvancedLipidAnnotationParameters;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationChainParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationMSMSParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
@@ -1436,7 +1437,10 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
       case Orbitrap, Orbitrap_Astral, FTICR, LOW_RES -> mzTolInterSample;
     };
     param.setParameter(LipidAnnotationParameters.mzTolerance, lipidMzTolerance);
-    param.setParameter(LipidAnnotationParameters.searchForMSMSFragments, true);
+    param.setParameter(LipidAnnotationParameters.lipidAnalysisType,
+        isImaging ? LipidAnalysisType.IMAGING : LipidAnalysisType.LC_REVERSED_PHASE);
+    param.setParameter(LipidAnnotationParameters.searchForMSMSFragments, !isImaging);
+    param.setParameter(LipidAnnotationParameters.minimumOverallQualityScore, 0.1);
     param.setParameter(LipidAnnotationParameters.customLipidClasses, false);
     final var ms2Param = param.getParameter(LipidAnnotationParameters.searchForMSMSFragments)
         .getEmbeddedParameters();
@@ -1444,7 +1448,6 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
     ms2Param.getParameter(LipidAnnotationMSMSParameters.spectraMergeSelect)
         .setUseInputScans(SelectInputScans.ALL_SCANS);
     ms2Param.setParameter(LipidAnnotationMSMSParameters.keepUnconfirmedAnnotations, isImaging);
-    ms2Param.setParameter(LipidAnnotationMSMSParameters.minimumMsMsScore, 0.1);
     ms2Param.setParameter(LipidAnnotationMSMSParameters.mzToleranceMS2, mzTolScans);
     param.setParameter(LipidAnnotationParameters.advanced, false);
     final var advanced = param.getEmbeddedParameterValue(LipidAnnotationParameters.advanced);

@@ -72,6 +72,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -91,6 +92,7 @@ public class AnnotationQualityPane extends BorderPane {
   private final Label placeholder = new Label("Select a row with lipid annotations.");
   private final Button removeMultiRowAnnotationsButton = new Button("Remove multi-row annotations");
   private final Button setBestPerRowButton = new Button("Set all rows to highest-score annotation");
+  private boolean includeRetentionTimeAnalysis = true;
   private @Nullable Runnable onAnnotationsChanged;
   private @Nullable FeatureListRow row;
   private @Nullable ModularFeatureList featureList;
@@ -122,12 +124,21 @@ public class AnnotationQualityPane extends BorderPane {
     requestUpdate();
   }
 
+  public void setIncludeRetentionTimeAnalysis(final boolean includeRetentionTimeAnalysis) {
+    if (this.includeRetentionTimeAnalysis == includeRetentionTimeAnalysis) {
+      return;
+    }
+    this.includeRetentionTimeAnalysis = includeRetentionTimeAnalysis;
+    requestUpdate();
+  }
+
   public void setOnAnnotationsChanged(final @Nullable Runnable onAnnotationsChanged) {
     this.onAnnotationsChanged = onAnnotationsChanged;
   }
 
   private void requestUpdate() {
-    scheduler.onTaskThreadDelayed(new QualityComputationTask(this, row, featureList),
+    scheduler.onTaskThreadDelayed(
+        new QualityComputationTask(this, row, featureList, includeRetentionTimeAnalysis),
         Duration.millis(120));
   }
 
@@ -176,12 +187,7 @@ public class AnnotationQualityPane extends BorderPane {
   private Region createQualityCard(final @NotNull QualityCardData qualityCardData) {
     final javafx.scene.layout.VBox card = new javafx.scene.layout.VBox(6);
     card.setStyle(qualityCardStyle());
-
-    final Label annotation = new Label(
-        qualityCardData.match().getLipidAnnotation().getAnnotation());
-    annotation.setStyle("-fx-font-weight: bold;");
-
-    card.getChildren().add(annotation);
+    card.getChildren().add(createQualityCardHeader(qualityCardData.match()));
     card.getChildren().add(createMetricRow("Overall quality", qualityCardData.overall(),
         qualityCardData.overall() >= 0.75 ? "High confidence"
             : qualityCardData.overall() >= 0.5 ? "Moderate confidence" : "Low confidence"));
@@ -194,13 +200,65 @@ public class AnnotationQualityPane extends BorderPane {
             qualityCardData.adduct().detail()));
     card.getChildren().add(createMetricRow("Isotope pattern", qualityCardData.isotope().score(),
         qualityCardData.isotope().detail()));
-    card.getChildren().add(
-        createMetricRow("Elution order score", qualityCardData.elutionOrder().score(),
-            qualityCardData.elutionOrder().detail()));
+    if (includeRetentionTimeAnalysis) {
+      card.getChildren().add(
+          createMetricRow("Elution order score", qualityCardData.elutionOrder().score(),
+              qualityCardData.elutionOrder().detail()));
+    }
     card.getChildren().add(
         createMetricRow("Interference risk", qualityCardData.interference().score(),
             qualityCardData.interference().detail()));
     return card;
+  }
+
+  private @NotNull Region createQualityCardHeader(final @NotNull MatchedLipid match) {
+    final Label annotation = new Label(match.getLipidAnnotation().getAnnotation());
+    annotation.setStyle("-fx-font-weight: bold;");
+    final Button deleteButton = new Button("Delete annotation");
+    deleteButton.setOnAction(_ -> deleteAnnotationFromSelectedRowWithConfirmation(match));
+
+    final Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+    final HBox header = new HBox(8, annotation, spacer, deleteButton);
+    header.setAlignment(Pos.CENTER_LEFT);
+    return header;
+  }
+
+  private void deleteAnnotationFromSelectedRowWithConfirmation(final @NotNull MatchedLipid match) {
+    if (row == null) {
+      return;
+    }
+    if (!confirmDeleteAnnotation(match)) {
+      return;
+    }
+    deleteAnnotationFromSelectedRow(match);
+    refreshAfterAnnotationDelete(row);
+  }
+
+  private boolean confirmDeleteAnnotation(final @NotNull MatchedLipid match) {
+    if (row == null) {
+      return false;
+    }
+    final String annotation = Objects.toString(match.getLipidAnnotation().getAnnotation(),
+        "Unknown annotation");
+    final String message = "Delete annotation \"" + annotation + "\" from selected row #"
+        + row.getID() + "?";
+    final Alert alert = new Alert(Alert.AlertType.CONFIRMATION, message, ButtonType.YES,
+        ButtonType.NO);
+    alert.setTitle("Confirm annotation deletion");
+    alert.setHeaderText("Delete annotation");
+    final Optional<ButtonType> result = alert.showAndWait();
+    return result.isPresent() && ButtonType.YES.equals(result.get());
+  }
+
+  private void deleteAnnotationFromSelectedRow(final @NotNull MatchedLipid match) {
+    if (row == null) {
+      return;
+    }
+    final List<MatchedLipid> remaining = row.getLipidMatches().stream()
+        .filter(existingMatch -> !Objects.equals(existingMatch, match)).toList();
+    row.setLipidAnnotations(remaining);
   }
 
   private Region createMetricRow(String name, double score, String detail) {
@@ -323,13 +381,16 @@ public class AnnotationQualityPane extends BorderPane {
 
     private final @Nullable FeatureListRow row;
     private final @Nullable ModularFeatureList featureList;
+    private final boolean includeRetentionTimeAnalysis;
     private @NotNull QualityComputationResult result;
 
     private QualityComputationTask(final @NotNull AnnotationQualityPane pane,
-        final @Nullable FeatureListRow row, final @Nullable ModularFeatureList featureList) {
+        final @Nullable FeatureListRow row, final @Nullable ModularFeatureList featureList,
+        final boolean includeRetentionTimeAnalysis) {
       super("lipidqc-quality-update", pane);
       this.row = row;
       this.featureList = featureList;
+      this.includeRetentionTimeAnalysis = includeRetentionTimeAnalysis;
       result = new QualityComputationResult("Select a row with lipid annotations.", null,
           new InterferenceMetrics(0, 0), List.of(), List.of());
     }
@@ -363,10 +424,13 @@ public class AnnotationQualityPane extends BorderPane {
         final QualityMetric ms2 = evaluateMs2(match);
         final QualityMetric adduct = evaluateAdduct(row, match);
         final QualityMetric isotope = evaluateIsotope(row, match);
-        final QualityMetric elutionOrder = evaluateElutionOrder(featureList, row, match);
-        final double overall =
-            (ms1.score() + ms2.score() + adduct.score() + isotope.score() + elutionOrder.score()
-                + interference.score()) / 6d;
+        final QualityMetric elutionOrder = includeRetentionTimeAnalysis
+            ? evaluateElutionOrder(featureList, row, match)
+            : new QualityMetric(0d, "Disabled for current lipid analysis mode");
+        final double scoreSum = ms1.score() + ms2.score() + adduct.score() + isotope.score()
+            + interference.score() + (includeRetentionTimeAnalysis ? elutionOrder.score() : 0d);
+        final int scoreCount = includeRetentionTimeAnalysis ? 6 : 5;
+        final double overall = scoreSum / scoreCount;
         cards.add(new QualityCardData(match, ms1, ms2, adduct, isotope, elutionOrder, interference,
             overall));
       }
@@ -398,7 +462,8 @@ public class AnnotationQualityPane extends BorderPane {
     if (featureList == null) {
       return;
     }
-    final Map<FeatureListRow, Set<String>> removalPlan = buildMultiRowRemovalPlan(featureList);
+    final Map<FeatureListRow, Set<String>> removalPlan = buildMultiRowRemovalPlan(featureList,
+        includeRetentionTimeAnalysis);
     final int removals = countPlannedAnnotationRemovals(removalPlan);
     if (removals <= 0) {
       MZmineCore.getDesktop()
@@ -416,7 +481,8 @@ public class AnnotationQualityPane extends BorderPane {
     if (featureList == null) {
       return;
     }
-    final Map<FeatureListRow, MatchedLipid> bestMatchByRow = planBestAnnotationPerRow(featureList);
+    final Map<FeatureListRow, MatchedLipid> bestMatchByRow = planBestAnnotationPerRow(featureList,
+        includeRetentionTimeAnalysis);
     final int changedRows = countPlannedSetBestUpdates(bestMatchByRow);
     if (changedRows <= 0) {
       MZmineCore.getDesktop().displayMessage("Annotation actions",
@@ -466,7 +532,7 @@ public class AnnotationQualityPane extends BorderPane {
   }
 
   private static @NotNull Map<FeatureListRow, Set<String>> buildMultiRowRemovalPlan(
-      final @NotNull ModularFeatureList featureList) {
+      final @NotNull ModularFeatureList featureList, final boolean includeRetentionTimeAnalysis) {
     final Map<String, List<RowAnnotationCandidate>> candidatesByAnnotation = new TreeMap<>();
     for (final FeatureListRow candidateRow : featureList.getRows()) {
       final List<MatchedLipid> rowMatches = candidateRow.getLipidMatches();
@@ -478,7 +544,8 @@ public class AnnotationQualityPane extends BorderPane {
         if (annotation.isBlank()) {
           continue;
         }
-        final double combinedScore = combinedAnnotationScore(featureList, candidateRow, match);
+        final double combinedScore = combinedAnnotationScore(featureList, candidateRow, match,
+            includeRetentionTimeAnalysis);
         candidatesByAnnotation.computeIfAbsent(annotation, _ -> new ArrayList<>())
             .add(new RowAnnotationCandidate(candidateRow, match, combinedScore));
       }
@@ -532,7 +599,7 @@ public class AnnotationQualityPane extends BorderPane {
   }
 
   private static @NotNull Map<FeatureListRow, MatchedLipid> planBestAnnotationPerRow(
-      final @NotNull ModularFeatureList featureList) {
+      final @NotNull ModularFeatureList featureList, final boolean includeRetentionTimeAnalysis) {
     final Map<FeatureListRow, MatchedLipid> bestMatchByRow = new LinkedHashMap<>();
     for (final FeatureListRow candidateRow : featureList.getRows()) {
       final List<MatchedLipid> matches = candidateRow.getLipidMatches();
@@ -540,8 +607,10 @@ public class AnnotationQualityPane extends BorderPane {
         continue;
       }
       final MatchedLipid bestMatch = matches.stream().max(
-          (a, b) -> Double.compare(combinedAnnotationScore(featureList, candidateRow, a),
-              combinedAnnotationScore(featureList, candidateRow, b))).orElse(null);
+          (a, b) -> Double.compare(
+              combinedAnnotationScore(featureList, candidateRow, a, includeRetentionTimeAnalysis),
+              combinedAnnotationScore(featureList, candidateRow, b,
+                  includeRetentionTimeAnalysis))).orElse(null);
       if (bestMatch != null) {
         bestMatchByRow.put(candidateRow, bestMatch);
       }
@@ -562,8 +631,9 @@ public class AnnotationQualityPane extends BorderPane {
   }
 
   private static double combinedAnnotationScore(final @NotNull ModularFeatureList featureList,
-      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match) {
-    return computeCombinedAnnotationScore(featureList, row, match);
+      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
+      final boolean includeRetentionTimeAnalysis) {
+    return computeCombinedAnnotationScore(featureList, row, match, true, includeRetentionTimeAnalysis);
   }
 
   private record RowAnnotationCandidate(@NotNull FeatureListRow row, @NotNull MatchedLipid match,
@@ -588,7 +658,8 @@ public class AnnotationQualityPane extends BorderPane {
 
   private void refreshQualityImmediately() {
     scheduler.cancelTasks();
-    scheduler.onTaskThread(new QualityComputationTask(this, row, featureList));
+    scheduler.onTaskThread(
+        new QualityComputationTask(this, row, featureList, includeRetentionTimeAnalysis));
   }
 
   private static @NotNull QualityMetric evaluateMs1(final @NotNull FeatureListRow row,

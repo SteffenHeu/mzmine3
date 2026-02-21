@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,8 +25,12 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.utils;
 
-import com.google.common.collect.ComparisonChain;
+import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.clampToUnit;
+import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
+
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipidStatus;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
@@ -37,12 +41,16 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidcha
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * The LipidAnnotationResolver class is responsible for resolving and processing matched lipid
@@ -59,32 +67,94 @@ public class LipidAnnotationResolver {
   private final boolean keepIsobars;
   private final boolean keepIsomers;
   private final boolean addMissingSpeciesLevelAnnotation;
+  private final boolean includeMs2Score;
+  private final boolean includeElutionOrderScore;
+  private final double minimumOverallQualityScore;
+  private final @Nullable LipidAnalysisType lipidAnalysisType;
 
   private int maximumIdNumber;
   private static final LipidFactory LIPID_FACTORY = new LipidFactory();
 
-  public LipidAnnotationResolver(boolean keepIsobars, boolean keepIsomers,
-      boolean addMissingSpeciesLevelAnnotation) {
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, true, true);
+  }
+
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, includeMs2Score,
+        includeElutionOrderScore, 0d, null);
+  }
+
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore, final double minimumOverallQualityScore) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, includeMs2Score,
+        includeElutionOrderScore, minimumOverallQualityScore, null);
+  }
+
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore, final double minimumOverallQualityScore,
+      final @Nullable LipidAnalysisType lipidAnalysisType) {
     this.keepIsobars = keepIsobars;
     this.keepIsomers = keepIsomers;
     this.addMissingSpeciesLevelAnnotation = addMissingSpeciesLevelAnnotation;
+    this.includeMs2Score = includeMs2Score;
+    this.includeElutionOrderScore = includeElutionOrderScore;
+    this.minimumOverallQualityScore = clampToUnit(minimumOverallQualityScore);
+    this.lipidAnalysisType = lipidAnalysisType;
     this.maximumIdNumber = -1;
-
   }
 
-  public LipidAnnotationResolver(boolean keepIsobars, boolean keepIsomers,
-      boolean addMissingSpeciesLevelAnnotation, int maximumIdNumber) {
-    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation);
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final int maximumIdNumber) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, maximumIdNumber, true, true);
+  }
+
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final int maximumIdNumber,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, includeMs2Score,
+        includeElutionOrderScore, 0d, null);
     this.maximumIdNumber = maximumIdNumber;
   }
 
-  public List<MatchedLipid> resolveFeatureListRowMatchedLipids(FeatureListRow featureListRow,
-      Set<MatchedLipid> matchedLipids) {
-    List<MatchedLipid> resolvedMatchedLipidsList = removeDuplicates(matchedLipids);
-    sortByMsMsScore(resolvedMatchedLipidsList);
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final int maximumIdNumber,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore,
+      final double minimumOverallQualityScore) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, includeMs2Score,
+        includeElutionOrderScore, minimumOverallQualityScore, null);
+    this.maximumIdNumber = maximumIdNumber;
+  }
+
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final int maximumIdNumber,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore,
+      final double minimumOverallQualityScore,
+      final @Nullable LipidAnalysisType lipidAnalysisType) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, includeMs2Score,
+        includeElutionOrderScore, minimumOverallQualityScore, lipidAnalysisType);
+    this.maximumIdNumber = maximumIdNumber;
+  }
+
+  public @NotNull List<MatchedLipid> resolveFeatureListRowMatchedLipids(
+      final @NotNull FeatureListRow featureListRow,
+      final @NotNull Set<MatchedLipid> matchedLipids) {
+    final List<MatchedLipid> resolvedMatchedLipidsList = removeDuplicates(matchedLipids);
+    final Map<MatchedLipid, Double> preFilterScoreCache = new IdentityHashMap<>();
+    final Map<MatchedLipid, Double> qualityScoreCache = new IdentityHashMap<>();
+    sortByRankingScore(featureListRow, resolvedMatchedLipidsList, preFilterScoreCache);
     if (addMissingSpeciesLevelAnnotation) {
-      estimateMissingSpeciesLevelAnnotations(resolvedMatchedLipidsList);
+      final boolean addedSpeciesLevel = estimateMissingSpeciesLevelAnnotations(
+          resolvedMatchedLipidsList);
+      if (addedSpeciesLevel) {
+        sortByRankingScore(featureListRow, resolvedMatchedLipidsList, preFilterScoreCache);
+      }
     }
+    filterByMinimumQuality(featureListRow, resolvedMatchedLipidsList, qualityScoreCache);
     //TODO: Add Keep isobars functionality
 
     //TODO: Add keep isomers functionality
@@ -96,13 +166,15 @@ public class LipidAnnotationResolver {
     return resolvedMatchedLipidsList;
   }
 
-  private List<MatchedLipid> removeDuplicates(Set<MatchedLipid> resolvedMatchedLipids) {
+  private @NotNull List<MatchedLipid> removeDuplicates(
+      final @NotNull Set<MatchedLipid> resolvedMatchedLipids) {
     return resolvedMatchedLipids.stream().collect(Collectors.collectingAndThen(
         Collectors.toCollection(() -> new TreeSet<>(comparatorMatchedLipids())), ArrayList::new));
   }
 
-  private void estimateMissingSpeciesLevelAnnotations(
-      List<MatchedLipid> resolvedMatchedLipidsList) {
+  private boolean estimateMissingSpeciesLevelAnnotations(
+      final @NotNull List<MatchedLipid> resolvedMatchedLipidsList) {
+    boolean addedAnnotations = false;
     if (resolvedMatchedLipidsList.stream().noneMatch(
         matchedLipid -> matchedLipid.getLipidAnnotation().getLipidAnnotationLevel()
             .equals(LipidAnnotationLevel.SPECIES_LEVEL))) {
@@ -130,40 +202,106 @@ public class LipidAnnotationResolver {
       }
       if (!estimatedSpeciesLevelMatchedLipids.isEmpty()) {
         resolvedMatchedLipidsList.addAll(estimatedSpeciesLevelMatchedLipids);
+        addedAnnotations = true;
       }
     }
+    return addedAnnotations;
   }
 
-  private SpeciesLevelAnnotation convertMolecularSpeciesLevelToSpeciesLevel(
-      MolecularSpeciesLevelAnnotation lipidAnnotation) {
-    int numberOfCarbons = lipidAnnotation.getLipidChains().stream()
+  private @NotNull SpeciesLevelAnnotation convertMolecularSpeciesLevelToSpeciesLevel(
+      final @NotNull MolecularSpeciesLevelAnnotation lipidAnnotation) {
+    final int numberOfCarbons = lipidAnnotation.getLipidChains().stream()
         .mapToInt(ILipidChain::getNumberOfCarbons).sum();
-    int numberOfDBEs = lipidAnnotation.getLipidChains().stream()
+    final int numberOfDBEs = lipidAnnotation.getLipidChains().stream()
         .mapToInt(ILipidChain::getNumberOfDBEs).sum();
     return LIPID_FACTORY.buildSpeciesLevelLipid(lipidAnnotation.getLipidClass(), numberOfCarbons,
         numberOfDBEs, 0);
   }
 
-  private void filterMaximumNumberOfId(List<MatchedLipid> resolvedMatchedLipids) {
-    Iterator<MatchedLipid> iterator = resolvedMatchedLipids.iterator();
+  private void filterMaximumNumberOfId(final @NotNull List<MatchedLipid> resolvedMatchedLipids) {
+    final Iterator<MatchedLipid> iterator = resolvedMatchedLipids.iterator();
     while (iterator.hasNext()) {
-      MatchedLipid lipid = iterator.next();
+      final MatchedLipid lipid = iterator.next();
       if (resolvedMatchedLipids.indexOf(lipid) > maximumIdNumber) {
         iterator.remove();
       }
     }
   }
 
-  private static Comparator<MatchedLipid> comparatorMatchedLipids() {
-    return (lipid1, lipid2) -> ComparisonChain.start()
-        .compare(lipid1.getLipidAnnotation().getAnnotation(),
-            lipid2.getLipidAnnotation().getAnnotation())
-        .compare(lipid1.getMsMsScore(), lipid2.getMsMsScore())
-        .compare(lipid1.getAccurateMz(), lipid2.getAccurateMz()).result();
+  private void filterByMinimumQuality(final @NotNull FeatureListRow featureListRow,
+      final @NotNull List<MatchedLipid> resolvedMatchedLipids,
+      final @NotNull Map<MatchedLipid, Double> qualityScoreCache) {
+    if (minimumOverallQualityScore <= 0d) {
+      return;
+    }
+    resolvedMatchedLipids.removeIf(matchedLipid -> qualityScoreCache.computeIfAbsent(matchedLipid,
+        lipid -> computeQualityScore(featureListRow, lipid)) < minimumOverallQualityScore);
   }
 
-  private void sortByMsMsScore(List<MatchedLipid> matchedLipids) {
-    matchedLipids.sort(Comparator.comparingDouble(MatchedLipid::getMsMsScore).reversed());
+  private static @NotNull Comparator<MatchedLipid> comparatorMatchedLipids() {
+    return Comparator.comparing(
+            (MatchedLipid lipid) -> Objects.toString(lipid.getLipidAnnotation().getAnnotation(), ""))
+        .thenComparingDouble(LipidAnnotationResolver::safeMs2Score)
+        .thenComparing(MatchedLipid::getAccurateMz, Comparator.nullsLast(Double::compareTo));
+  }
+
+  private void sortByRankingScore(final @NotNull FeatureListRow featureListRow,
+      final @NotNull List<MatchedLipid> matchedLipids,
+      final @NotNull Map<MatchedLipid, Double> scoreCache) {
+    matchedLipids.sort((left, right) -> {
+      final double leftScore = scoreCache.computeIfAbsent(left,
+          lipid -> computePreFilterRankingScore(featureListRow, lipid));
+      final double rightScore = scoreCache.computeIfAbsent(right,
+          lipid -> computePreFilterRankingScore(featureListRow, lipid));
+      final int byScore = Double.compare(rightScore, leftScore);
+      if (byScore != 0) {
+        return byScore;
+      }
+      final int byMs2 = Double.compare(safeMs2Score(right), safeMs2Score(left));
+      if (byMs2 != 0) {
+        return byMs2;
+      }
+      return Objects.toString(left.getLipidAnnotation().getAnnotation(), "")
+          .compareTo(Objects.toString(right.getLipidAnnotation().getAnnotation(), ""));
+    });
+  }
+
+  private double computePreFilterRankingScore(final @NotNull FeatureListRow featureListRow,
+      final @NotNull MatchedLipid matchedLipid) {
+    final double ms1Score = computeMs1Score(featureListRow, matchedLipid);
+    if (includeMs2Score) {
+      return (ms1Score + safeMs2Score(matchedLipid)) / 2d;
+    }
+    return ms1Score;
+  }
+
+  private double computeQualityScore(final @NotNull FeatureListRow featureListRow,
+      final @NotNull MatchedLipid matchedLipid) {
+    if (featureListRow.getFeatureList() instanceof ModularFeatureList modularFeatureList) {
+      return computeCombinedAnnotationScore(modularFeatureList, featureListRow, matchedLipid,
+          includeMs2Score, includeElutionOrderScore, lipidAnalysisType);
+    }
+    return computePreFilterRankingScore(featureListRow, matchedLipid);
+  }
+
+  private static double computeMs1Score(final @NotNull FeatureListRow featureListRow,
+      final @NotNull MatchedLipid matchedLipid) {
+    final double exactMz = MatchedLipid.getExactMass(matchedLipid);
+    final Double accurateMz = matchedLipid.getAccurateMz();
+    final double observedMz = accurateMz != null ? accurateMz : featureListRow.getAverageMZ();
+    final double ppm = (observedMz - exactMz) / exactMz * 1e6;
+    final double absPpm = Math.abs(ppm);
+    if (!Double.isFinite(absPpm)) {
+      return 0d;
+    }
+    return clampToUnit(1d - Math.min(absPpm, 5d) / 5d);
+  }
+
+  private static double safeMs2Score(final @Nullable MatchedLipid matchedLipid) {
+    if (matchedLipid == null || matchedLipid.getMsMsScore() == null) {
+      return 0d;
+    }
+    return clampToUnit(matchedLipid.getMsMsScore());
   }
 
 }

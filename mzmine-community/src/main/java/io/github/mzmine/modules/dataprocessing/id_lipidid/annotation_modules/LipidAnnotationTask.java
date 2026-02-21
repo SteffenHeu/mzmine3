@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,6 +25,8 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules;
 
+import static java.util.Objects.requireNonNullElse;
+
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.PolarityType;
@@ -34,6 +36,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidClasses;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidIon;
@@ -54,7 +57,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
-import javafx.collections.ObservableList;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -80,10 +82,11 @@ public class LipidAnnotationTask extends AbstractTask {
   private final MZTolerance mzToleranceMS2;
   private final Boolean searchForMSMSFragments;
   private final Boolean keepUnconfirmedAnnotations;
-  private double minMsMsScore;
+  private final double minimumOverallQualityScore;
   private final IonizationType[] ionizationTypesToIgnore;
   private final ParameterSet parameters;
   private final FragmentScanSelection scanMergeSelect;
+  private final @NotNull LipidAnalysisType lipidAnalysisType;
 
   public LipidAnnotationTask(ParameterSet parameters, FeatureList featureList,
       @NotNull Instant moduleCallDate) {
@@ -107,6 +110,11 @@ public class LipidAnnotationTask extends AbstractTask {
     this.mzTolerance = parameters.getParameter(LipidAnnotationParameters.mzTolerance).getValue();
     Object[] selectedObjects = parameters.getParameter(LipidAnnotationParameters.lipidClasses)
         .getValue();
+    this.lipidAnalysisType = requireNonNullElse(
+        parameters.getParameter(LipidAnnotationParameters.lipidAnalysisType).getValue(),
+        LipidAnalysisType.LC_REVERSED_PHASE);
+    this.minimumOverallQualityScore = parameters.getParameter(
+        LipidAnnotationParameters.minimumOverallQualityScore).getValue();
     this.searchForMSMSFragments = parameters.getParameter(
         LipidAnnotationParameters.searchForMSMSFragments).getValue();
     if (searchForMSMSFragments.booleanValue()) {
@@ -116,9 +124,6 @@ public class LipidAnnotationTask extends AbstractTask {
           .getValue();
       this.keepUnconfirmedAnnotations = ms2Params.getParameter(
           LipidAnnotationMSMSParameters.keepUnconfirmedAnnotations).getValue();
-      this.minMsMsScore = (ms2Params.getParameter(LipidAnnotationMSMSParameters.minimumMsMsScore)
-          .getValue());
-
       this.scanMergeSelect = ms2Params.getParameter(
               LipidAnnotationMSMSParameters.spectraMergeSelect)
           .createFragmentScanSelection(getMemoryMapStorage());
@@ -198,6 +203,7 @@ public class LipidAnnotationTask extends AbstractTask {
         .sorted(Comparator.comparingDouble(LipidIon::mz)).toList();
 
     rows.parallelStream().forEach(row -> {
+      final Set<MatchedLipid> possibleRowAnnotations = new HashSet<>();
       Range<Double> mzTolRange = mzTolerance.getToleranceRange(row.getAverageMZ());
       double lowerEdge = mzTolRange.lowerEndpoint();
       double upperEdge = mzTolRange.upperEndpoint();
@@ -210,15 +216,18 @@ public class LipidAnnotationTask extends AbstractTask {
           }
 
           LipidAnnotationUtils.findPossibleLipid(sortedLipidDatabase.get(i), row, parameters,
-              mzTolerance, mzToleranceMS2, searchForMSMSFragments, minMsMsScore,
-              keepUnconfirmedAnnotations,
+              mzTolerance, mzToleranceMS2, searchForMSMSFragments, keepUnconfirmedAnnotations,
               sortedLipidDatabase.get(i).lipidAnnotation().getLipidClass().getCoreClass(),
-              scanMergeSelect);
+              scanMergeSelect, possibleRowAnnotations);
 
           if (upperEdge < sortedLipidDatabase.get(i).mz()) {
             break;
           }
         }
+      }
+      if (!possibleRowAnnotations.isEmpty()) {
+        LipidAnnotationUtils.addAnnotationsToFeatureList(row, possibleRowAnnotations,
+            lipidAnalysisType, searchForMSMSFragments, minimumOverallQualityScore);
       }
       finishedSteps++;
     });

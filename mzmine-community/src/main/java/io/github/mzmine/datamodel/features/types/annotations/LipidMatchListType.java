@@ -38,6 +38,7 @@ import io.github.mzmine.datamodel.features.types.annotations.iin.IonAdductType;
 import io.github.mzmine.datamodel.features.types.modifiers.AnnotationType;
 import io.github.mzmine.datamodel.features.types.numbers.MzPpmDifferenceType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.ExplainedIntensityPercentType;
+import io.github.mzmine.datamodel.features.types.numbers.scores.LipidOverallQualityScoreType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import java.util.ArrayList;
@@ -59,6 +60,7 @@ public class LipidMatchListType extends ListWithSubsType<MatchedLipid> implement
       new CommentType(), //
       new MzPpmDifferenceType(),//
       new ExplainedIntensityPercentType(), //
+      new LipidOverallQualityScoreType(), //
       new LipidSpectrumType());
 
   @NotNull
@@ -92,6 +94,7 @@ public class LipidMatchListType extends ListWithSubsType<MatchedLipid> implement
         double exactMass = MatchedLipid.getExactMass(match);
         yield (float) ((exactMass - match.getAccurateMz()) / exactMass) * 1000000;
       }
+      case LipidOverallQualityScoreType _ -> null; // created on demand in cell factory
       case AnnotationSummaryType _ -> null; // created on demand in cell factory
       default -> throw new UnsupportedOperationException(
           "DataType %s is not covered in map".formatted(subType.toString()));

@@ -109,6 +109,7 @@ public class KendrickPane extends BorderPane {
   private @Nullable ColoredBubbleDatasetRenderer colorRenderer;
   private @Nullable ColoredBubbleDatasetRenderer filteredOutRenderer;
   private @Nullable FeatureListRow selectedRow;
+  private boolean includeRetentionTimeAnalysis = true;
   private long filterRequestId;
 
   public KendrickPane(final @NotNull LipidAnnotationQCDashboardModel model,
@@ -167,6 +168,14 @@ public class KendrickPane extends BorderPane {
     });
   }
 
+  public void setIncludeRetentionTimeAnalysis(final boolean includeRetentionTimeAnalysis) {
+    if (this.includeRetentionTimeAnalysis == includeRetentionTimeAnalysis) {
+      return;
+    }
+    this.includeRetentionTimeAnalysis = includeRetentionTimeAnalysis;
+    applyFilters();
+  }
+
   public void applyFilters() {
     if (chart == null || baseDataset == null || colorRenderer == null
         || filteredOutRenderer == null) {
@@ -178,7 +187,7 @@ public class KendrickPane extends BorderPane {
     final long requestId = ++filterRequestId;
     filterScheduler.onTaskThreadDelayed(
         new KendrickFilterComputationTask(this, requestId, Objects.requireNonNull(baseDataset),
-            featureList, visibleIds), Duration.millis(120));
+            featureList, visibleIds, includeRetentionTimeAnalysis), Duration.millis(120));
   }
 
   private void applyFilterComputationResult(final @NotNull KendrickFilterComputationResult result) {
@@ -227,16 +236,19 @@ public class KendrickPane extends BorderPane {
     private final @NotNull KendrickMassPlotXYZDataset baseDataset;
     private final @Nullable ModularFeatureList featureList;
     private final @NotNull Set<Integer> visibleRowIds;
+    private final boolean includeRetentionTimeAnalysis;
     private @NotNull KendrickFilterComputationResult result;
 
     private KendrickFilterComputationTask(final @NotNull KendrickPane pane, final long requestId,
         final @NotNull KendrickMassPlotXYZDataset baseDataset,
-        final @Nullable ModularFeatureList featureList, final @NotNull Set<Integer> visibleRowIds) {
+        final @Nullable ModularFeatureList featureList, final @NotNull Set<Integer> visibleRowIds,
+        final boolean includeRetentionTimeAnalysis) {
       super("lipidqc-kendrick-filter-update", pane);
       this.requestId = requestId;
       this.baseDataset = baseDataset;
       this.featureList = featureList;
       this.visibleRowIds = Set.copyOf(visibleRowIds);
+      this.includeRetentionTimeAnalysis = includeRetentionTimeAnalysis;
       final KendrickSubsetDataset fallback = new KendrickSubsetDataset(baseDataset, _ -> true);
       result = new KendrickFilterComputationResult(requestId, baseDataset, fallback, null, null,
           createColorPaintScale(fallback), new LookupPaintScale(0d, 1d, Color.GRAY));
@@ -257,7 +269,8 @@ public class KendrickPane extends BorderPane {
       final KendrickSubsetDataset outlierDataset =
           featureList == null || inDataset.getItemCount(0) == 0 ? null
               : new KendrickSubsetDataset(baseDataset,
-                  row -> visiblePredicate.test(row) && rowOutlier(featureList, row));
+                  row -> visiblePredicate.test(row) && rowOutlier(featureList, row,
+                      includeRetentionTimeAnalysis));
       result = new KendrickFilterComputationResult(requestId, baseDataset, inDataset,
           filteredOutDataset, outlierDataset, filteredColorScale, grayScale);
     }
@@ -506,15 +519,20 @@ public class KendrickPane extends BorderPane {
   }
 
   private static boolean rowOutlier(final @NotNull ModularFeatureList featureList,
-      final @NotNull FeatureListRow row) {
+      final @NotNull FeatureListRow row, final boolean includeRetentionTimeAnalysis) {
     final List<MatchedLipid> matches = row.getLipidMatches();
     if (matches.isEmpty()) {
       return false;
     }
     final MatchedLipid match = matches.getFirst();
+    if (!includeRetentionTimeAnalysis) {
+      final double overall = computeOverallQualityScore(row, match, 0d, false);
+      return overall < 0.5d;
+    }
     final ElutionOrderMetrics elutionMetrics = computeElutionOrderMetrics(featureList, row,
         match);
-    final double overall = computeOverallQualityScore(row, match, elutionMetrics.combinedScore());
+    final double overall = computeOverallQualityScore(row, match, elutionMetrics.combinedScore(),
+        true);
     final boolean poorCarbonTrend = elutionMetrics.carbonsTrend().available()
         && elutionMetrics.carbonsTrend().score() < 0.55d;
     final boolean poorDbeTrend =
@@ -524,15 +542,18 @@ public class KendrickPane extends BorderPane {
   }
 
   private static double computeOverallQualityScore(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match, final double elutionOrderScore) {
+      final @NotNull MatchedLipid match, final double elutionOrderScore,
+      final boolean includeRetentionTimeAnalysis) {
     final double ms1Score = computeMs1Score(row, match);
     final double ms2Score = computeMs2Score(match);
     final double adductScore = computeAdductScore(row, match);
     final double isotopeScore = computeIsotopeScore(row, match);
     final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
     final double interference = computeInterferenceScore(interferenceMetrics.totalPenaltyCount());
-    return (ms1Score + ms2Score + adductScore + isotopeScore + elutionOrderScore + interference)
-        / 6d;
+    final double scoreSum = ms1Score + ms2Score + adductScore + isotopeScore + interference
+        + (includeRetentionTimeAnalysis ? elutionOrderScore : 0d);
+    final int scoreCount = includeRetentionTimeAnalysis ? 6 : 5;
+    return scoreSum / scoreCount;
   }
 
   private static double computeMs1Score(final @NotNull FeatureListRow row,

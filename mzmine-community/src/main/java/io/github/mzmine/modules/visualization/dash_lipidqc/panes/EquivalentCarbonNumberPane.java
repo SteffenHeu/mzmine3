@@ -64,6 +64,7 @@ import javafx.scene.control.Accordion;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -244,6 +245,10 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     chart.addChartMouseListener(new ChartMouseListenerFX() {
       @Override
       public void chartMouseClicked(final ChartMouseEventFX event) {
+        if (event.getTrigger() == null || !event.getTrigger().isStillSincePress()
+            || event.getTrigger().getButton() != MouseButton.PRIMARY) {
+          return;
+        }
         if (!(event.getEntity() instanceof XYItemEntity entity)
             || !(entity.getDataset() instanceof RetentionTrendDataset clickedDataset)) {
           return;
@@ -253,6 +258,9 @@ public class EquivalentCarbonNumberPane extends BorderPane {
           return;
         }
         final MatchedLipid clickedLipid = clickedDataset.getMatchedLipid(item);
+        if (clickedLipid == null) {
+          return;
+        }
         final FeatureListRow clickedRow = findRowForLipid(clickedLipid);
         if (clickedRow != null) {
           model.setRow(clickedRow);
@@ -285,6 +293,10 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     chart.addChartMouseListener(new ChartMouseListenerFX() {
       @Override
       public void chartMouseClicked(final ChartMouseEventFX event) {
+        if (event.getTrigger() == null || !event.getTrigger().isStillSincePress()
+            || event.getTrigger().getButton() != MouseButton.PRIMARY) {
+          return;
+        }
         if (!(event.getEntity() instanceof XYItemEntity entity)
             || !(entity.getDataset() instanceof RetentionTrendDataset clickedDataset)) {
           return;
@@ -294,6 +306,9 @@ public class EquivalentCarbonNumberPane extends BorderPane {
           return;
         }
         final MatchedLipid clickedLipid = clickedDataset.getMatchedLipid(item);
+        if (clickedLipid == null) {
+          return;
+        }
         final FeatureListRow clickedRow = findRowForLipid(clickedLipid);
         if (clickedRow != null) {
           model.setRow(clickedRow);
@@ -502,6 +517,8 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     ConfigService.getConfiguration().getDefaultChartTheme().apply(viewer);
 
     final XYPlot plot = chart.getXYPlot();
+    plot.setDomainCrosshairVisible(false);
+    plot.setRangeCrosshairVisible(false);
     final XYLineAndShapeRenderer pointRenderer = new XYLineAndShapeRenderer(false, true);
     pointRenderer.setSeriesShape(0, new Ellipse2D.Double(-3, -3, 6, 6));
     pointRenderer.setSeriesPaint(0, ConfigService.getDefaultColorPalette().getPositiveColorAWT());
@@ -579,6 +596,8 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       final @Nullable RetentionTrendDataset carbonDataset,
       final @Nullable RetentionTrendDataset dbeDataset) {
     final XYPlot plot = new XYPlot();
+    plot.setDomainCrosshairVisible(false);
+    plot.setRangeCrosshairVisible(false);
     final NumberAxis domainAxis = new NumberAxis("Retention time");
     plot.setDomainAxis(domainAxis);
 

@@ -25,9 +25,13 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc;
 
+import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
@@ -46,6 +50,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.geometry.Orientation;
 import javafx.scene.control.ComboBox;
@@ -76,20 +82,58 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     preferredLevelCombo.getSelectionModel().select(PreferredLipidLevelOption.MOLECULAR_SPECIES);
     final LipidSummaryPane summaryPane = new LipidSummaryPane(model, filterState,
         preferredLevelCombo);
+
+    final BorderPane retentionSection = DashboardLayoutFactory.wrapInSubsection(
+        "Retention time analysis", ecnPane);
+    final @Nullable Label retentionTitleLabel =
+        retentionSection.getTop() instanceof Label label ? label : null;
+    final Label retentionDisabledLabel = new Label(
+        "Retention time analysis is disabled for this lipid analysis mode.");
+    retentionDisabledLabel.setWrapText(true);
+    retentionDisabledLabel.setStyle("-fx-padding: 8;");
+    final BooleanProperty retentionAnalysisEnabled = new SimpleBooleanProperty(true);
+
+    final Runnable applyDashboardModeFromFeatureList = () -> {
+      final @Nullable ModularFeatureList currentFeatureList = model.getFeatureList();
+      final boolean includeRetention = shouldIncludeRetentionTimeAnalysis(currentFeatureList);
+      retentionAnalysisEnabled.set(includeRetention);
+      qualityPane.setIncludeRetentionTimeAnalysis(includeRetention);
+      kendrickPane.setIncludeRetentionTimeAnalysis(includeRetention);
+      if (retentionTitleLabel != null) {
+        retentionTitleLabel.textProperty().unbind();
+      }
+      if (includeRetention) {
+        retentionSection.setCenter(ecnPane);
+        if (retentionTitleLabel != null) {
+          retentionTitleLabel.textProperty().bind(ecnPane.paneTitleProperty());
+        }
+      } else {
+        if (retentionTitleLabel != null) {
+          retentionTitleLabel.setText("Retention time analysis");
+        }
+        retentionSection.setCenter(retentionDisabledLabel);
+      }
+    };
+
     final Runnable refreshAllDashboardPlots = () -> {
+      applyDashboardModeFromFeatureList.run();
       final @Nullable ModularFeatureList currentFeatureList = model.getFeatureList();
       final @Nullable FeatureListRow selectedRow = model.getRow();
       if (currentFeatureList != null) {
         summaryPane.setFeatureList(currentFeatureList);
         qualityPane.setFeatureList(currentFeatureList);
         kendrickPane.setFeatureList(currentFeatureList);
-        ecnPane.setFeatureList(currentFeatureList);
+        if (retentionAnalysisEnabled.get()) {
+          ecnPane.setFeatureList(currentFeatureList);
+        }
         isotopePane.setFeatureList(currentFeatureList);
         matchedSignalsPane.setFeatureList(currentFeatureList);
       }
       qualityPane.setRow(selectedRow);
       kendrickPane.setRow(selectedRow);
-      ecnPane.setRow(selectedRow);
+      if (retentionAnalysisEnabled.get()) {
+        ecnPane.setRow(selectedRow);
+      }
       isotopePane.setRow(selectedRow);
       matchedSignalsPane.setRow(selectedRow);
     };
@@ -108,14 +152,19 @@ public class LipidAnnotationQCDashboardViewBuilder extends
         FeatureTableFXUtil.selectAndScrollTo(row, model.getFeatureTableFx());
       }
       isotopePane.setRow(row);
-      ecnPane.setRow(row);
+      if (retentionAnalysisEnabled.get()) {
+        ecnPane.setRow(row);
+      }
       matchedSignalsPane.setRow(row);
       kendrickPane.setRow(row);
       qualityPane.setRow(row);
     });
 
     model.featureListProperty().subscribe(flist -> {
-      ecnPane.setFeatureList(flist);
+      applyDashboardModeFromFeatureList.run();
+      if (retentionAnalysisEnabled.get()) {
+        ecnPane.setFeatureList(flist);
+      }
       isotopePane.setFeatureList(flist);
       matchedSignalsPane.setFeatureList(flist);
       kendrickPane.setFeatureList(flist);
@@ -136,11 +185,7 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       Platform.runLater(() -> selectFirstVisibleRow(model));
     });
 
-    final BorderPane retentionSection = DashboardLayoutFactory.wrapInSubsection(
-        "Retention time analysis", ecnPane);
-    if (retentionSection.getTop() instanceof Label titleLabel) {
-      titleLabel.textProperty().bind(ecnPane.paneTitleProperty());
-    }
+    applyDashboardModeFromFeatureList.run();
 
     final Region dashboardContent = DashboardLayoutFactory.createSixPaneLayout(
         DashboardLayoutFactory.wrapInSubsection("Lipid annotation summary", summaryPane),
@@ -197,6 +242,28 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       reordered.addAll(matches.stream().filter(match -> !isMatchingLevel(match, level)).toList());
       row.setLipidAnnotations(reordered);
     }
+  }
+
+  private static boolean shouldIncludeRetentionTimeAnalysis(
+      final @Nullable ModularFeatureList featureList) {
+    if (featureList == null) {
+      return true;
+    }
+    final List<FeatureListAppliedMethod> appliedMethods = featureList.getAppliedMethods();
+    for (int i = appliedMethods.size() - 1; i >= 0; i--) {
+      final FeatureListAppliedMethod appliedMethod = appliedMethods.get(i);
+      if (!(appliedMethod.getModule() instanceof LipidAnnotationModule)) {
+        continue;
+      }
+      try {
+        final LipidAnalysisType analysisType = appliedMethod.getParameters()
+            .getParameter(LipidAnnotationParameters.lipidAnalysisType).getValue();
+        return analysisType == null || analysisType.hasRetentionTimePattern();
+      } catch (RuntimeException ignored) {
+        return true;
+      }
+    }
+    return true;
   }
 
   private static boolean isMatchingLevel(final @NotNull MatchedLipid match,

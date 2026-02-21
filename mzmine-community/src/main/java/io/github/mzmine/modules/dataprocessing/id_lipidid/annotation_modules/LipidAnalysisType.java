@@ -25,30 +25,37 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules;
 
-import io.github.mzmine.modules.dataprocessing.filter_scan_merge_select.SpectraMergeSelectParameter;
-import io.github.mzmine.parameters.impl.SimpleParameterSet;
-import io.github.mzmine.parameters.parametertypes.BooleanParameter;
-import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParameter;
+import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
+import org.jetbrains.annotations.NotNull;
 
-public class LipidAnnotationMSMSParameters extends SimpleParameterSet {
+public enum LipidAnalysisType implements UniqueIdSupplier {
+  LC_REVERSED_PHASE("lc_reversed_phase", "LC-MS (reversed phase)", true),
+  LC_HILIC("lc_hilic", "LC-MS (HILIC)", true),
+  DIRECT_INFUSION("direct_infusion", "Direct infusion", false),
+  IMAGING("imaging", "Imaging", false);
 
-  public static final SpectraMergeSelectParameter spectraMergeSelect = SpectraMergeSelectParameter.createLipidSearchAllSpectraDefault();
+  private final @NotNull String uniqueId;
+  private final @NotNull String label;
+  private final boolean hasRetentionTimePattern;
 
-  public static final MZToleranceParameter mzToleranceMS2 = new MZToleranceParameter(
-      "m/z tolerance MS2 level:",
-      "Enter m/z tolerance for exact mass database matching on MS2 level", 0.005, 10);
+  LipidAnalysisType(final @NotNull String uniqueId, final @NotNull String label,
+      final boolean hasRetentionTimePattern) {
+    this.uniqueId = uniqueId;
+    this.label = label;
+    this.hasRetentionTimePattern = hasRetentionTimePattern;
+  }
 
-  public static final BooleanParameter keepUnconfirmedAnnotations = new BooleanParameter(
-      "Keep unconfirmed annotations",
-      "WARNING!: If checked, annotations based on accurate mass without headgroup fragment annotations are kept.",
-      false);
-
-  public LipidAnnotationMSMSParameters() {
-    super(spectraMergeSelect, mzToleranceMS2, keepUnconfirmedAnnotations);
+  public boolean hasRetentionTimePattern() {
+    return hasRetentionTimePattern;
   }
 
   @Override
-  public int getVersion() {
-    return 3;
+  public @NotNull String getUniqueID() {
+    return uniqueId;
+  }
+
+  @Override
+  public @NotNull String toString() {
+    return label;
   }
 }

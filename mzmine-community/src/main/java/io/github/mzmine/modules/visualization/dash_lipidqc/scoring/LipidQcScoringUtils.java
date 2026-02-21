@@ -25,8 +25,12 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.scoring;
 
+import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
@@ -34,6 +38,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -46,6 +51,10 @@ public final class LipidQcScoringUtils {
   private static final double RT_DELTA_NO_PENALTY_NORMALIZED = 0.006d;
   private static final double RT_DELTA_FULL_PENALTY_NORMALIZED = 0.07d;
   private static final double RT_DELTA_PENALTY_EXPONENT = 1.35d;
+  private static final int HILIC_MIN_CLASS_ROWS = 4;
+  private static final double HILIC_WINDOW_SUPPORT_FRACTION = 0.6d;
+  private static final double HILIC_WINDOW_EDGE_TOLERANCE_MINUTES = 0.02d;
+  private static final double HILIC_WINDOW_EDGE_RELATIVE_TOLERANCE = 0.02d;
 
   private LipidQcScoringUtils() {
   }
@@ -63,22 +72,59 @@ public final class LipidQcScoringUtils {
   }
 
   public record ElutionOrderMetrics(double combinedScore, @NotNull TrendScore carbonsTrend,
-                                    @NotNull TrendScore dbeTrend) {
+                                    @NotNull TrendScore dbeTrend,
+                                    @Nullable String detailOverride) {
 
   }
 
   public static @NotNull ElutionOrderMetrics computeElutionOrderMetrics(
       final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
+    return computeElutionOrderMetrics(featureList, row, match,
+        detectLipidAnalysisType(featureList));
+  }
+
+  public static @NotNull ElutionOrderMetrics computeElutionOrderMetrics(
+      final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match, final @Nullable LipidAnalysisType analysisType) {
+    final LipidAnalysisType resolvedAnalysisType = Objects.requireNonNullElse(analysisType,
+        LipidAnalysisType.LC_REVERSED_PHASE);
+    return switch (resolvedAnalysisType) {
+      case LC_HILIC -> computeHilicElutionOrderMetrics(featureList, row, match);
+      case LC_REVERSED_PHASE -> computeTrendElutionOrderMetrics(featureList, row, match);
+      case DIRECT_INFUSION, IMAGING ->
+          createUnavailableElutionMetrics("Disabled for current lipid analysis mode");
+    };
+  }
+
+  public static @Nullable LipidAnalysisType detectLipidAnalysisType(
+      final @NotNull ModularFeatureList featureList) {
+    final List<FeatureListAppliedMethod> appliedMethods = featureList.getAppliedMethods();
+    for (int i = appliedMethods.size() - 1; i >= 0; i--) {
+      final FeatureListAppliedMethod appliedMethod = appliedMethods.get(i);
+      if (!(appliedMethod.getModule() instanceof LipidAnnotationModule)) {
+        continue;
+      }
+      try {
+        return appliedMethod.getParameters().getParameter(LipidAnnotationParameters.lipidAnalysisType)
+            .getValue();
+      } catch (RuntimeException ignored) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  private static @NotNull ElutionOrderMetrics computeTrendElutionOrderMetrics(
+      final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match) {
     if (row.getAverageRT() == null) {
-      final TrendScore missing = new TrendScore(0d, Double.NaN, Double.NaN, false);
-      return new ElutionOrderMetrics(0d, missing, missing);
+      return createUnavailableElutionMetrics("Missing RT context");
     }
     final int selectedCarbons = extractTrendCarbons(match.getLipidAnnotation());
     final int selectedDbe = extractTrendDbe(match.getLipidAnnotation());
     if (selectedCarbons < 0 || selectedDbe < 0) {
-      final TrendScore missing = new TrendScore(0d, Double.NaN, Double.NaN, false);
-      return new ElutionOrderMetrics(0d, missing, missing);
+      return createUnavailableElutionMetrics("Missing lipid chain information");
     }
 
     final ILipidClass selectedClass = match.getLipidAnnotation().getLipidClass();
@@ -114,7 +160,90 @@ public final class LipidQcScoringUtils {
     final TrendScore dbeTrend = computeTrendScore(dbeTrendPoints, selectedDbe, observedRt,
         methodLength);
     final double combined = combineTrendScores(carbonsTrend, dbeTrend);
-    return new ElutionOrderMetrics(combined, carbonsTrend, dbeTrend);
+    return new ElutionOrderMetrics(combined, carbonsTrend, dbeTrend, null);
+  }
+
+  private static @NotNull ElutionOrderMetrics computeHilicElutionOrderMetrics(
+      final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match) {
+    if (row.getAverageRT() == null) {
+      return createUnavailableElutionMetrics("Missing RT context");
+    }
+    final ILipidClass selectedClass = match.getLipidAnnotation().getLipidClass();
+    final double[] classRtValues = collectClassRetentionTimes(featureList, selectedClass);
+    if (classRtValues.length < HILIC_MIN_CLASS_ROWS) {
+      return createUnavailableElutionMetrics(
+          "HILIC class-window model needs at least " + HILIC_MIN_CLASS_ROWS + " class rows");
+    }
+
+    final int supportCount = Math.max(3,
+        (int) Math.ceil(classRtValues.length * HILIC_WINDOW_SUPPORT_FRACTION));
+    final RtWindow dominantWindow = computeNarrowestWindow(classRtValues, supportCount);
+    final double observedRt = row.getAverageRT();
+    final double windowWidth = dominantWindow.upperRt() - dominantWindow.lowerRt();
+    final double edgeTolerance = Math.max(HILIC_WINDOW_EDGE_TOLERANCE_MINUTES,
+        windowWidth * HILIC_WINDOW_EDGE_RELATIVE_TOLERANCE);
+    final boolean inWindow = observedRt >= dominantWindow.lowerRt() - edgeTolerance
+        && observedRt <= dominantWindow.upperRt() + edgeTolerance;
+    final double distanceToWindow = inWindow ? 0d
+        : Math.min(Math.abs(observedRt - dominantWindow.lowerRt()),
+            Math.abs(observedRt - dominantWindow.upperRt()));
+    final double normalizedDistance = normalizeRtDeltaByMethodLength(distanceToWindow,
+        computeRtMethodLength(featureList));
+    final double score = inWindow ? 1d : 0d;
+    final TrendScore windowScore = new TrendScore(score, distanceToWindow, normalizedDistance,
+        true);
+    final String detail = String.format(
+        "HILIC class window %.2f-%.2f min (%d/%d rows); selected RT %.2f is %s the window",
+        dominantWindow.lowerRt(), dominantWindow.upperRt(), dominantWindow.supportCount(),
+        dominantWindow.totalCount(), observedRt, inWindow ? "inside" : "outside");
+    return new ElutionOrderMetrics(score, windowScore, windowScore, detail);
+  }
+
+  private static @NotNull ElutionOrderMetrics createUnavailableElutionMetrics(
+      final @NotNull String reason) {
+    final TrendScore missing = new TrendScore(0d, Double.NaN, Double.NaN, false);
+    return new ElutionOrderMetrics(0d, missing, missing, reason);
+  }
+
+  private static @NotNull double[] collectClassRetentionTimes(
+      final @NotNull ModularFeatureList featureList, final @NotNull ILipidClass selectedClass) {
+    final List<Double> classRts = new ArrayList<>();
+    for (final FeatureListRow candidateRow : featureList.getRows()) {
+      final Float candidateRt = candidateRow.getAverageRT();
+      if (candidateRt == null || !Float.isFinite(candidateRt)) {
+        continue;
+      }
+      final List<MatchedLipid> rowMatches = candidateRow.getLipidMatches();
+      if (rowMatches.isEmpty()) {
+        continue;
+      }
+      final boolean hasMatchingClass = rowMatches.stream().anyMatch(
+          candidate -> candidate.getLipidAnnotation().getLipidClass().equals(selectedClass));
+      if (hasMatchingClass) {
+        classRts.add((double) candidateRt);
+      }
+    }
+    return classRts.stream().mapToDouble(Double::doubleValue).toArray();
+  }
+
+  private static @NotNull RtWindow computeNarrowestWindow(final @NotNull double[] rtValues,
+      final int requestedSupportCount) {
+    final double[] sorted = Arrays.copyOf(rtValues, rtValues.length);
+    Arrays.sort(sorted);
+    final int supportCount = Math.max(2, Math.min(sorted.length, requestedSupportCount));
+    int bestStart = 0;
+    double bestWidth = Double.POSITIVE_INFINITY;
+    for (int start = 0; start <= sorted.length - supportCount; start++) {
+      final int end = start + supportCount - 1;
+      final double width = sorted[end] - sorted[start];
+      if (width < bestWidth) {
+        bestWidth = width;
+        bestStart = start;
+      }
+    }
+    final int bestEnd = bestStart + supportCount - 1;
+    return new RtWindow(sorted[bestStart], sorted[bestEnd], supportCount, sorted.length);
   }
 
   private static @NotNull TrendScore computeTrendScore(final @NotNull List<double[]> points,
@@ -145,6 +274,9 @@ public final class LipidQcScoringUtils {
 
   public static @NotNull String formatElutionOrderDetail(
       final @NotNull ElutionOrderMetrics metrics) {
+    if (metrics.detailOverride() != null && !metrics.detailOverride().isBlank()) {
+      return metrics.detailOverride();
+    }
     return "C trend: " + formatTrendDetail(metrics.carbonsTrend()) + " | DBE trend: "
         + formatTrendDetail(metrics.dbeTrend());
   }
@@ -249,20 +381,52 @@ public final class LipidQcScoringUtils {
 
   public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match) {
-    final ElutionOrderMetrics elutionMetrics = computeElutionOrderMetrics(featureList, row, match);
-    return computeOverallQualityScore(row, match, elutionMetrics.combinedScore());
+    return computeCombinedAnnotationScore(featureList, row, match, true, true,
+        detectLipidAnalysisType(featureList));
+  }
+
+  public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
+      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore) {
+    return computeCombinedAnnotationScore(featureList, row, match, includeMs2Score,
+        includeElutionOrderScore, detectLipidAnalysisType(featureList));
+  }
+
+  public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
+      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore,
+      final @Nullable LipidAnalysisType analysisType) {
+    final double elutionOrderScore;
+    if (includeElutionOrderScore) {
+      final ElutionOrderMetrics elutionMetrics = computeElutionOrderMetrics(featureList, row, match,
+          analysisType);
+      elutionOrderScore = elutionMetrics.combinedScore();
+    } else {
+      elutionOrderScore = 0d;
+    }
+    return computeOverallQualityScore(row, match, elutionOrderScore, includeMs2Score,
+        includeElutionOrderScore);
   }
 
   private static double computeOverallQualityScore(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match, final double elutionOrderScore) {
+      final @NotNull MatchedLipid match, final double elutionOrderScore,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore) {
     final double ms1Score = computeMs1Score(row, match);
-    final double ms2Score = computeMs2Score(match);
     final double adductScore = computeAdductScore(row, match);
     final double isotopeScore = computeIsotopeScore(row, match);
     final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
     final double interference = computeInterferenceScore(interferenceMetrics.totalPenaltyCount());
-    return (ms1Score + ms2Score + adductScore + isotopeScore + elutionOrderScore + interference)
-        / 6d;
+    double scoreSum = ms1Score + adductScore + isotopeScore + interference;
+    int scoreCount = 4;
+    if (includeMs2Score) {
+      scoreSum += computeMs2Score(match);
+      scoreCount++;
+    }
+    if (includeElutionOrderScore) {
+      scoreSum += elutionOrderScore;
+      scoreCount++;
+    }
+    return scoreCount == 0 ? 0d : scoreSum / scoreCount;
   }
 
   private static double computeMs1Score(final @NotNull FeatureListRow row,
@@ -373,5 +537,9 @@ public final class LipidQcScoringUtils {
       return 0d;
     }
     return maxRt - minRt;
+  }
+
+  private record RtWindow(double lowerRt, double upperRt, int supportCount, int totalCount) {
+
   }
 }
