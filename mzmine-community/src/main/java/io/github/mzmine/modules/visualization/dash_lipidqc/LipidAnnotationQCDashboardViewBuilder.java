@@ -28,6 +28,8 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.javafx.components.factories.FxLabels;
+import io.github.mzmine.javafx.components.factories.FxSplitPanes;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
@@ -36,14 +38,14 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
-import io.github.mzmine.modules.visualization.dash_lipidqc.panes.DashboardFilterState;
-import io.github.mzmine.modules.visualization.dash_lipidqc.panes.DashboardLayoutFactory;
-import io.github.mzmine.modules.visualization.dash_lipidqc.panes.AnnotationQualityPane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.panes.EquivalentCarbonNumberPane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.panes.IsotopePane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.panes.KendrickPane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.panes.LipidSummaryPane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.panes.MatchedSignalsPane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.state.DashboardFilterState;
+import io.github.mzmine.modules.visualization.dash_lipidqc.layout.DashboardLayoutFactory;
+import io.github.mzmine.modules.visualization.dash_lipidqc.quality.AnnotationQualityPane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.retention.EquivalentCarbonNumberPane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.isotope.IsotopePane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickPane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.summary.LipidSummaryPane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.matched.MatchedSignalsPane;
 import io.github.mzmine.util.FeatureTableFXUtil;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +58,6 @@ import javafx.collections.FXCollections;
 import javafx.geometry.Orientation;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.SplitPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
@@ -87,9 +88,8 @@ public class LipidAnnotationQCDashboardViewBuilder extends
         "Retention time analysis", ecnPane);
     final @Nullable Label retentionTitleLabel =
         retentionSection.getTop() instanceof Label label ? label : null;
-    final Label retentionDisabledLabel = new Label(
+    final Label retentionDisabledLabel = FxLabels.newLabel(
         "Retention time analysis is disabled for this lipid analysis mode.");
-    retentionDisabledLabel.setWrapText(true);
     retentionDisabledLabel.setStyle("-fx-padding: 8;");
     final BooleanProperty retentionAnalysisEnabled = new SimpleBooleanProperty(true);
 
@@ -204,10 +204,8 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       model.getFeatureTableFx().refresh();
       refreshAllDashboardPlots.run();
     });
-    final SplitPane mainSplit = new SplitPane(dashboardContent,
+    final var mainSplit = FxSplitPanes.newSplitPane(0.68, Orientation.VERTICAL, dashboardContent,
         model.getFeatureTableController().buildView());
-    mainSplit.setOrientation(Orientation.VERTICAL);
-    mainSplit.setDividerPositions(0.68);
 
     return mainSplit;
   }
@@ -273,25 +271,6 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       case MOLECULAR_SPECIES_LEVEL ->
           match.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation;
     };
-  }
-
-  private enum PreferredLipidLevelOption {
-    SPECIES("Species level", LipidAnnotationLevel.SPECIES_LEVEL), MOLECULAR_SPECIES(
-        "Molecular species level", LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL);
-
-    private final @NotNull String label;
-    private final @NotNull LipidAnnotationLevel level;
-
-    PreferredLipidLevelOption(final @NotNull String label,
-        final @NotNull LipidAnnotationLevel level) {
-      this.label = label;
-      this.level = level;
-    }
-
-    @Override
-    public @NotNull String toString() {
-      return label;
-    }
   }
 
 }

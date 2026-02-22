@@ -37,7 +37,6 @@ import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.spectra.Lipid
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.spectra.SingleSpectrumProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYBarRenderer;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
@@ -91,7 +90,7 @@ public class LipidSpectrumPlot extends SpectraPlot {
     final Scan matchedMsMsScan = matchedFragments.stream().map(LipidFragment::getMsMsScan)
         .findFirst().orElse(null);
 
-    final SimpleColorPalette palette = MZmineCore.getConfiguration().getDefaultColorPalette();
+    final SimpleColorPalette palette = ConfigService.getConfiguration().getDefaultColorPalette();
     final List<XYDatasetAndRenderer> datasets = new ArrayList<>();
     if (matchedMsMsScan != null) {
       PlotXYDataProvider spectrumProvider = new SingleSpectrumProvider(matchedMsMsScan,
@@ -117,14 +116,13 @@ public class LipidSpectrumPlot extends SpectraPlot {
           "Matched Signals", palette.getPositiveColorAWT());
       final ColoredXYDataset fragmentDataSet = new ColoredXYDataset(fragmentDataProvider,
           runOption);
-      final ColoredXYBarRenderer matchedRenderer = new ColoredXYBarRenderer(true);
+      final ColoredXYBarRenderer matchedRenderer = new StyledLipidSpectrumBarRenderer(true,
+          palette.getPositiveColorAWT());
 
       matchedRenderer.setDefaultItemLabelsVisible(showSignalLabels);
       if (showSignalLabels) {
         final MatchedLipidLabelGenerator matchedLipidLabelGenerator = new MatchedLipidLabelGenerator(
             this, matchedFragments, true);
-        matchedRenderer.setDefaultItemLabelPaint(
-            ConfigService.getConfiguration().getDefaultChartTheme().getItemLabelPaint());
         matchedRenderer.setDefaultItemLabelGenerator(matchedLipidLabelGenerator);
       }
       datasets.add(new DatasetAndRenderer(fragmentDataSet, matchedRenderer));

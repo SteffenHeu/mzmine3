@@ -25,7 +25,7 @@
 
 package io.github.mzmine.modules.visualization.spectra.matchedlipid;
 
-import io.github.mzmine.main.MZmineCore;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
@@ -88,7 +88,7 @@ public class MatchedLipidLabelGenerator implements XYItemLabelGenerator {
     if (isMatchedMz(x)) {
       return null;
     }
-    return MZmineCore.getConfiguration().getMZFormat().format(x);
+    return ConfigService.getConfiguration().getMZFormat().format(x);
   }
 
   private boolean canDrawLabel(XYDataset dataset, int series, int item, double originalX,
@@ -159,24 +159,24 @@ public class MatchedLipidLabelGenerator implements XYItemLabelGenerator {
       sb.append("\n");
 
       sb.append(lipidFragment.getIonFormula()).append("\n")
-          .append(MZmineCore.getConfiguration().getMZFormat().format(lipidFragment.getMzExact()))
+          .append(ConfigService.getConfiguration().getMZFormat().format(lipidFragment.getMzExact()))
           .append("\n");
       // accuracy
       if (showAccuracy) {
         float ppm = (float) ((lipidFragment.getMzExact() - lipidFragment.getDataPoint().getMZ())
             / lipidFragment.getMzExact()) * 1000000;
-        sb.append("Δ ").append(MZmineCore.getConfiguration().getPPMFormat().format(ppm))
+        sb.append("Δ ").append(ConfigService.getConfiguration().getPPMFormat().format(ppm))
             .append("ppm\n");
       }
     } else {
       sb.append(lipidFragment.getRuleType().toString()).append("\n")
           .append(lipidFragment.getIonFormula()).append("\n")
-          .append(MZmineCore.getConfiguration().getMZFormat().format(lipidFragment.getMzExact()));
+          .append(ConfigService.getConfiguration().getMZFormat().format(lipidFragment.getMzExact()));
       // accuracy
       if (showAccuracy) {
         float ppm = (float) ((lipidFragment.getMzExact() - lipidFragment.getDataPoint().getMZ())
             / lipidFragment.getMzExact()) * 1000000;
-        sb.append("Δ ").append(MZmineCore.getConfiguration().getPPMFormat().format(ppm))
+        sb.append("Δ ").append(ConfigService.getConfiguration().getPPMFormat().format(ppm))
             .append("ppm\n");
       }
     }
