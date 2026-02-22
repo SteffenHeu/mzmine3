@@ -153,6 +153,8 @@ public class AnnotationQualityPane extends BorderPane {
     if (interferenceMetrics.totalPenaltyCount() > 0) {
       final Label warning = new Label(
           "Potential interference: " + interferenceDetail(interferenceMetrics));
+      warning.setWrapText(true);
+      warning.setMaxWidth(Double.MAX_VALUE);
       warning.setStyle(qualityWarningStyle());
       content.getChildren().add(warning);
     }
@@ -296,6 +298,7 @@ public class AnnotationQualityPane extends BorderPane {
 
     final Label barLabel = new Label(name + "  " + String.format("%.0f%%", score * 100d));
     barLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: bold;");
+    barLabel.setTextFill(javafx.scene.paint.Color.WHITE);
     barLabel.setMouseTransparent(true);
 
     final StackPane barPane = new StackPane(barTrack, barFill, barLabel);
@@ -315,7 +318,9 @@ public class AnnotationQualityPane extends BorderPane {
       return null;
     }
     final javafx.scene.layout.FlowPane rowLinks = new javafx.scene.layout.FlowPane(4, 4);
+    rowLinks.prefWrapLengthProperty().bind(widthProperty().subtract(36));
     final Label title = new Label("Same annotation rows:");
+    title.setWrapText(true);
     rowLinks.getChildren().add(title);
     for (final FeatureListRow duplicate : duplicateRows) {
       final javafx.scene.control.Hyperlink link = new javafx.scene.control.Hyperlink(
@@ -345,11 +350,14 @@ public class AnnotationQualityPane extends BorderPane {
       refreshAfterAnnotationDelete(row);
     });
 
-    final HBox actionButtons = new HBox(6, deleteSelectedRowButton,
+    final javafx.scene.layout.FlowPane actionButtons = new javafx.scene.layout.FlowPane(6, 6,
+        deleteSelectedRowButton,
         deleteAllSameAnnotationRowsButton);
+    actionButtons.prefWrapLengthProperty().bind(widthProperty().subtract(36));
     actionButtons.setAlignment(Pos.CENTER_LEFT);
 
     final VBox alertContainer = new VBox(6, rowLinks, actionButtons);
+    alertContainer.setFillWidth(true);
     alertContainer.setStyle(qualityWarningStyle());
     return alertContainer;
   }

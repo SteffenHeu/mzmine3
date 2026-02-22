@@ -117,6 +117,13 @@ public enum LipidClasses implements ILipidClass {
               LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL, "C3H2O2"),//
       }), //
 
+  NACYLETHANOLAMINES("N-acyl ethanolamines", "NAE", LipidCategories.FATTYACYLS,
+      LipidMainClasses.FATTYAMIDES, "C2H6O", new LipidChainType[]{LipidChainType.AMID_CHAIN},
+      new LipidFragmentationRule[]{ //
+          new LipidFragmentationRule(PolarityType.POSITIVE, IonizationType.POSITIVE_HYDROGEN,
+              LipidFragmentationRuleType.PRECURSOR, LipidAnnotationLevel.SPECIES_LEVEL), //
+      }), //
+
   // Glycerolipids
   MONOACYLGLYCEROLS("Monoacylglycerols", "MG", LipidCategories.GLYCEROLIPIDS,
       LipidMainClasses.MONORADYLGLYCEROLS, "C3H8O3",
