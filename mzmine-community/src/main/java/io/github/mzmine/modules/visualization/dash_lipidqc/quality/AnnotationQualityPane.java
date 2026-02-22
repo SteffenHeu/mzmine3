@@ -23,30 +23,25 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.panes;
+package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
 
 import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.clampToUnit;
 import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
 import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeElutionOrderMetrics;
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeInterferenceMetrics;
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeInterferenceScore;
 import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.formatElutionOrderDetail;
 import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.interferenceDetail;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScaleTransform;
-import io.github.mzmine.javafx.mvci.FxUpdateTask;
+import io.github.mzmine.javafx.components.factories.FxButtons;
+import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
 import io.github.mzmine.javafx.util.FxColorUtil;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.main.MZmineCore;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
 import io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.InterferenceMetrics;
@@ -89,9 +84,10 @@ public class AnnotationQualityPane extends BorderPane {
   private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
   private final javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(8);
   private final javafx.scene.control.ScrollPane scrollPane = new javafx.scene.control.ScrollPane();
-  private final Label placeholder = new Label("Select a row with lipid annotations.");
-  private final Button removeMultiRowAnnotationsButton = new Button("Remove multi-row annotations");
-  private final Button setBestPerRowButton = new Button("Set all rows to highest-score annotation");
+  private final @NotNull Label placeholder = FxLabels.newLabel(
+      "Select a row with lipid annotations.");
+  private final @NotNull Button removeMultiRowAnnotationsButton;
+  private final @NotNull Button setBestPerRowButton;
   private boolean includeRetentionTimeAnalysis = true;
   private @Nullable Runnable onAnnotationsChanged;
   private @Nullable FeatureListRow row;
@@ -101,8 +97,10 @@ public class AnnotationQualityPane extends BorderPane {
     this.model = model;
     scrollPane.setFitToWidth(true);
     scrollPane.setContent(content);
-    removeMultiRowAnnotationsButton.setOnAction(_ -> removeMultiRowAnnotations());
-    setBestPerRowButton.setOnAction(_ -> setHighestScoreAnnotationOnAllRows());
+    removeMultiRowAnnotationsButton = FxButtons.createButton("Remove multi-row annotations",
+        this::removeMultiRowAnnotations);
+    setBestPerRowButton = FxButtons.createButton("Set all rows to highest-score annotation",
+        this::setHighestScoreAnnotationOnAllRows);
     final VBox actionBox = new VBox(6, removeMultiRowAnnotationsButton, setBestPerRowButton);
     actionBox.setAlignment(Pos.TOP_LEFT);
     final TitledPane actionsPane = new TitledPane("Annotation actions", actionBox);
@@ -142,7 +140,7 @@ public class AnnotationQualityPane extends BorderPane {
         Duration.millis(120));
   }
 
-  private void applyQualityResult(final @NotNull QualityComputationResult result) {
+  void applyQualityResult(final @NotNull QualityComputationResult result) {
     if (result.placeholderText() != null) {
       showPlaceholder(result.placeholderText());
       return;
@@ -169,11 +167,7 @@ public class AnnotationQualityPane extends BorderPane {
     setCenter(scrollPane);
   }
 
-  private void update() {
-    requestUpdate();
-  }
-
-  private static @NotNull List<FeatureListRow> findDuplicateRowsExcludingSelected(
+  static @NotNull List<FeatureListRow> findDuplicateRowsExcludingSelected(
       final @Nullable ModularFeatureList featureList, final int selectedRowId,
       final @NotNull String annotation) {
     if (featureList == null || annotation.isBlank()) {
@@ -214,10 +208,10 @@ public class AnnotationQualityPane extends BorderPane {
   }
 
   private @NotNull Region createQualityCardHeader(final @NotNull MatchedLipid match) {
-    final Label annotation = new Label(match.getLipidAnnotation().getAnnotation());
+    final Label annotation = FxLabels.newLabel(match.getLipidAnnotation().getAnnotation());
     annotation.setStyle("-fx-font-weight: bold;");
-    final Button deleteButton = new Button("Delete annotation");
-    deleteButton.setOnAction(_ -> deleteAnnotationFromSelectedRowWithConfirmation(match));
+    final Button deleteButton = FxButtons.createButton("Delete annotation",
+        () -> deleteAnnotationFromSelectedRowWithConfirmation(match));
 
     final Region spacer = new Region();
     HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -263,12 +257,13 @@ public class AnnotationQualityPane extends BorderPane {
     row.setLipidAnnotations(remaining);
   }
 
-  private Region createMetricRow(String name, double score, String detail) {
+  private Region createMetricRow(final @NotNull String name, final double score,
+      final @NotNull String detail) {
     final double clipped = Math.max(0d, Math.min(1d, score));
     final javafx.scene.paint.Color scoreColor = qualityScoreColor(clipped);
     final StackPane barPane = createMetricBar(name, clipped, scoreColor);
 
-    final Label detailLabel = new Label(detail);
+    final Label detailLabel = FxLabels.newLabel(detail);
     detailLabel.setStyle("-fx-font-size: 11px;");
     detailLabel.setWrapText(true);
     return new VBox(3, barPane, detailLabel);
@@ -296,9 +291,8 @@ public class AnnotationQualityPane extends BorderPane {
     barFill.setStyle("-fx-background-color: " + toCssColor(scoreColor)
         + "; -fx-background-radius: 3;");
 
-    final Label barLabel = new Label(name + "  " + String.format("%.0f%%", score * 100d));
-    barLabel.setStyle("-fx-font-size: 11px; -fx-font-weight: bold;");
-    barLabel.setTextFill(javafx.scene.paint.Color.WHITE);
+    final Label barLabel = FxLabels.newLabel(name + "  " + String.format("%.0f%%", score * 100d));
+    barLabel.setStyle(metricBarLabelStyle());
     barLabel.setMouseTransparent(true);
 
     final StackPane barPane = new StackPane(barTrack, barFill, barLabel);
@@ -319,7 +313,7 @@ public class AnnotationQualityPane extends BorderPane {
     }
     final javafx.scene.layout.FlowPane rowLinks = new javafx.scene.layout.FlowPane(4, 4);
     rowLinks.prefWrapLengthProperty().bind(widthProperty().subtract(36));
-    final Label title = new Label("Same annotation rows:");
+    final Label title = FxLabels.newLabel("Same annotation rows:");
     title.setWrapText(true);
     rowLinks.getChildren().add(title);
     for (final FeatureListRow duplicate : duplicateRows) {
@@ -331,8 +325,7 @@ public class AnnotationQualityPane extends BorderPane {
       });
       rowLinks.getChildren().add(link);
     }
-    final Button deleteSelectedRowButton = new Button("Delete selected");
-    deleteSelectedRowButton.setOnAction(_ -> {
+    final Button deleteSelectedRowButton = FxButtons.createButton("Delete selected", () -> {
       if (row == null) {
         return;
       }
@@ -340,8 +333,7 @@ public class AnnotationQualityPane extends BorderPane {
       refreshAfterAnnotationDelete(row);
     });
 
-    final Button deleteAllSameAnnotationRowsButton = new Button("Delete others");
-    deleteAllSameAnnotationRowsButton.setOnAction(_ -> {
+    final Button deleteAllSameAnnotationRowsButton = FxButtons.createButton("Delete others", () -> {
       final List<FeatureListRow> rowsToUpdate = getDuplicateRowsExcludingSelected(
           selectedAnnotation);
       for (final FeatureListRow sameAnnotationRow : rowsToUpdate) {
@@ -369,98 +361,6 @@ public class AnnotationQualityPane extends BorderPane {
     return findDuplicateRowsExcludingSelected(featureList, selectedRowId, annotation);
   }
 
-  private record QualityComputationResult(@Nullable String placeholderText,
-                                          @Nullable MatchedLipid selectedAnnotation,
-                                          @NotNull InterferenceMetrics interferenceMetrics,
-                                          @NotNull List<FeatureListRow> duplicateRows,
-                                          @NotNull List<QualityCardData> qualityCards) {
-
-  }
-
-  private record QualityCardData(@NotNull MatchedLipid match, @NotNull QualityMetric ms1,
-                                 @NotNull QualityMetric ms2, @NotNull QualityMetric adduct,
-                                 @NotNull QualityMetric isotope,
-                                 @NotNull QualityMetric elutionOrder,
-                                 @NotNull QualityMetric interference, double overall) {
-
-  }
-
-  private static final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
-
-    private final @Nullable FeatureListRow row;
-    private final @Nullable ModularFeatureList featureList;
-    private final boolean includeRetentionTimeAnalysis;
-    private @NotNull QualityComputationResult result;
-
-    private QualityComputationTask(final @NotNull AnnotationQualityPane pane,
-        final @Nullable FeatureListRow row, final @Nullable ModularFeatureList featureList,
-        final boolean includeRetentionTimeAnalysis) {
-      super("lipidqc-quality-update", pane);
-      this.row = row;
-      this.featureList = featureList;
-      this.includeRetentionTimeAnalysis = includeRetentionTimeAnalysis;
-      result = new QualityComputationResult("Select a row with lipid annotations.", null,
-          new InterferenceMetrics(0, 0), List.of(), List.of());
-    }
-
-    @Override
-    protected void process() {
-      if (row == null) {
-        result = new QualityComputationResult("Select a row with lipid annotations.", null,
-            new InterferenceMetrics(0, 0), List.of(), List.of());
-        return;
-      }
-      final List<MatchedLipid> matches = row.getLipidMatches();
-      if (matches.isEmpty()) {
-        result = new QualityComputationResult("No lipid annotations available for selected row.",
-            null, new InterferenceMetrics(0, 0), List.of(), List.of());
-        return;
-      }
-      final List<MatchedLipid> matchSnapshot = List.copyOf(matches);
-      final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
-      final MatchedLipid selectedAnnotation = matchSnapshot.getFirst();
-      final String annotationText = Objects.toString(
-          selectedAnnotation.getLipidAnnotation().getAnnotation(), "");
-      final List<FeatureListRow> duplicateRows = findDuplicateRowsExcludingSelected(featureList,
-          row.getID(), annotationText);
-      final QualityMetric interference = new QualityMetric(
-          computeInterferenceScore(interferenceMetrics.totalPenaltyCount()),
-          interferenceDetail(interferenceMetrics));
-      final List<QualityCardData> cards = new ArrayList<>(matchSnapshot.size());
-      for (final MatchedLipid match : matchSnapshot) {
-        final QualityMetric ms1 = evaluateMs1(row, match);
-        final QualityMetric ms2 = evaluateMs2(match);
-        final QualityMetric adduct = evaluateAdduct(row, match);
-        final QualityMetric isotope = evaluateIsotope(row, match);
-        final QualityMetric elutionOrder = includeRetentionTimeAnalysis
-            ? evaluateElutionOrder(featureList, row, match)
-            : new QualityMetric(0d, "Disabled for current lipid analysis mode");
-        final double scoreSum = ms1.score() + ms2.score() + adduct.score() + isotope.score()
-            + interference.score() + (includeRetentionTimeAnalysis ? elutionOrder.score() : 0d);
-        final int scoreCount = includeRetentionTimeAnalysis ? 6 : 5;
-        final double overall = scoreSum / scoreCount;
-        cards.add(new QualityCardData(match, ms1, ms2, adduct, isotope, elutionOrder, interference,
-            overall));
-      }
-      result = new QualityComputationResult(null, selectedAnnotation, interferenceMetrics,
-          List.copyOf(duplicateRows), List.copyOf(cards));
-    }
-
-    @Override
-    protected void updateGuiModel() {
-      model.applyQualityResult(result);
-    }
-
-    @Override
-    public String getTaskDescription() {
-      return "Calculating lipid annotation quality cards";
-    }
-
-    @Override
-    public double getFinishedPercentage() {
-      return 0d;
-    }
-  }
 
   private static void removeAllAnnotationsFromRow(final @NotNull FeatureListRow targetRow) {
     targetRow.setLipidAnnotations(List.of());
@@ -474,7 +374,7 @@ public class AnnotationQualityPane extends BorderPane {
         includeRetentionTimeAnalysis);
     final int removals = countPlannedAnnotationRemovals(removalPlan);
     if (removals <= 0) {
-      MZmineCore.getDesktop()
+      DesktopService.getDesktop()
           .displayMessage("Annotation actions", "No multi-row annotations would be removed.");
       return;
     }
@@ -493,7 +393,7 @@ public class AnnotationQualityPane extends BorderPane {
         includeRetentionTimeAnalysis);
     final int changedRows = countPlannedSetBestUpdates(bestMatchByRow);
     if (changedRows <= 0) {
-      MZmineCore.getDesktop().displayMessage("Annotation actions",
+      DesktopService.getDesktop().displayMessage("Annotation actions",
           "All rows already use the highest-score annotation as selected annotation.");
       return;
     }
@@ -644,11 +544,6 @@ public class AnnotationQualityPane extends BorderPane {
     return computeCombinedAnnotationScore(featureList, row, match, true, includeRetentionTimeAnalysis);
   }
 
-  private record RowAnnotationCandidate(@NotNull FeatureListRow row, @NotNull MatchedLipid match,
-                                        double combinedScore) {
-
-  }
-
   private void refreshAfterAnnotationDelete(final @Nullable FeatureListRow preferredRow) {
     model.setFeatureList(model.getFeatureList());
     model.getFeatureTableFx().refresh();
@@ -670,7 +565,7 @@ public class AnnotationQualityPane extends BorderPane {
         new QualityComputationTask(this, row, featureList, includeRetentionTimeAnalysis));
   }
 
-  private static @NotNull QualityMetric evaluateMs1(final @NotNull FeatureListRow row,
+  static @NotNull QualityMetric evaluateMs1(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
     final double exactMz = MatchedLipid.getExactMass(match);
     final double observedMz =
@@ -681,13 +576,13 @@ public class AnnotationQualityPane extends BorderPane {
     return new QualityMetric(score, String.format("%.2f ppm", ppm));
   }
 
-  private static @NotNull QualityMetric evaluateMs2(final @NotNull MatchedLipid match) {
+  static @NotNull QualityMetric evaluateMs2(final @NotNull MatchedLipid match) {
     final double explained = clampToUnit(match.getMsMsScore() == null ? 0d : match.getMsMsScore());
     return new QualityMetric(explained,
         String.format("%.1f", explained * 100d) + "% explained intensity");
   }
 
-  private static @NotNull QualityMetric evaluateAdduct(final @NotNull FeatureListRow row,
+  static @NotNull QualityMetric evaluateAdduct(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
     if (row.getBestIonIdentity() == null) {
       return new QualityMetric(0d, "No ion identity available for cross-check");
@@ -700,7 +595,7 @@ public class AnnotationQualityPane extends BorderPane {
     return new QualityMetric(matchFound ? 1d : 0d, detail);
   }
 
-  private static @NotNull QualityMetric evaluateIsotope(final @NotNull FeatureListRow row,
+  static @NotNull QualityMetric evaluateIsotope(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
     if (row.getBestIsotopePattern() == null || match.getIsotopePattern() == null) {
       return new QualityMetric(0.35, "Missing measured or theoretical isotope pattern");
@@ -711,7 +606,7 @@ public class AnnotationQualityPane extends BorderPane {
     return new QualityMetric(score, "Similarity score " + String.format("%.2f", score));
   }
 
-  private static @NotNull QualityMetric evaluateElutionOrder(
+  static @NotNull QualityMetric evaluateElutionOrder(
       final @Nullable ModularFeatureList featureList, final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
     if (featureList == null || row.getAverageRT() == null) {
@@ -737,104 +632,37 @@ public class AnnotationQualityPane extends BorderPane {
     return FxColorUtil.colorToHex(color);
   }
 
-  private static String normalizeAdduct(String adduct) {
+  private static @NotNull String normalizeAdduct(final @Nullable String adduct) {
     return adduct == null ? "" : adduct.replaceAll("\\s+", "").toLowerCase();
   }
 
-  private static int extractDbe(ILipidAnnotation lipidAnnotation) {
-    if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-          molecularAnnotation.getAnnotation()).getValue();
-    }
-    if (lipidAnnotation instanceof SpeciesLevelAnnotation speciesAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-          speciesAnnotation.getAnnotation()).getValue();
-    }
-    return -1;
-  }
-
-  private static int extractCarbons(ILipidAnnotation lipidAnnotation) {
-    if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-          molecularAnnotation.getAnnotation()).getKey();
-    }
-    if (lipidAnnotation instanceof SpeciesLevelAnnotation speciesAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-          speciesAnnotation.getAnnotation()).getKey();
-    }
-    return -1;
-  }
-
-  private static double predictRtByLinearFit(List<double[]> points, double x) {
-    double sumX = 0;
-    double sumY = 0;
-    double sumXY = 0;
-    double sumXX = 0;
-    for (double[] p : points) {
-      sumX += p[0];
-      sumY += p[1];
-      sumXY += p[0] * p[1];
-      sumXX += p[0] * p[0];
-    }
-    final int n = points.size();
-    final double denom = n * sumXX - sumX * sumX;
-    if (Math.abs(denom) < 1e-8) {
-      return sumY / n;
-    }
-    final double slope = (n * sumXY - sumX * sumY) / denom;
-    final double intercept = (sumY - slope * sumX) / n;
-    return intercept + slope * x;
-  }
-
-  private static double estimateResidualStd(List<double[]> points) {
-    if (points.size() < 3) {
-      return 0.1d;
-    }
-    double meanX = points.stream().mapToDouble(p -> p[0]).average().orElse(0d);
-    double meanY = points.stream().mapToDouble(p -> p[1]).average().orElse(0d);
-    double numerator = 0d;
-    double denominator = 0d;
-    for (double[] p : points) {
-      numerator += (p[0] - meanX) * (p[1] - meanY);
-      denominator += (p[0] - meanX) * (p[0] - meanX);
-    }
-    final double slope = denominator == 0d ? 0d : numerator / denominator;
-    final double intercept = meanY - slope * meanX;
-    double ss = 0d;
-    for (double[] p : points) {
-      final double residual = p[1] - (intercept + slope * p[0]);
-      ss += residual * residual;
-    }
-    return Math.sqrt(ss / Math.max(1, points.size() - 2));
-  }
-
-  private void showPlaceholder(String text) {
+  private void showPlaceholder(final @NotNull String text) {
     placeholder.setText(text);
     setCenter(placeholder);
   }
 
-  private static String qualityWarningStyle() {
+  private static @NotNull String qualityWarningStyle() {
     final Color negative = ConfigService.getDefaultColorPalette().getNegativeColorAWT();
     final String borderColor = "rgb(%d,%d,%d)".formatted(negative.getRed(), negative.getGreen(),
         negative.getBlue());
-    return MZmineCore.getConfiguration().isDarkMode() ?
+    return ConfigService.getConfiguration().isDarkMode() ?
         "-fx-background-color: transparent; -fx-border-color: " + borderColor + "; -fx-padding: 6;"
         : "-fx-background-color: #fff3cd; -fx-border-color: " + borderColor + "; -fx-padding: 6;";
   }
 
-  private static String qualityCardStyle() {
-    return MZmineCore.getConfiguration().isDarkMode()
+  private static @NotNull String qualityCardStyle() {
+    return ConfigService.getConfiguration().isDarkMode()
         ? "-fx-background-color: transparent; -fx-border-color: #5b5b5b; -fx-padding: 8;"
         : "-fx-background-color: #ffffff; -fx-border-color: #d0d0d0; -fx-padding: 8;";
   }
 
   private static @NotNull String metricBarTrackStyle() {
-    return MZmineCore.getConfiguration().isDarkMode()
+    return ConfigService.getConfiguration().isDarkMode()
         ? "-fx-background-color: rgba(255,255,255,0.14); -fx-border-color: #5b5b5b; -fx-background-radius: 3; -fx-border-radius: 3;"
         : "-fx-background-color: #f0f0f0; -fx-border-color: #d0d0d0; -fx-background-radius: 3; -fx-border-radius: 3;";
   }
 
-  private record QualityMetric(double score, String detail) {
-
+  private static @NotNull String metricBarLabelStyle() {
+    return "-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: white !important;";
   }
 }

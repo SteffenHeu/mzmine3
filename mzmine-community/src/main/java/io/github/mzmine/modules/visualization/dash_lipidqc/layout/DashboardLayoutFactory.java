@@ -23,7 +23,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.panes;
+package io.github.mzmine.modules.visualization.dash_lipidqc.layout;
 
 import java.util.List;
 import javafx.scene.control.Label;

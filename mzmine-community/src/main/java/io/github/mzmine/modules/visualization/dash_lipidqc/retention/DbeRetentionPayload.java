@@ -23,31 +23,18 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.panes;
+package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
-import java.util.Objects;
-import java.util.Set;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public final class DashboardFilterState {
+record DbeRetentionPayload(@NotNull RetentionTrendMode mode,
+                           @NotNull MatchedLipid selectedMatch,
+                           @NotNull ILipidClass selectedClass,
+                           int carbons,
+                           int selectedDbe,
+                           @NotNull RetentionTrendDataset dataset)
+    implements RetentionComputationPayload {
 
-  private @NotNull Set<Integer> barSelectedRowIds = Set.of();
-  private @Nullable Runnable onChange;
-
-  public @NotNull Set<Integer> getBarSelectedRowIds() {
-    return barSelectedRowIds;
-  }
-
-  public void setBarSelectedRowIds(final @NotNull Set<Integer> barSelectedRowIds) {
-    this.barSelectedRowIds = Objects.requireNonNullElse(barSelectedRowIds, Set.of());
-  }
-
-  public @Nullable Runnable getOnChange() {
-    return onChange;
-  }
-
-  public void setOnChange(final @Nullable Runnable onChange) {
-    this.onChange = onChange;
-  }
 }
