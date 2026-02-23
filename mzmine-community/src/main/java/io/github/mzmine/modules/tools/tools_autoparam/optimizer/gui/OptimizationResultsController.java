@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -40,6 +39,7 @@ import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.util.FxFileChooser;
 import io.github.mzmine.javafx.util.FxFileChooser.FileSelectionType;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.BatchModeParameters;
@@ -118,7 +118,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
       return;
     }
 
-    BatchModeParameters batchModeParameters = (BatchModeParameters) MZmineCore.getConfiguration()
+    BatchModeParameters batchModeParameters = (BatchModeParameters) ConfigService.getConfiguration()
         .getModuleParameters(BatchModeModule.class);
     batchModeParameters.getParameter(BatchModeParameters.batchQueue).setValue(q);
 

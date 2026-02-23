@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -50,7 +49,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public static final BooleanParameter maximizeCv20 = new BooleanParameter(
       "Maximize rows with RSD < 20",
-      "Attempts to maximize the number of rows that have an area RSD of < 20%", true);
+      "Attempts to maximize the number of rows that have an area RSD of < 20%", false);
 
   public static final BooleanParameter maximizeFeaturesWithIsotopes = new BooleanParameter(
       "Maximize features with isotopes",
@@ -59,7 +58,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public static final BooleanParameter minimizeDoublePeaks = new BooleanParameter(
       "Minimize number of double peaks",
-      "Minimizes the number of features that are classified as being a double peak.", true);
+      "Minimizes the number of features that are classified as being a double peak.", false);
 
   public static final BooleanParameter maximizeNumberOfBenchmarkFeatures = new BooleanParameter(
       "Maximize number of benchmark features", """
@@ -68,7 +67,7 @@ public class OptimizerParameters extends SimpleParameterSet {
          A chromatogram is build for each base peak and cut at 5% relative height. The RT range is
          then increased by 3*the FWHM of the peak. Additionally, the 13C isotopes are extracted in
          the same RT range and used, if they have a correlation factor > 90%.
-      2. Additional benchmark features may be user defined by the file given below.""", true);
+      2. Additional benchmark features may be user defined by the file given below.""", false);
 
   public static final BooleanParameter maximizeRowFillRatio = new BooleanParameter(
       "Maximize fill ratio", """
@@ -79,7 +78,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public static final BooleanParameter maximizeCv20WithIsos = new BooleanParameter(
       "Maximize rows with isotopes and RSD < 20",
-      "Attempts to maximize the number of rows that have an area RSD of < 20%", true);
+      "Attempts to maximize the number of rows that have an area RSD of < 20%", false);
 
   public static final BooleanParameter slawIntegrationScore = new BooleanParameter(
       "Slaw integration score",
