@@ -27,6 +27,7 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
 
 import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeInterferenceMetrics;
 import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeInterferenceScore;
+import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeWeightedQualityScore;
 import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.interferenceDetail;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
@@ -90,10 +91,9 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
       final QualityMetric elutionOrder = includeRetentionTimeAnalysis
           ? AnnotationQualityPane.evaluateElutionOrder(featureList, row, match)
           : new QualityMetric(0d, "Disabled for current lipid analysis mode");
-      final double scoreSum = ms1.score() + ms2.score() + adduct.score() + isotope.score()
-          + interference.score() + (includeRetentionTimeAnalysis ? elutionOrder.score() : 0d);
-      final int scoreCount = includeRetentionTimeAnalysis ? 6 : 5;
-      final double overall = scoreSum / scoreCount;
+      final double overall = computeWeightedQualityScore(ms1.score(), ms2.score(), adduct.score(),
+          isotope.score(), interference.score(), elutionOrder.score(), true,
+          includeRetentionTimeAnalysis);
       cards.add(
           new QualityCardData(match, ms1, ms2, adduct, isotope, elutionOrder, interference,
               overall));

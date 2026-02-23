@@ -292,7 +292,7 @@ public class AnnotationQualityPane extends BorderPane {
         + "; -fx-background-radius: 3;");
 
     final Label barLabel = FxLabels.newLabel(name + "  " + String.format("%.0f%%", score * 100d));
-    barLabel.setStyle(metricBarLabelStyle());
+    barLabel.setStyle(metricBarLabelStyle(score));
     barLabel.setMouseTransparent(true);
 
     final StackPane barPane = new StackPane(barTrack, barFill, barLabel);
@@ -598,7 +598,7 @@ public class AnnotationQualityPane extends BorderPane {
   static @NotNull QualityMetric evaluateIsotope(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
     if (row.getBestIsotopePattern() == null || match.getIsotopePattern() == null) {
-      return new QualityMetric(0.35, "Missing measured or theoretical isotope pattern");
+      return new QualityMetric(0d, "Missing measured or theoretical isotope pattern");
     }
     final float score = io.github.mzmine.modules.tools.isotopepatternscore.IsotopePatternScoreCalculator.getSimilarityScore(
         row.getBestIsotopePattern(), match.getIsotopePattern(),
@@ -662,7 +662,10 @@ public class AnnotationQualityPane extends BorderPane {
         : "-fx-background-color: #f0f0f0; -fx-border-color: #d0d0d0; -fx-background-radius: 3; -fx-border-radius: 3;";
   }
 
-  private static @NotNull String metricBarLabelStyle() {
-    return "-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: white !important;";
+  private static @NotNull String metricBarLabelStyle(final double score) {
+    final String textColor = ConfigService.getConfiguration().isDarkMode() || score >= 0.5d
+        ? "white" : "#1f1f1f";
+    return "-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: " + textColor
+        + " !important;";
   }
 }

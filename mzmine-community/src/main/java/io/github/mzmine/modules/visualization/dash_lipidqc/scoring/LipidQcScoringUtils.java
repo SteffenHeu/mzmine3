@@ -46,11 +46,53 @@ import java.util.TreeMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Central scoring model used by lipid QC and lipid-annotation ranking.
+ * <p>
+ * The final annotation score is a weighted mean of all enabled component scores.
+ * Components are normalized to {@code [0, 1]} before weighting.
+ * Default component weights:
+ * <ul>
+ *   <li>MS1 mass accuracy: {@code 5}</li>
+ *   <li>Lipid ion vs ion identity: {@code 1}</li>
+ *   <li>Isotope pattern: {@code 2}</li>
+ *   <li>Interference: {@code 3}</li>
+ *   <li>MS2 explained intensity: {@code 10}</li>
+ *   <li>Elution order: {@code 7}</li>
+ * </ul>
+ * <p>
+ * Always included:
+ * <ul>
+ *   <li>MS1 mass accuracy: linear scaling, {@code 0 ppm -> 1.0}, {@code >= 5 ppm -> 0.0}</li>
+ *   <li>Lipid ion vs ion identity adduct agreement: binary ({@code 1.0} if equal, else
+ *   {@code 0.0})</li>
+ *   <li>Isotope pattern similarity (missing measured or theoretical pattern -> {@code 0.0})</li>
+ *   <li>Interference score derived from competing annotations in the same row</li>
+ * </ul>
+ * Optional:
+ * <ul>
+ *   <li>MS2 explained intensity score ({@code [0, 1]})</li>
+ *   <li>Elution-order score (mode-dependent; disabled for direct infusion/imaging)</li>
+ * </ul>
+ * Elution-order behavior:
+ * <ul>
+ *   <li>Reversed-phase LC: combines carbon-trend and DBE-trend linear models</li>
+ *   <li>HILIC: class-window model (inside dominant RT window: {@code 1.0}, outside:
+ *   {@code 0.0})</li>
+ *   <li>Direct infusion / imaging: unavailable ({@code 0.0})</li>
+ * </ul>
+ */
 public final class LipidQcScoringUtils {
 
   private static final double RT_DELTA_NO_PENALTY_NORMALIZED = 0.006d;
   private static final double RT_DELTA_FULL_PENALTY_NORMALIZED = 0.07d;
   private static final double RT_DELTA_PENALTY_EXPONENT = 1.35d;
+  private static final double WEIGHT_MS1 = 5d;
+  private static final double WEIGHT_ADDUCT = 1d;
+  private static final double WEIGHT_ISOTOPE = 2d;
+  private static final double WEIGHT_INTERFERENCE = 3d;
+  private static final double WEIGHT_MS2 = 10d;
+  private static final double WEIGHT_ELUTION_ORDER = 7d;
   private static final int HILIC_MIN_CLASS_ROWS = 4;
   private static final double HILIC_WINDOW_SUPPORT_FRACTION = 0.6d;
   private static final double HILIC_WINDOW_EDGE_TOLERANCE_MINUTES = 0.02d;
@@ -59,11 +101,25 @@ public final class LipidQcScoringUtils {
   private LipidQcScoringUtils() {
   }
 
+  /**
+   * RT-trend score payload for one trend model.
+   *
+   * @param score normalized trend score in {@code [0, 1]}
+   * @param residualRt absolute RT residual in minutes
+   * @param normalizedDelta residual normalized by method length
+   * @param available true if sufficient data was available to fit the model
+   */
   public record TrendScore(double score, double residualRt, double normalizedDelta,
                            boolean available) {
 
   }
 
+  /**
+   * Interference diagnostics for one row.
+   *
+   * @param classPenaltyCount penalties from competing lipid classes in the same row
+   * @param sameClassAdductPenaltyCount penalties from same-class, multi-adduct ambiguity
+   */
   public record InterferenceMetrics(int classPenaltyCount, int sameClassAdductPenaltyCount) {
 
     public int totalPenaltyCount() {
@@ -77,6 +133,14 @@ public final class LipidQcScoringUtils {
 
   }
 
+  /**
+   * Computes elution-order metrics for the feature list's detected lipid-analysis mode.
+   *
+   * @param featureList feature list that provides RT context and mode provenance
+   * @param row selected row
+   * @param match lipid annotation candidate for the row
+   * @return mode-specific elution metrics and combined score
+   */
   public static @NotNull ElutionOrderMetrics computeElutionOrderMetrics(
       final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
@@ -84,6 +148,15 @@ public final class LipidQcScoringUtils {
         detectLipidAnalysisType(featureList));
   }
 
+  /**
+   * Computes elution-order metrics for an explicit lipid-analysis mode.
+   *
+   * @param featureList feature list that provides RT context
+   * @param row selected row
+   * @param match lipid annotation candidate for the row
+   * @param analysisType lipid-analysis mode; {@code null} falls back to reversed-phase LC
+   * @return mode-specific elution metrics and combined score
+   */
   public static @NotNull ElutionOrderMetrics computeElutionOrderMetrics(
       final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match, final @Nullable LipidAnalysisType analysisType) {
@@ -97,6 +170,12 @@ public final class LipidQcScoringUtils {
     };
   }
 
+  /**
+   * Detects lipid-analysis mode from the latest applied {@link LipidAnnotationModule} step.
+   *
+   * @param featureList feature list that contains applied methods
+   * @return detected analysis mode or {@code null} if not available
+   */
   public static @Nullable LipidAnalysisType detectLipidAnalysisType(
       final @NotNull ModularFeatureList featureList) {
     final List<FeatureListAppliedMethod> appliedMethods = featureList.getAppliedMethods();
@@ -338,6 +417,9 @@ public final class LipidQcScoringUtils {
     return -1;
   }
 
+  /**
+   * Clamps a value to {@code [0, 1]}. Non-finite input is mapped to {@code 0}.
+   */
   public static double clampToUnit(final double value) {
     if (!Double.isFinite(value)) {
       return 0d;
@@ -371,6 +453,14 @@ public final class LipidQcScoringUtils {
     return clampToUnit(1d - nonLinearPenalty);
   }
 
+  /**
+   * Converts the number of interference penalties into a score.
+   * <ul>
+   *   <li>{@code 0 penalties -> 1.0}</li>
+   *   <li>{@code 1 penalty -> 0.5}</li>
+   *   <li>{@code >= 2 penalties -> 0.0}</li>
+   * </ul>
+   */
   public static double computeInterferenceScore(final int interferenceCount) {
     return switch (Math.max(0, interferenceCount)) {
       case 0 -> 1d;
@@ -379,12 +469,23 @@ public final class LipidQcScoringUtils {
     };
   }
 
+  /**
+   * Computes the overall annotation score with default settings:
+   * includes MS2 and elution-order contributions, using auto-detected analysis mode.
+   */
   public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match) {
     return computeCombinedAnnotationScore(featureList, row, match, true, true,
         detectLipidAnalysisType(featureList));
   }
 
+  /**
+   * Computes the overall annotation score with optional MS2 and elution-order components, using
+   * auto-detected analysis mode.
+   *
+   * @param includeMs2Score true to include MS2 explained-intensity score
+   * @param includeElutionOrderScore true to include RT/elution-order score
+   */
   public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
       final boolean includeMs2Score, final boolean includeElutionOrderScore) {
@@ -392,6 +493,19 @@ public final class LipidQcScoringUtils {
         includeElutionOrderScore, detectLipidAnalysisType(featureList));
   }
 
+  /**
+   * Computes the overall annotation score for a specific analysis mode.
+   * <p>
+   * Final score = arithmetic mean of all enabled component scores.
+   *
+   * @param featureList feature list used for context-dependent scores
+   * @param row selected row
+   * @param match annotation candidate
+   * @param includeMs2Score true to include MS2 explained-intensity score
+   * @param includeElutionOrderScore true to include elution-order score
+   * @param analysisType explicit analysis mode; {@code null} falls back to auto-detection
+   * @return normalized combined score in {@code [0, 1]}
+   */
   public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
       final boolean includeMs2Score, final boolean includeElutionOrderScore,
@@ -408,25 +522,53 @@ public final class LipidQcScoringUtils {
         includeElutionOrderScore);
   }
 
+  /**
+   * Computes the weighted overall quality score from normalized component scores.
+   * <p>
+   * All provided component scores are clamped to {@code [0, 1]} before weighting.
+   *
+   * @param ms1Score MS1 accuracy score
+   * @param ms2Score MS2 explained-intensity score
+   * @param adductScore adduct agreement score
+   * @param isotopeScore isotope similarity score
+   * @param interferenceScore interference score
+   * @param elutionOrderScore elution-order score
+   * @param includeMs2Score true to include MS2 in the weighted mean
+   * @param includeElutionOrderScore true to include elution order in the weighted mean
+   * @return weighted mean score in {@code [0, 1]}
+   */
+  public static double computeWeightedQualityScore(final double ms1Score, final double ms2Score,
+      final double adductScore, final double isotopeScore, final double interferenceScore,
+      final double elutionOrderScore, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore) {
+    double weightedSum = WEIGHT_MS1 * clampToUnit(ms1Score)
+        + WEIGHT_ADDUCT * clampToUnit(adductScore)
+        + WEIGHT_ISOTOPE * clampToUnit(isotopeScore)
+        + WEIGHT_INTERFERENCE * clampToUnit(interferenceScore);
+    double weightSum = WEIGHT_MS1 + WEIGHT_ADDUCT + WEIGHT_ISOTOPE + WEIGHT_INTERFERENCE;
+
+    if (includeMs2Score) {
+      weightedSum += WEIGHT_MS2 * clampToUnit(ms2Score);
+      weightSum += WEIGHT_MS2;
+    }
+    if (includeElutionOrderScore) {
+      weightedSum += WEIGHT_ELUTION_ORDER * clampToUnit(elutionOrderScore);
+      weightSum += WEIGHT_ELUTION_ORDER;
+    }
+    return weightSum <= 0d ? 0d : clampToUnit(weightedSum / weightSum);
+  }
+
   private static double computeOverallQualityScore(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match, final double elutionOrderScore,
       final boolean includeMs2Score, final boolean includeElutionOrderScore) {
     final double ms1Score = computeMs1Score(row, match);
+    final double ms2Score = computeMs2Score(match);
     final double adductScore = computeAdductScore(row, match);
     final double isotopeScore = computeIsotopeScore(row, match);
     final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
-    final double interference = computeInterferenceScore(interferenceMetrics.totalPenaltyCount());
-    double scoreSum = ms1Score + adductScore + isotopeScore + interference;
-    int scoreCount = 4;
-    if (includeMs2Score) {
-      scoreSum += computeMs2Score(match);
-      scoreCount++;
-    }
-    if (includeElutionOrderScore) {
-      scoreSum += elutionOrderScore;
-      scoreCount++;
-    }
-    return scoreCount == 0 ? 0d : scoreSum / scoreCount;
+    final double interferenceScore = computeInterferenceScore(interferenceMetrics.totalPenaltyCount());
+    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
+        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore);
   }
 
   private static double computeMs1Score(final @NotNull FeatureListRow row,
@@ -460,7 +602,7 @@ public final class LipidQcScoringUtils {
   private static double computeIsotopeScore(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
     if (row.getBestIsotopePattern() == null || match.getIsotopePattern() == null) {
-      return 0.35d;
+      return 0d;
     }
     return io.github.mzmine.modules.tools.isotopepatternscore.IsotopePatternScoreCalculator.getSimilarityScore(
         row.getBestIsotopePattern(), match.getIsotopePattern(),
@@ -471,6 +613,20 @@ public final class LipidQcScoringUtils {
     return adduct == null ? "" : adduct.replaceAll("\\s+", "").toLowerCase();
   }
 
+  /**
+   * Computes interference metrics from all lipid matches in one row.
+   * <p>
+   * Two independent penalty channels are tracked and added:
+   * <ul>
+   *   <li>Competing lipid classes in the row:
+   *   {@code classPenaltyCount = max(0, uniqueClasses - 1)}</li>
+   *   <li>Same-class adduct ambiguity:
+   *   for each lipid class in the row, add one penalty if there is more than one unique
+   *   annotation and more than one unique non-empty adduct</li>
+   * </ul>
+   * The resulting total penalty count is mapped to the interference score by
+   * {@link #computeInterferenceScore(int)} ({@code 0 -> 1.0}, {@code 1 -> 0.5}, {@code >=2 -> 0.0}).
+   */
   public static @NotNull InterferenceMetrics computeInterferenceMetrics(
       final @NotNull FeatureListRow row) {
     final List<MatchedLipid> matches = row.getLipidMatches();
