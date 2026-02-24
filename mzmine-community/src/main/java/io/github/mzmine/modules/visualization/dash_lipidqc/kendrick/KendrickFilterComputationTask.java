@@ -41,6 +41,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
 import io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.InterferenceMetrics;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotXYZDataset;
@@ -116,11 +117,10 @@ final class KendrickFilterComputationTask extends FxUpdateTask<KendrickPane> {
 
   private static boolean rowOutlier(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final boolean includeRetentionTimeAnalysis) {
-    final List<MatchedLipid> matches = row.getLipidMatches();
-    if (matches.isEmpty()) {
+    final @Nullable MatchedLipid match = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
+    if (match == null) {
       return false;
     }
-    final MatchedLipid match = matches.getFirst();
     if (!includeRetentionTimeAnalysis) {
       final double overall = computeOverallQualityScore(row, match, 0d, false);
       return overall < 0.5d;

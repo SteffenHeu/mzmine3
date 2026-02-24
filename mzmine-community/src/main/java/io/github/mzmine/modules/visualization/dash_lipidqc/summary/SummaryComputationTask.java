@@ -33,6 +33,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -100,7 +101,11 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
       }
       totalLipidRows++;
       if (localCountMode == SummaryCountMode.ROW_COUNT) {
-        final MatchedLipid lipid = matches.getFirst();
+        final @Nullable MatchedLipid lipid =
+            LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
+        if (lipid == null) {
+          continue;
+        }
         final String groupName = localGrouping.extractGroupLabel(lipid, extractSubclassToken(lipid));
         groupTooltip.putIfAbsent(groupName,
             localGrouping.extractTooltip(lipid, extractSubclassToken(lipid)));
@@ -214,4 +219,3 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
     return lipid.getLipidAnnotation().getLipidClass().getName() + "|" + carbons + ":" + dbe;
   }
 }
-

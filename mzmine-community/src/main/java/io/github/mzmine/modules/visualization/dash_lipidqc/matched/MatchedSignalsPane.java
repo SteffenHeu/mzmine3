@@ -30,6 +30,7 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.spectra.matchedlipid.LipidSpectrumPlot;
 import java.util.List;
 import javafx.geometry.Pos;
@@ -69,7 +70,11 @@ public class MatchedSignalsPane extends BorderPane {
       return;
     }
 
-    final MatchedLipid match = matches.getFirst();
+    final @Nullable MatchedLipid match = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
+    if (match == null) {
+      showPlaceholder("No matched lipid signals available for selected row.");
+      return;
+    }
     if (spectrumPlot == null) {
       spectrumPlot = new LipidSpectrumPlot(match, true, RunOption.THIS_THREAD);
     } else {

@@ -35,12 +35,12 @@ import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.spectra.MassS
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYBarRenderer;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.tools.isotopeprediction.IsotopePatternCalculator;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.renderers.SpectraItemLabelGenerator;
 import java.awt.Color;
 import java.awt.geom.Ellipse2D;
-import java.util.List;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
@@ -95,8 +95,7 @@ public class IsotopePane extends BorderPane {
         measuredRenderer,
         false, false);
 
-    final MatchedLipid selectedMatch =
-        row.getLipidMatches().isEmpty() ? null : row.getLipidMatches().getFirst();
+    final MatchedLipid selectedMatch = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
     final IsotopePattern theoreticalPattern = resolveTheoreticalPattern(row, selectedMatch);
     if (theoreticalPattern != null) {
       final XYLineAndShapeRenderer theoreticalRenderer = new XYLineAndShapeRenderer(false, true);
@@ -113,9 +112,9 @@ public class IsotopePane extends BorderPane {
 
   private static @Nullable IsotopePattern resolveTheoreticalPattern(final @NotNull FeatureListRow row,
       final @Nullable MatchedLipid selectedMatch) {
-    final List<MatchedLipid> matches = row.getLipidMatches();
     final MatchedLipid target =
-        selectedMatch != null ? selectedMatch : (matches.isEmpty() ? null : matches.getFirst());
+        selectedMatch != null ? selectedMatch
+            : LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
     if (target == null) {
       return null;
     }

@@ -43,6 +43,7 @@ import io.github.mzmine.javafx.util.FxColorUtil;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
 import io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.InterferenceMetrics;
 import io.github.mzmine.util.FeatureTableFXUtil;
@@ -173,9 +174,11 @@ public class AnnotationQualityPane extends BorderPane {
     if (featureList == null || annotation.isBlank()) {
       return List.of();
     }
-    return featureList.getRows().stream().filter(r -> !r.getLipidMatches().isEmpty()).filter(
-            r -> Objects.equals(r.getLipidMatches().getFirst().getLipidAnnotation().getAnnotation(),
-                annotation)).filter(r -> r.getID() != selectedRowId)
+    return featureList.getRows().stream()
+        .filter(r -> Objects.equals(java.util.Optional.ofNullable(
+                LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(r))
+            .map(match -> match.getLipidAnnotation().getAnnotation()).orElse(null), annotation))
+        .filter(r -> r.getID() != selectedRowId)
         .sorted((a, b) -> Integer.compare(a.getID(), b.getID())).map(r -> (FeatureListRow) r)
         .toList();
   }
@@ -208,7 +211,7 @@ public class AnnotationQualityPane extends BorderPane {
   }
 
   private @NotNull Region createQualityCardHeader(final @NotNull MatchedLipid match) {
-    final Label annotation = FxLabels.newLabel(match.getLipidAnnotation().getAnnotation());
+    final Label annotation = FxLabels.newLabel(formatCardTitle(match));
     annotation.setStyle("-fx-font-weight: bold;");
     final Button deleteButton = FxButtons.createButton("Delete annotation",
         () -> deleteAnnotationFromSelectedRowWithConfirmation(match));
@@ -219,6 +222,17 @@ public class AnnotationQualityPane extends BorderPane {
     final HBox header = new HBox(8, annotation, spacer, deleteButton);
     header.setAlignment(Pos.CENTER_LEFT);
     return header;
+  }
+
+  private static @NotNull String formatCardTitle(final @NotNull MatchedLipid match) {
+    final String annotation = Objects.toString(match.getLipidAnnotation().getAnnotation(),
+        "Unknown annotation");
+    final @Nullable String adductName = match.getIonizationType() != null
+        ? match.getIonizationType().getAdductName() : null;
+    if (adductName == null || adductName.isBlank()) {
+      return annotation;
+    }
+    return annotation + " " + adductName;
   }
 
   private void deleteAnnotationFromSelectedRowWithConfirmation(final @NotNull MatchedLipid match) {

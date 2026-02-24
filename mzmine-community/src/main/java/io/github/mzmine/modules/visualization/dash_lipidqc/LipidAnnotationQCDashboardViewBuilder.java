@@ -28,6 +28,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.datamodel.features.DataTypeValueChangeListener;
+import io.github.mzmine.datamodel.features.types.DataTypes;
+import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
+import io.github.mzmine.datamodel.features.types.annotations.PreferredAnnotationType;
 import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.components.factories.FxSplitPanes;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
@@ -51,6 +55,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -137,6 +143,37 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       isotopePane.setRow(selectedRow);
       matchedSignalsPane.setRow(selectedRow);
     };
+
+    final AtomicBoolean lipidAnnotationRefreshScheduled = new AtomicBoolean(false);
+    final DataTypeValueChangeListener<Object> lipidAnnotationListener =
+        (_, _, _, _) -> {
+          if (lipidAnnotationRefreshScheduled.compareAndSet(false, true)) {
+            Platform.runLater(() -> {
+              lipidAnnotationRefreshScheduled.set(false);
+              refreshAllDashboardPlots.run();
+            });
+          }
+        };
+    final var lipidMatchesType = DataTypes.get(LipidMatchListType.class);
+    final var preferredAnnotationType = DataTypes.get(PreferredAnnotationType.class);
+    final AtomicReference<@Nullable ModularFeatureList> annotationListenerFeatureList =
+        new AtomicReference<>(null);
+    final Runnable updateLipidAnnotationListener = () -> {
+      final @Nullable ModularFeatureList currentFeatureList = model.getFeatureList();
+      final @Nullable ModularFeatureList previousFeatureList =
+          annotationListenerFeatureList.getAndSet(currentFeatureList);
+      if (previousFeatureList != null && previousFeatureList != currentFeatureList) {
+        previousFeatureList.removeRowTypeValueListener(lipidMatchesType, lipidAnnotationListener);
+        previousFeatureList.removeRowTypeValueListener(preferredAnnotationType,
+            lipidAnnotationListener);
+      }
+      if (currentFeatureList != null && currentFeatureList != previousFeatureList) {
+        currentFeatureList.addRowTypeValueListener(lipidMatchesType, lipidAnnotationListener);
+        currentFeatureList.addRowTypeValueListener(preferredAnnotationType,
+            lipidAnnotationListener);
+      }
+    };
+
     qualityPane.setOnAnnotationsChanged(refreshAllDashboardPlots);
 
     model.featureTableFxProperty().get().getSelectionModel().selectedItemProperty()
@@ -161,6 +198,7 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     });
 
     model.featureListProperty().subscribe(flist -> {
+      updateLipidAnnotationListener.run();
       applyDashboardModeFromFeatureList.run();
       if (retentionAnalysisEnabled.get()) {
         ecnPane.setFeatureList(flist);
@@ -185,6 +223,7 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       Platform.runLater(() -> selectFirstVisibleRow(model));
     });
 
+    updateLipidAnnotationListener.run();
     applyDashboardModeFromFeatureList.run();
 
     final Region dashboardContent = DashboardLayoutFactory.createSixPaneLayout(

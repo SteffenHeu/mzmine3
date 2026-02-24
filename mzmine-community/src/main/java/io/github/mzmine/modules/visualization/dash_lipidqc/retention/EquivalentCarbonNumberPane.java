@@ -39,6 +39,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberChart;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberDataset;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -629,9 +630,10 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   }
 
   private @Nullable FeatureListRow findRowForLipid(@NotNull MatchedLipid clickedLipid) {
-    for (FeatureListRow candidate : getCurrentRowsWithLipidIds()) {
-      final List<MatchedLipid> matches = candidate.getLipidMatches();
-      if (!matches.isEmpty() && clickedLipid.equals(matches.getFirst())) {
+    for (final FeatureListRow candidate : getCurrentRowsWithLipidIds()) {
+      final @Nullable MatchedLipid selectedMatch =
+          LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(candidate);
+      if (selectedMatch != null && clickedLipid.equals(selectedMatch)) {
         return candidate;
       }
     }

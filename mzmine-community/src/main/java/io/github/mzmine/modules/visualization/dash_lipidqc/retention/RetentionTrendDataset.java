@@ -26,8 +26,8 @@
 package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -49,11 +49,11 @@ final class RetentionTrendDataset extends AbstractXYDataset {
     final List<Double> yList = new ArrayList<>();
     final List<MatchedLipid> lipidList = new ArrayList<>();
     for (final FeatureListRow row : rows) {
-      final List<MatchedLipid> rowMatches = row.get(LipidMatchListType.class);
-      if (rowMatches == null || rowMatches.isEmpty() || row.getAverageRT() == null) {
+      final @Nullable MatchedLipid match = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
+          row);
+      if (match == null || row.getAverageRT() == null) {
         continue;
       }
-      final MatchedLipid match = rowMatches.getFirst();
       if (!predicate.test(match)) {
         continue;
       }

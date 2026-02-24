@@ -26,10 +26,10 @@
 package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -57,8 +57,9 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
       result = new RetentionComputationResult("Select a row with lipid annotations.", null);
       return;
     }
-    final List<MatchedLipid> selectedMatches = selectedRow.get(LipidMatchListType.class);
-    if (selectedMatches == null || selectedMatches.isEmpty()) {
+    final @Nullable MatchedLipid selectedMatch =
+        LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(selectedRow);
+    if (selectedMatch == null) {
       result = new RetentionComputationResult(
           "No lipid annotations available for selected row.", null);
       return;
@@ -73,7 +74,6 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
       return;
     }
 
-    final MatchedLipid selectedMatch = selectedMatches.getFirst();
     final ILipidClass selectedClass = selectedMatch.getLipidAnnotation().getLipidClass();
 
     switch (mode) {
@@ -85,8 +85,8 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
           return;
         }
         final int matchCount = (int) rowsWithLipidIds.stream()
-            .map(r -> r.get(LipidMatchListType.class))
-            .filter(matches -> matches != null && !matches.isEmpty()).map(List::getFirst)
+            .map(LipidQcAnnotationSelectionUtils::getPreferredLipidMatch)
+            .filter(java.util.Objects::nonNull)
             .filter(match -> match.getLipidAnnotation().getLipidClass().equals(selectedClass))
             .filter(match -> EquivalentCarbonNumberPane.extractDbe(match.getLipidAnnotation()) == dbe)
             .count();

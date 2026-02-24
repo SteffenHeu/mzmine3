@@ -27,7 +27,6 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.kendrick;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.gui.chartbasics.chartutils.ColoredBubbleDatasetRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.XYItemObjectProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.AlphaBubbleDatasetRenderer;
@@ -35,6 +34,7 @@ import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickSubsetDataset;
 import io.github.mzmine.modules.visualization.dash_lipidqc.state.DashboardFilterState;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotChart;
@@ -48,7 +48,6 @@ import java.awt.Color;
 import java.awt.Paint;
 import java.awt.geom.Ellipse2D;
 import java.text.DecimalFormat;
-import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import javafx.application.Platform;
@@ -432,11 +431,12 @@ public class KendrickPane extends BorderPane {
   }
 
   private static @NotNull String getSelectedLabel(final @NotNull FeatureListRow row) {
-    final List<MatchedLipid> matches = row.get(LipidMatchListType.class);
-    if (matches == null || matches.isEmpty()) {
+    final @Nullable MatchedLipid selectedMatch = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
+        row);
+    if (selectedMatch == null) {
       return "Row " + row.getID();
     }
-    final String annotation = matches.getFirst().getLipidAnnotation().getAnnotation();
+    final String annotation = selectedMatch.getLipidAnnotation().getAnnotation();
     return annotation.length() > 52 ? annotation.substring(0, 49) + "..." : annotation;
   }
 

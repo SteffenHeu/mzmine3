@@ -34,6 +34,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.InterferenceMetrics;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,7 +75,12 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
     }
     final List<MatchedLipid> matchSnapshot = List.copyOf(matches);
     final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
-    final MatchedLipid selectedAnnotation = matchSnapshot.getFirst();
+    final MatchedLipid selectedAnnotation = java.util.Objects.requireNonNullElse(
+        LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row), matchSnapshot.getFirst());
+    final List<MatchedLipid> orderedMatches = new ArrayList<>(matchSnapshot.size());
+    orderedMatches.add(selectedAnnotation);
+    orderedMatches.addAll(
+        matchSnapshot.stream().filter(match -> !Objects.equals(match, selectedAnnotation)).toList());
     final String annotationText = Objects.toString(
         selectedAnnotation.getLipidAnnotation().getAnnotation(), "");
     final List<FeatureListRow> duplicateRows = AnnotationQualityPane.findDuplicateRowsExcludingSelected(
@@ -82,8 +88,8 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
     final QualityMetric interference = new QualityMetric(
         computeInterferenceScore(interferenceMetrics.totalPenaltyCount()),
         interferenceDetail(interferenceMetrics));
-    final List<QualityCardData> cards = new ArrayList<>(matchSnapshot.size());
-    for (final MatchedLipid match : matchSnapshot) {
+    final List<QualityCardData> cards = new ArrayList<>(orderedMatches.size());
+    for (final MatchedLipid match : orderedMatches) {
       final QualityMetric ms1 = AnnotationQualityPane.evaluateMs1(row, match);
       final QualityMetric ms2 = AnnotationQualityPane.evaluateMs2(match);
       final QualityMetric adduct = AnnotationQualityPane.evaluateAdduct(row, match);
