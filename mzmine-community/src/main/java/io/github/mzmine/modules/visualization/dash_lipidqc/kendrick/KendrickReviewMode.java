@@ -25,22 +25,21 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.kendrick;
 
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickSubsetDataset;
-import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotXYZDataset;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.jfree.chart.renderer.LookupPaintScale;
-import org.jfree.chart.renderer.PaintScale;
 
-record KendrickFilterComputationResult(long requestId,
-                                       @NotNull KendrickMassPlotXYZDataset baseDataset,
-                                       @NotNull KendrickReviewMode reviewMode,
-                                       @NotNull KendrickSubsetDataset inDataset,
-                                       @Nullable KendrickSubsetDataset filteredOutDataset,
-                                       @Nullable KendrickSubsetDataset outlierDataset,
-                                       @NotNull PaintScale filteredColorScale,
-                                       boolean showColorScaleLegend,
-                                       @NotNull LookupPaintScale grayScale,
-                                       @Nullable KendrickFalseNegativeDetector falseNegativeDetector) {
+public enum KendrickReviewMode {
+  NONE("None"),
+  POTENTIAL_FALSE_POSITIVE("Potentially false positive"),
+  POTENTIAL_FALSE_NEGATIVE("Potentially false negative");
 
+  private final @NotNull String title;
+
+  KendrickReviewMode(final @NotNull String title) {
+    this.title = title;
+  }
+
+  @Override
+  public @NotNull String toString() {
+    return title;
+  }
 }

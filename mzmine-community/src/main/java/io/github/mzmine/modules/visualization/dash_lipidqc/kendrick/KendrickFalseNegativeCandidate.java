@@ -25,22 +25,15 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.kendrick;
 
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickSubsetDataset;
-import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotXYZDataset;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jfree.chart.renderer.LookupPaintScale;
-import org.jfree.chart.renderer.PaintScale;
 
-record KendrickFilterComputationResult(long requestId,
-                                       @NotNull KendrickMassPlotXYZDataset baseDataset,
-                                       @NotNull KendrickReviewMode reviewMode,
-                                       @NotNull KendrickSubsetDataset inDataset,
-                                       @Nullable KendrickSubsetDataset filteredOutDataset,
-                                       @Nullable KendrickSubsetDataset outlierDataset,
-                                       @NotNull PaintScale filteredColorScale,
-                                       boolean showColorScaleLegend,
-                                       @NotNull LookupPaintScale grayScale,
-                                       @Nullable KendrickFalseNegativeDetector falseNegativeDetector) {
+public record KendrickFalseNegativeCandidate(@NotNull MatchedLipid match, double overallScore,
+                                             @NotNull String detail,
+                                             @NotNull String predictedClassName,
+                                             @Nullable Double ch2TrendKmd,
+                                             @Nullable Double dbeTrendSlope,
+                                             @Nullable Double dbeTrendIntercept) {
 
 }

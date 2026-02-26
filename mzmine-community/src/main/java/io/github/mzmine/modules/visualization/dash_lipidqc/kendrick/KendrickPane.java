@@ -30,12 +30,12 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.gui.chartbasics.chartutils.ColoredBubbleDatasetRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.XYItemObjectProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.AlphaBubbleDatasetRenderer;
+import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickSubsetDataset;
 import io.github.mzmine.modules.visualization.dash_lipidqc.state.DashboardFilterState;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotChart;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotParameters;
@@ -50,11 +50,17 @@ import java.awt.geom.Ellipse2D;
 import java.text.DecimalFormat;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
+import javafx.scene.control.Accordion;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -78,26 +84,69 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 public class KendrickPane extends BorderPane {
 
+  private static final double KMD_MIN = -1d;
+  private static final double KMD_MAX = 1d;
+  private static final int FILTERED_OUT_DATASET_INDEX = 0;
+  private static final int FILTERED_IN_DATASET_INDEX = 1;
+  private static final int TREND_OVERLAY_DATASET_INDEX = 2;
+  private static final int OUTLIER_OVERLAY_DATASET_INDEX = 3;
+  private static final int SELECTION_OVERLAY_DATASET_INDEX = 4;
+
   private final @NotNull LipidAnnotationQCDashboardModel model;
   private final @NotNull DashboardFilterState filterState;
   private final @NotNull LatestTaskScheduler filterScheduler = new LatestTaskScheduler();
   private final @NotNull Label placeholder = new Label(
       "Select a feature list to build Kendrick plot.");
+  private final @NotNull ComboBox<KendrickReviewMode> reviewModeSelector = new ComboBox<>(
+      FXCollections.observableArrayList(KendrickReviewMode.values()));
   private @Nullable ModularFeatureList featureList;
   private @Nullable KendrickMassPlotXYZDataset baseDataset;
   private @Nullable KendrickMassPlotChart chart;
   private @Nullable ColoredBubbleDatasetRenderer colorRenderer;
   private @Nullable ColoredBubbleDatasetRenderer filteredOutRenderer;
+  private @Nullable KendrickFalseNegativeDetector falseNegativeDetector;
   private @Nullable FeatureListRow selectedRow;
   private boolean includeRetentionTimeAnalysis = true;
+  private @NotNull KendrickReviewMode reviewMode = KendrickReviewMode.NONE;
+  private @Nullable Consumer<KendrickReviewMode> onReviewModeChanged;
   private long filterRequestId;
 
   public KendrickPane(final @NotNull LipidAnnotationQCDashboardModel model,
       final @NotNull DashboardFilterState filterState) {
     this.model = model;
     this.filterState = filterState;
+    reviewModeSelector.getSelectionModel().select(reviewMode);
+    reviewModeSelector.valueProperty().addListener((_, _, mode) -> {
+      if (mode == null || mode == reviewMode) {
+        return;
+      }
+      reviewMode = mode;
+      applyFilters();
+      if (onReviewModeChanged != null) {
+        onReviewModeChanged.accept(mode);
+      }
+    });
+    final HBox modeControls = new HBox(6, FxLabels.newLabel("Mode:"), reviewModeSelector);
+    modeControls.setAlignment(Pos.CENTER_LEFT);
+    final TitledPane modePane = new TitledPane("Annotation review mode", modeControls);
+    modePane.setCollapsible(true);
+    final Accordion modeAccordion = new Accordion(modePane);
+    modeAccordion.setExpandedPane(null);
+    setBottom(modeAccordion);
     setCenter(placeholder);
     BorderPane.setAlignment(placeholder, Pos.CENTER);
+  }
+
+  public void setOnReviewModeChanged(
+      final @Nullable Consumer<KendrickReviewMode> onReviewModeChanged) {
+    this.onReviewModeChanged = onReviewModeChanged;
+    if (onReviewModeChanged != null) {
+      onReviewModeChanged.accept(reviewMode);
+    }
+  }
+
+  public @NotNull KendrickReviewMode getReviewMode() {
+    return reviewMode;
   }
 
   public void setRow(final @Nullable FeatureListRow row) {
@@ -164,10 +213,12 @@ public class KendrickPane extends BorderPane {
     final boolean filterActive = !filterState.getBarSelectedRowIds().isEmpty();
     final Set<Integer> visibleIds = filterActive ? Set.copyOf(filterState.getBarSelectedRowIds())
         : Set.of();
+    final boolean multiGroupSelection = filterState.getBarSelectedGroups().size() > 1;
     final long requestId = ++filterRequestId;
     filterScheduler.onTaskThreadDelayed(new KendrickFilterComputationTask(this, requestId,
         Objects.requireNonNull(baseDataset), featureList, visibleIds,
-        includeRetentionTimeAnalysis), Duration.millis(120));
+        filterState.getBarSelectedRowColors(), multiGroupSelection,
+        includeRetentionTimeAnalysis, reviewMode), Duration.millis(120));
   }
 
   void applyFilterComputationResult(final @NotNull KendrickFilterComputationResult result) {
@@ -177,26 +228,40 @@ public class KendrickPane extends BorderPane {
       return;
     }
 
+    falseNegativeDetector = result.falseNegativeDetector();
     final XYPlot plot = chart.getChart().getXYPlot();
+    final @Nullable AxisRangeState domainAxisState =
+        plot.getDomainAxis() instanceof NumberAxis domainAxis ? captureAxisState(domainAxis) : null;
+    final @Nullable AxisRangeState rangeAxisState =
+        plot.getRangeAxis() instanceof NumberAxis rangeAxis ? captureAxisState(rangeAxis) : null;
     colorRenderer.setPaintScale(result.filteredColorScale());
-    updateColorScaleLegend(result.filteredColorScale());
+    if (result.showColorScaleLegend()) {
+      updateColorScaleLegend(result.filteredColorScale());
+    } else {
+      removeColorScaleLegend();
+    }
 
     if (result.filteredOutDataset() != null) {
       filteredOutRenderer.setPaintScale(result.grayScale());
-      plot.setDataset(0, result.filteredOutDataset());
-      plot.setRenderer(0, filteredOutRenderer);
-      plot.setDataset(1, result.inDataset());
-      plot.setRenderer(1, colorRenderer);
+      plot.setDataset(FILTERED_OUT_DATASET_INDEX, result.filteredOutDataset());
+      plot.setRenderer(FILTERED_OUT_DATASET_INDEX, filteredOutRenderer);
+      plot.setDataset(FILTERED_IN_DATASET_INDEX, result.inDataset());
+      plot.setRenderer(FILTERED_IN_DATASET_INDEX, colorRenderer);
     } else {
-      plot.setDataset(0, result.inDataset());
-      plot.setRenderer(0, colorRenderer);
-      plot.setDataset(1, null);
-      plot.setRenderer(1, null);
+      plot.setDataset(FILTERED_OUT_DATASET_INDEX, result.inDataset());
+      plot.setRenderer(FILTERED_OUT_DATASET_INDEX, colorRenderer);
+      plot.setDataset(FILTERED_IN_DATASET_INDEX, null);
+      plot.setRenderer(FILTERED_IN_DATASET_INDEX, null);
     }
 
-    updateOutlierOverlay(result.outlierDataset());
+    updateOutlierOverlay(result.outlierDataset(), result.reviewMode());
     updateSelectionOverlay();
-    optimizeVisibleKendrickAxes(plot);
+    if (plot.getDomainAxis() instanceof NumberAxis domainAxis && domainAxisState != null) {
+      restoreAxisState(domainAxis, domainAxisState);
+    }
+    if (plot.getRangeAxis() instanceof NumberAxis rangeAxis && rangeAxisState != null) {
+      restoreAxisState(rangeAxis, rangeAxisState);
+    }
     chart.getChart().fireChartChanged();
   }
 
@@ -205,17 +270,7 @@ public class KendrickPane extends BorderPane {
       return;
     }
     final JFreeChart jChart = chart.getChart();
-    Title existingLegend = null;
-    for (int i = 0; i < jChart.getSubtitleCount(); i++) {
-      final Title subtitle = jChart.getSubtitle(i);
-      if (subtitle instanceof PaintScaleLegend) {
-        existingLegend = subtitle;
-        break;
-      }
-    }
-    if (existingLegend != null) {
-      jChart.removeSubtitle(existingLegend);
-    }
+    removeColorScaleLegend();
 
     final XYPlot xyPlot = jChart.getXYPlot();
     final NumberAxis scaleAxis = new NumberAxis(null);
@@ -240,6 +295,24 @@ public class KendrickPane extends BorderPane {
     legend.setPosition(RectangleEdge.RIGHT);
     legend.setBackgroundPaint(new Color(0, 0, 0, 0));
     jChart.addSubtitle(legend);
+  }
+
+  private void removeColorScaleLegend() {
+    if (chart == null) {
+      return;
+    }
+    final JFreeChart jChart = chart.getChart();
+    Title existingLegend = null;
+    for (int i = 0; i < jChart.getSubtitleCount(); i++) {
+      final Title subtitle = jChart.getSubtitle(i);
+      if (subtitle instanceof PaintScaleLegend) {
+        existingLegend = subtitle;
+        break;
+      }
+    }
+    if (existingLegend != null) {
+      jChart.removeSubtitle(existingLegend);
+    }
   }
 
   private void buildChart(final @NotNull KendrickMassPlotXYZDataset dataset) {
@@ -304,6 +377,7 @@ public class KendrickPane extends BorderPane {
 
     chart = newChart;
     setCenter(newChart);
+    optimizeVisibleKendrickAxes(plot);
     applyFilters();
   }
 
@@ -322,7 +396,7 @@ public class KendrickPane extends BorderPane {
       final boolean xAxis) {
     double min = Double.POSITIVE_INFINITY;
     double max = Double.NEGATIVE_INFINITY;
-    for (int datasetIndex = 0; datasetIndex <= 1; datasetIndex++) {
+    for (final int datasetIndex : new int[]{FILTERED_OUT_DATASET_INDEX, FILTERED_IN_DATASET_INDEX}) {
       final XYDataset dataset = plot.getDataset(datasetIndex);
       if (dataset == null || dataset.getSeriesCount() == 0) {
         continue;
@@ -361,13 +435,39 @@ public class KendrickPane extends BorderPane {
     axis.setRange(extrema.min() - padding, extrema.max() + padding);
   }
 
+  private static @NotNull AxisRangeState captureAxisState(final @NotNull NumberAxis axis) {
+    return new AxisRangeState(axis.isAutoRange(), axis.getLowerBound(), axis.getUpperBound());
+  }
+
+  private static void restoreAxisState(final @NotNull NumberAxis axis,
+      final @NotNull AxisRangeState axisState) {
+    if (axisState.autoRange()) {
+      axis.setAutoRange(true);
+      return;
+    }
+    if (!Double.isFinite(axisState.lowerBound()) || !Double.isFinite(axisState.upperBound())) {
+      return;
+    }
+    if (axisState.upperBound() <= axisState.lowerBound()) {
+      final double delta = Math.max(Math.abs(axisState.lowerBound()) * 0.02d, 0.05d);
+      axis.setRange(axisState.lowerBound() - delta, axisState.upperBound() + delta);
+      return;
+    }
+    axis.setAutoRange(false);
+    axis.setAutoRangeIncludesZero(false);
+    axis.setAutoRangeStickyZero(false);
+    axis.setRange(axisState.lowerBound(), axisState.upperBound());
+  }
+
   private void updateSelectionOverlay() {
     if (chart == null || baseDataset == null) {
       return;
     }
     final XYPlot plot = chart.getChart().getXYPlot();
-    plot.setDataset(4, null);
-    plot.setRenderer(4, null);
+    plot.setDataset(TREND_OVERLAY_DATASET_INDEX, null);
+    plot.setRenderer(TREND_OVERLAY_DATASET_INDEX, null);
+    plot.setDataset(SELECTION_OVERLAY_DATASET_INDEX, null);
+    plot.setRenderer(SELECTION_OVERLAY_DATASET_INDEX, null);
     if (selectedRow == null) {
       return;
     }
@@ -393,30 +493,107 @@ public class KendrickPane extends BorderPane {
     selectedSeries.add(x, y);
     final XYSeriesCollection selectedDataset = new XYSeriesCollection();
     selectedDataset.addSeries(selectedSeries);
-    plot.setDataset(4, selectedDataset);
-    plot.setRenderer(4, new SelectedLipidOverlayRenderer(getSelectedLabel(selectedRow)));
+    plot.setDataset(SELECTION_OVERLAY_DATASET_INDEX, selectedDataset);
+    plot.setRenderer(SELECTION_OVERLAY_DATASET_INDEX,
+        new SelectedLipidOverlayRenderer(getSelectedLabel(selectedRow)));
+    updateFalseNegativeTrendOverlay(plot);
   }
 
-  private void updateOutlierOverlay(final @Nullable KendrickSubsetDataset outlierDataset) {
+  private void updateFalseNegativeTrendOverlay(final @NotNull XYPlot plot) {
+    if (selectedRow == null || reviewMode != KendrickReviewMode.POTENTIAL_FALSE_NEGATIVE
+        || falseNegativeDetector == null) {
+      return;
+    }
+    final @Nullable KendrickFalseNegativeCandidate candidate = falseNegativeDetector.detectCandidate(
+        selectedRow);
+    if (candidate == null) {
+      return;
+    }
+    final KendrickAxisExtrema visibleMzExtrema = collectVisibleExtrema(plot, true);
+    if (!visibleMzExtrema.available()) {
+      return;
+    }
+    final double minMz = visibleMzExtrema.min();
+    final double maxMz = visibleMzExtrema.max();
+    if (!Double.isFinite(minMz) || !Double.isFinite(maxMz)) {
+      return;
+    }
+
+    final XYSeriesCollection trendDataset = new XYSeriesCollection();
+    final XYLineAndShapeRenderer trendRenderer = new XYLineAndShapeRenderer(true, false);
+    trendRenderer.setDefaultShapesVisible(false);
+    trendRenderer.setAutoPopulateSeriesStroke(false);
+    trendRenderer.setAutoPopulateSeriesPaint(false);
+    int seriesIndex = 0;
+
+    final @Nullable Double ch2TrendKmd = candidate.ch2TrendKmd();
+    if (ch2TrendKmd != null && Double.isFinite(ch2TrendKmd)) {
+      final XYSeries ch2Series = new XYSeries("CH2 trend");
+      ch2Series.add(minMz, ch2TrendKmd);
+      ch2Series.add(maxMz, ch2TrendKmd);
+      trendDataset.addSeries(ch2Series);
+      trendRenderer.setSeriesPaint(seriesIndex,
+          ConfigService.getDefaultColorPalette().getPositiveColorAWT());
+      trendRenderer.setSeriesStroke(seriesIndex, new java.awt.BasicStroke(1.6f,
+          java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND, 1f,
+          new float[]{5f, 4f}, 0f));
+      trendRenderer.setSeriesVisibleInLegend(seriesIndex, false);
+      seriesIndex++;
+    }
+
+    final @Nullable Double dbeTrendSlope = candidate.dbeTrendSlope();
+    final @Nullable Double dbeTrendIntercept = candidate.dbeTrendIntercept();
+    if (dbeTrendSlope != null && dbeTrendIntercept != null && Double.isFinite(dbeTrendSlope)
+        && Double.isFinite(dbeTrendIntercept)) {
+      final @Nullable TrendSegment clippedSegment = clipLineToKmdBounds(dbeTrendSlope,
+          dbeTrendIntercept, minMz, maxMz);
+      if (clippedSegment != null) {
+        final XYSeries dbeSeries = new XYSeries("DBE trend");
+        dbeSeries.add(clippedSegment.x1(), clippedSegment.y1());
+        dbeSeries.add(clippedSegment.x2(), clippedSegment.y2());
+        trendDataset.addSeries(dbeSeries);
+        trendRenderer.setSeriesPaint(seriesIndex,
+            ConfigService.getDefaultColorPalette().getNeutralColorAWT());
+        trendRenderer.setSeriesStroke(seriesIndex, new java.awt.BasicStroke(1.6f,
+            java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND, 1f,
+            new float[]{5f, 4f}, 0f));
+        trendRenderer.setSeriesVisibleInLegend(seriesIndex, false);
+        seriesIndex++;
+      }
+    }
+
+    if (seriesIndex == 0) {
+      return;
+    }
+    plot.setDataset(TREND_OVERLAY_DATASET_INDEX, trendDataset);
+    plot.setRenderer(TREND_OVERLAY_DATASET_INDEX, trendRenderer);
+  }
+
+  private void updateOutlierOverlay(final @Nullable KendrickSubsetDataset outlierDataset,
+      final @NotNull KendrickReviewMode reviewMode) {
     if (chart == null) {
       return;
     }
     final XYPlot plot = chart.getChart().getXYPlot();
-    plot.setDataset(3, null);
-    plot.setRenderer(3, null);
+    plot.setDataset(OUTLIER_OVERLAY_DATASET_INDEX, null);
+    plot.setRenderer(OUTLIER_OVERLAY_DATASET_INDEX, null);
     if (outlierDataset == null || outlierDataset.getItemCount(0) == 0) {
       return;
     }
 
     final XYLineAndShapeRenderer outlierRenderer = new XYLineAndShapeRenderer(false, true);
-    outlierRenderer.setSeriesPaint(0,
-        ConfigService.getDefaultColorPalette().getNegativeColorAWT());
+    final Color overlayColor = switch (reviewMode) {
+      case NONE -> ConfigService.getDefaultColorPalette().getNeutralColorAWT();
+      case POTENTIAL_FALSE_POSITIVE -> ConfigService.getDefaultColorPalette().getNegativeColorAWT();
+      case POTENTIAL_FALSE_NEGATIVE -> ConfigService.getDefaultColorPalette().getPositiveColorAWT();
+    };
+    outlierRenderer.setSeriesPaint(0, overlayColor);
     outlierRenderer.setSeriesStroke(0, new java.awt.BasicStroke(1.9f));
     outlierRenderer.setSeriesShape(0, new Ellipse2D.Double(-5.5, -5.5, 11, 11));
     outlierRenderer.setDefaultShapesFilled(false);
     outlierRenderer.setSeriesVisibleInLegend(0, false);
-    plot.setDataset(3, outlierDataset);
-    plot.setRenderer(3, outlierRenderer);
+    plot.setDataset(OUTLIER_OVERLAY_DATASET_INDEX, outlierDataset);
+    plot.setRenderer(OUTLIER_OVERLAY_DATASET_INDEX, outlierRenderer);
   }
 
   private static @Nullable FeatureListRow resolveClickedRow(final @NotNull XYDataset dataset,
@@ -440,8 +617,43 @@ public class KendrickPane extends BorderPane {
     return annotation.length() > 52 ? annotation.substring(0, 49) + "..." : annotation;
   }
 
+  private static @Nullable TrendSegment clipLineToKmdBounds(final double slope,
+      final double intercept, final double minX, final double maxX) {
+    if (!Double.isFinite(slope) || !Double.isFinite(intercept) || !Double.isFinite(minX)
+        || !Double.isFinite(maxX) || maxX <= minX) {
+      return null;
+    }
+
+    if (Math.abs(slope) < 1e-12d) {
+      final double y = intercept;
+      if (!Double.isFinite(y) || y < KMD_MIN || y > KMD_MAX) {
+        return null;
+      }
+      return new TrendSegment(minX, y, maxX, y);
+    }
+
+    final double xAtMinKmd = (KMD_MIN - intercept) / slope;
+    final double xAtMaxKmd = (KMD_MAX - intercept) / slope;
+    final double minAllowedX = Math.min(xAtMinKmd, xAtMaxKmd);
+    final double maxAllowedX = Math.max(xAtMinKmd, xAtMaxKmd);
+    final double clippedMinX = Math.max(minX, minAllowedX);
+    final double clippedMaxX = Math.min(maxX, maxAllowedX);
+    if (!Double.isFinite(clippedMinX) || !Double.isFinite(clippedMaxX) || clippedMaxX <= clippedMinX) {
+      return null;
+    }
+
+    final double y1 = clampKmd(slope * clippedMinX + intercept);
+    final double y2 = clampKmd(slope * clippedMaxX + intercept);
+    return new TrendSegment(clippedMinX, y1, clippedMaxX, y2);
+  }
+
+  private static double clampKmd(final double kmd) {
+    return Math.max(KMD_MIN, Math.min(KMD_MAX, kmd));
+  }
+
   private void discardChart() {
     filterScheduler.cancelTasks();
+    falseNegativeDetector = null;
     if (chart == null) {
       baseDataset = null;
       return;
@@ -459,5 +671,13 @@ public class KendrickPane extends BorderPane {
   private void showPlaceholder(final @NotNull String text) {
     placeholder.setText(text);
     setCenter(placeholder);
+  }
+
+  private record AxisRangeState(boolean autoRange, double lowerBound, double upperBound) {
+
+  }
+
+  private record TrendSegment(double x1, double y1, double x2, double y2) {
+
   }
 }
