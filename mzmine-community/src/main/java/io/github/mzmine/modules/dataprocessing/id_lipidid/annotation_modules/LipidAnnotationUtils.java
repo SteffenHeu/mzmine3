@@ -25,7 +25,7 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules;
 
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.clampToUnit;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.clampToUnit;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.DataPoint;

@@ -25,11 +25,13 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.utils;
 
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.clampToUnit;
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.clampToUnit;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRule;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRuleType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipidStatus;
@@ -37,9 +39,11 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.ILipidChain;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -269,10 +273,17 @@ public class LipidAnnotationResolver {
   private double computePreFilterRankingScore(final @NotNull FeatureListRow featureListRow,
       final @NotNull MatchedLipid matchedLipid) {
     final double ms1Score = computeMs1Score(featureListRow, matchedLipid);
+    final Double preferenceScore = computeRelativeRuleIntensityPreferenceScore(matchedLipid);
+    final double prePreferenceScore;
     if (includeMs2Score) {
-      return (ms1Score + safeMs2Score(matchedLipid)) / 2d;
+      prePreferenceScore = (ms1Score + safeMs2Score(matchedLipid)) / 2d;
+    } else {
+      prePreferenceScore = ms1Score;
     }
-    return ms1Score;
+    if (preferenceScore == null) {
+      return prePreferenceScore;
+    }
+    return (prePreferenceScore + preferenceScore) / 2d;
   }
 
   private double computeQualityScore(final @NotNull FeatureListRow featureListRow,
@@ -302,6 +313,83 @@ public class LipidAnnotationResolver {
       return 0d;
     }
     return clampToUnit(matchedLipid.getMsMsScore());
+  }
+
+  static @Nullable Double computeRelativeRuleIntensityPreferenceScore(
+      final @NotNull MatchedLipid matchedLipid) {
+    final Map<RuleKey, Integer> expectedRelativeIntensityWeights = collectExpectedRelativeIntensityWeights(
+        matchedLipid);
+    if (expectedRelativeIntensityWeights.size() < 2) {
+      return null;
+    }
+
+    final Map<RuleKey, Double> maxObservedIntensityByRule = new HashMap<>();
+    for (final LipidFragment fragment : matchedLipid.getMatchedFragments()) {
+      final LipidFragmentationRuleType ruleType = fragment.getRuleType();
+      final double intensity = fragment.getDataPoint().getIntensity();
+      if (ruleType == null || !Double.isFinite(intensity) || intensity <= 0d) {
+        continue;
+      }
+      final RuleKey ruleKey = new RuleKey(ruleType,
+          Objects.toString(fragment.getOriginatingRuleFormula(), ""));
+      if (!expectedRelativeIntensityWeights.containsKey(ruleKey)) {
+        continue;
+      }
+      maxObservedIntensityByRule.merge(ruleKey, intensity, Math::max);
+    }
+
+    if (maxObservedIntensityByRule.isEmpty()) {
+      return null;
+    }
+    if (maxObservedIntensityByRule.size() == 1) {
+      final RuleKey observedRule = maxObservedIntensityByRule.keySet().iterator().next();
+      final Integer expectedRelativeIntensity = expectedRelativeIntensityWeights.get(observedRule);
+      if (expectedRelativeIntensity == null || expectedRelativeIntensity <= 0) {
+        return null;
+      }
+      return clampToUnit(expectedRelativeIntensity / 100d);
+    }
+    final double sumExpected = expectedRelativeIntensityWeights.values().stream()
+        .mapToDouble(Integer::doubleValue).sum();
+    final double sumObserved = expectedRelativeIntensityWeights.keySet().stream().mapToDouble(
+        key -> maxObservedIntensityByRule.getOrDefault(key, 0d)).sum();
+    if (sumExpected <= 0d || sumObserved <= 0d) {
+      return null;
+    }
+
+    final double l1Distance = expectedRelativeIntensityWeights.entrySet().stream().mapToDouble(
+        entry -> {
+      final double expected = entry.getValue() / sumExpected;
+      final double observed = maxObservedIntensityByRule.getOrDefault(entry.getKey(), 0d)
+          / sumObserved;
+      return Math.abs(expected - observed);
+    }).sum();
+    final double normalized = 1d - Math.min(l1Distance / 2d, 1d);
+    return clampToUnit(normalized);
+  }
+
+  private static @NotNull Map<RuleKey, Integer> collectExpectedRelativeIntensityWeights(
+      final @NotNull MatchedLipid matchedLipid) {
+    final Map<RuleKey, Integer> expectedRelativeIntensityWeights = new HashMap<>();
+    final LipidFragmentationRule[] fragmentationRules = matchedLipid.getLipidAnnotation()
+        .getLipidClass().getFragmentationRules();
+    final var ionizationType = matchedLipid.getIonizationType();
+    for (final LipidFragmentationRule rule : fragmentationRules) {
+      final LipidFragmentationRuleType ruleType = rule.getLipidFragmentationRuleType();
+      final int relativeIntensityWeight = rule.getRelativeIntensityWeight();
+      if (ruleType == null || relativeIntensityWeight <= 0
+          || rule.getIonizationType() != ionizationType) {
+        continue;
+      }
+      final RuleKey ruleKey = new RuleKey(ruleType,
+          Objects.toString(rule.getMolecularFormula(), ""));
+      expectedRelativeIntensityWeights.merge(ruleKey, relativeIntensityWeight, Math::max);
+    }
+    return expectedRelativeIntensityWeights;
+  }
+
+  private record RuleKey(@NotNull LipidFragmentationRuleType ruleType,
+                         @NotNull String ruleFormula) {
   }
 
 }

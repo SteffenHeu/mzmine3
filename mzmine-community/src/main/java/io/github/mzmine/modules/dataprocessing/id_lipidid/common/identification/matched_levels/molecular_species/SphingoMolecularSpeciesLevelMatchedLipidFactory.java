@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,6 +27,7 @@ package io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification
 
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.IonizationType;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRatingGate;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
@@ -48,6 +49,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.jetbrains.annotations.NotNull;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 
 public class SphingoMolecularSpeciesLevelMatchedLipidFactory implements
@@ -57,11 +59,16 @@ public class SphingoMolecularSpeciesLevelMatchedLipidFactory implements
   private static final LipidFactory LIPID_FACTORY = new LipidFactory();
 
   @Override
-  public MatchedLipid validateMolecularSpeciesLevelAnnotation(double accurateMz,
-      ILipidAnnotation molecularSpeciesLevelAnnotation, Set<LipidFragment> annotatedFragments,
-      DataPoint[] massList, double minMsMsScore, MZTolerance mzTolRangeMSMS,
-      IonizationType ionizationType) {
-    if (!annotatedFragments.isEmpty()) {
+  public MatchedLipid validateMolecularSpeciesLevelAnnotation(final double accurateMz,
+      final @NotNull ILipidAnnotation molecularSpeciesLevelAnnotation,
+      final @NotNull Set<LipidFragment> annotatedFragments, final @NotNull DataPoint[] massList,
+      final double minMsMsScore, final @NotNull MZTolerance mzTolRangeMSMS,
+      final @NotNull IonizationType ionizationType) {
+    final Set<LipidFragment> molecularSpeciesFragments = annotatedFragments.stream().filter(
+        fragment -> fragment.getLipidFragmentInformationLevelType()
+            .equals(LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL)).collect(Collectors.toSet());
+    if (!molecularSpeciesFragments.isEmpty() && LipidFragmentationRatingGate.hasSufficientEvidence(
+        molecularSpeciesFragments)) {
       IMolecularFormula lipidFormula = null;
       try {
         lipidFormula = (IMolecularFormula) molecularSpeciesLevelAnnotation.getMolecularFormula()
@@ -85,9 +92,11 @@ public class SphingoMolecularSpeciesLevelMatchedLipidFactory implements
   }
 
   @Override
-  public Set<MatchedLipid> predictMolecularSpeciesLevelMatches(Set<LipidFragment> detectedFragments,
-      ILipidAnnotation lipidAnnotation, Double accurateMz, DataPoint[] massList,
-      double minMsMsScore, MZTolerance mzTolRangeMSMS, IonizationType ionizationType) {
+  public @NotNull Set<MatchedLipid> predictMolecularSpeciesLevelMatches(
+      final @NotNull Set<LipidFragment> detectedFragments,
+      final @NotNull ILipidAnnotation lipidAnnotation, final @NotNull Double accurateMz,
+      final @NotNull DataPoint[] massList, final double minMsMsScore,
+      final @NotNull MZTolerance mzTolRangeMSMS, final @NotNull IonizationType ionizationType) {
     Set<MatchedLipid> matchedMolecularSpeciesLevelAnnotations = new HashSet<>();
     int totalNumberOfCAtoms = 0;
     int totalNumberOfDBEs = 0;
@@ -117,7 +126,8 @@ public class SphingoMolecularSpeciesLevelMatchedLipidFactory implements
         Set<LipidFragment> fittingFragments = extractFragmentsForFittingChains(
             molecularSpeciesLevelAnnotation.getLipidChains(),
             detectedFragmentsWithChainInformation);
-        if (!fittingFragments.isEmpty()) {
+        if (!fittingFragments.isEmpty() && LipidFragmentationRatingGate.hasSufficientEvidence(
+            fittingFragments)) {
           MatchedLipid newMolecularSpeciesLevelMatch = buildNewMolecularSpeciesLevelMatch(
               fittingFragments, molecularSpeciesLevelAnnotation, accurateMz, massList, minMsMsScore,
               mzTolRangeMSMS, ionizationType);

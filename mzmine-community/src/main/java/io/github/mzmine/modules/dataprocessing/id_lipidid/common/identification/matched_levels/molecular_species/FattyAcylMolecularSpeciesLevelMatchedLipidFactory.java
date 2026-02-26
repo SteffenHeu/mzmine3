@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,6 +27,7 @@ package io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification
 
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.IonizationType;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRatingGate;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
@@ -49,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.jetbrains.annotations.NotNull;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 
 public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
@@ -58,11 +60,16 @@ public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
   private static final LipidFactory LIPID_FACTORY = new LipidFactory();
 
   @Override
-  public MatchedLipid validateMolecularSpeciesLevelAnnotation(double accurateMz,
-      ILipidAnnotation molecularSpeciesLevelAnnotation, Set<LipidFragment> annotatedFragments,
-      DataPoint[] massList, double minMsMsScore, MZTolerance mzTolRangeMSMS,
-      IonizationType ionizationType) {
-    if (!annotatedFragments.isEmpty()) {
+  public MatchedLipid validateMolecularSpeciesLevelAnnotation(final double accurateMz,
+      final @NotNull ILipidAnnotation molecularSpeciesLevelAnnotation,
+      final @NotNull Set<LipidFragment> annotatedFragments, final @NotNull DataPoint[] massList,
+      final double minMsMsScore, final @NotNull MZTolerance mzTolRangeMSMS,
+      final @NotNull IonizationType ionizationType) {
+    final Set<LipidFragment> molecularSpeciesFragments = annotatedFragments.stream().filter(
+        fragment -> fragment.getLipidFragmentInformationLevelType()
+            .equals(LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL)).collect(Collectors.toSet());
+    if (!molecularSpeciesFragments.isEmpty() && LipidFragmentationRatingGate.hasSufficientEvidence(
+        molecularSpeciesFragments)) {
       IMolecularFormula lipidFormula = null;
       try {
         lipidFormula = (IMolecularFormula) molecularSpeciesLevelAnnotation.getMolecularFormula()
@@ -118,9 +125,12 @@ public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
         if (checkChainTypesFitLipidClass(predictedChains, lipidAnnotation.getLipidClass())) {
           Set<LipidFragment> fittingFragments = extractFragmentsForFittingChains(predictedChains,
               detectedFragmentsWithChainInformation);
-          matchedMolecularSpeciesLevelAnnotations.add(
-              buildNewMolecularSpeciesLevelMatch(fittingFragments, lipidAnnotation, accurateMz,
-                  massList, predictedChains, minMsMsScore, mzTolRangeMSMS, ionizationType));
+          final MatchedLipid newMatch = buildNewMolecularSpeciesLevelMatch(fittingFragments,
+              lipidAnnotation, accurateMz, massList, predictedChains, minMsMsScore, mzTolRangeMSMS,
+              ionizationType);
+          if (newMatch != null) {
+            matchedMolecularSpeciesLevelAnnotations.add(newMatch);
+          }
         }
       }
       if (chainsInLipid >= 2) {
@@ -135,9 +145,12 @@ public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
             if (checkChainTypesFitLipidClass(predictedChains, lipidAnnotation.getLipidClass())) {
               Set<LipidFragment> fittingFragments = extractFragmentsForFittingChains(
                   predictedChains, detectedFragmentsWithChainInformation);
-              matchedMolecularSpeciesLevelAnnotations.add(
-                  buildNewMolecularSpeciesLevelMatch(fittingFragments, lipidAnnotation, accurateMz,
-                      massList, predictedChains, minMsMsScore, mzTolRangeMSMS, ionizationType));
+              final MatchedLipid newMatch = buildNewMolecularSpeciesLevelMatch(fittingFragments,
+                  lipidAnnotation, accurateMz, massList, predictedChains, minMsMsScore,
+                  mzTolRangeMSMS, ionizationType);
+              if (newMatch != null) {
+                matchedMolecularSpeciesLevelAnnotations.add(newMatch);
+              }
             }
           }
           if (chainsInLipid >= 3) {
@@ -154,10 +167,12 @@ public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
                     lipidAnnotation.getLipidClass())) {
                   Set<LipidFragment> fittingFragments = extractFragmentsForFittingChains(
                       predictedChains, detectedFragmentsWithChainInformation);
-                  matchedMolecularSpeciesLevelAnnotations.add(
-                      buildNewMolecularSpeciesLevelMatch(fittingFragments, lipidAnnotation,
-                          accurateMz, massList, predictedChains, minMsMsScore, mzTolRangeMSMS,
-                          ionizationType));
+                  final MatchedLipid newMatch = buildNewMolecularSpeciesLevelMatch(fittingFragments,
+                      lipidAnnotation, accurateMz, massList, predictedChains, minMsMsScore,
+                      mzTolRangeMSMS, ionizationType);
+                  if (newMatch != null) {
+                    matchedMolecularSpeciesLevelAnnotations.add(newMatch);
+                  }
                 }
               }
               if (chainsInLipid >= 4) {
@@ -176,10 +191,12 @@ public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
                         lipidAnnotation.getLipidClass())) {
                       Set<LipidFragment> fittingFragments = extractFragmentsForFittingChains(
                           predictedChains, detectedFragmentsWithChainInformation);
-                      matchedMolecularSpeciesLevelAnnotations.add(
-                          buildNewMolecularSpeciesLevelMatch(fittingFragments, lipidAnnotation,
-                              accurateMz, massList, predictedChains, minMsMsScore, mzTolRangeMSMS,
-                              ionizationType));
+                      final MatchedLipid newMatch = buildNewMolecularSpeciesLevelMatch(
+                          fittingFragments, lipidAnnotation, accurateMz, massList, predictedChains,
+                          minMsMsScore, mzTolRangeMSMS, ionizationType);
+                      if (newMatch != null) {
+                        matchedMolecularSpeciesLevelAnnotations.add(newMatch);
+                      }
                     }
                   }
                 }
@@ -234,7 +251,8 @@ public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
           double precursorMz = FormulaUtils.calculateMzRatio(lipidFormula);
           Double msMsScore = MSMS_LIPID_TOOLS.calculateMsMsScore(massList, entry.getValue(),
               precursorMz, mzTolRangeMSMS);
-          if (msMsScore >= minMsMsScore) {
+          if (msMsScore >= minMsMsScore && LipidFragmentationRatingGate.hasSufficientEvidence(
+              entry.getValue())) {
             matchedLipids.add(
                 new MatchedLipid(lipidAnnotation, accurateMz, ionizationType, entry.getValue(),
                     msMsScore));
@@ -286,10 +304,16 @@ public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
     return fittingFragments;
   }
 
-  private MatchedLipid buildNewMolecularSpeciesLevelMatch(Set<LipidFragment> detectedFragments,
-      ILipidAnnotation lipidAnnotation, Double accurateMz, DataPoint[] massList,
-      List<ILipidChain> predictedChains, double minMsMsScore, MZTolerance mzTolRangeMSMS,
-      IonizationType ionizationType) {
+  private MatchedLipid buildNewMolecularSpeciesLevelMatch(
+      final @NotNull Set<LipidFragment> detectedFragments,
+      final @NotNull ILipidAnnotation lipidAnnotation, final @NotNull Double accurateMz,
+      final @NotNull DataPoint[] massList, final @NotNull List<ILipidChain> predictedChains,
+      final double minMsMsScore, final @NotNull MZTolerance mzTolRangeMSMS,
+      final @NotNull IonizationType ionizationType) {
+    if (detectedFragments.isEmpty() || !LipidFragmentationRatingGate.hasSufficientEvidence(
+        detectedFragments)) {
+      return null;
+    }
     ILipidAnnotation molecularSpeciesLevelAnnotation = LIPID_FACTORY.buildMolecularSpeciesLevelLipidFromChains(
         lipidAnnotation.getLipidClass(), predictedChains);
     if (molecularSpeciesLevelAnnotation != null) {
