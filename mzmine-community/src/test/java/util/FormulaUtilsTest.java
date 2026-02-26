@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -152,5 +152,21 @@ public class FormulaUtilsTest {
     var ion2 = annotationPlus.ionize(adduct);
 
     Assertions.assertEquals(ion1.getPrecursorMZ(), ion2.getPrecursorMZ());
+  }
+
+  @Test
+  void canSubtractFormulaValid() {
+    final IMolecularFormula source = FormulaUtils.createMajorIsotopeMolFormula("C10H20N2O4");
+    final IMolecularFormula sub = FormulaUtils.createMajorIsotopeMolFormula("N2");
+
+    Assertions.assertTrue(FormulaUtils.canSubtractFormula(source, sub));
+  }
+
+  @Test
+  void canSubtractFormulaInvalid() {
+    final IMolecularFormula source = FormulaUtils.createMajorIsotopeMolFormula("C10H20NO4");
+    final IMolecularFormula sub = FormulaUtils.createMajorIsotopeMolFormula("N2");
+
+    Assertions.assertFalse(FormulaUtils.canSubtractFormula(source, sub));
   }
 }

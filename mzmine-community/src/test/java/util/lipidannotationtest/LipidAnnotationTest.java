@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,6 +36,7 @@ import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.datamodel.impl.masslist.SimpleMassList;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationChainParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRule;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRuleRating;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.fragmentation.ILipidFragmentFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.fragmentation.LipidFragmentFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
@@ -52,6 +53,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SphingolipidSpeciesLevelMatchedLipidFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SterolSpeciesLevelMatchedLipidFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.ILipidChain;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidFactory;
@@ -61,7 +63,9 @@ import io.github.mzmine.project.impl.RawDataFileImpl;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javafx.scene.paint.Color;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -118,6 +122,34 @@ class LipidAnnotationTest {
   void msMsRuleTestMG_NH4() {
     LipidAnnotationMsMsTestResource testSpectrum = MSMS_TEST_SPECTRA.getMG_18_OMPlusNH4();
     checkLipidAnnotation(testSpectrum);
+  }
+
+  @Test
+  void msMsRuleTestMGNH4RequiresAtLeastTwoMinorSpeciesFragments() {
+    final LipidAnnotationMsMsTestResource testSpectrum = MSMS_TEST_SPECTRA.getMG_18_OMPlusNH4();
+    final SpeciesLevelAnnotation speciesLevelAnnotation = (SpeciesLevelAnnotation) testSpectrum.getTestLipid();
+    final Set<LipidFragment> annotatedFragments = findAnnotatedFragments(testSpectrum,
+        speciesLevelAnnotation);
+    final Set<LipidFragment> minorSpeciesFragments = annotatedFragments.stream().filter(
+        fragment -> fragment.getLipidFragmentInformationLevelType()
+            == LipidAnnotationLevel.SPECIES_LEVEL).filter(
+        fragment -> fragment.getLipidFragmentationRuleRating()
+            == LipidFragmentationRuleRating.MINOR).collect(Collectors.toSet());
+
+    Assertions.assertTrue(minorSpeciesFragments.size() >= 2,
+        "Test spectrum should contain at least two minor species-level fragments.");
+
+    final ISpeciesLevelMatchedLipidFactory matchedLipidFactory = new GlyceroAndGlycerophosphoSpeciesLevelMatchedLipidFactory();
+    final MZTolerance mzTolerance = new MZTolerance(0.01, 5);
+    final MassList massList = convertTestSpectrumToDataPoints(testSpectrum);
+    SIMPLE_SCAN.addMassList(massList);
+    final LipidFragment oneMinorFragment = minorSpeciesFragments.iterator().next();
+    final MatchedLipid singleMinorMatch = matchedLipidFactory.validateSpeciesLevelAnnotation(0.0,
+        speciesLevelAnnotation, Set.of(oneMinorFragment), massList.getDataPoints(), 0.0,
+        mzTolerance, testSpectrum.getIonizationType());
+
+    Assertions.assertNull(singleMinorMatch,
+        "Single minor species-level fragment must not produce a species-level annotation.");
   }
 
   @Test
@@ -500,6 +532,35 @@ class LipidAnnotationTest {
   }
 
   @Test
+  void msMsRuleTestHex2CerMPlusHRequiresAtLeastTwoMinorMolecularFragments() {
+    final LipidAnnotationMsMsTestResource testSpectrum = MSMS_TEST_SPECTRA.getHex2Cer_18_1_2O_16_0MMPlusH();
+    final SpeciesLevelAnnotation speciesLevelAnnotation = convertMolecularSpeciesLevelToSpeciesLevel(
+        (MolecularSpeciesLevelAnnotation) testSpectrum.getTestLipid());
+    final Set<LipidFragment> annotatedFragments = findAnnotatedFragments(testSpectrum,
+        speciesLevelAnnotation);
+    final Set<LipidFragment> minorMolecularFragments = annotatedFragments.stream().filter(
+        fragment -> fragment.getLipidFragmentInformationLevelType()
+            == LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL).filter(
+        fragment -> fragment.getLipidFragmentationRuleRating()
+            == LipidFragmentationRuleRating.MINOR).collect(Collectors.toSet());
+
+    Assertions.assertTrue(minorMolecularFragments.size() >= 2,
+        "Test spectrum should contain at least two minor molecular-species fragments.");
+
+    final IMolecularSpeciesLevelMatchedLipidFactory matchedLipidFactory = new SphingoMolecularSpeciesLevelMatchedLipidFactory();
+    final MZTolerance mzTolerance = new MZTolerance(0.01, 5);
+    final MassList massList = convertTestSpectrumToDataPoints(testSpectrum);
+    SIMPLE_SCAN.addMassList(massList);
+    final LipidFragment oneMinorFragment = minorMolecularFragments.iterator().next();
+    final Set<MatchedLipid> predictedFromSingleMinor = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
+        Set.of(oneMinorFragment), speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
+        mzTolerance, testSpectrum.getIonizationType());
+
+    Assertions.assertTrue(predictedFromSingleMinor.isEmpty(),
+        "Single minor molecular-species fragment must not produce a molecular-species annotation.");
+  }
+
+  @Test
   void msMsRuleTestHex3Cer_18_1_2O_24_0MMPlusH() {
     LipidAnnotationMsMsTestResource testSpectrum = MSMS_TEST_SPECTRA.getHex3Cer_18_1_2O_16_0MMPlusH();
     checkLipidAnnotation(testSpectrum);
@@ -697,6 +758,29 @@ class LipidAnnotationTest {
       dataPoints[i] = new SimpleDataPoint(testSpectrum.getMzFragments()[i], 100);
     }
     return SimpleMassList.create(null, dataPoints);
+  }
+
+  private @NotNull Set<LipidFragment> findAnnotatedFragments(
+      final @NotNull LipidAnnotationMsMsTestResource testSpectrum,
+      final @NotNull SpeciesLevelAnnotation speciesLevelAnnotation) {
+    final Set<LipidFragment> annotatedFragments = new HashSet<>();
+    final LipidFragmentationRule[] rules = speciesLevelAnnotation.getLipidClass()
+        .getFragmentationRules();
+    final MZTolerance mzTolerance = new MZTolerance(0.01, 5);
+    final MassList massList = convertTestSpectrumToDataPoints(testSpectrum);
+    SIMPLE_SCAN.addMassList(massList);
+    if (rules == null || rules.length == 0) {
+      return annotatedFragments;
+    }
+
+    final ILipidFragmentFactory lipidFragmentFactory = new LipidFragmentFactory(mzTolerance,
+        speciesLevelAnnotation, testSpectrum.getIonizationType(), rules, SIMPLE_SCAN,
+        LIPID_CHAIN_PARAMETERS_GLYCERO_AND_GLYCEROPHOSPHOLIPIDS.getEmbeddedParameters());
+    final List<LipidFragment> annotatedFragmentsForDataPoint = lipidFragmentFactory.findLipidFragments();
+    if (annotatedFragmentsForDataPoint != null && !annotatedFragmentsForDataPoint.isEmpty()) {
+      annotatedFragments.addAll(annotatedFragmentsForDataPoint);
+    }
+    return annotatedFragments;
   }
 
   private SpeciesLevelAnnotation convertMolecularSpeciesLevelToSpeciesLevel(
