@@ -23,23 +23,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
+package io.github.mzmine.modules.visualization.dash_lipidqc.isotope;
 
-import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
-import java.util.List;
-import org.jetbrains.annotations.NotNull;
+import io.github.mzmine.datamodel.IsotopePattern;
 import org.jetbrains.annotations.Nullable;
 
-record QualityComputationResult(@Nullable String placeholderText,
-                                @Nullable MatchedLipid selectedAnnotation,
-                                @NotNull InterferenceMetrics interferenceMetrics,
-                                @NotNull List<FeatureListRow> duplicateRows,
-                                @NotNull List<QualityCardData> qualityCards,
-                                @Nullable String falsePositiveReason,
-                                @Nullable KendrickFalseNegativeCandidate falseNegativeCandidate,
-                                @Nullable QualityCardData falseNegativeQualityCard) {
+record IsotopeComputationResult(@Nullable String placeholderText,
+                                @Nullable IsotopePattern measuredPattern,
+                                @Nullable IsotopePattern theoreticalPattern) {
 
 }
+

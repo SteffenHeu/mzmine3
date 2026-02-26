@@ -33,9 +33,12 @@ import io.github.mzmine.datamodel.identities.iontype.IonTypeParser;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.ColoredXYDataset;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.spectra.MassSpectrumProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYBarRenderer;
+import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
 import io.github.mzmine.modules.tools.isotopeprediction.IsotopePatternCalculator;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.renderers.SpectraItemLabelGenerator;
@@ -44,6 +47,7 @@ import java.awt.geom.Ellipse2D;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
+import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.axis.NumberAxis;
@@ -56,8 +60,10 @@ public class IsotopePane extends BorderPane {
   private static final double MIN_THEORETICAL_ABUNDANCE = 0.005d;
   private static final double MIN_MERGE_WIDTH = 0.00005d;
 
+  private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
   private final @NotNull SpectraPlot plot = new SpectraPlot();
   private final @NotNull Label placeholder = new Label("Select a row with an isotope pattern.");
+  private @Nullable FeatureListRow row;
 
   public IsotopePane() {
     setCenter(placeholder);
@@ -73,41 +79,59 @@ public class IsotopePane extends BorderPane {
   }
 
   public void setFeatureList(final @Nullable ModularFeatureList featureList) {
+    requestUpdate();
   }
 
   public void setRow(final @Nullable FeatureListRow row) {
-    plot.applyWithNotifyChanges(false, plot::removeAllDataSets);
-    if (row == null) {
-      showPlaceholder("Select a row with an isotope pattern.");
-      return;
-    }
+    this.row = row;
+    requestUpdate();
+  }
 
-    final IsotopePattern pattern = row.getBestIsotopePattern();
-    if (pattern == null) {
-      showPlaceholder("No isotope pattern available for selected row.");
+  private void requestUpdate() {
+    scheduler.onTaskThreadDelayed(new IsotopeComputationTask(this, row), Duration.millis(120));
+  }
+
+  void applyComputationResult(final @NotNull IsotopeComputationResult result) {
+    plot.applyWithNotifyChanges(false, plot::removeAllDataSets);
+    if (result.placeholderText() != null) {
+      showPlaceholder(result.placeholderText());
       return;
     }
 
     final ColoredXYBarRenderer measuredRenderer = new ColoredXYBarRenderer(false);
     measuredRenderer.setDefaultItemLabelGenerator(new SpectraItemLabelGenerator(plot));
-    plot.addDataSet(new ColoredXYDataset(new MassSpectrumProvider(pattern, "Isotope pattern",
+    plot.addDataSet(new ColoredXYDataset(
+            new MassSpectrumProvider(result.measuredPattern(), "Isotope pattern",
             ConfigService.getDefaultColorPalette().getAWT(0))), Color.black, false,
         measuredRenderer,
         false, false);
 
-    final MatchedLipid selectedMatch = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
-    final IsotopePattern theoreticalPattern = resolveTheoreticalPattern(row, selectedMatch);
-    if (theoreticalPattern != null) {
+    if (result.theoreticalPattern() != null) {
       final XYLineAndShapeRenderer theoreticalRenderer = new XYLineAndShapeRenderer(false, true);
       theoreticalRenderer.setSeriesPaint(0, new Color(220, 40, 40));
       theoreticalRenderer.setSeriesShape(0, new Ellipse2D.Double(-4, -4, 8, 8));
       theoreticalRenderer.setSeriesStroke(0, new java.awt.BasicStroke(1.8f));
       theoreticalRenderer.setSeriesVisibleInLegend(0, true);
       plot.addDataSet(new ColoredXYDataset(
-          new MassSpectrumProvider(theoreticalPattern, "Theoretical isotope pattern",
+          new MassSpectrumProvider(result.theoreticalPattern(), "Theoretical isotope pattern",
               new Color(220, 40, 40))), Color.RED, false, theoreticalRenderer, false, false);
     }
     setCenter(plot);
+  }
+
+  static @NotNull IsotopeComputationResult computeResult(final @Nullable FeatureListRow row) {
+    if (row == null) {
+      return new IsotopeComputationResult("Select a row with an isotope pattern.", null, null);
+    }
+    final IsotopePattern measuredPattern = row.getBestIsotopePattern();
+    if (measuredPattern == null) {
+      return new IsotopeComputationResult("No isotope pattern available for selected row.", null,
+          null);
+    }
+
+    final @Nullable MatchedLipid selectedMatch = resolvePreferredOrPotentialMatch(row);
+    final IsotopePattern theoreticalPattern = resolveTheoreticalPattern(row, selectedMatch);
+    return new IsotopeComputationResult(null, measuredPattern, theoreticalPattern);
   }
 
   private static @Nullable IsotopePattern resolveTheoreticalPattern(final @NotNull FeatureListRow row,
@@ -145,6 +169,21 @@ public class IsotopePane extends BorderPane {
           measured.getBasePeakIntensity());
     }
     return pattern;
+  }
+
+  private static @Nullable MatchedLipid resolvePreferredOrPotentialMatch(
+      final @NotNull FeatureListRow row) {
+    final @Nullable MatchedLipid preferred = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
+        row);
+    if (preferred != null) {
+      return preferred;
+    }
+    if (row.getFeatureList() instanceof ModularFeatureList featureList) {
+      final @Nullable KendrickFalseNegativeCandidate potential =
+          new KendrickFalseNegativeDetector(featureList).detectCandidate(row);
+      return potential == null ? null : potential.match();
+    }
+    return null;
   }
 
   private void showPlaceholder(final @NotNull String text) {

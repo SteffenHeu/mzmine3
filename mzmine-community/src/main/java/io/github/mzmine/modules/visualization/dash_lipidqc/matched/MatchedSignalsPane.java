@@ -25,25 +25,34 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.matched;
 
+import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
+import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
+import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
+import io.github.mzmine.modules.visualization.spectra.simplespectra.datasets.ScanDataSet;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.spectra.matchedlipid.LipidSpectrumPlot;
+import java.util.Comparator;
 import java.util.List;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
+import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MatchedSignalsPane extends BorderPane {
 
+  private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
   private final @NotNull Label placeholder = new Label("Select a row with matched lipid signals.");
   private @Nullable FeatureListRow row;
   private @Nullable LipidSpectrumPlot spectrumPlot;
+  private @Nullable SpectraPlot rawSpectrumPlot;
 
   public MatchedSignalsPane() {
     setCenter(placeholder);
@@ -51,36 +60,83 @@ public class MatchedSignalsPane extends BorderPane {
   }
 
   public void setFeatureList(final @Nullable ModularFeatureList featureList) {
+    requestUpdate();
   }
 
   public void setRow(final @Nullable FeatureListRow row) {
     this.row = row;
-    update();
+    requestUpdate();
   }
 
-  private void update() {
-    if (row == null) {
-      showPlaceholder("Select a row with matched lipid signals.");
+  private void requestUpdate() {
+    scheduler.onTaskThreadDelayed(new MatchedSignalsComputationTask(this, row),
+        Duration.millis(120));
+  }
+
+  void applyComputationResult(final @NotNull MatchedSignalsComputationResult result) {
+    if (result.placeholderText() != null) {
+      showPlaceholder(result.placeholderText());
       return;
+    }
+
+    final @Nullable MatchedLipid match = result.match();
+    if (match != null) {
+      if (spectrumPlot == null) {
+        spectrumPlot = new LipidSpectrumPlot(match, true, RunOption.NEW_THREAD);
+      } else {
+        spectrumPlot.updateLipidSpectrum(match, true, RunOption.NEW_THREAD);
+      }
+      setCenter(spectrumPlot);
+      return;
+    }
+
+    showRawMs2Spectrum(result.representativeMs2Scan());
+  }
+
+  static @NotNull MatchedSignalsComputationResult computeResult(final @Nullable FeatureListRow row) {
+    if (row == null) {
+      return new MatchedSignalsComputationResult("Select a row with matched lipid signals.", null,
+          null);
+    }
+
+    final @Nullable Scan representativeMs2Scan = selectRepresentativeMs2Scan(row);
+    if (representativeMs2Scan == null) {
+      return new MatchedSignalsComputationResult("No MS2 spectrum available for selected row.",
+          null, null);
     }
 
     final List<MatchedLipid> matches = row.get(LipidMatchListType.class);
-    if (matches == null || matches.isEmpty()) {
-      showPlaceholder("No matched lipid signals available for selected row.");
-      return;
+    final @Nullable MatchedLipid match = matches == null || matches.isEmpty() ? null
+        : LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
+    if (match != null && !match.getMatchedFragments().isEmpty()) {
+      return new MatchedSignalsComputationResult(null, representativeMs2Scan, match);
     }
 
-    final @Nullable MatchedLipid match = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
-    if (match == null) {
-      showPlaceholder("No matched lipid signals available for selected row.");
+    return new MatchedSignalsComputationResult(null, representativeMs2Scan, null);
+  }
+
+  private void showRawMs2Spectrum(final @Nullable Scan scan) {
+    if (scan == null) {
+      showPlaceholder("No MS2 spectrum available for selected row.");
       return;
     }
-    if (spectrumPlot == null) {
-      spectrumPlot = new LipidSpectrumPlot(match, true, RunOption.THIS_THREAD);
-    } else {
-      spectrumPlot.updateLipidSpectrum(match, true, RunOption.THIS_THREAD);
+    if (rawSpectrumPlot == null) {
+      rawSpectrumPlot = new SpectraPlot(false, true);
+      rawSpectrumPlot.setMinHeight(50d);
     }
-    setCenter(spectrumPlot);
+    rawSpectrumPlot.removeAllDataSets();
+    rawSpectrumPlot.addDataSet(new ScanDataSet("MS2 spectrum", scan),
+        ConfigService.getDefaultColorPalette().getNegativeColorAWT(), false, true);
+    setCenter(rawSpectrumPlot);
+  }
+
+  private static @Nullable Scan selectRepresentativeMs2Scan(final @NotNull FeatureListRow row) {
+    final List<Scan> scans = row.getAllFragmentScans();
+    if (scans.isEmpty()) {
+      return null;
+    }
+    return scans.stream().max(Comparator.comparingDouble(scan -> scan.getTIC() == null ? 0d
+        : scan.getTIC())).orElse(scans.getFirst());
   }
 
   private void showPlaceholder(final @NotNull String text) {

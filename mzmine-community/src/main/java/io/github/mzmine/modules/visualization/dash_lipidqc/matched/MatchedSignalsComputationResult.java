@@ -23,23 +23,15 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
+package io.github.mzmine.modules.visualization.dash_lipidqc.matched;
 
-import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
-import java.util.List;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record QualityComputationResult(@Nullable String placeholderText,
-                                @Nullable MatchedLipid selectedAnnotation,
-                                @NotNull InterferenceMetrics interferenceMetrics,
-                                @NotNull List<FeatureListRow> duplicateRows,
-                                @NotNull List<QualityCardData> qualityCards,
-                                @Nullable String falsePositiveReason,
-                                @Nullable KendrickFalseNegativeCandidate falseNegativeCandidate,
-                                @Nullable QualityCardData falseNegativeQualityCard) {
+record MatchedSignalsComputationResult(@Nullable String placeholderText,
+                                       @Nullable Scan representativeMs2Scan,
+                                       @Nullable MatchedLipid match) {
 
 }
+

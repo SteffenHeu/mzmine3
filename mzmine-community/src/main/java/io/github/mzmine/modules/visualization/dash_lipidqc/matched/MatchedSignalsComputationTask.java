@@ -23,23 +23,42 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
+package io.github.mzmine.modules.visualization.dash_lipidqc.matched;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
-import java.util.List;
+import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record QualityComputationResult(@Nullable String placeholderText,
-                                @Nullable MatchedLipid selectedAnnotation,
-                                @NotNull InterferenceMetrics interferenceMetrics,
-                                @NotNull List<FeatureListRow> duplicateRows,
-                                @NotNull List<QualityCardData> qualityCards,
-                                @Nullable String falsePositiveReason,
-                                @Nullable KendrickFalseNegativeCandidate falseNegativeCandidate,
-                                @Nullable QualityCardData falseNegativeQualityCard) {
+final class MatchedSignalsComputationTask extends FxUpdateTask<MatchedSignalsPane> {
 
+  private final @Nullable FeatureListRow row;
+  private @NotNull MatchedSignalsComputationResult result = new MatchedSignalsComputationResult(
+      "Select a row with matched lipid signals.", null, null);
+
+  MatchedSignalsComputationTask(final @NotNull MatchedSignalsPane model,
+      final @Nullable FeatureListRow row) {
+    super("Compute matched lipid signals pane", model);
+    this.row = row;
+  }
+
+  @Override
+  protected void process() {
+    result = MatchedSignalsPane.computeResult(row);
+  }
+
+  @Override
+  protected void updateGuiModel() {
+    model.applyComputationResult(result);
+  }
+
+  @Override
+  public @NotNull String getTaskDescription() {
+    return "Calculating matched lipid signals pane datasets";
+  }
+
+  @Override
+  public double getFinishedPercentage() {
+    return 0d;
+  }
 }

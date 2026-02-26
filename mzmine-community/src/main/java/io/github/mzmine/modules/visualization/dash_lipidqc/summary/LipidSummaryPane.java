@@ -36,10 +36,15 @@ import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDash
 import io.github.mzmine.modules.visualization.dash_lipidqc.state.DashboardFilterState;
 import java.awt.Color;
 import java.awt.Font;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.control.Accordion;
@@ -83,7 +88,9 @@ public class LipidSummaryPane extends BorderPane {
 
   private @Nullable ModularFeatureList featureList;
   private @Nullable String selectedGroup;
+  private final @NotNull LinkedHashSet<String> selectedGroups = new LinkedHashSet<>();
   private final @NotNull Map<String, Set<Integer>> groupToRowIds = new TreeMap<>();
+  private @Nullable Consumer<Set<Integer>> onGroupSelectedRowIds;
 
   public LipidSummaryPane(final @NotNull LipidAnnotationQCDashboardModel model,
       final @NotNull DashboardFilterState filterState,
@@ -126,12 +133,10 @@ public class LipidSummaryPane extends BorderPane {
   }
 
   private void clearSummaryFilter() {
+    selectedGroups.clear();
     selectedGroup = null;
-    filterState.setBarSelectedRowIds(Set.of());
-    final Runnable onChange = filterState.getOnChange();
-    if (onChange != null) {
-      onChange.run();
-    }
+    applySelectionToFilterState();
+    notifyFilterChanged();
     requestChartUpdate();
   }
 
@@ -143,6 +148,7 @@ public class LipidSummaryPane extends BorderPane {
   private void requestChartUpdate() {
     final SummaryGroup grouping = groupSelector.getValue();
     final SummaryCountMode countMode = countModeSelector.getValue();
+    selectedGroup = selectedGroups.stream().findFirst().orElse(null);
     scheduler.onTaskThreadDelayed(
         new SummaryComputationTask(this, featureList, grouping, countMode, selectedGroup),
         Duration.millis(120));
@@ -152,12 +158,19 @@ public class LipidSummaryPane extends BorderPane {
     if (result.placeholderText() != null) {
       showPlaceholder(result.placeholderText());
       groupToRowIds.clear();
+      selectedGroups.clear();
+      selectedGroup = null;
+      applySelectionToFilterState();
+      notifyFilterChanged();
       return;
     }
 
-    selectedGroup = result.selectedGroup();
     groupToRowIds.clear();
     groupToRowIds.putAll(result.groupToRowIds());
+    selectedGroups.retainAll(groupToRowIds.keySet());
+    selectedGroup = selectedGroups.stream().findFirst().orElse(null);
+    applySelectionToFilterState();
+    notifyFilterChanged();
 
     final DefaultCategoryDataset dataset = new DefaultCategoryDataset();
     result.groupToCount().forEach(
@@ -169,6 +182,7 @@ public class LipidSummaryPane extends BorderPane {
     chart.getCategoryPlot().getDomainAxis().setCategoryLabelPositions(CategoryLabelPositions.UP_45);
     final EChartViewer viewer = new EChartViewer(chart);
     final SelectableCategoryBarRenderer selectable = new SelectableCategoryBarRenderer();
+    selectable.setSelectedCategoryColors(createSelectedGroupColors());
     selectable.setSelectedCategoryKey(selectedGroup);
     selectable.setDefaultItemLabelGenerator(new StandardCategoryItemLabelGenerator());
     selectable.setDefaultItemLabelsVisible(true);
@@ -202,12 +216,17 @@ public class LipidSummaryPane extends BorderPane {
         if (event.getEntity() instanceof CategoryItemEntity categoryEntity) {
           final String key = Objects.toString(categoryEntity.getColumnKey(), null);
           if (key != null && groupToRowIds.containsKey(key)) {
-            selectedGroup = key.equals(selectedGroup) ? null : key;
-            filterState.setBarSelectedRowIds(
-                selectedGroup == null ? Set.of() : Set.copyOf(groupToRowIds.get(selectedGroup)));
-            final Runnable onChange = filterState.getOnChange();
-            if (onChange != null) {
-              onChange.run();
+            final boolean wasSelected = selectedGroups.contains(key);
+            if (selectedGroups.contains(key)) {
+              selectedGroups.remove(key);
+            } else {
+              selectedGroups.add(key);
+            }
+            selectedGroup = selectedGroups.stream().findFirst().orElse(null);
+            applySelectionToFilterState();
+            notifyFilterChanged();
+            if (!wasSelected) {
+              notifyGroupSelectedRowIds(key);
             }
             requestChartUpdate();
           }
@@ -233,6 +252,76 @@ public class LipidSummaryPane extends BorderPane {
   private static @NotNull Color summaryLabelColor() {
     return io.github.mzmine.main.ConfigService.getConfiguration().isDarkMode()
         ? new Color(230, 230, 230) : new Color(35, 35, 35);
+  }
+
+  private @NotNull Map<String, Color> createSelectedGroupColors() {
+    final Map<String, Color> selectedGroupColors = new LinkedHashMap<>();
+    final Set<Integer> usedColorCodes = new HashSet<>();
+    final var palette = ConfigService.getConfiguration().getDefaultColorPalette();
+    final int paletteSize = Math.max(0, palette.size());
+    int colorIndex = 0;
+    for (final String group : selectedGroups) {
+      int overflowIndex = Math.max(0, colorIndex - paletteSize);
+      Color color = colorIndex < paletteSize
+          ? palette.getAWT(colorIndex)
+          : generateDistinctOverflowColor(overflowIndex);
+      while (usedColorCodes.contains(color.getRGB())) {
+        color = generateDistinctOverflowColor(++overflowIndex);
+      }
+      usedColorCodes.add(color.getRGB());
+      selectedGroupColors.put(group, color);
+      colorIndex++;
+    }
+    return selectedGroupColors;
+  }
+
+  private static @NotNull Color generateDistinctOverflowColor(final int index) {
+    // Low-discrepancy hue stepping keeps colors visually distinct for long selections.
+    final double hue = (index * 0.6180339887498949d) % 1d;
+    final float saturation = 0.72f;
+    final float brightness = 0.88f;
+    return Color.getHSBColor((float) hue, saturation, brightness);
+  }
+
+  private void applySelectionToFilterState() {
+    final Map<String, Color> selectedGroupColors = createSelectedGroupColors();
+    final Set<Integer> selectedRowIds = new HashSet<>();
+    final Map<Integer, Color> selectedRowColors = new HashMap<>();
+    for (final Map.Entry<String, Color> selectedGroupColor : selectedGroupColors.entrySet()) {
+      final Set<Integer> rowIds = groupToRowIds.get(selectedGroupColor.getKey());
+      if (rowIds == null || rowIds.isEmpty()) {
+        continue;
+      }
+      selectedRowIds.addAll(rowIds);
+      for (final Integer rowId : rowIds) {
+        selectedRowColors.putIfAbsent(rowId, selectedGroupColor.getValue());
+      }
+    }
+    filterState.setBarSelectedGroups(Set.copyOf(selectedGroups));
+    filterState.setBarSelectedRowIds(Set.copyOf(selectedRowIds));
+    filterState.setBarSelectedRowColors(Map.copyOf(selectedRowColors));
+  }
+
+  private void notifyFilterChanged() {
+    final Runnable onChange = filterState.getOnChange();
+    if (onChange != null) {
+      onChange.run();
+    }
+  }
+
+  public void setOnGroupSelectedRowIds(final @Nullable Consumer<Set<Integer>> onGroupSelectedRowIds) {
+    this.onGroupSelectedRowIds = onGroupSelectedRowIds;
+  }
+
+  private void notifyGroupSelectedRowIds(final @NotNull String groupKey) {
+    if (onGroupSelectedRowIds == null) {
+      return;
+    }
+    final Set<Integer> rowIds = groupToRowIds.get(groupKey);
+    if (rowIds == null || rowIds.isEmpty()) {
+      return;
+    }
+    onGroupSelectedRowIds.accept(Set.copyOf(rowIds));
   }
 
   private void showPlaceholder(final @NotNull String text) {

@@ -25,6 +25,8 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.state;
 
+import java.awt.Color;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.jetbrains.annotations.NotNull;
@@ -33,6 +35,8 @@ import org.jetbrains.annotations.Nullable;
 public final class DashboardFilterState {
 
   private @NotNull Set<Integer> barSelectedRowIds = Set.of();
+  private @NotNull Set<String> barSelectedGroups = Set.of();
+  private @NotNull Map<Integer, Color> barSelectedRowColors = Map.of();
   private @Nullable Runnable onChange;
 
   public @NotNull Set<Integer> getBarSelectedRowIds() {
@@ -41,6 +45,22 @@ public final class DashboardFilterState {
 
   public void setBarSelectedRowIds(final @NotNull Set<Integer> barSelectedRowIds) {
     this.barSelectedRowIds = Objects.requireNonNullElse(barSelectedRowIds, Set.of());
+  }
+
+  public @NotNull Set<String> getBarSelectedGroups() {
+    return barSelectedGroups;
+  }
+
+  public void setBarSelectedGroups(final @NotNull Set<String> barSelectedGroups) {
+    this.barSelectedGroups = Objects.requireNonNullElse(barSelectedGroups, Set.of());
+  }
+
+  public @NotNull Map<Integer, Color> getBarSelectedRowColors() {
+    return barSelectedRowColors;
+  }
+
+  public void setBarSelectedRowColors(final @NotNull Map<Integer, Color> barSelectedRowColors) {
+    this.barSelectedRowColors = Objects.requireNonNullElse(barSelectedRowColors, Map.of());
   }
 
   public @Nullable Runnable getOnChange() {

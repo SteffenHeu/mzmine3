@@ -25,17 +25,26 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
 
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeInterferenceMetrics;
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeInterferenceScore;
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.computeWeightedQualityScore;
-import static io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.interferenceDetail;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeInterferenceMetrics;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeInterferenceScore;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeAdductWeight;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeElutionOrderMetrics;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeElutionOrderWeight;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeWeightedQualityScore;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.formatElutionOrderDetail;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.interferenceDetail;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalsePositiveUtils;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickReviewMode;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
-import io.github.mzmine.modules.visualization.dash_lipidqc.scoring.LipidQcScoringUtils.InterferenceMetrics;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -47,30 +56,48 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
   private final @Nullable FeatureListRow row;
   private final @Nullable ModularFeatureList featureList;
   private final boolean includeRetentionTimeAnalysis;
+  private final @NotNull KendrickReviewMode reviewMode;
   private @NotNull QualityComputationResult result;
 
   QualityComputationTask(final @NotNull AnnotationQualityPane pane,
       final @Nullable FeatureListRow row, final @Nullable ModularFeatureList featureList,
-      final boolean includeRetentionTimeAnalysis) {
+      final boolean includeRetentionTimeAnalysis, final @NotNull KendrickReviewMode reviewMode) {
     super("lipidqc-quality-update", pane);
     this.row = row;
     this.featureList = featureList;
     this.includeRetentionTimeAnalysis = includeRetentionTimeAnalysis;
+    this.reviewMode = reviewMode;
     result = new QualityComputationResult("Select a row with lipid annotations.", null,
-        new InterferenceMetrics(0, 0), List.of(), List.of());
+        new InterferenceMetrics(0, 0), List.of(), List.of(), null, null, null);
   }
 
   @Override
   protected void process() {
+    final @Nullable String falsePositiveReason = row == null || featureList == null
+        || reviewMode != KendrickReviewMode.POTENTIAL_FALSE_POSITIVE ? null
+        : KendrickFalsePositiveUtils.potentialFalsePositiveReason(featureList, row,
+            includeRetentionTimeAnalysis);
+    final @Nullable KendrickFalseNegativeCandidate falseNegativeCandidate =
+        row == null || featureList == null
+            || reviewMode != KendrickReviewMode.POTENTIAL_FALSE_NEGATIVE ? null
+            : new KendrickFalseNegativeDetector(featureList).detectCandidate(row);
+    final @Nullable QualityCardData falseNegativeQualityCard =
+        row == null || falseNegativeCandidate == null
+            ? null : createQualityCardData(row, falseNegativeCandidate.match(),
+            computeInterferenceMetrics(row));
     if (row == null) {
       result = new QualityComputationResult("Select a row with lipid annotations.", null,
-          new InterferenceMetrics(0, 0), List.of(), List.of());
+          new InterferenceMetrics(0, 0), List.of(), List.of(), falsePositiveReason,
+          falseNegativeCandidate, falseNegativeQualityCard);
       return;
     }
     final List<MatchedLipid> matches = row.getLipidMatches();
     if (matches.isEmpty()) {
-      result = new QualityComputationResult("No lipid annotations available for selected row.",
-          null, new InterferenceMetrics(0, 0), List.of(), List.of());
+      final InterferenceMetrics emptyRowInterference = computeInterferenceMetrics(row);
+      final @Nullable String placeholder = falseNegativeQualityCard == null
+          ? "No lipid annotations available for selected row." : null;
+      result = new QualityComputationResult(placeholder, null, emptyRowInterference, List.of(),
+          List.of(), falsePositiveReason, falseNegativeCandidate, falseNegativeQualityCard);
       return;
     }
     final List<MatchedLipid> matchSnapshot = List.copyOf(matches);
@@ -90,22 +117,11 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
         interferenceDetail(interferenceMetrics));
     final List<QualityCardData> cards = new ArrayList<>(orderedMatches.size());
     for (final MatchedLipid match : orderedMatches) {
-      final QualityMetric ms1 = AnnotationQualityPane.evaluateMs1(row, match);
-      final QualityMetric ms2 = AnnotationQualityPane.evaluateMs2(match);
-      final QualityMetric adduct = AnnotationQualityPane.evaluateAdduct(row, match);
-      final QualityMetric isotope = AnnotationQualityPane.evaluateIsotope(row, match);
-      final QualityMetric elutionOrder = includeRetentionTimeAnalysis
-          ? AnnotationQualityPane.evaluateElutionOrder(featureList, row, match)
-          : new QualityMetric(0d, "Disabled for current lipid analysis mode");
-      final double overall = computeWeightedQualityScore(ms1.score(), ms2.score(), adduct.score(),
-          isotope.score(), interference.score(), elutionOrder.score(), true,
-          includeRetentionTimeAnalysis);
-      cards.add(
-          new QualityCardData(match, ms1, ms2, adduct, isotope, elutionOrder, interference,
-              overall));
+      cards.add(createQualityCardData(row, match, interferenceMetrics));
     }
     result = new QualityComputationResult(null, selectedAnnotation, interferenceMetrics,
-        List.copyOf(duplicateRows), List.copyOf(cards));
+        List.copyOf(duplicateRows), List.copyOf(cards), falsePositiveReason,
+        falseNegativeCandidate, falseNegativeQualityCard);
   }
 
   @Override
@@ -121,5 +137,32 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
   @Override
   public double getFinishedPercentage() {
     return 0d;
+  }
+
+  private @NotNull QualityCardData createQualityCardData(final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match, final @NotNull InterferenceMetrics interferenceMetrics) {
+    final QualityMetric ms1 = AnnotationQualityPane.evaluateMs1(row, match);
+    final QualityMetric ms2 = AnnotationQualityPane.evaluateMs2(match);
+    final QualityMetric adduct = AnnotationQualityPane.evaluateAdduct(row, match);
+    final QualityMetric isotope = AnnotationQualityPane.evaluateIsotope(row, match);
+    final @Nullable ElutionOrderMetrics elutionMetrics = includeRetentionTimeAnalysis
+        && featureList != null ? computeElutionOrderMetrics(featureList, row, match) : null;
+    final QualityMetric elutionOrder = includeRetentionTimeAnalysis
+        ? elutionMetrics != null ? new QualityMetric(elutionMetrics.combinedScore(),
+            formatElutionOrderDetail(elutionMetrics))
+            : new QualityMetric(0.4d, "Missing RT context")
+        : new QualityMetric(0d, "Disabled for current lipid analysis mode");
+    final QualityMetric interference = new QualityMetric(
+        computeInterferenceScore(interferenceMetrics.totalPenaltyCount()),
+        interferenceDetail(interferenceMetrics));
+    final double adductWeight = computeAdductWeight(row, match);
+    final double elutionOrderWeight = includeRetentionTimeAnalysis
+        ? computeElutionOrderWeight(elutionMetrics)
+        : 0d;
+    final double overall = computeWeightedQualityScore(ms1.score(), ms2.score(), adduct.score(),
+        isotope.score(), interference.score(), elutionOrder.score(), true,
+        includeRetentionTimeAnalysis, adductWeight, elutionOrderWeight);
+    return new QualityCardData(match, ms1, ms2, adduct, isotope, elutionOrder, interference,
+        overall);
   }
 }

@@ -26,10 +26,13 @@
 package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -57,8 +60,11 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
       result = new RetentionComputationResult("Select a row with lipid annotations.", null);
       return;
     }
-    final @Nullable MatchedLipid selectedMatch =
-        LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(selectedRow);
+    @Nullable MatchedLipid selectedMatch = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
+        selectedRow);
+    if (selectedMatch == null) {
+      selectedMatch = getPotentialMatchForUnannotatedRow(selectedRow);
+    }
     if (selectedMatch == null) {
       result = new RetentionComputationResult(
           "No lipid annotations available for selected row.", null);
@@ -145,11 +151,11 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
                 && EquivalentCarbonNumberPane.extractCarbons(
                 match.getLipidAnnotation()) == selectedCarbons,
             match -> EquivalentCarbonNumberPane.extractDbe(match.getLipidAnnotation()));
-        final boolean hasCarbonTrend = carbonTrendDataset.getItemCount(0) >= 3;
-        final boolean hasDbeTrend = dbeTrendDataset.getItemCount(0) >= 3;
+        final boolean hasCarbonTrend = carbonTrendDataset.getItemCount(0) >= 2;
+        final boolean hasDbeTrend = dbeTrendDataset.getItemCount(0) >= 2;
         if (!hasCarbonTrend && !hasDbeTrend) {
           result = new RetentionComputationResult(
-              "Not enough lipids for combined trend model (need at least 3 rows in trend group).",
+              "Not enough lipids for combined trend model (need at least 2 rows in trend group).",
               null);
           return;
         }
@@ -174,5 +180,15 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
   @Override
   public double getFinishedPercentage() {
     return 0d;
+  }
+
+  private static @Nullable MatchedLipid getPotentialMatchForUnannotatedRow(
+      final @NotNull FeatureListRow selectedRow) {
+    if (!(selectedRow.getFeatureList() instanceof ModularFeatureList modularFeatureList)) {
+      return null;
+    }
+    final @Nullable KendrickFalseNegativeCandidate potential =
+        new KendrickFalseNegativeDetector(modularFeatureList).detectCandidate(selectedRow);
+    return potential == null ? null : potential.match();
   }
 }

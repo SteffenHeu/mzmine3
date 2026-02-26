@@ -33,6 +33,7 @@ import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotX
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,6 +48,12 @@ public class KendrickSubsetDataset extends org.jfree.data.xy.AbstractXYZDataset
 
   public KendrickSubsetDataset(final @NotNull KendrickMassPlotXYZDataset source,
       final @NotNull Predicate<FeatureListRow> predicate) {
+    this(source, predicate, null);
+  }
+
+  public KendrickSubsetDataset(final @NotNull KendrickMassPlotXYZDataset source,
+      final @NotNull Predicate<FeatureListRow> predicate,
+      final @Nullable ToDoubleFunction<FeatureListRow> zValueOverride) {
     final List<FeatureListRow> rowList = new ArrayList<>();
     final List<Double> xList = new ArrayList<>();
     final List<Double> yList = new ArrayList<>();
@@ -60,7 +67,7 @@ public class KendrickSubsetDataset extends org.jfree.data.xy.AbstractXYZDataset
       rowList.add(row);
       xList.add(source.getXValue(0, i));
       yList.add(source.getYValue(0, i));
-      zList.add(source.getZValue(0, i));
+      zList.add(resolveZValue(source, row, i, zValueOverride));
       bubbleList.add(source.getBubbleSizeValue(0, i));
     }
     rows = rowList.toArray(new FeatureListRow[0]);
@@ -68,6 +75,18 @@ public class KendrickSubsetDataset extends org.jfree.data.xy.AbstractXYZDataset
     y = yList.stream().mapToDouble(Double::doubleValue).toArray();
     z = zList.stream().mapToDouble(Double::doubleValue).toArray();
     bubble = bubbleList.stream().mapToDouble(Double::doubleValue).toArray();
+  }
+
+  private static double resolveZValue(final @NotNull KendrickMassPlotXYZDataset source,
+      final @NotNull FeatureListRow row, final int itemIndex,
+      final @Nullable ToDoubleFunction<FeatureListRow> zValueOverride) {
+    if (zValueOverride != null) {
+      final double overriddenValue = zValueOverride.applyAsDouble(row);
+      if (Double.isFinite(overriddenValue)) {
+        return overriddenValue;
+      }
+    }
+    return source.getZValue(0, itemIndex);
   }
 
   @Override

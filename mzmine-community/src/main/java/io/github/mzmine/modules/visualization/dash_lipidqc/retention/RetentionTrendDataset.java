@@ -41,6 +41,7 @@ final class RetentionTrendDataset extends AbstractXYDataset {
   private final @NotNull double[] xValues;
   private final @NotNull double[] yValues;
   private final @NotNull MatchedLipid[] matchedLipids;
+  private final @NotNull FeatureListRow[] rows;
 
   RetentionTrendDataset(final @NotNull List<FeatureListRow> rows,
       final @NotNull Predicate<MatchedLipid> predicate,
@@ -48,6 +49,7 @@ final class RetentionTrendDataset extends AbstractXYDataset {
     final List<Double> xList = new ArrayList<>();
     final List<Double> yList = new ArrayList<>();
     final List<MatchedLipid> lipidList = new ArrayList<>();
+    final List<FeatureListRow> rowList = new ArrayList<>();
     for (final FeatureListRow row : rows) {
       final @Nullable MatchedLipid match = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
           row);
@@ -62,12 +64,14 @@ final class RetentionTrendDataset extends AbstractXYDataset {
         continue;
       }
       lipidList.add(match);
+      rowList.add(row);
       xList.add((double) row.getAverageRT());
       yList.add(y);
     }
     xValues = xList.stream().mapToDouble(Double::doubleValue).toArray();
     yValues = yList.stream().mapToDouble(Double::doubleValue).toArray();
     matchedLipids = lipidList.toArray(new MatchedLipid[0]);
+    this.rows = rowList.toArray(new FeatureListRow[0]);
   }
 
   @Override
@@ -101,6 +105,10 @@ final class RetentionTrendDataset extends AbstractXYDataset {
 
   @Nullable MatchedLipid getMatchedLipid(final int item) {
     return item >= 0 && item < matchedLipids.length ? matchedLipids[item] : null;
+  }
+
+  @Nullable FeatureListRow getRow(final int item) {
+    return item >= 0 && item < rows.length ? rows[item] : null;
   }
 
   @Nullable String getTooltip(final int item) {

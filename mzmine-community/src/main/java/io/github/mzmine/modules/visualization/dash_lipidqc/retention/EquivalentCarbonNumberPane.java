@@ -40,6 +40,9 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAn
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalsePositiveUtils;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberChart;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberDataset;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -47,6 +50,7 @@ import io.github.mzmine.util.FeatureTableFXUtil;
 import java.awt.Color;
 import java.awt.Paint;
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.util.List;
 import javafx.application.Platform;
@@ -82,6 +86,12 @@ import org.jfree.data.xy.XYSeriesCollection;
 
 public class EquivalentCarbonNumberPane extends BorderPane {
 
+  private static final int FP_OVERLAY_DATASET_INDEX = 5;
+  private static final int FN_OVERLAY_DATASET_INDEX = 6;
+  private static final int COMBINED_CARBON_FP_DATASET_INDEX = 12;
+  private static final int COMBINED_DBE_FP_DATASET_INDEX = 13;
+  private static final int COMBINED_CARBON_FN_DATASET_INDEX = 14;
+  private static final int COMBINED_DBE_FN_DATASET_INDEX = 15;
   private static final @NotNull Color SELECTED_POINT_COLOR = ConfigService.getDefaultColorPalette()
       .getPositiveColorAWT();
   private final LipidAnnotationQCDashboardModel model;
@@ -191,6 +201,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       if (chart.getChart().getXYPlot().getRenderer(1) instanceof XYLineAndShapeRenderer renderer) {
         renderer.setSeriesPaint(0, ecnTrendDatasetColor());
       }
+      configureEcnAxisRanges(chart.getChart().getXYPlot(), dataset);
       chart.addChartMouseListener(new ChartMouseListenerFX() {
         @Override
         public void chartMouseClicked(final ChartMouseEventFX event) {
@@ -221,11 +232,27 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       if (selectedRow != null) {
         highlightSelectedLipid(chart, selectedRow, selectedMatch);
       }
+      final @Nullable SelectionQualityFlag selectionQualityFlag = selectedRow == null ? null
+          : determineSelectionQualityFlag(selectedRow);
+      final int falsePositiveCount = addEcnFalsePositiveOverlay(chart, dataset);
+      final int selectedCarbons = extractCarbons(selectedMatch.getLipidAnnotation());
+      if (selectedRow != null
+          && selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE) {
+        if (selectedCarbons >= 0) {
+          addFalseNegativeSelectionOverlay(chart.getChart().getXYPlot(), FN_OVERLAY_DATASET_INDEX,
+              0, selectedRow.getAverageRT(), selectedCarbons);
+        }
+      }
+      if (selectedRow != null && selectedCarbons >= 0) {
+        ensurePointVisible(chart.getChart().getXYPlot(), selectedRow.getAverageRT(),
+            selectedCarbons, 0);
+      }
       chart.setMinSize(250, 120);
       updatePaneTitle(
           "Retention time analysis: " + selectedClass.getAbbr() + " ECN DBE=" + dbe + " (R2 "
               + ConfigService.getConfiguration().getScoreFormat().format(chart.getR2()) + ", n="
-              + matchCount + ")");
+              + matchCount + ")" + formatQualityIndicator(falsePositiveCount,
+              selectionQualityFlag));
       setCenter(chart);
     };
     dataset.addTaskStatusListener((_, newStatus, _) -> {
@@ -285,10 +312,22 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     if (selectedRow != null) {
       highlightSelectedTrendPoint(chart, selectedRow, selectedDbe);
     }
+    final @Nullable SelectionQualityFlag selectionQualityFlag = selectedRow == null ? null
+        : determineSelectionQualityFlag(selectedRow);
+    final int falsePositiveCount = addTrendFalsePositiveOverlay(chart.getChart().getXYPlot(),
+        trendDataset, FP_OVERLAY_DATASET_INDEX, 0);
+    if (selectedRow != null && selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE) {
+      addFalseNegativeSelectionOverlay(chart.getChart().getXYPlot(), FN_OVERLAY_DATASET_INDEX, 0,
+          selectedRow.getAverageRT(), selectedDbe);
+    }
+    if (selectedRow != null) {
+      ensurePointVisible(chart.getChart().getXYPlot(), selectedRow.getAverageRT(), selectedDbe, 0);
+    }
     updatePaneTitle(
         "Retention time analysis: " + selectedClass.getAbbr() + " DBE C=" + carbons + " (R2 "
             + ConfigService.getConfiguration().getScoreFormat().format(chartResult.r2()) + ", n="
-            + trendDataset.getItemCount(0) + ")");
+            + trendDataset.getItemCount(0) + ")" + formatQualityIndicator(falsePositiveCount,
+            selectionQualityFlag));
     setCenter(chart);
   }
 
@@ -335,9 +374,44 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       highlightSelectedCombinedTrendPoints(chart, selectedRow, selectedCarbons, selectedDbe,
           chartResult);
     }
+    final @Nullable SelectionQualityFlag selectionQualityFlag = selectedRow == null ? null
+        : determineSelectionQualityFlag(selectedRow);
+    int falsePositiveCount = 0;
+    if (carbonTrendDataset != null && chartResult.carbonsAxisIndex() >= 0) {
+      falsePositiveCount += addTrendFalsePositiveOverlay(chart.getChart().getXYPlot(),
+          carbonTrendDataset, COMBINED_CARBON_FP_DATASET_INDEX, chartResult.carbonsAxisIndex());
+    }
+    if (dbeTrendDataset != null && chartResult.dbeAxisIndex() >= 0) {
+      falsePositiveCount += addTrendFalsePositiveOverlay(chart.getChart().getXYPlot(),
+          dbeTrendDataset, COMBINED_DBE_FP_DATASET_INDEX, chartResult.dbeAxisIndex());
+    }
+    if (selectedRow != null
+        && selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE
+        && selectedRow.getAverageRT() != null) {
+      if (chartResult.carbonsAxisIndex() >= 0) {
+        addFalseNegativeSelectionOverlay(chart.getChart().getXYPlot(),
+            COMBINED_CARBON_FN_DATASET_INDEX, chartResult.carbonsAxisIndex(),
+            selectedRow.getAverageRT(), selectedCarbons);
+      }
+      if (chartResult.dbeAxisIndex() >= 0) {
+        addFalseNegativeSelectionOverlay(chart.getChart().getXYPlot(),
+            COMBINED_DBE_FN_DATASET_INDEX, chartResult.dbeAxisIndex(), selectedRow.getAverageRT(),
+            selectedDbe);
+      }
+    }
+    if (selectedRow != null) {
+      if (chartResult.carbonsAxisIndex() >= 0) {
+        ensurePointVisible(chart.getChart().getXYPlot(), selectedRow.getAverageRT(),
+            selectedCarbons, chartResult.carbonsAxisIndex());
+      }
+      if (chartResult.dbeAxisIndex() >= 0) {
+        ensurePointVisible(chart.getChart().getXYPlot(), selectedRow.getAverageRT(), selectedDbe,
+            chartResult.dbeAxisIndex());
+      }
+    }
     updatePaneTitle(
         "Retention time analysis: " + selectedClass.getAbbr() + " " + selectedCarbons + ":"
-            + selectedDbe);
+            + selectedDbe + formatQualityIndicator(falsePositiveCount, selectionQualityFlag));
     setCenter(chart);
   }
 
@@ -370,6 +444,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       regressionRenderer.setSeriesPaint(0, trendPaint);
       plot.setRenderer(1, regressionRenderer);
     }
+    configureTrendAxisRanges(plot, dataset);
     return new TrendChartResult(viewer, regression[2]);
   }
 
@@ -535,12 +610,13 @@ public class EquivalentCarbonNumberPane extends BorderPane {
 
     if (carbonAxisIndex >= 0 && carbonDataset != null && plot.getRangeAxis(
         carbonAxisIndex) instanceof NumberAxis carbonAxis) {
-      setAxisRangeToData(carbonAxis, minDatasetY(carbonDataset), maxDatasetY(carbonDataset),
-          false);
+      final @NotNull TrendYBounds carbonBounds = calculateTrendYBounds(carbonDataset);
+      setAxisRangeToData(carbonAxis, carbonBounds.minY(), carbonBounds.maxY(), false);
     }
     if (dbeAxisIndex >= 0 && dbeDataset != null && plot.getRangeAxis(
         dbeAxisIndex) instanceof NumberAxis dbeAxis) {
-      setAxisRangeToData(dbeAxis, minDatasetY(dbeDataset), maxDatasetY(dbeDataset), false);
+      final @NotNull TrendYBounds dbeBounds = calculateTrendYBounds(dbeDataset);
+      setAxisRangeToData(dbeAxis, dbeBounds.minY(), dbeBounds.maxY(), false);
     }
   }
 
@@ -577,15 +653,116 @@ public class EquivalentCarbonNumberPane extends BorderPane {
 
     if (max <= min) {
       final double delta = Math.max(Math.abs(min) * 0.05d, 0.2d);
-      final double lower = lockLowerToFirstPoint ? min : min - delta;
-      axis.setRange(lower, min + delta);
+      final double lower = lockLowerToFirstPoint ? min - delta * 0.5d : min - delta;
+      axis.setRange(lower, min + delta * 1.6d);
       return;
     }
 
     final double span = max - min;
-    final double lowerPadding = lockLowerToFirstPoint ? 0d : span * 0.03d;
-    final double upperPadding = span * 0.03d;
+    final double lowerPadding = lockLowerToFirstPoint ? span * 0.16d : span * 0.18d;
+    final double upperPadding = span * 0.30d;
     axis.setRange(min - lowerPadding, max + upperPadding);
+  }
+
+  private static void configureEcnAxisRanges(final @NotNull XYPlot plot,
+      final @NotNull EquivalentCarbonNumberDataset dataset) {
+    double minX = Double.POSITIVE_INFINITY;
+    double maxX = Double.NEGATIVE_INFINITY;
+    double minY = Double.POSITIVE_INFINITY;
+    double maxY = Double.NEGATIVE_INFINITY;
+    for (int i = 0; i < dataset.getItemCount(0); i++) {
+      final double x = dataset.getXValue(0, i);
+      final double y = dataset.getYValue(0, i);
+      if (Double.isFinite(x)) {
+        minX = Math.min(minX, x);
+        maxX = Math.max(maxX, x);
+      }
+      if (Double.isFinite(y)) {
+        minY = Math.min(minY, y);
+        maxY = Math.max(maxY, y);
+      }
+    }
+    if (plot.getDomainAxis() instanceof NumberAxis domainAxis) {
+      setAxisRangeToData(domainAxis, minX, maxX, true);
+    }
+    if (plot.getRangeAxis() instanceof NumberAxis rangeAxis) {
+      setAxisRangeToData(rangeAxis, minY, maxY, false);
+    }
+  }
+
+  private static void configureTrendAxisRanges(final @NotNull XYPlot plot,
+      final @NotNull RetentionTrendDataset dataset) {
+    if (plot.getDomainAxis() instanceof NumberAxis domainAxis) {
+      final double minX = java.util.Arrays.stream(dataset.getXValues()).min()
+          .orElse(Double.NaN);
+      final double maxX = java.util.Arrays.stream(dataset.getXValues()).max()
+          .orElse(Double.NaN);
+      setAxisRangeToData(domainAxis, minX, maxX, true);
+    }
+    if (plot.getRangeAxis() instanceof NumberAxis rangeAxis) {
+      final @NotNull TrendYBounds bounds = calculateTrendYBounds(dataset);
+      setAxisRangeToData(rangeAxis, bounds.minY(), bounds.maxY(), false);
+    }
+  }
+
+  private static void ensurePointVisible(final @NotNull XYPlot plot, final @Nullable Float xValue,
+      final double yValue, final int rangeAxisIndex) {
+    if (xValue == null || !Double.isFinite(yValue)) {
+      return;
+    }
+    if (plot.getDomainAxis() instanceof NumberAxis domainAxis) {
+      extendAxisToIncludeValue(domainAxis, xValue.doubleValue(), true);
+    }
+    if (plot.getRangeAxis(rangeAxisIndex) instanceof NumberAxis rangeAxis) {
+      extendAxisToIncludeValue(rangeAxis, yValue, false);
+    }
+  }
+
+  private static void extendAxisToIncludeValue(final @NotNull NumberAxis axis, final double value,
+      final boolean lockLowerToFirstPoint) {
+    if (!Double.isFinite(value)) {
+      return;
+    }
+    final double lower = axis.getLowerBound();
+    final double upper = axis.getUpperBound();
+    if (!Double.isFinite(lower) || !Double.isFinite(upper)) {
+      setAxisRangeToData(axis, value, value, lockLowerToFirstPoint);
+      return;
+    }
+    if (value >= lower && value <= upper) {
+      return;
+    }
+    setAxisRangeToData(axis, Math.min(lower, value), Math.max(upper, value),
+        lockLowerToFirstPoint);
+  }
+
+  private static @NotNull TrendYBounds calculateTrendYBounds(
+      final @NotNull RetentionTrendDataset dataset) {
+    double minY = minDatasetY(dataset);
+    double maxY = maxDatasetY(dataset);
+    if (dataset.getItemCount(0) < 2) {
+      return new TrendYBounds(minY, maxY);
+    }
+    final double[] regression = calculateLinearRegression(dataset);
+    if (!Double.isFinite(regression[0]) || !Double.isFinite(regression[1])) {
+      return new TrendYBounds(minY, maxY);
+    }
+    final double minX = java.util.Arrays.stream(dataset.getXValues()).min().orElse(Double.NaN);
+    final double maxX = java.util.Arrays.stream(dataset.getXValues()).max().orElse(Double.NaN);
+    if (!Double.isFinite(minX) || !Double.isFinite(maxX)) {
+      return new TrendYBounds(minY, maxY);
+    }
+    final double lowerFitY = regression[0] * minX + regression[1];
+    final double upperFitY = regression[0] * maxX + regression[1];
+    if (Double.isFinite(lowerFitY)) {
+      minY = Math.min(minY, lowerFitY);
+      maxY = Math.max(maxY, lowerFitY);
+    }
+    if (Double.isFinite(upperFitY)) {
+      minY = Math.min(minY, upperFitY);
+      maxY = Math.max(maxY, upperFitY);
+    }
+    return new TrendYBounds(minY, maxY);
   }
 
   private static void appendRegressionDatasetIfValid(final @NotNull XYPlot plot,
@@ -619,6 +796,150 @@ public class EquivalentCarbonNumberPane extends BorderPane {
         (xyDataset, series, item) -> dataset.getTooltip(item));
     pointRenderer.setSeriesVisibleInLegend(0, false);
     return pointRenderer;
+  }
+
+  private int addEcnFalsePositiveOverlay(final @NotNull EquivalentCarbonNumberChart chart,
+      final @NotNull EquivalentCarbonNumberDataset dataset) {
+    final XYSeries falsePositiveSeries = new XYSeries("Potential false positives");
+    for (int i = 0; i < dataset.getItemCount(0); i++) {
+      final @Nullable MatchedLipid matchedLipid = dataset.getMatchedLipid(i);
+      if (matchedLipid == null) {
+        continue;
+      }
+      final @Nullable FeatureListRow row = findRowForLipid(matchedLipid);
+      if (row == null || !isPotentialFalsePositive(row)) {
+        continue;
+      }
+      falsePositiveSeries.add(dataset.getXValue(0, i), dataset.getYValue(0, i));
+    }
+    if (falsePositiveSeries.isEmpty()) {
+      chart.getChart().getXYPlot().setDataset(FP_OVERLAY_DATASET_INDEX, null);
+      chart.getChart().getXYPlot().setRenderer(FP_OVERLAY_DATASET_INDEX, null);
+      return 0;
+    }
+    final XYSeriesCollection overlayDataset = new XYSeriesCollection();
+    overlayDataset.addSeries(falsePositiveSeries);
+    final XYLineAndShapeRenderer overlayRenderer = createOutlinedOverlayRenderer(
+        falsePositiveColor(), new Ellipse2D.Double(-6d, -6d, 12d, 12d), null);
+    chart.getChart().getXYPlot().setDataset(FP_OVERLAY_DATASET_INDEX, overlayDataset);
+    chart.getChart().getXYPlot().setRenderer(FP_OVERLAY_DATASET_INDEX, overlayRenderer);
+    return falsePositiveSeries.getItemCount();
+  }
+
+  private int addTrendFalsePositiveOverlay(final @NotNull XYPlot plot,
+      final @NotNull RetentionTrendDataset dataset, final int datasetIndex,
+      final int rangeAxisIndex) {
+    final XYSeries falsePositiveSeries = new XYSeries("Potential false positives");
+    for (int i = 0; i < dataset.getItemCount(0); i++) {
+      final @Nullable FeatureListRow row = dataset.getRow(i);
+      if (row == null || !isPotentialFalsePositive(row)) {
+        continue;
+      }
+      falsePositiveSeries.add(dataset.getXValue(0, i), dataset.getYValue(0, i));
+    }
+    if (falsePositiveSeries.isEmpty()) {
+      plot.setDataset(datasetIndex, null);
+      plot.setRenderer(datasetIndex, null);
+      return 0;
+    }
+    final XYSeriesCollection overlayDataset = new XYSeriesCollection();
+    overlayDataset.addSeries(falsePositiveSeries);
+    plot.setDataset(datasetIndex, overlayDataset);
+    plot.mapDatasetToRangeAxis(datasetIndex, rangeAxisIndex);
+    plot.setRenderer(datasetIndex, createOutlinedOverlayRenderer(falsePositiveColor(),
+        new Ellipse2D.Double(-6d, -6d, 12d, 12d), null));
+    return falsePositiveSeries.getItemCount();
+  }
+
+  private static void addFalseNegativeSelectionOverlay(final @NotNull XYPlot plot,
+      final int datasetIndex, final int rangeAxisIndex, final @Nullable Float xValue,
+      final double yValue) {
+    if (xValue == null || !Double.isFinite(yValue)) {
+      plot.setDataset(datasetIndex, null);
+      plot.setRenderer(datasetIndex, null);
+      return;
+    }
+    final XYSeries falseNegativeSeries = new XYSeries("Potential false negative");
+    falseNegativeSeries.add((double) xValue, yValue);
+    final XYSeriesCollection overlayDataset = new XYSeriesCollection();
+    overlayDataset.addSeries(falseNegativeSeries);
+    plot.setDataset(datasetIndex, overlayDataset);
+    plot.mapDatasetToRangeAxis(datasetIndex, rangeAxisIndex);
+    plot.setRenderer(datasetIndex, createOutlinedOverlayRenderer(falseNegativeColor(),
+        falseNegativeMarkerShape(), "FN"));
+  }
+
+  private static @NotNull XYLineAndShapeRenderer createOutlinedOverlayRenderer(
+      final @NotNull Color color, final @NotNull java.awt.Shape shape,
+      final @Nullable String label) {
+    final XYLineAndShapeRenderer overlayRenderer = new XYLineAndShapeRenderer(false, true);
+    overlayRenderer.setSeriesPaint(0, color);
+    overlayRenderer.setSeriesStroke(0, new java.awt.BasicStroke(2.2f));
+    overlayRenderer.setSeriesShape(0, shape);
+    overlayRenderer.setDefaultShapesFilled(false);
+    overlayRenderer.setUseOutlinePaint(true);
+    overlayRenderer.setSeriesOutlinePaint(0, color);
+    overlayRenderer.setSeriesOutlineStroke(0, new java.awt.BasicStroke(2.2f));
+    if (label != null) {
+      overlayRenderer.setDefaultItemLabelGenerator((xyDataset, series, item) -> label);
+      overlayRenderer.setDefaultItemLabelsVisible(true);
+      overlayRenderer.setDefaultItemLabelPaint(color);
+      overlayRenderer.setDefaultPositiveItemLabelPosition(
+          new org.jfree.chart.labels.ItemLabelPosition(org.jfree.chart.labels.ItemLabelAnchor.OUTSIDE12,
+              TextAnchor.BOTTOM_CENTER));
+    }
+    overlayRenderer.setSeriesVisibleInLegend(0, false);
+    return overlayRenderer;
+  }
+
+  private static @NotNull java.awt.Shape falseNegativeMarkerShape() {
+    final Path2D.Double diamond = new Path2D.Double();
+    diamond.moveTo(0d, -6.5d);
+    diamond.lineTo(6.5d, 0d);
+    diamond.lineTo(0d, 6.5d);
+    diamond.lineTo(-6.5d, 0d);
+    diamond.closePath();
+    return diamond;
+  }
+
+  private @NotNull SelectionQualityFlag determineSelectionQualityFlag(
+      final @NotNull FeatureListRow row) {
+    if (!(row.getFeatureList() instanceof ModularFeatureList modularFeatureList)) {
+      return SelectionQualityFlag.NONE;
+    }
+    if (row.getLipidMatches().isEmpty()) {
+      final @Nullable KendrickFalseNegativeCandidate candidate =
+          new KendrickFalseNegativeDetector(modularFeatureList).detectCandidate(row);
+      return candidate != null ? SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE
+          : SelectionQualityFlag.NONE;
+    }
+    final @Nullable String falsePositiveReason =
+        KendrickFalsePositiveUtils.potentialFalsePositiveReason(modularFeatureList, row, true);
+    return falsePositiveReason != null ? SelectionQualityFlag.POTENTIAL_FALSE_POSITIVE
+        : SelectionQualityFlag.NONE;
+  }
+
+  private static boolean isPotentialFalsePositive(final @NotNull FeatureListRow row) {
+    if (!(row.getFeatureList() instanceof ModularFeatureList modularFeatureList)) {
+      return false;
+    }
+    return KendrickFalsePositiveUtils.potentialFalsePositiveReason(modularFeatureList, row,
+        true) != null;
+  }
+
+  private static @NotNull String formatQualityIndicator(final int falsePositiveCount,
+      final @Nullable SelectionQualityFlag selectionQualityFlag) {
+    final StringBuilder suffixBuilder = new StringBuilder();
+    if (falsePositiveCount > 0) {
+      suffixBuilder.append(" | FP outlined: ").append(falsePositiveCount);
+    }
+    if (selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE) {
+      suffixBuilder.append(" | FN outlined");
+    } else if (selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_POSITIVE
+        && falsePositiveCount == 0) {
+      suffixBuilder.append(" | FP outlined");
+    }
+    return suffixBuilder.toString();
   }
 
   private void updatePaneTitle(final @NotNull String title) {
@@ -740,8 +1061,13 @@ public class EquivalentCarbonNumberPane extends BorderPane {
         || !(plot.getRangeAxis(secondaryAxisIndex) instanceof NumberAxis secondaryAxis)) {
       return;
     }
+    final double primaryLower = primaryAxis.getLowerBound();
+    final double primaryUpper = primaryAxis.getUpperBound();
+    final double secondaryLower = secondaryAxis.getLowerBound();
+    final double secondaryUpper = secondaryAxis.getUpperBound();
     final SelectedPointAxisSynchronizer synchronizer = new SelectedPointAxisSynchronizer(
-        primaryAxis, secondaryAxis, primaryValue, secondaryValue);
+        primaryAxis, secondaryAxis, primaryValue, secondaryValue, primaryLower, primaryUpper,
+        secondaryLower, secondaryUpper);
     synchronizer.install();
     synchronizer.syncSecondaryToPrimary();
   }
@@ -783,6 +1109,14 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     return ConfigService.getDefaultColorPalette().getNeutralColorAWT();
   }
 
+  private static @NotNull Color falsePositiveColor() {
+    return ConfigService.getDefaultColorPalette().getNegativeColorAWT();
+  }
+
+  private static @NotNull Color falseNegativeColor() {
+    return ConfigService.getDefaultColorPalette().getPositiveColorAWT();
+  }
+
   private static void configureNoCrosshair(final @NotNull XYPlot plot) {
     plot.setDomainCrosshairVisible(false);
     plot.setRangeCrosshairVisible(false);
@@ -791,5 +1125,13 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   private void showPlaceholder(final @NotNull String text) {
     placeholder.setText(text);
     setCenter(placeholder);
+  }
+
+  private enum SelectionQualityFlag {
+    NONE, POTENTIAL_FALSE_POSITIVE, POTENTIAL_FALSE_NEGATIVE
+  }
+
+  private record TrendYBounds(double minY, double maxY) {
+
   }
 }

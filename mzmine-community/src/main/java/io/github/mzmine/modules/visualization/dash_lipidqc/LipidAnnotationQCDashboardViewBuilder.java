@@ -28,10 +28,13 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.DataTypeValueChangeListener;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.datamodel.features.types.annotations.PreferredAnnotationType;
+import io.github.mzmine.datamodel.features.types.fx.ColumnID;
+import io.github.mzmine.datamodel.features.types.fx.ColumnType;
 import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.components.factories.FxSplitPanes;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
@@ -50,9 +53,11 @@ import io.github.mzmine.modules.visualization.dash_lipidqc.isotope.IsotopePane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.summary.LipidSummaryPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.matched.MatchedSignalsPane;
+import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import io.github.mzmine.util.FeatureTableFXUtil;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -64,6 +69,7 @@ import javafx.collections.FXCollections;
 import javafx.geometry.Orientation;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TreeTableColumn;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
@@ -83,12 +89,15 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     final EquivalentCarbonNumberPane ecnPane = new EquivalentCarbonNumberPane(model);
     final KendrickPane kendrickPane = new KendrickPane(model, filterState);
     final AnnotationQualityPane qualityPane = new AnnotationQualityPane(model);
+    kendrickPane.setOnReviewModeChanged(qualityPane::setKendrickReviewMode);
     final MatchedSignalsPane matchedSignalsPane = new MatchedSignalsPane();
     final ComboBox<PreferredLipidLevelOption> preferredLevelCombo = new ComboBox<>(
         FXCollections.observableArrayList(PreferredLipidLevelOption.values()));
     preferredLevelCombo.getSelectionModel().select(PreferredLipidLevelOption.MOLECULAR_SPECIES);
     final LipidSummaryPane summaryPane = new LipidSummaryPane(model, filterState,
         preferredLevelCombo);
+    summaryPane.setOnGroupSelectedRowIds(
+        rowIds -> Platform.runLater(() -> selectAndScrollToGroupRow(model, rowIds)));
 
     final BorderPane retentionSection = DashboardLayoutFactory.wrapInSubsection(
         "Retention time analysis", ecnPane);
@@ -185,8 +194,11 @@ public class LipidAnnotationQCDashboardViewBuilder extends
               selectFirstVisibleRow(model);
             }));
     model.rowProperty().addListener((_, _, row) -> {
-      if (row != null && model.getFeatureTableFx().getSelectedRow() != model.getRow()) {
-        FeatureTableFXUtil.selectAndScrollTo(row, model.getFeatureTableFx());
+      if (row != null) {
+        final @Nullable FeatureListRow tableSelectedRow = model.getFeatureTableFx().getSelectedRow();
+        if (tableSelectedRow == null || tableSelectedRow.getID() != row.getID()) {
+          FeatureTableFXUtil.selectAndScrollTo(row, model.getFeatureTableFx());
+        }
       }
       isotopePane.setRow(row);
       if (retentionAnalysisEnabled.get()) {
@@ -212,15 +224,8 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     });
 
     filterState.setOnChange(() -> {
-      final Set<Integer> rowIds = filterState.getBarSelectedRowIds();
-      if (rowIds == null || rowIds.isEmpty()) {
-        model.getFeatureTableController().getFilterModel().setIdFilter("");
-      } else {
-        model.getFeatureTableController().getFilterModel().setIdFilter(
-            rowIds.stream().sorted().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse(""));
-      }
+      applyPreferredAnnotationSortForClassFilter(filterState, model.getFeatureTableFx());
       kendrickPane.applyFilters();
-      Platform.runLater(() -> selectFirstVisibleRow(model));
     });
 
     updateLipidAnnotationListener.run();
@@ -256,10 +261,51 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       model.setRow(null);
       return;
     }
+    final @Nullable FeatureListRow currentRow = model.getRow();
+    if (currentRow != null && filteredItems.stream().map(javafx.scene.control.TreeItem::getValue)
+        .filter(Objects::nonNull).anyMatch(row -> row.getID() == currentRow.getID())) {
+      if (!Objects.equals(table.getSelectedRow(), currentRow)) {
+        FeatureTableFXUtil.selectAndScrollTo(currentRow, table);
+      }
+      return;
+    }
     final FeatureListRow firstRow = filteredItems.get(0).getValue();
-    if (firstRow != null && !Objects.equals(model.getRow(), firstRow)) {
+    if (firstRow != null && (model.getRow() == null || model.getRow().getID() != firstRow.getID())) {
       FeatureTableFXUtil.selectAndScrollTo(firstRow, table);
       model.setRow(firstRow);
+    }
+  }
+
+  private static void selectAndScrollToGroupRow(
+      final @NotNull LipidAnnotationQCDashboardModel model,
+      final @NotNull Set<Integer> rowIds) {
+    if (rowIds.isEmpty()) {
+      return;
+    }
+
+    final @NotNull FeatureTableFX table = model.getFeatureTableFx();
+    final var visibleItems = table.getFilteredRowItems();
+    if (visibleItems != null) {
+      for (final var item : visibleItems) {
+        final @Nullable FeatureListRow row = item.getValue();
+        if (row != null && rowIds.contains(row.getID())) {
+          FeatureTableFXUtil.selectAndScrollTo(row, table);
+          model.setRow(row);
+          return;
+        }
+      }
+    }
+
+    final @Nullable ModularFeatureList featureList = model.getFeatureList();
+    if (featureList == null) {
+      return;
+    }
+    for (final FeatureListRow row : featureList.getRows()) {
+      if (rowIds.contains(row.getID())) {
+        FeatureTableFXUtil.selectAndScrollTo(row, table);
+        model.setRow(row);
+        return;
+      }
     }
   }
 
@@ -310,6 +356,47 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       case MOLECULAR_SPECIES_LEVEL ->
           match.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation;
     };
+  }
+
+  private static void applyPreferredAnnotationSortForClassFilter(
+      final @NotNull DashboardFilterState filterState, final @NotNull FeatureTableFX table) {
+    if (filterState.getBarSelectedRowIds().isEmpty()) {
+      return;
+    }
+
+    final @Nullable TreeTableColumn<ModularFeatureListRow, ?> preferredAnnotationColumn =
+        findPreferredAnnotationColumn(table);
+    if (preferredAnnotationColumn == null || !preferredAnnotationColumn.isSortable()) {
+      return;
+    }
+
+    final @Nullable FeatureListRow selectedRow = table.getSelectedRow();
+    preferredAnnotationColumn.setSortType(TreeTableColumn.SortType.ASCENDING);
+    table.getTable().getSortOrder().setAll(preferredAnnotationColumn);
+    table.getTable().sort();
+
+    if (selectedRow != null) {
+      FeatureTableFXUtil.selectAndScrollTo(selectedRow, table);
+    }
+  }
+
+  private static @Nullable TreeTableColumn<ModularFeatureListRow, ?> findPreferredAnnotationColumn(
+      final @NotNull FeatureTableFX table) {
+    final var preferredAnnotationType = DataTypes.get(PreferredAnnotationType.class);
+    for (final Map.Entry<TreeTableColumn<ModularFeatureListRow, ?>, ColumnID> entry : table.getNewColumnMap()
+        .entrySet()) {
+      final @NotNull ColumnID columnId = entry.getValue();
+      if (columnId.getType() != ColumnType.ROW_TYPE || columnId.getRaw() != null) {
+        continue;
+      }
+      if (!preferredAnnotationType.equals(columnId.getDataType())) {
+        continue;
+      }
+      if (columnId.getSubColIndex() == 0) {
+        return entry.getKey();
+      }
+    }
+    return null;
   }
 
 }

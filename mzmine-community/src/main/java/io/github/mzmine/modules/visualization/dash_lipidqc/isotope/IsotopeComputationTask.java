@@ -23,23 +23,41 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
+package io.github.mzmine.modules.visualization.dash_lipidqc.isotope;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
-import java.util.List;
+import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-record QualityComputationResult(@Nullable String placeholderText,
-                                @Nullable MatchedLipid selectedAnnotation,
-                                @NotNull InterferenceMetrics interferenceMetrics,
-                                @NotNull List<FeatureListRow> duplicateRows,
-                                @NotNull List<QualityCardData> qualityCards,
-                                @Nullable String falsePositiveReason,
-                                @Nullable KendrickFalseNegativeCandidate falseNegativeCandidate,
-                                @Nullable QualityCardData falseNegativeQualityCard) {
+final class IsotopeComputationTask extends FxUpdateTask<IsotopePane> {
 
+  private final @Nullable FeatureListRow row;
+  private @NotNull IsotopeComputationResult result = new IsotopeComputationResult(
+      "Select a row with an isotope pattern.", null, null);
+
+  IsotopeComputationTask(final @NotNull IsotopePane model, final @Nullable FeatureListRow row) {
+    super("Compute isotope pane", model);
+    this.row = row;
+  }
+
+  @Override
+  protected void process() {
+    result = IsotopePane.computeResult(row);
+  }
+
+  @Override
+  protected void updateGuiModel() {
+    model.applyComputationResult(result);
+  }
+
+  @Override
+  public @NotNull String getTaskDescription() {
+    return "Calculating isotope pane datasets";
+  }
+
+  @Override
+  public double getFinishedPercentage() {
+    return 0d;
+  }
 }
