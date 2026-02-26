@@ -23,7 +23,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.scoring;
+package io.github.mzmine.modules.dataprocessing.id_lipidid.scoring;
 
 import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
@@ -54,11 +54,12 @@ import org.jetbrains.annotations.Nullable;
  * Default component weights:
  * <ul>
  *   <li>MS1 mass accuracy: {@code 5}</li>
- *   <li>Lipid ion vs ion identity: {@code 1}</li>
+ *   <li>Lipid ion vs ion identity: dynamic,
+ *   {@code 50} if adducts mismatch, otherwise {@code 10}</li>
  *   <li>Isotope pattern: {@code 2}</li>
  *   <li>Interference: {@code 3}</li>
  *   <li>MS2 explained intensity: {@code 10}</li>
- *   <li>Elution order: {@code 7}</li>
+ *   <li>Elution order: dynamic, {@code 30} if a trend model is available, otherwise {@code 10}</li>
  * </ul>
  * <p>
  * Always included:
@@ -87,12 +88,15 @@ public final class LipidQcScoringUtils {
   private static final double RT_DELTA_NO_PENALTY_NORMALIZED = 0.006d;
   private static final double RT_DELTA_FULL_PENALTY_NORMALIZED = 0.07d;
   private static final double RT_DELTA_PENALTY_EXPONENT = 1.35d;
-  private static final double WEIGHT_MS1 = 5d;
-  private static final double WEIGHT_ADDUCT = 1d;
-  private static final double WEIGHT_ISOTOPE = 2d;
-  private static final double WEIGHT_INTERFERENCE = 3d;
-  private static final double WEIGHT_MS2 = 10d;
-  private static final double WEIGHT_ELUTION_ORDER = 7d;
+  private static final double WEIGHT_MS1 = 40d;
+  private static final double WEIGHT_ADDUCT_MATCH = 10d;
+  private static final double WEIGHT_ADDUCT_NO_ION_IDENTITY = 10d;
+  private static final double WEIGHT_ADDUCT_MISMATCH = 50d;
+  private static final double WEIGHT_ISOTOPE = 20d;
+  private static final double WEIGHT_INTERFERENCE = 5d;
+  private static final double WEIGHT_MS2 = 100d;
+  private static final double WEIGHT_ELUTION_ORDER_NO_TREND = 30d;
+  private static final double WEIGHT_ELUTION_ORDER_WITH_TREND = 10d;
   private static final int HILIC_MIN_CLASS_ROWS = 4;
   private static final double HILIC_WINDOW_SUPPORT_FRACTION = 0.6d;
   private static final double HILIC_WINDOW_EDGE_TOLERANCE_MINUTES = 0.02d;
@@ -510,16 +514,19 @@ public final class LipidQcScoringUtils {
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
       final boolean includeMs2Score, final boolean includeElutionOrderScore,
       final @Nullable LipidAnalysisType analysisType) {
+    final double elutionOrderWeight;
     final double elutionOrderScore;
     if (includeElutionOrderScore) {
       final ElutionOrderMetrics elutionMetrics = computeElutionOrderMetrics(featureList, row, match,
           analysisType);
       elutionOrderScore = elutionMetrics.combinedScore();
+      elutionOrderWeight = computeElutionOrderWeight(elutionMetrics);
     } else {
       elutionOrderScore = 0d;
+      elutionOrderWeight = WEIGHT_ELUTION_ORDER_WITH_TREND;
     }
-    return computeOverallQualityScore(row, match, elutionOrderScore, includeMs2Score,
-        includeElutionOrderScore);
+    return computeOverallQualityScore(row, match, elutionOrderScore, elutionOrderWeight,
+        includeMs2Score, includeElutionOrderScore);
   }
 
   /**
@@ -541,34 +548,89 @@ public final class LipidQcScoringUtils {
       final double adductScore, final double isotopeScore, final double interferenceScore,
       final double elutionOrderScore, final boolean includeMs2Score,
       final boolean includeElutionOrderScore) {
+    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
+        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
+        WEIGHT_ADDUCT_MATCH, WEIGHT_ELUTION_ORDER_WITH_TREND);
+  }
+
+  /**
+   * Computes the weighted overall quality score from normalized component scores.
+   * <p>
+   * All provided component scores are clamped to {@code [0, 1]} before weighting.
+   *
+   * @param ms1Score MS1 accuracy score
+   * @param ms2Score MS2 explained-intensity score
+   * @param adductScore adduct agreement score
+   * @param isotopeScore isotope similarity score
+   * @param interferenceScore interference score
+   * @param elutionOrderScore elution-order score
+   * @param includeMs2Score true to include MS2 in the weighted mean
+   * @param includeElutionOrderScore true to include elution order in the weighted mean
+   * @param adductWeight adduct component weight applied for this evaluation
+   * @return weighted mean score in {@code [0, 1]}
+   */
+  public static double computeWeightedQualityScore(final double ms1Score, final double ms2Score,
+      final double adductScore, final double isotopeScore, final double interferenceScore,
+      final double elutionOrderScore, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore, final double adductWeight) {
+    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
+        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
+        adductWeight, WEIGHT_ELUTION_ORDER_WITH_TREND);
+  }
+
+  /**
+   * Computes the weighted overall quality score from normalized component scores.
+   * <p>
+   * All provided component scores are clamped to {@code [0, 1]} before weighting.
+   *
+   * @param ms1Score MS1 accuracy score
+   * @param ms2Score MS2 explained-intensity score
+   * @param adductScore adduct agreement score
+   * @param isotopeScore isotope similarity score
+   * @param interferenceScore interference score
+   * @param elutionOrderScore elution-order score
+   * @param includeMs2Score true to include MS2 in the weighted mean
+   * @param includeElutionOrderScore true to include elution order in the weighted mean
+   * @param adductWeight adduct component weight applied for this evaluation
+   * @param elutionOrderWeight elution-order component weight applied for this evaluation
+   * @return weighted mean score in {@code [0, 1]}
+   */
+  public static double computeWeightedQualityScore(final double ms1Score, final double ms2Score,
+      final double adductScore, final double isotopeScore, final double interferenceScore,
+      final double elutionOrderScore, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore, final double adductWeight,
+      final double elutionOrderWeight) {
     double weightedSum = WEIGHT_MS1 * clampToUnit(ms1Score)
-        + WEIGHT_ADDUCT * clampToUnit(adductScore)
+        + Math.max(0d, adductWeight) * clampToUnit(adductScore)
         + WEIGHT_ISOTOPE * clampToUnit(isotopeScore)
         + WEIGHT_INTERFERENCE * clampToUnit(interferenceScore);
-    double weightSum = WEIGHT_MS1 + WEIGHT_ADDUCT + WEIGHT_ISOTOPE + WEIGHT_INTERFERENCE;
+    double weightSum = WEIGHT_MS1 + Math.max(0d, adductWeight) + WEIGHT_ISOTOPE + WEIGHT_INTERFERENCE;
 
     if (includeMs2Score) {
       weightedSum += WEIGHT_MS2 * clampToUnit(ms2Score);
       weightSum += WEIGHT_MS2;
     }
     if (includeElutionOrderScore) {
-      weightedSum += WEIGHT_ELUTION_ORDER * clampToUnit(elutionOrderScore);
-      weightSum += WEIGHT_ELUTION_ORDER;
+      weightedSum += Math.max(0d, elutionOrderWeight) * clampToUnit(elutionOrderScore);
+      weightSum += Math.max(0d, elutionOrderWeight);
     }
     return weightSum <= 0d ? 0d : clampToUnit(weightedSum / weightSum);
   }
 
   private static double computeOverallQualityScore(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match, final double elutionOrderScore,
+      final double elutionOrderWeight,
       final boolean includeMs2Score, final boolean includeElutionOrderScore) {
     final double ms1Score = computeMs1Score(row, match);
     final double ms2Score = computeMs2Score(match);
     final double adductScore = computeAdductScore(row, match);
+    final double adductWeight = computeAdductWeight(row, match);
     final double isotopeScore = computeIsotopeScore(row, match);
     final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
     final double interferenceScore = computeInterferenceScore(interferenceMetrics.totalPenaltyCount());
     return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
-        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore);
+        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
+        adductWeight, elutionOrderWeight);
   }
 
   private static double computeMs1Score(final @NotNull FeatureListRow row,
@@ -591,12 +653,45 @@ public final class LipidQcScoringUtils {
 
   private static double computeAdductScore(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
-    if (row.getBestIonIdentity() == null) {
+    if (row.getBestIonIdentity() == null || match.getIonizationType() == null) {
       return 0d;
     }
     final String featureAdduct = normalizeAdduct(row.getBestIonIdentity().getAdduct());
     final String lipidAdduct = normalizeAdduct(match.getIonizationType().getAdductName());
     return featureAdduct.equals(lipidAdduct) ? 1d : 0d;
+  }
+
+  /**
+   * Dynamic adduct weight used by the overall quality score.
+   * <ul>
+   *   <li>If ion identity is missing: {@code 10}</li>
+   *   <li>If adducts mismatch: {@code 50}</li>
+   *   <li>If adducts match: {@code 10}</li>
+   * </ul>
+   */
+  public static double computeAdductWeight(final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match) {
+    if (row.getBestIonIdentity() == null || match.getIonizationType() == null) {
+      return WEIGHT_ADDUCT_NO_ION_IDENTITY;
+    }
+    final String featureAdduct = normalizeAdduct(row.getBestIonIdentity().getAdduct());
+    final String lipidAdduct = normalizeAdduct(match.getIonizationType().getAdductName());
+    return featureAdduct.equals(lipidAdduct) ? WEIGHT_ADDUCT_MATCH : WEIGHT_ADDUCT_MISMATCH;
+  }
+
+  /**
+   * Dynamic elution-order weight used by the overall quality score.
+   * <ul>
+   *   <li>If metrics are missing or no trend model is available: {@code 10}</li>
+   *   <li>If at least one trend model is available: {@code 30}</li>
+   * </ul>
+   */
+  public static double computeElutionOrderWeight(final @Nullable ElutionOrderMetrics metrics) {
+    if (metrics == null) {
+      return WEIGHT_ELUTION_ORDER_NO_TREND;
+    }
+    final boolean trendAvailable = metrics.carbonsTrend().available() || metrics.dbeTrend().available();
+    return trendAvailable ? WEIGHT_ELUTION_ORDER_WITH_TREND : WEIGHT_ELUTION_ORDER_NO_TREND;
   }
 
   private static double computeIsotopeScore(final @NotNull FeatureListRow row,
