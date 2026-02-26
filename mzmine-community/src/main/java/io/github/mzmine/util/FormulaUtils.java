@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -40,10 +40,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -662,6 +664,31 @@ public class FormulaUtils {
     final Integer subtractCharge = Objects.requireNonNullElse(add.getCharge(), 0);
     result.setCharge(resultCharge + subtractCharge);
     return result;
+  }
+
+  /**
+   * Checks if {@code sub} can be subtracted from {@code result} without creating negative element
+   * counts.
+   */
+  public static boolean canSubtractFormula(@Nullable final IMolecularFormula result,
+      @Nullable final IMolecularFormula sub) {
+    if (result == null || sub == null) {
+      return false;
+    }
+
+    final Set<String> handledSymbols = new HashSet<>();
+    for (final IIsotope isotope : sub.isotopes()) {
+      final String symbol = isotope.getSymbol();
+      if (!handledSymbols.add(symbol)) {
+        continue;
+      }
+      final int required = countElement(sub, symbol);
+      final int available = countElement(result, symbol);
+      if (available < required) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
