@@ -36,17 +36,26 @@ final class SelectedPointAxisSynchronizer {
   private final @NotNull NumberAxis secondaryAxis;
   private final double primaryValue;
   private final double secondaryValue;
+  private final double primaryMinBound;
+  private final double primaryMaxBound;
+  private final double secondaryMinBound;
+  private final double secondaryMaxBound;
   private final @NotNull AxisChangeListener primaryListener;
   private final @NotNull AxisChangeListener secondaryListener;
   private boolean updating;
 
   SelectedPointAxisSynchronizer(final @NotNull NumberAxis primaryAxis,
       final @NotNull NumberAxis secondaryAxis, final double primaryValue,
-      final double secondaryValue) {
+      final double secondaryValue, final double primaryMinBound, final double primaryMaxBound,
+      final double secondaryMinBound, final double secondaryMaxBound) {
     this.primaryAxis = primaryAxis;
     this.secondaryAxis = secondaryAxis;
     this.primaryValue = primaryValue;
     this.secondaryValue = secondaryValue;
+    this.primaryMinBound = primaryMinBound;
+    this.primaryMaxBound = primaryMaxBound;
+    this.secondaryMinBound = secondaryMinBound;
+    this.secondaryMaxBound = secondaryMaxBound;
     primaryListener = this::onPrimaryAxisChanged;
     secondaryListener = this::onSecondaryAxisChanged;
   }
@@ -57,7 +66,8 @@ final class SelectedPointAxisSynchronizer {
   }
 
   void syncSecondaryToPrimary() {
-    syncAxis(primaryAxis, secondaryAxis, primaryValue, secondaryValue);
+    syncAxis(primaryAxis, secondaryAxis, primaryValue, secondaryValue, secondaryMinBound,
+        secondaryMaxBound);
   }
 
   private void onPrimaryAxisChanged(final @NotNull AxisChangeEvent event) {
@@ -69,12 +79,13 @@ final class SelectedPointAxisSynchronizer {
   }
 
   private void syncPrimaryToSecondary() {
-    syncAxis(secondaryAxis, primaryAxis, secondaryValue, primaryValue);
+    syncAxis(secondaryAxis, primaryAxis, secondaryValue, primaryValue, primaryMinBound,
+        primaryMaxBound);
   }
 
   private void syncAxis(final @NotNull NumberAxis sourceAxis,
       final @NotNull NumberAxis targetAxis, final double sourceValue,
-      final double targetValue) {
+      final double targetValue, final double targetMinBound, final double targetMaxBound) {
     if (updating || !Double.isFinite(sourceValue) || !Double.isFinite(targetValue)) {
       return;
     }
@@ -92,8 +103,22 @@ final class SelectedPointAxisSynchronizer {
       return;
     }
     final double clampedPosition = EquivalentCarbonNumberPane.clampToUnit(normalizedPosition);
-    final double targetLower = targetValue - clampedPosition * targetSpan;
-    final double targetUpper = targetLower + targetSpan;
+    double adaptedSpan = targetSpan;
+    if (Double.isFinite(targetMinBound) && Double.isFinite(targetMaxBound)
+        && targetMaxBound >= targetMinBound) {
+      if (clampedPosition > 0d) {
+        adaptedSpan = Math.max(adaptedSpan, (targetValue - targetMinBound) / clampedPosition);
+      }
+      if (clampedPosition < 1d) {
+        adaptedSpan = Math.max(adaptedSpan,
+            (targetMaxBound - targetValue) / (1d - clampedPosition));
+      }
+    }
+    if (!Double.isFinite(adaptedSpan) || adaptedSpan <= 0d) {
+      adaptedSpan = targetSpan;
+    }
+    final double targetLower = targetValue - clampedPosition * adaptedSpan;
+    final double targetUpper = targetLower + adaptedSpan;
     updating = true;
     try {
       targetAxis.setRange(targetLower, targetUpper);

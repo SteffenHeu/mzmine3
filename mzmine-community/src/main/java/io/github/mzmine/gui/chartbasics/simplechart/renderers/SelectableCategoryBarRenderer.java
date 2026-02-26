@@ -27,6 +27,7 @@ package io.github.mzmine.gui.chartbasics.simplechart.renderers;
 
 import io.github.mzmine.main.ConfigService;
 import java.awt.Color;
+import java.util.Map;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -39,6 +40,7 @@ public class SelectableCategoryBarRenderer extends BarRenderer {
       .getPositiveColorAWT();
   private final @NotNull Color defaultColor = ConfigService.getDefaultColorPalette()
       .getNeutralColorAWT();
+  private @NotNull Map<String, Color> selectedCategoryColors = Map.of();
   private @Nullable String selectedCategoryKey;
 
   public SelectableCategoryBarRenderer() {
@@ -50,11 +52,21 @@ public class SelectableCategoryBarRenderer extends BarRenderer {
     this.selectedCategoryKey = selectedCategoryKey;
   }
 
+  public void setSelectedCategoryColors(final @NotNull Map<String, Color> selectedCategoryColors) {
+    this.selectedCategoryColors = selectedCategoryColors;
+  }
+
   @Override
   public @NotNull java.awt.Paint getItemPaint(final int row, final int column) {
     final var plot = getPlot();
     if (plot != null && plot.getDataset() != null) {
       final String key = Objects.toString(plot.getDataset().getColumnKey(column), null);
+      if (key != null) {
+        final Color selectedCategoryColor = selectedCategoryColors.get(key);
+        if (selectedCategoryColor != null) {
+          return selectedCategoryColor;
+        }
+      }
       if (selectedCategoryKey != null && selectedCategoryKey.equals(key)) {
         return selectedColor;
       }
