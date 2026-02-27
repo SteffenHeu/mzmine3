@@ -33,6 +33,7 @@ import io.github.mzmine.gui.preferences.Themes;
 import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.util.spectraldb.entry.DBEntryField;
+import io.github.mzmine.util.spectraldb.entry.SpectralDBEntry;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibrary;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibraryEntry;
 import io.github.mzmine.util.spectraldb.parser.UnsupportedFormatException;
@@ -40,14 +41,19 @@ import java.io.File;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumMap;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
@@ -68,10 +74,21 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
 
   private final @NotNull Stage owner;
   private final @NotNull SpectralLibraryFileService fileService = new SpectralLibraryFileService();
+  private final @NotNull ExecutorService ioExecutor = Executors.newSingleThreadExecutor(
+      runnable -> {
+        final Thread thread = new Thread(runnable, "spectral-library-editor-io");
+        thread.setDaemon(true);
+        return thread;
+      });
+  private final @NotNull SpectralLibraryEntryListController entryListController;
   private final @NotNull SpectralLibraryEditorViewBuilder viewBuilder;
 
-  private @Nullable SpectralLibrary currentLibrary;
   private @Nullable File currentFile;
+  private long loadRequestCounter;
+  /**
+   * Tracks whether a library has been loaded into the editor model.
+   */
+  private boolean libraryLoaded;
   /**
    * Tracks whether the currently loaded library has unsaved edits.
    */
@@ -89,8 +106,11 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
   public SpectralLibraryEditorController(@NotNull final Stage owner) {
     super(new SpectralLibraryEditorModel());
     this.owner = owner;
-    viewBuilder = new SpectralLibraryEditorViewBuilder(model, this);
+    entryListController = new SpectralLibraryEntryListController(model.getEntries());
+    viewBuilder = new SpectralLibraryEditorViewBuilder(model, this, entryListController);
     owner.titleProperty().bind(model.windowTitleProperty());
+
+    model.selectedEntryProperty().bind(entryListController.primaryEntryProperty());
 
     model.selectedEntryProperty().addListener((_, _, selectedEntry) -> {
       updateMetadataForSelection(selectedEntry);
@@ -127,7 +147,7 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
       return;
     }
 
-    loadLibrary(selectedFile);
+    loadLibraryAsync(selectedFile);
   }
 
   /**
@@ -138,10 +158,33 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
   }
 
   /**
+   * Removes all currently selected or checked entries from the loaded library.
+   */
+  public void onRemoveSelectedOrCheckedRequested() {
+    if (!libraryLoaded) {
+      setStatus("No library loaded.");
+      return;
+    }
+
+    final List<SpectralLibraryEntry> entriesToRemove = entryListController.getSelectedOrCheckedEntries();
+    if (entriesToRemove.isEmpty()) {
+      setStatus("No selected or checked entries to remove.");
+      return;
+    }
+
+    final int removedCount = entriesToRemove.size();
+    model.getEntries().removeAll(entriesToRemove);
+    entryListController.clearSelectionState();
+    entryListController.ensurePrimaryEntry();
+    markDirty();
+    setStatus("Removed " + removedCount + " entries.");
+  }
+
+  /**
    * Handles the Save As action and writes the current library to a new file.
    */
   public void onSaveAsRequested() {
-    if (currentLibrary == null) {
+    if (!libraryLoaded) {
       setStatus("No library loaded.");
       return;
     }
@@ -220,33 +263,74 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
   }
 
   /**
-   * Loads a spectral library file into the model.
+   * Loads a spectral library file on a background thread.
    *
    * @param file input library file.
    */
-  private void loadLibrary(@NotNull final File file) {
+  private void loadLibraryAsync(@NotNull final File file) {
+    final long requestId = ++loadRequestCounter;
+    setStatus("Loading " + file.getName() + "...");
     try {
-      final SpectralLibrary loadedLibrary = fileService.loadLibrary(file);
-      currentLibrary = loadedLibrary;
-      currentFile = file;
-      dirty = false;
-
-      model.getEntries().setAll(loadedLibrary.getEntries());
-      if (loadedLibrary.getEntries().isEmpty()) {
-        model.setSelectedEntry(null);
-      } else {
-        model.setSelectedEntry(loadedLibrary.getEntries().getFirst());
-      }
-
-      setStatus("Loaded " + file.getName() + " with " + loadedLibrary.getEntries().size() + " entries.");
-      updateWindowState();
-    } catch (final UnsupportedFormatException e) {
-      logger.log(Level.WARNING, "Unsupported library format " + file.getAbsolutePath(), e);
-      setStatus("Unsupported spectral library format: " + file.getName());
-    } catch (final Exception e) {
-      logger.log(Level.WARNING, "Cannot load spectral library " + file.getAbsolutePath(), e);
-      setStatus("Failed to load file: " + e.getMessage());
+      ioExecutor.submit(() -> {
+        try {
+          final SpectralLibrary loadedLibrary = fileService.loadLibrary(file);
+          onGuiThread(() -> {
+            if (requestId != loadRequestCounter) {
+              return;
+            }
+            applyLoadedLibrary(file, loadedLibrary);
+          });
+        } catch (final UnsupportedFormatException e) {
+          logger.log(Level.WARNING, "Unsupported library format " + file.getAbsolutePath(), e);
+          onGuiThread(() -> {
+            if (requestId != loadRequestCounter) {
+              return;
+            }
+            setStatus("Unsupported spectral library format: " + file.getName());
+          });
+        } catch (final Exception e) {
+          logger.log(Level.WARNING, "Cannot load spectral library " + file.getAbsolutePath(), e);
+          onGuiThread(() -> {
+            if (requestId != loadRequestCounter) {
+              return;
+            }
+            setStatus("Failed to load file: " + e.getMessage());
+          });
+        }
+      });
+    } catch (final RejectedExecutionException e) {
+      logger.log(Level.WARNING, "Cannot schedule library loading for " + file.getAbsolutePath(), e);
+      setStatus("Failed to load file: background loader is not available.");
     }
+  }
+
+  /**
+   * Stops controller resources and background tasks.
+   */
+  @Override
+  public void close() {
+    super.close();
+    ioExecutor.shutdownNow();
+  }
+
+  /**
+   * Applies a loaded library to the model on the JavaFX thread.
+   *
+   * @param file source file used for loading.
+   * @param loadedLibrary loaded spectral library.
+   */
+  private void applyLoadedLibrary(@NotNull final File file,
+      @NotNull final SpectralLibrary loadedLibrary) {
+    currentFile = file;
+    libraryLoaded = true;
+    dirty = false;
+
+    model.getEntries().setAll(copyEntries(loadedLibrary.getEntries()));
+    entryListController.clearSelectionState();
+    entryListController.ensurePrimaryEntry();
+
+    setStatus("Loaded " + file.getName() + " with " + loadedLibrary.getEntries().size() + " entries.");
+    updateWindowState();
   }
 
   /**
@@ -256,13 +340,14 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * @param format output serialization format.
    */
   private void saveLibrary(@NotNull final File file, @NotNull final SpectralLibraryFileFormat format) {
-    if (currentLibrary == null) {
+    if (!libraryLoaded) {
       setStatus("No library loaded.");
       return;
     }
 
     try {
-      fileService.saveLibrary(currentLibrary, file, format);
+      final SpectralLibrary exportLibrary = createLibraryFromModel(file);
+      fileService.saveLibrary(exportLibrary, file, format);
       currentFile = file;
       dirty = false;
       setStatus("Saved " + file.getName() + " in " + format.name() + " format.");
@@ -271,6 +356,49 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
       logger.log(Level.WARNING, "Cannot save library to " + file.getAbsolutePath(), e);
       setStatus("Failed to save file: " + e.getMessage());
     }
+  }
+
+  /**
+   * Creates a detached export library from the current editor model state.
+   *
+   * @param targetFile file the export library is associated with.
+   * @return new library containing copies of all model entries.
+   */
+  private @NotNull SpectralLibrary createLibraryFromModel(@NotNull final File targetFile) {
+    final SpectralLibrary exportLibrary = new SpectralLibrary(null, targetFile);
+    exportLibrary.addEntries(copyEntries(model.getEntries()));
+    exportLibrary.trim();
+    return exportLibrary;
+  }
+
+  /**
+   * Creates detached copies for all entries in a list.
+   *
+   * @param entries source entries.
+   * @return copied entries detached from their source library.
+   */
+  private @NotNull List<SpectralLibraryEntry> copyEntries(
+      @NotNull final List<SpectralLibraryEntry> entries) {
+    return entries.stream().map(this::copyEntry).toList();
+  }
+
+  /**
+   * Creates a detached copy of a single entry.
+   *
+   * @param entry source entry.
+   * @return copied entry with copied metadata and data points.
+   */
+  private @NotNull SpectralLibraryEntry copyEntry(@NotNull final SpectralLibraryEntry entry) {
+    if (entry instanceof SpectralDBEntry dbEntry) {
+      return new SpectralDBEntry(dbEntry);
+    }
+
+    final int size = entry.getNumberOfDataPoints();
+    final double[] mzValues = entry.getMzValues(new double[size]);
+    final double[] intensityValues = entry.getIntensityValues(new double[size]);
+    final Map<DBEntryField, Object> fields = new EnumMap<>(DBEntryField.class);
+    fields.putAll(entry.getFields());
+    return new SpectralDBEntry(null, mzValues, intensityValues, fields, null);
   }
 
   /**
@@ -377,7 +505,7 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    */
   private void refreshEntryListIfNeeded(@NotNull final DBEntryField field) {
     if (LIST_LABEL_FIELDS.contains(field)) {
-      model.requestListRefresh();
+      entryListController.requestListRefresh();
     }
   }
 
@@ -388,7 +516,6 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    */
   private void updateStructureForSelection(@Nullable final SpectralLibraryEntry entry) {
     if (entry == null) {
-      model.setStructureVisible(false);
       model.setStructureMolecule(null);
       return;
     }
@@ -396,7 +523,6 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
     final String smiles = entry.getAsString(DBEntryField.SMILES).orElse(null);
     final String inchi = entry.getAsString(DBEntryField.INCHI).orElse(null);
     final boolean hasStructureInput = isNonBlank(smiles) || isNonBlank(inchi);
-    model.setStructureVisible(hasStructureInput);
     if (!hasStructureInput) {
       model.setStructureMolecule(null);
       return;
@@ -511,7 +637,7 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
 
     model.setCurrentFileText(currentFile == null ? "No file loaded"
         : currentFile.getName() + " (" + model.getEntries().size() + " entries)");
-    model.setSaveEnabled(currentLibrary != null);
+    model.setSaveEnabled(libraryLoaded);
   }
 
   /**
@@ -523,4 +649,10 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
     model.setStatusText(message);
     logger.info(message);
   }
+
+  @Override
+  public void onGuiThread(Runnable task) {
+    Platform.runLater(task);
+  }
+
 }

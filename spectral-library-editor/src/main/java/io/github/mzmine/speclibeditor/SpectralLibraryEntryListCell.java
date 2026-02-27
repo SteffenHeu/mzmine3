@@ -29,12 +29,41 @@ import io.github.mzmine.util.spectraldb.entry.DBEntryField;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibraryEntry;
 import java.util.Locale;
 import javafx.scene.control.ListCell;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Renders a spectral library entry row in the entry list view.
  */
 public final class SpectralLibraryEntryListCell extends ListCell<SpectralLibraryEntry> {
+
+  /**
+   * Creates a compact display label for an entry without an index.
+   *
+   * @param item entry to format.
+   * @return formatted entry label.
+   */
+  public static @NotNull String toDisplayText(@NotNull final SpectralLibraryEntry item) {
+    return toDisplayText(item, -1);
+  }
+
+  /**
+   * Creates a compact display label for an entry with an optional index prefix.
+   *
+   * @param item entry to format.
+   * @param index zero-based index or a negative value to omit the index.
+   * @return formatted entry label.
+   */
+  public static @NotNull String toDisplayText(@NotNull final SpectralLibraryEntry item,
+      final int index) {
+    final String name = item.getAsString(DBEntryField.NAME)
+        .or(() -> item.getAsString(DBEntryField.ENTRY_ID))
+        .orElse(index >= 0 ? "Entry " + (index + 1) : "Entry");
+    final String precursor = item.getAsDouble(DBEntryField.PRECURSOR_MZ)
+        .map(value -> String.format(Locale.US, "%.5f", value)).orElse("n/a");
+    final String prefix = index >= 0 ? (index + 1) + " | " : "";
+    return prefix + name + " | m/z " + precursor;
+  }
 
   /**
    * Updates the cell text with a compact label for the given entry.
@@ -49,12 +78,6 @@ public final class SpectralLibraryEntryListCell extends ListCell<SpectralLibrary
       setText(null);
       return;
     }
-
-    final String name = item.getAsString(DBEntryField.NAME)
-        .or(() -> item.getAsString(DBEntryField.ENTRY_ID))
-        .orElse("Entry " + (getIndex() + 1));
-    final String precursor = item.getAsDouble(DBEntryField.PRECURSOR_MZ)
-        .map(value -> String.format(Locale.US, "%.5f", value)).orElse("n/a");
-    setText((getIndex() + 1) + " | " + name + " | m/z " + precursor);
+    setText(toDisplayText(item, getIndex()));
   }
 }

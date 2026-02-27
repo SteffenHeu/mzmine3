@@ -47,6 +47,7 @@ public final class SpectralLibraryEditorApplication extends Application {
     final SpectralLibraryEditorController controller = new SpectralLibraryEditorController(stage);
     final Scene scene = new Scene(controller.buildView(), 1750, 980);
     stage.setScene(scene);
+    stage.setOnHidden(_ -> controller.close());
     stage.show();
   }
 }

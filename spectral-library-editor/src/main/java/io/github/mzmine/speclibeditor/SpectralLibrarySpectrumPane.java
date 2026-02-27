@@ -34,6 +34,7 @@ import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYBarRender
 import io.github.mzmine.util.spectraldb.entry.DBEntryField;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibraryEntry;
 import java.awt.Color;
+import java.text.DecimalFormat;
 import java.util.List;
 import javafx.scene.Node;
 import org.jetbrains.annotations.NotNull;
@@ -57,6 +58,7 @@ public final class SpectralLibrarySpectrumPane {
     chart.setLegendItemsVisible(false);
     chart.setItemLabelsVisible(false);
     chart.setStickyZeroRangeAxis(true);
+    chart.setDomainAxisNumberFormatOverride(new DecimalFormat("0.0000"));
     chart.setMinWidth(420);
     chart.setMinHeight(320);
   }

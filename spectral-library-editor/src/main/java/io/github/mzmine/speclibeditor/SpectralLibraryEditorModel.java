@@ -33,10 +33,8 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.LongProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -60,18 +58,11 @@ public final class SpectralLibraryEditorModel {
   private final @NotNull StringProperty statusText = new SimpleStringProperty(
       "Open a spectral library to start editing.");
   private final @NotNull StringProperty currentFileText = new SimpleStringProperty("No file loaded");
-  private final @NotNull StringProperty windowTitle = new SimpleStringProperty("MZmine Spectral Library Editor");
+  private final @NotNull StringProperty windowTitle = new SimpleStringProperty("mzmine Spectral Library Editor");
   private final @NotNull BooleanProperty saveEnabled = new SimpleBooleanProperty(false);
   private final @NotNull BooleanProperty metadataEnabled = new SimpleBooleanProperty(false);
-  private final @NotNull ObjectProperty<@NotNull DBEntryField> filterField =
-      new SimpleObjectProperty<>(DBEntryField.NAME);
-  private final @NotNull StringProperty filterFieldText = new SimpleStringProperty(
-      DBEntryField.NAME.toString());
-  private final @NotNull StringProperty filterText = new SimpleStringProperty("");
-  private final @NotNull BooleanProperty structureVisible = new SimpleBooleanProperty(false);
   private final @NotNull ObjectProperty<@Nullable MolecularStructure> structureMolecule =
       new SimpleObjectProperty<>();
-  private final @NotNull LongProperty listRefreshVersion = new SimpleLongProperty(0);
 
   private final @NotNull Map<DBEntryField, StringProperty> metadataText = new EnumMap<>(DBEntryField.class);
   private final @NotNull Map<DBEntryField, BooleanProperty> metadataError = new EnumMap<>(DBEntryField.class);
@@ -222,114 +213,6 @@ public final class SpectralLibraryEditorModel {
   }
 
   /**
-   * Returns the selected metadata field used for list filtering.
-   *
-   * @return filter field selection.
-   */
-  public @NotNull DBEntryField getFilterField() {
-    return filterField.get();
-  }
-
-  /**
-   * Returns the selected metadata field property used for list filtering.
-   *
-   * @return filter field property.
-   */
-  public @NotNull ObjectProperty<@NotNull DBEntryField> filterFieldProperty() {
-    return filterField;
-  }
-
-  /**
-   * Updates the selected metadata field used for list filtering.
-   *
-   * @param filterField filter field to apply.
-   */
-  public void setFilterField(@NotNull final DBEntryField filterField) {
-    this.filterField.set(filterField);
-  }
-
-  /**
-   * Returns the current filter field label text.
-   *
-   * @return filter field label text.
-   */
-  public @NotNull String getFilterFieldText() {
-    return filterFieldText.get();
-  }
-
-  /**
-   * Returns the filter field label text property.
-   *
-   * @return filter field label property.
-   */
-  public @NotNull StringProperty filterFieldTextProperty() {
-    return filterFieldText;
-  }
-
-  /**
-   * Updates the filter field label text.
-   *
-   * @param filterFieldText filter field label text entered by the user.
-   */
-  public void setFilterFieldText(@NotNull final String filterFieldText) {
-    this.filterFieldText.set(filterFieldText);
-  }
-
-  /**
-   * Returns the current text query used for list filtering.
-   *
-   * @return filter text query.
-   */
-  public @NotNull String getFilterText() {
-    return filterText.get();
-  }
-
-  /**
-   * Returns the text query property used for list filtering.
-   *
-   * @return filter text property.
-   */
-  public @NotNull StringProperty filterTextProperty() {
-    return filterText;
-  }
-
-  /**
-   * Updates the text query used for list filtering.
-   *
-   * @param filterText new filter query text.
-   */
-  public void setFilterText(@NotNull final String filterText) {
-    this.filterText.set(filterText);
-  }
-
-  /**
-   * Returns whether the structure preview should be shown.
-   *
-   * @return {@code true} if the structure preview should be visible.
-   */
-  public boolean isStructureVisible() {
-    return structureVisible.get();
-  }
-
-  /**
-   * Returns the structure preview visibility property.
-   *
-   * @return visibility property for the structure preview pane.
-   */
-  public @NotNull BooleanProperty structureVisibleProperty() {
-    return structureVisible;
-  }
-
-  /**
-   * Sets whether the structure preview should be shown.
-   *
-   * @param structureVisible {@code true} to show the structure preview.
-   */
-  public void setStructureVisible(final boolean structureVisible) {
-    this.structureVisible.set(structureVisible);
-  }
-
-  /**
    * Returns the currently displayed molecular structure.
    *
    * @return structure molecule or {@code null} if unavailable.
@@ -354,22 +237,6 @@ public final class SpectralLibraryEditorModel {
    */
   public void setStructureMolecule(@Nullable final MolecularStructure structureMolecule) {
     this.structureMolecule.set(structureMolecule);
-  }
-
-  /**
-   * Returns a version counter used to trigger list refreshes.
-   *
-   * @return list refresh version property.
-   */
-  public @NotNull LongProperty listRefreshVersionProperty() {
-    return listRefreshVersion;
-  }
-
-  /**
-   * Increments the list refresh version to request a UI refresh.
-   */
-  public void requestListRefresh() {
-    listRefreshVersion.set(listRefreshVersion.get() + 1);
   }
 
   /**
