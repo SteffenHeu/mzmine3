@@ -107,7 +107,10 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
     super(new SpectralLibraryEditorModel());
     this.owner = owner;
     entryListController = new SpectralLibraryEntryListController(model.getEntries());
-    viewBuilder = new SpectralLibraryEditorViewBuilder(model, this, entryListController);
+    final SpectralLibraryMetadataPaneController metadataPaneController =
+        new SpectralLibraryMetadataPaneController(model, this);
+    viewBuilder = new SpectralLibraryEditorViewBuilder(model, this, entryListController,
+        metadataPaneController);
     owner.titleProperty().bind(model.windowTitleProperty());
 
     model.selectedEntryProperty().bind(entryListController.primaryEntryProperty());

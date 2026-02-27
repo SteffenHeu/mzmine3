@@ -28,31 +28,19 @@ package io.github.mzmine.speclibeditor;
 import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.components.factories.FxSplitPanes;
-import io.github.mzmine.javafx.components.factories.FxTextFields;
 import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
-import io.github.mzmine.modules.visualization.molstructure.Structure2DComponent;
-import io.github.mzmine.util.spectraldb.entry.DBEntryField;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.ScrollPane.ScrollBarPolicy;
 import javafx.scene.control.SplitPane;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.jetbrains.annotations.NotNull;
 
@@ -63,8 +51,8 @@ public final class SpectralLibraryEditorViewBuilder extends FxViewBuilder<Spectr
 
   private final @NotNull SpectralLibraryEditorController controller;
   private final @NotNull SpectralLibraryEntryListController entryListController;
+  private final @NotNull SpectralLibraryMetadataPaneController metadataPaneController;
   private final @NotNull SpectralLibrarySpectrumPane spectrumPane = new SpectralLibrarySpectrumPane();
-  private final @NotNull Structure2DComponent structurePane = new Structure2DComponent();
 
   /**
    * Creates a view builder bound to the editor model and controller.
@@ -72,13 +60,16 @@ public final class SpectralLibraryEditorViewBuilder extends FxViewBuilder<Spectr
    * @param model editor state model.
    * @param controller editor controller handling user actions.
    * @param entryListController entry list controller for the left panel.
+   * @param metadataPaneController metadata pane controller for the right panel.
    */
   protected SpectralLibraryEditorViewBuilder(@NotNull final SpectralLibraryEditorModel model,
       @NotNull final SpectralLibraryEditorController controller,
-      @NotNull final SpectralLibraryEntryListController entryListController) {
+      @NotNull final SpectralLibraryEntryListController entryListController,
+      @NotNull final SpectralLibraryMetadataPaneController metadataPaneController) {
     super(model);
     this.controller = controller;
     this.entryListController = entryListController;
+    this.metadataPaneController = metadataPaneController;
   }
 
   /**
@@ -100,11 +91,6 @@ public final class SpectralLibraryEditorViewBuilder extends FxViewBuilder<Spectr
    * Connects model properties to UI controls and selection events.
    */
   private void initializeBindings() {
-    structurePane.moleculeProperty().bind(Bindings.createObjectBinding(
-        () -> {
-          final var structure = model.getStructureMolecule();
-          return structure == null ? null : structure.structure();
-        }, model.structureMoleculeProperty()));
     model.selectedEntryProperty().addListener((_, _, selectedEntry) -> spectrumPane.setEntry(selectedEntry));
     spectrumPane.setEntry(model.getSelectedEntry());
   }
@@ -178,70 +164,7 @@ public final class SpectralLibraryEditorViewBuilder extends FxViewBuilder<Spectr
    * @return right panel node.
    */
   private @NotNull Node createMetadataPane() {
-    final Label title = FxLabels.newBoldTitle("Metadata");
-    final Node structureNode = createStructurePreviewPane();
-    final GridPane metadataGrid = createMetadataGrid();
-    final VBox metadataContent = FxLayout.newVBox(Pos.TOP_LEFT, FxLayout.DEFAULT_PADDING_INSETS, true,
-        structureNode, metadataGrid);
-    final ScrollPane metadataScrollPane = FxLayout.newScrollPane(metadataContent, ScrollBarPolicy.NEVER,
-        ScrollBarPolicy.AS_NEEDED);
-    metadataScrollPane.setFitToWidth(true);
-
-    final VBox pane = FxLayout.newVBox(Pos.TOP_LEFT, FxLayout.DEFAULT_PADDING_INSETS, true, title,
-        metadataScrollPane);
-    VBox.setVgrow(metadataScrollPane, Priority.ALWAYS);
-    pane.setMinWidth(470);
-    return pane;
-  }
-
-  /**
-   * Creates the structure preview shown above the metadata form.
-   *
-   * @return structure preview node.
-   */
-  private @NotNull Node createStructurePreviewPane() {
-    final Label structureLabel = FxLabels.newLabelNoWrap("Structure");
-    structurePane.setContextMenuEnabled(false);
-    final StackPane structureContainer = new StackPane(structurePane);
-    structureContainer.setMinHeight(190);
-    structureContainer.setPrefHeight(220);
-    structureContainer.setMaxHeight(260);
-    final VBox wrapper = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true, structureLabel,
-        structureContainer);
-    wrapper.visibleProperty().bind(model.structureMoleculeProperty().map(Objects::nonNull));
-    wrapper.managedProperty().bind(wrapper.visibleProperty());
-    VBox.setVgrow(structureContainer, Priority.NEVER);
-    return wrapper;
-  }
-
-  /**
-   * Creates the two-column metadata form with labels and editors.
-   *
-   * @return populated metadata grid.
-   */
-  private @NotNull GridPane createMetadataGrid() {
-    final List<Node> gridNodes = new ArrayList<>();
-    for (final DBEntryField field : model.getEditableFields()) {
-      final Label label = FxLabels.newLabelNoWrap(field.toString());
-      final String tooltip = field.name() + " (" + field.getObjectClass().getSimpleName() + ")";
-      final TextField editor = FxTextFields.newTextField(28, model.metadataTextProperty(field), field.name(),
-          tooltip);
-      editor.setOnAction(_ -> controller.onMetadataCommit(field));
-      editor.focusedProperty().addListener((_, _, focused) -> {
-        if (!focused) {
-          controller.onMetadataCommit(field);
-        }
-      });
-      editor.disableProperty().bind(model.metadataEnabledProperty().not());
-      editor.styleProperty().bind(model.metadataErrorProperty(field).map(
-          hasError -> hasError ? "-fx-border-color: #b00020;" : "").orElse(""));
-
-      gridNodes.add(label);
-      gridNodes.add(editor);
-    }
-
-    return FxLayout.newGrid2Col(FxLayout.GridColumnGrow.RIGHT, Insets.EMPTY,
-        gridNodes.toArray(Node[]::new));
+    return metadataPaneController.buildView();
   }
 
   /**
