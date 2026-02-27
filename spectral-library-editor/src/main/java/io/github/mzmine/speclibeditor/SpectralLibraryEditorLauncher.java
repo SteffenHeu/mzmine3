@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,30 +23,30 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-pluginManagement {
-    repositories {
-        gradlePluginPortal() // if pluginManagement.repositories looks like this, it can be omitted as this is the default
-        // general repos for all sub-modules
-        mavenCentral()
-    }
-    includeBuild("convention-plugins")
+package io.github.mzmine.speclibeditor;
+
+import java.util.Locale;
+import javafx.application.Application;
+import org.jetbrains.annotations.NotNull;
+
+/**
+ * Dedicated launcher class to avoid Java launcher FX detection issues when directly starting a
+ * class that extends {@link Application}.
+ */
+public final class SpectralLibraryEditorLauncher {
+
+  /**
+   * Prevents instantiation of the launcher utility class.
+   */
+  private SpectralLibraryEditorLauncher() {
+  }
+
+  /**
+   * Starts the spectral library editor JavaFX application.
+   *
+   * @param args command line arguments passed to JavaFX.
+   */
+  public static void main(@NotNull final String[] args) {
+    Application.launch(SpectralLibraryEditorApplication.class, args);
+  }
 }
-
-// this should not be needed but can remove later once stable
-//plugins {
-// this resolution should not be needed if we do not force a specific JDK
-// github actions already have their own jdk defined
-//    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-//}
-
-rootProject.name = "mzmine"
-include(
-    "mzmine-community",
-    "taskcontroller",
-    "utils",
-    "javafx-framework",
-    "config",
-    "reports",
-    "spectral-library-editor",
-)
-//includeBuild("convention-plugins")

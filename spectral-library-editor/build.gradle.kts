@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,30 +23,28 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-pluginManagement {
-    repositories {
-        gradlePluginPortal() // if pluginManagement.repositories looks like this, it can be omitted as this is the default
-        // general repos for all sub-modules
-        mavenCentral()
-    }
-    includeBuild("convention-plugins")
+plugins {
+    id("io.github.mzmine.java-app-conv")
+    id("io.github.mzmine.javafx-conv")
 }
 
-// this should not be needed but can remove later once stable
-//plugins {
-// this resolution should not be needed if we do not force a specific JDK
-// github actions already have their own jdk defined
-//    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-//}
+repositories {
+    mavenCentral()
+    maven { url = uri(layout.projectDirectory.dir("../local-repo/")) }
+}
 
-rootProject.name = "mzmine"
-include(
-    "mzmine-community",
-    "taskcontroller",
-    "utils",
-    "javafx-framework",
-    "config",
-    "reports",
-    "spectral-library-editor",
-)
-//includeBuild("convention-plugins")
+dependencies {
+    implementation(project(":mzmine-community"))
+    implementation(project(":javafx-framework"))
+    implementation(project(":utils"))
+    implementation(project(":taskcontroller"))
+    implementation("io.mzio:memory-management:1.0.0")
+    implementation(libs.guava)
+    implementation(libs.bundles.cdk)
+    implementation(libs.bundles.jfreechart)
+}
+
+application {
+    mainClass.set("io.github.mzmine.speclibeditor.SpectralLibraryEditorLauncher")
+    applicationName = "spectral-library-editor"
+}

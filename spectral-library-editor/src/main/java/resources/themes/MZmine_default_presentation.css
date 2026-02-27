@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2022 The MZmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,30 +23,55 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-pluginManagement {
-    repositories {
-        gradlePluginPortal() // if pluginManagement.repositories looks like this, it can be omitted as this is the default
-        // general repos for all sub-modules
-        mavenCentral()
-    }
-    includeBuild("convention-plugins")
+.root {
+  -fx-font-size: 18;
 }
 
-// this should not be needed but can remove later once stable
-//plugins {
-// this resolution should not be needed if we do not force a specific JDK
-// github actions already have their own jdk defined
-//    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-//}
+.menu-bar {
+  -fx-font-size: 15pt;
+}
+.menu-item {
+  -fx-font-size: 15pt;
+}
 
-rootProject.name = "mzmine"
-include(
-    "mzmine-community",
-    "taskcontroller",
-    "utils",
-    "javafx-framework",
-    "config",
-    "reports",
-    "spectral-library-editor",
-)
-//includeBuild("convention-plugins")
+.title-label {
+  -fx-font-size: 16.0pt;
+}
+
+.bold-title-label {
+  -fx-font-size: 16.0pt;
+  -fx-font-weight: bold;
+}
+
+.bold-semititle-label {
+  -fx-font-size: 12.0pt;
+  -fx-font-weight: bold;
+}
+
+.white-larger-label {
+  -fx-font-size: 13.0pt;
+  -fx-text-fill: white;
+  -fx-wrap-text: true;
+  -fx-font-weight: bold;
+}
+
+.white-score-label {
+  -fx-font-size: 20.0pt;
+  -fx-font-weight: bold;
+  -fx-text-fill: white;
+}
+
+.white-score-label-small {
+  -fx-font-size: 7pt;
+  -fx-font-weight: bold;
+  -fx-text-fill: white;
+}
+.copyable-label, .copyable-label:focused {
+     -fx-background-color: transparent ;
+     -fx-background-insets: 0px ;
+ }
+
+.large-title-pane > .title > .text {
+  -fx-font-size: 12.0pt;
+  -fx-font-weight: bold;
+}
