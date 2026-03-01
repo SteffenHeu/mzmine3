@@ -629,7 +629,7 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * Recomputes title, current file label and save enablement.
    */
   private void updateWindowState() {
-    final StringBuilder title = new StringBuilder("MZmine Spectral Library Editor");
+    final StringBuilder title = new StringBuilder("mzmine Spectral Library Editor");
     if (currentFile != null) {
       title.append(" - ").append(currentFile.getName());
     }

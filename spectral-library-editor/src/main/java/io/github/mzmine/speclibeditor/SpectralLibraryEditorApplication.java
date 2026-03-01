@@ -25,6 +25,7 @@
 
 package io.github.mzmine.speclibeditor;
 
+import com.sun.glass.ui.Screen;
 import java.util.Locale;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -45,7 +46,12 @@ public final class SpectralLibraryEditorApplication extends Application {
   public void start(@NotNull final Stage stage) {
     Locale.setDefault(new Locale("en", "US"));
     final SpectralLibraryEditorController controller = new SpectralLibraryEditorController(stage);
-    final Scene scene = new Scene(controller.buildView(), 1750, 980);
+
+    float scaleX = Screen.getMainScreen().getRecommendedOutputScaleX();
+    float scaleY = Screen.getMainScreen().getRecommendedOutputScaleY();
+    double height = Screen.getMainScreen().getHeight() / scaleY * 0.8;
+    double width = Screen.getMainScreen().getWidth() / scaleX * 0.8;
+    final Scene scene = new Scene(controller.buildView(), width, height);
     stage.setScene(scene);
     stage.setOnHidden(_ -> controller.close());
     stage.show();
