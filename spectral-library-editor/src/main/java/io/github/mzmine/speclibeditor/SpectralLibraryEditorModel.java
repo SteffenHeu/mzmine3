@@ -30,8 +30,11 @@ import io.github.mzmine.util.spectraldb.entry.DBEntryField;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibraryEntry;
 import java.util.Arrays;
 import java.util.EnumMap;
+import java.util.EnumSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -66,6 +69,11 @@ public final class SpectralLibraryEditorModel {
 
   private final @NotNull Map<DBEntryField, StringProperty> metadataText = new EnumMap<>(DBEntryField.class);
   private final @NotNull Map<DBEntryField, BooleanProperty> metadataError = new EnumMap<>(DBEntryField.class);
+  private final @NotNull Map<DBEntryField, BooleanProperty> metadataEdited = new EnumMap<>(DBEntryField.class);
+  private final @NotNull IdentityHashMap<SpectralLibraryEntry, EnumMap<DBEntryField, String>>
+      originalValuesByEntry = new IdentityHashMap<>();
+  private final @NotNull IdentityHashMap<SpectralLibraryEntry, EnumSet<DBEntryField>>
+      changedFieldsByEntry = new IdentityHashMap<>();
 
   /**
    * Initializes per-field metadata properties used by the editor form.
@@ -74,6 +82,7 @@ public final class SpectralLibraryEditorModel {
     for (final DBEntryField field : EDITABLE_FIELDS) {
       metadataText.put(field, new SimpleStringProperty(""));
       metadataError.put(field, new SimpleBooleanProperty(false));
+      metadataEdited.put(field, new SimpleBooleanProperty(false));
     }
   }
 
@@ -287,5 +296,121 @@ public final class SpectralLibraryEditorModel {
    */
   public void setMetadataError(@NotNull final DBEntryField field, final boolean hasError) {
     metadataErrorProperty(field).set(hasError);
+  }
+
+  /**
+   * Returns the edited-state property for a metadata field.
+   *
+   * @param field metadata field key.
+   * @return edited state property for the field.
+   */
+  public @NotNull BooleanProperty metadataEditedProperty(@NotNull final DBEntryField field) {
+    return metadataEdited.get(field);
+  }
+
+  /**
+   * Sets the edited state for a metadata field.
+   *
+   * @param field metadata field key.
+   * @param edited {@code true} if the field differs from its loaded/saved baseline value.
+   */
+  public void setMetadataEdited(@NotNull final DBEntryField field, final boolean edited) {
+    metadataEditedProperty(field).set(edited);
+  }
+
+  /**
+   * Clears all baseline snapshots and tracked field changes.
+   */
+  public void clearEditedEntryTracking() {
+    originalValuesByEntry.clear();
+    changedFieldsByEntry.clear();
+  }
+
+  /**
+   * Sets the metadata baseline snapshot for one entry.
+   *
+   * @param entry entry key.
+   * @param snapshot baseline field values.
+   */
+  public void setEntryBaselineSnapshot(@NotNull final SpectralLibraryEntry entry,
+      @NotNull final Map<DBEntryField, String> snapshot) {
+    final EnumMap<DBEntryField, String> baseline = new EnumMap<>(DBEntryField.class);
+    baseline.putAll(snapshot);
+    originalValuesByEntry.put(entry, baseline);
+    changedFieldsByEntry.remove(entry);
+  }
+
+  /**
+   * Removes all tracking state for one entry.
+   *
+   * @param entry entry to remove.
+   */
+  public void removeEditedEntryTracking(@NotNull final SpectralLibraryEntry entry) {
+    originalValuesByEntry.remove(entry);
+    changedFieldsByEntry.remove(entry);
+  }
+
+  /**
+   * Checks whether an entry has at least one changed metadata field.
+   *
+   * @param entry entry to inspect.
+   * @return {@code true} if the entry is edited.
+   */
+  public boolean isEntryEdited(@Nullable final SpectralLibraryEntry entry) {
+    if (entry == null) {
+      return false;
+    }
+    final EnumSet<DBEntryField> changedFields = changedFieldsByEntry.get(entry);
+    return changedFields != null && !changedFields.isEmpty();
+  }
+
+  /**
+   * Checks whether one metadata field of an entry is edited.
+   *
+   * @param entry entry to inspect.
+   * @param field field to inspect.
+   * @return {@code true} if the field differs from baseline.
+   */
+  public boolean isFieldEdited(@Nullable final SpectralLibraryEntry entry,
+      @NotNull final DBEntryField field) {
+    if (entry == null) {
+      return false;
+    }
+    final EnumSet<DBEntryField> changedFields = changedFieldsByEntry.get(entry);
+    return changedFields != null && changedFields.contains(field);
+  }
+
+  /**
+   * Updates field-level tracking by comparing current value with baseline value.
+   *
+   * @param entry entry being edited.
+   * @param field field being edited.
+   * @param currentValue serialized current field value.
+   */
+  public void updateFieldChangeTracking(@NotNull final SpectralLibraryEntry entry,
+      @NotNull final DBEntryField field, @NotNull final String currentValue) {
+    final EnumMap<DBEntryField, String> baseline = originalValuesByEntry.get(entry);
+    final String baselineValue = baseline == null ? "" : baseline.getOrDefault(field, "");
+    final EnumSet<DBEntryField> changedFields = changedFieldsByEntry.computeIfAbsent(entry,
+        _ -> EnumSet.noneOf(DBEntryField.class));
+
+    if (Objects.equals(currentValue, baselineValue)) {
+      changedFields.remove(field);
+    } else {
+      changedFields.add(field);
+    }
+
+    if (changedFields.isEmpty()) {
+      changedFieldsByEntry.remove(entry);
+    }
+  }
+
+  /**
+   * Checks whether at least one entry has edited metadata fields.
+   *
+   * @return {@code true} if any entry is edited.
+   */
+  public boolean hasAnyEntryEdits() {
+    return !changedFieldsByEntry.isEmpty();
   }
 }

@@ -148,8 +148,17 @@ public final class SpectralLibraryMetadataPaneViewBuilder extends
         }
       });
       editor.disableProperty().bind(model.metadataEnabledProperty().not());
-      editor.styleProperty().bind(model.metadataErrorProperty(field).map(
-          hasError -> hasError ? "-fx-border-color: #b00020;" : "").orElse(""));
+      label.styleProperty().bind(model.metadataEditedProperty(field).map(
+          edited -> edited ? "-fx-font-weight: bold; -fx-text-fill: -jr-accent;" : "").orElse(""));
+      editor.styleProperty().bind(Bindings.createStringBinding(() -> {
+            if (model.metadataErrorProperty(field).get()) {
+              return "-fx-border-color: #b00020;";
+            }
+            if (model.metadataEditedProperty(field).get()) {
+              return "-fx-border-color: -jr-accent;";
+            }
+            return "";
+          }, model.metadataErrorProperty(field), model.metadataEditedProperty(field)));
 
       gridNodes.add(label);
       gridNodes.add(editor);

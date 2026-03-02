@@ -44,7 +44,19 @@ public final class SpectralLibraryEntryListCell extends ListCell<SpectralLibrary
    * @return formatted entry label.
    */
   public static @NotNull String toDisplayText(@NotNull final SpectralLibraryEntry item) {
-    return toDisplayText(item, -1);
+    return toDisplayText(item, -1, false);
+  }
+
+  /**
+   * Creates a compact display label for an entry without an index and optional edited marker.
+   *
+   * @param item entry to format.
+   * @param edited whether the entry has unsaved metadata edits.
+   * @return formatted entry label.
+   */
+  public static @NotNull String toDisplayText(@NotNull final SpectralLibraryEntry item,
+      final boolean edited) {
+    return toDisplayText(item, -1, edited);
   }
 
   /**
@@ -56,13 +68,27 @@ public final class SpectralLibraryEntryListCell extends ListCell<SpectralLibrary
    */
   public static @NotNull String toDisplayText(@NotNull final SpectralLibraryEntry item,
       final int index) {
+    return toDisplayText(item, index, false);
+  }
+
+  /**
+   * Creates a compact display label for an entry with optional index and edited marker.
+   *
+   * @param item entry to format.
+   * @param index zero-based index or a negative value to omit the index.
+   * @param edited whether the entry has unsaved metadata edits.
+   * @return formatted entry label.
+   */
+  public static @NotNull String toDisplayText(@NotNull final SpectralLibraryEntry item,
+      final int index, final boolean edited) {
     final String name = item.getAsString(DBEntryField.NAME)
         .or(() -> item.getAsString(DBEntryField.ENTRY_ID))
         .orElse(index >= 0 ? "Entry " + (index + 1) : "Entry");
     final String precursor = item.getAsDouble(DBEntryField.PRECURSOR_MZ)
         .map(value -> String.format(Locale.US, "%.5f", value)).orElse("n/a");
     final String prefix = index >= 0 ? (index + 1) + " | " : "";
-    return prefix + name + " | m/z " + precursor;
+    final String editedPrefix = edited ? "* " : "";
+    return editedPrefix + prefix + name + " | m/z " + precursor;
   }
 
   /**

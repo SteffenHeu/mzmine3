@@ -90,9 +90,9 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    */
   private boolean libraryLoaded;
   /**
-   * Tracks whether the currently loaded library has unsaved edits.
+   * Tracks non-metadata edits that cannot be inferred from field-level diffs (for example removals).
    */
-  private boolean dirty;
+  private boolean structuralDirty;
   /**
    * Guards metadata commits while the controller updates form fields programmatically.
    */
@@ -107,6 +107,7 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
     super(new SpectralLibraryEditorModel());
     this.owner = owner;
     entryListController = new SpectralLibraryEntryListController(model.getEntries());
+    entryListController.setEditedEntryPredicate(this::isEntryEdited);
     final SpectralLibraryMetadataPaneController metadataPaneController =
         new SpectralLibraryMetadataPaneController(model, this);
     viewBuilder = new SpectralLibraryEditorViewBuilder(model, this, entryListController,
@@ -140,7 +141,7 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * Handles the Open action and loads a selected spectral library file.
    */
   public void onOpenRequested() {
-    if (dirty && !confirmDiscardChanges()) {
+    if (isDirty() && !confirmDiscardChanges()) {
       return;
     }
 
@@ -161,6 +162,16 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
   }
 
   /**
+   * Checks whether an entry currently differs from the loaded/saved baseline.
+   *
+   * @param entry entry to inspect.
+   * @return {@code true} if at least one metadata field was changed.
+   */
+  public boolean isEntryEdited(@Nullable final SpectralLibraryEntry entry) {
+    return model.isEntryEdited(entry);
+  }
+
+  /**
    * Removes all currently selected or checked entries from the loaded library.
    */
   public void onRemoveSelectedOrCheckedRequested() {
@@ -176,10 +187,13 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
     }
 
     final int removedCount = entriesToRemove.size();
+    for (final SpectralLibraryEntry entry : entriesToRemove) {
+      model.removeEditedEntryTracking(entry);
+    }
     model.getEntries().removeAll(entriesToRemove);
     entryListController.clearSelectionState();
     entryListController.ensurePrimaryEntry();
-    markDirty();
+    markStructuralDirty();
     setStatus("Removed " + removedCount + " entries.");
   }
 
@@ -222,16 +236,17 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
     if (entry == null) {
       return;
     }
+    final boolean wasEntryEdited = isEntryEdited(entry);
 
     final String input = model.getMetadataText(field).trim();
     if (input.isEmpty()) {
-      final Object oldValue = entry.getFields().remove(field);
+      entry.getFields().remove(field);
       model.setMetadataError(field, false);
       model.setMetadataText(field, "");
-      if (oldValue != null) {
-        markDirty();
-      }
-      refreshEntryListIfNeeded(field);
+      updateFieldChangeTracking(entry, field);
+      updateMetadataEditedForSelection(entry);
+      updateDirtyState();
+      refreshEntryListIfNeeded(field, wasEntryEdited != isEntryEdited(entry));
       if (isStructureField(field)) {
         updateStructureForSelection(entry);
       }
@@ -254,12 +269,18 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
     model.setMetadataText(field, serializeValue(converted));
     final Object previousValue = entry.getFields().get(field);
     if (Objects.equals(previousValue, converted)) {
+      updateFieldChangeTracking(entry, field);
+      updateMetadataEditedForSelection(entry);
+      updateDirtyState();
+      refreshEntryListIfNeeded(field, wasEntryEdited != isEntryEdited(entry));
       return;
     }
 
     entry.putIfNotNull(field, converted);
-    markDirty();
-    refreshEntryListIfNeeded(field);
+    updateFieldChangeTracking(entry, field);
+    updateMetadataEditedForSelection(entry);
+    updateDirtyState();
+    refreshEntryListIfNeeded(field, wasEntryEdited != isEntryEdited(entry));
     if (isStructureField(field)) {
       updateStructureForSelection(entry);
     }
@@ -326,14 +347,15 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
       @NotNull final SpectralLibrary loadedLibrary) {
     currentFile = file;
     libraryLoaded = true;
-    dirty = false;
+    structuralDirty = false;
 
     model.getEntries().setAll(copyEntries(loadedLibrary.getEntries()));
+    rebuildBaselineSnapshots();
     entryListController.clearSelectionState();
     entryListController.ensurePrimaryEntry();
 
     setStatus("Loaded " + file.getName() + " with " + loadedLibrary.getEntries().size() + " entries.");
-    updateWindowState();
+    updateDirtyState();
   }
 
   /**
@@ -352,9 +374,12 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
       final SpectralLibrary exportLibrary = createLibraryFromModel(file);
       fileService.saveLibrary(exportLibrary, file, format);
       currentFile = file;
-      dirty = false;
+      structuralDirty = false;
+      rebuildBaselineSnapshots();
+      updateMetadataEditedForSelection(model.getSelectedEntry());
+      entryListController.requestListRefresh();
       setStatus("Saved " + file.getName() + " in " + format.name() + " format.");
-      updateWindowState();
+      updateDirtyState();
     } catch (final Exception e) {
       logger.log(Level.WARNING, "Cannot save library to " + file.getAbsolutePath(), e);
       setStatus("Failed to save file: " + e.getMessage());
@@ -417,6 +442,7 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
         model.setMetadataError(field, false);
         final String value = entry == null ? "" : serializeValue(entry.getField(field).orElse(null));
         model.setMetadataText(field, value);
+        model.setMetadataEdited(field, isFieldEdited(entry, field));
       }
     } finally {
       updatingMetadataFields = false;
@@ -506,8 +532,9 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    *
    * @param field metadata field that changed.
    */
-  private void refreshEntryListIfNeeded(@NotNull final DBEntryField field) {
-    if (LIST_LABEL_FIELDS.contains(field)) {
+  private void refreshEntryListIfNeeded(@NotNull final DBEntryField field,
+      final boolean entryEditedStateChanged) {
+    if (entryEditedStateChanged || LIST_LABEL_FIELDS.contains(field)) {
       entryListController.requestListRefresh();
     }
   }
@@ -618,10 +645,95 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
   }
 
   /**
-   * Marks the current library as modified and updates UI state.
+   * Rebuilds baseline snapshots and clears metadata change markers.
    */
-  private void markDirty() {
-    dirty = true;
+  private void rebuildBaselineSnapshots() {
+    model.clearEditedEntryTracking();
+    for (final SpectralLibraryEntry entry : model.getEntries()) {
+      model.setEntryBaselineSnapshot(entry, snapshotEntryValues(entry));
+    }
+  }
+
+  /**
+   * Creates a metadata baseline snapshot for all editable fields of one entry.
+   *
+   * @param entry source entry.
+   * @return field-to-serialized-value baseline map.
+   */
+  private @NotNull EnumMap<DBEntryField, String> snapshotEntryValues(
+      @NotNull final SpectralLibraryEntry entry) {
+    final EnumMap<DBEntryField, String> snapshot = new EnumMap<>(DBEntryField.class);
+    for (final DBEntryField field : model.getEditableFields()) {
+      snapshot.put(field, serializeValue(entry.getField(field).orElse(null)));
+    }
+    return snapshot;
+  }
+
+  /**
+   * Updates field-level change tracking for one entry field against its baseline value.
+   *
+   * @param entry changed entry.
+   * @param field changed field.
+   */
+  private void updateFieldChangeTracking(@NotNull final SpectralLibraryEntry entry,
+      @NotNull final DBEntryField field) {
+    final String currentValue = serializeValue(entry.getField(field).orElse(null));
+    model.updateFieldChangeTracking(entry, field, currentValue);
+  }
+
+  /**
+   * Checks whether a specific field of an entry is currently edited.
+   *
+   * @param entry target entry.
+   * @param field target field.
+   * @return {@code true} if the field differs from baseline.
+   */
+  private boolean isFieldEdited(@Nullable final SpectralLibraryEntry entry,
+      @NotNull final DBEntryField field) {
+    return model.isFieldEdited(entry, field);
+  }
+
+  /**
+   * Updates field-level edited markers for the selected metadata form.
+   *
+   * @param entry currently selected entry.
+   */
+  private void updateMetadataEditedForSelection(@Nullable final SpectralLibraryEntry entry) {
+    for (final DBEntryField editableField : model.getEditableFields()) {
+      model.setMetadataEdited(editableField, isFieldEdited(entry, editableField));
+    }
+  }
+
+  /**
+   * Checks whether at least one entry contains metadata edits.
+   *
+   * @return {@code true} if any entry has changed fields.
+   */
+  private boolean hasAnyEntryEdits() {
+    return model.hasAnyEntryEdits();
+  }
+
+  /**
+   * Marks non-metadata changes (for example entry removal) as dirty.
+   */
+  private void markStructuralDirty() {
+    structuralDirty = true;
+    updateDirtyState();
+  }
+
+  /**
+   * Computes whether the current library has unsaved edits.
+   *
+   * @return {@code true} if structural or metadata edits are present.
+   */
+  private boolean isDirty() {
+    return structuralDirty || hasAnyEntryEdits();
+  }
+
+  /**
+   * Recomputes the overall dirty flag and updates dependent UI state.
+   */
+  private void updateDirtyState() {
     updateWindowState();
   }
 
@@ -633,7 +745,7 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
     if (currentFile != null) {
       title.append(" - ").append(currentFile.getName());
     }
-    if (dirty) {
+    if (isDirty()) {
       title.append(" *");
     }
     model.setWindowTitle(title.toString());

@@ -141,7 +141,7 @@ public final class SpectralLibraryEntryListViewBuilder extends FxViewBuilder<Spe
         if (object == null) {
           return "";
         }
-        return SpectralLibraryEntryListCell.toDisplayText(object);
+        return SpectralLibraryEntryListCell.toDisplayText(object, controller.isEntryEdited(object));
       }
 
       @Override

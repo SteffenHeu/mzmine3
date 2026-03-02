@@ -48,6 +48,7 @@ public final class SpectralLibraryEntryListController extends
     FxController<SpectralLibraryEntryListModel> {
 
   private final @NotNull SpectralLibraryEntryListViewBuilder viewBuilder;
+  private @NotNull Predicate<SpectralLibraryEntry> editedEntryPredicate = _ -> false;
 
   /**
    * Creates a list controller backed by the shared entries list.
@@ -94,6 +95,25 @@ public final class SpectralLibraryEntryListController extends
    */
   public @NotNull ObjectProperty<@Nullable SpectralLibraryEntry> primaryEntryProperty() {
     return model.primaryEntryProperty();
+  }
+
+  /**
+   * Sets the predicate used to decide whether a list entry should be marked as edited.
+   *
+   * @param editedEntryPredicate predicate returning {@code true} for edited entries.
+   */
+  public void setEditedEntryPredicate(@NotNull final Predicate<SpectralLibraryEntry> editedEntryPredicate) {
+    this.editedEntryPredicate = editedEntryPredicate;
+  }
+
+  /**
+   * Checks whether a specific entry should be rendered as edited.
+   *
+   * @param entry entry to inspect.
+   * @return {@code true} if the entry is edited.
+   */
+  public boolean isEntryEdited(@Nullable final SpectralLibraryEntry entry) {
+    return entry != null && editedEntryPredicate.test(entry);
   }
 
   /**
