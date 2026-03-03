@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -27,6 +26,8 @@ package io.github.mzmine.speclibeditor;
 
 import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
+import io.github.mzmine.util.spectraldb.entry.DBEntryField;
+import javafx.application.Platform;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -35,6 +36,7 @@ import org.jetbrains.annotations.NotNull;
 public final class SpectralLibraryMetadataPaneController extends
     FxController<SpectralLibraryEditorModel> {
 
+  private final @NotNull SpectralLibraryEditorController editorController;
   private final @NotNull SpectralLibraryMetadataPaneViewBuilder viewBuilder;
 
   /**
@@ -46,7 +48,22 @@ public final class SpectralLibraryMetadataPaneController extends
   public SpectralLibraryMetadataPaneController(@NotNull final SpectralLibraryEditorModel model,
       @NotNull final SpectralLibraryEditorController editorController) {
     super(model);
-    viewBuilder = new SpectralLibraryMetadataPaneViewBuilder(model, editorController);
+    this.editorController = editorController;
+    viewBuilder = new SpectralLibraryMetadataPaneViewBuilder(model, this);
+  }
+
+  /**
+   * Commits one metadata field edit to the parent editor controller.
+   *
+   * @param field metadata field that should be committed.
+   */
+  public void onMetadataCommit(@NotNull final DBEntryField field) {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(() -> onMetadataCommit(field));
+      return;
+    }
+
+    editorController.onMetadataCommit(field);
   }
 
   /**

@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -34,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Predicate;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ListChangeListener;
@@ -122,7 +122,13 @@ public final class SpectralLibraryEntryListController extends
    * @param selectedItems current selected checklist items.
    */
   public void onSelectedItemsChanged(@NotNull final List<SpectralLibraryEntry> selectedItems) {
-    model.setSelectedEntries(selectedItems);
+    final List<SpectralLibraryEntry> selectedItemsSnapshot = List.copyOf(selectedItems);
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(() -> onSelectedItemsChanged(selectedItemsSnapshot));
+      return;
+    }
+
+    model.setSelectedEntries(selectedItemsSnapshot);
     ensurePrimaryEntry();
   }
 
@@ -132,7 +138,13 @@ public final class SpectralLibraryEntryListController extends
    * @param checkedItems current checked checklist items.
    */
   public void onCheckedItemsChanged(@NotNull final List<SpectralLibraryEntry> checkedItems) {
-    model.setCheckedEntries(checkedItems);
+    final List<SpectralLibraryEntry> checkedItemsSnapshot = List.copyOf(checkedItems);
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(() -> onCheckedItemsChanged(checkedItemsSnapshot));
+      return;
+    }
+
+    model.setCheckedEntries(checkedItemsSnapshot);
     ensurePrimaryEntry();
   }
 
@@ -152,6 +164,11 @@ public final class SpectralLibraryEntryListController extends
    * Clears tracked selection and check state.
    */
   public void clearSelectionState() {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(this::clearSelectionState);
+      return;
+    }
+
     model.clearSelectionState();
     ensurePrimaryEntry();
   }
@@ -160,6 +177,11 @@ public final class SpectralLibraryEntryListController extends
    * Updates the primary entry to the first selected, checked or visible entry.
    */
   public void ensurePrimaryEntry() {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(this::ensurePrimaryEntry);
+      return;
+    }
+
     final SpectralLibraryEntry firstSelected = firstContainedEntry(model.getSelectedEntries());
     if (firstSelected != null) {
       model.setPrimaryEntry(firstSelected);
@@ -183,6 +205,11 @@ public final class SpectralLibraryEntryListController extends
    * Requests a visual refresh of the checklist rows.
    */
   public void requestListRefresh() {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(this::requestListRefresh);
+      return;
+    }
+
     model.requestListRefresh();
   }
 

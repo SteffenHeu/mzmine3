@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -55,19 +54,19 @@ import org.jetbrains.annotations.NotNull;
 public final class SpectralLibraryMetadataPaneViewBuilder extends
     FxViewBuilder<SpectralLibraryEditorModel> {
 
-  private final @NotNull SpectralLibraryEditorController editorController;
+  private final @NotNull SpectralLibraryMetadataPaneController controller;
   private final @NotNull Structure2DComponent structurePane = new Structure2DComponent();
 
   /**
    * Creates the metadata pane view builder.
    *
    * @param model shared editor model.
-   * @param editorController parent editor controller handling metadata commits.
+   * @param controller metadata pane controller handling metadata commits.
    */
   protected SpectralLibraryMetadataPaneViewBuilder(@NotNull final SpectralLibraryEditorModel model,
-      @NotNull final SpectralLibraryEditorController editorController) {
+      @NotNull final SpectralLibraryMetadataPaneController controller) {
     super(model);
-    this.editorController = editorController;
+    this.controller = controller;
   }
 
   /**
@@ -141,10 +140,10 @@ public final class SpectralLibraryMetadataPaneViewBuilder extends
       final String tooltip = field.name() + " (" + field.getObjectClass().getSimpleName() + ")";
       final TextField editor = FxTextFields.newTextField(28, model.metadataTextProperty(field), field.name(),
           tooltip);
-      editor.setOnAction(_ -> editorController.onMetadataCommit(field));
+      editor.setOnAction(_ -> controller.onMetadataCommit(field));
       editor.focusedProperty().addListener((_, _, focused) -> {
         if (!focused) {
-          editorController.onMetadataCommit(field);
+          controller.onMetadataCommit(field);
         }
       });
       editor.disableProperty().bind(model.metadataEnabledProperty().not());

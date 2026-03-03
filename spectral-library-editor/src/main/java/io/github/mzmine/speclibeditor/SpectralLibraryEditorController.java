@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -86,10 +85,6 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
   private @Nullable File currentFile;
   private long loadRequestCounter;
   /**
-   * Tracks whether a library has been loaded into the editor model.
-   */
-  private boolean libraryLoaded;
-  /**
    * Tracks non-metadata edits that cannot be inferred from field-level diffs (for example removals).
    */
   private boolean structuralDirty;
@@ -97,6 +92,10 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * Guards metadata commits while the controller updates form fields programmatically.
    */
   private boolean updatingMetadataFields;
+  /**
+   * Tracks whether a save task is currently running in the background.
+   */
+  private boolean saveInProgress;
 
   /**
    * Creates a controller instance bound to the given owner stage.
@@ -141,6 +140,16 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * Handles the Open action and loads a selected spectral library file.
    */
   public void onOpenRequested() {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(this::onOpenRequested);
+      return;
+    }
+
+    if (saveInProgress) {
+      setStatus("Save in progress. Please wait.");
+      return;
+    }
+
     if (isDirty() && !confirmDiscardChanges()) {
       return;
     }
@@ -158,6 +167,11 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * Handles save requests by delegating to Save As to avoid overwriting existing files.
    */
   public void onSaveRequested() {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(this::onSaveRequested);
+      return;
+    }
+
     onSaveAsRequested();
   }
 
@@ -175,7 +189,17 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * Removes all currently selected or checked entries from the loaded library.
    */
   public void onRemoveSelectedOrCheckedRequested() {
-    if (!libraryLoaded) {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(this::onRemoveSelectedOrCheckedRequested);
+      return;
+    }
+
+    if (saveInProgress) {
+      setStatus("Save in progress. Please wait.");
+      return;
+    }
+
+    if (!isLibraryLoaded()) {
       setStatus("No library loaded.");
       return;
     }
@@ -201,7 +225,17 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * Handles the Save As action and writes the current library to a new file.
    */
   public void onSaveAsRequested() {
-    if (!libraryLoaded) {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(this::onSaveAsRequested);
+      return;
+    }
+
+    if (saveInProgress) {
+      setStatus("Save in progress. Please wait.");
+      return;
+    }
+
+    if (!isLibraryLoaded()) {
       setStatus("No library loaded.");
       return;
     }
@@ -228,6 +262,15 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * @param field metadata field that was committed by the user.
    */
   public void onMetadataCommit(@NotNull final DBEntryField field) {
+    if (!Platform.isFxApplicationThread()) {
+      onGuiThread(() -> onMetadataCommit(field));
+      return;
+    }
+
+    if (saveInProgress) {
+      return;
+    }
+
     if (updatingMetadataFields) {
       return;
     }
@@ -346,8 +389,8 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
   private void applyLoadedLibrary(@NotNull final File file,
       @NotNull final SpectralLibrary loadedLibrary) {
     currentFile = file;
-    libraryLoaded = true;
     structuralDirty = false;
+    saveInProgress = false;
 
     model.getEntries().setAll(copyEntries(loadedLibrary.getEntries()));
     rebuildBaselineSnapshots();
@@ -365,36 +408,69 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
    * @param format output serialization format.
    */
   private void saveLibrary(@NotNull final File file, @NotNull final SpectralLibraryFileFormat format) {
-    if (!libraryLoaded) {
+    if (!isLibraryLoaded()) {
       setStatus("No library loaded.");
       return;
     }
 
+    // decision: snapshot the JavaFX list on GUI thread, then perform deep-copy/export on background thread.
+    final List<SpectralLibraryEntry> entriesSnapshot = List.copyOf(model.getEntries());
+    saveInProgress = true;
+    setStatus("Saving " + file.getName() + "...");
+    updateWindowState();
+
     try {
-      final SpectralLibrary exportLibrary = createLibraryFromModel(file);
-      fileService.saveLibrary(exportLibrary, file, format);
-      currentFile = file;
-      structuralDirty = false;
-      rebuildBaselineSnapshots();
-      updateMetadataEditedForSelection(model.getSelectedEntry());
-      entryListController.requestListRefresh();
-      setStatus("Saved " + file.getName() + " in " + format.name() + " format.");
-      updateDirtyState();
-    } catch (final Exception e) {
-      logger.log(Level.WARNING, "Cannot save library to " + file.getAbsolutePath(), e);
-      setStatus("Failed to save file: " + e.getMessage());
+      ioExecutor.submit(() -> {
+        try {
+          final SpectralLibrary exportLibrary = createLibraryFromEntries(file, entriesSnapshot);
+          fileService.saveLibrary(exportLibrary, file, format);
+          onGuiThread(() -> applySaveSuccess(file, format));
+        } catch (final Exception e) {
+          logger.log(Level.WARNING, "Cannot save library to " + file.getAbsolutePath(), e);
+          onGuiThread(() -> {
+            saveInProgress = false;
+            updateWindowState();
+            setStatus("Failed to save file: " + e.getMessage());
+          });
+        }
+      });
+    } catch (final RejectedExecutionException e) {
+      logger.log(Level.WARNING, "Cannot schedule library saving for " + file.getAbsolutePath(), e);
+      saveInProgress = false;
+      updateWindowState();
+      setStatus("Failed to save file: background saver is not available.");
     }
   }
 
   /**
-   * Creates a detached export library from the current editor model state.
+   * Applies state updates after a successful save operation.
+   *
+   * @param file   saved output file.
+   * @param format saved output format.
+   */
+  private void applySaveSuccess(@NotNull final File file,
+      @NotNull final SpectralLibraryFileFormat format) {
+    currentFile = file;
+    structuralDirty = false;
+    saveInProgress = false;
+    rebuildBaselineSnapshots();
+    updateMetadataEditedForSelection(model.getSelectedEntry());
+    entryListController.requestListRefresh();
+    setStatus("Saved " + file.getName() + " in " + format.name() + " format.");
+    updateDirtyState();
+  }
+
+  /**
+   * Creates a detached export library from a source entry snapshot.
    *
    * @param targetFile file the export library is associated with.
-   * @return new library containing copies of all model entries.
+   * @param sourceEntries source entries that should be exported.
+   * @return new library containing detached copies of all source entries.
    */
-  private @NotNull SpectralLibrary createLibraryFromModel(@NotNull final File targetFile) {
+  private @NotNull SpectralLibrary createLibraryFromEntries(@NotNull final File targetFile,
+      @NotNull final List<SpectralLibraryEntry> sourceEntries) {
     final SpectralLibrary exportLibrary = new SpectralLibrary(null, targetFile);
-    exportLibrary.addEntries(copyEntries(model.getEntries()));
+    exportLibrary.addEntries(copyEntries(sourceEntries));
     exportLibrary.trim();
     return exportLibrary;
   }
@@ -752,7 +828,17 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
 
     model.setCurrentFileText(currentFile == null ? "No file loaded"
         : currentFile.getName() + " (" + model.getEntries().size() + " entries)");
-    model.setSaveEnabled(libraryLoaded);
+    model.setSaveEnabled(isLibraryLoaded() && !saveInProgress);
+  }
+
+  /**
+   * Returns whether a spectral library is currently loaded.
+   *
+   * @return {@code true} if a source file is loaded.
+   */
+  private boolean isLibraryLoaded() {
+    // decision: loaded state stays true even if the loaded library has zero entries.
+    return currentFile != null;
   }
 
   /**
@@ -771,3 +857,4 @@ public final class SpectralLibraryEditorController extends FxController<Spectral
   }
 
 }
+

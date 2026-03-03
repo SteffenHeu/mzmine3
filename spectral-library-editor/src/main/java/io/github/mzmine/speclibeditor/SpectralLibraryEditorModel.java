@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -37,6 +36,7 @@ import java.util.Map;
 import java.util.Objects;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -74,6 +74,7 @@ public final class SpectralLibraryEditorModel {
       originalValuesByEntry = new IdentityHashMap<>();
   private final @NotNull IdentityHashMap<SpectralLibraryEntry, EnumSet<DBEntryField>>
       changedFieldsByEntry = new IdentityHashMap<>();
+  private final @NotNull BooleanProperty anyEntryEdits = new SimpleBooleanProperty(false);
 
   /**
    * Initializes per-field metadata properties used by the editor form.
@@ -324,6 +325,7 @@ public final class SpectralLibraryEditorModel {
   public void clearEditedEntryTracking() {
     originalValuesByEntry.clear();
     changedFieldsByEntry.clear();
+    updateAnyEntryEditsState();
   }
 
   /**
@@ -338,6 +340,7 @@ public final class SpectralLibraryEditorModel {
     baseline.putAll(snapshot);
     originalValuesByEntry.put(entry, baseline);
     changedFieldsByEntry.remove(entry);
+    updateAnyEntryEditsState();
   }
 
   /**
@@ -348,6 +351,7 @@ public final class SpectralLibraryEditorModel {
   public void removeEditedEntryTracking(@NotNull final SpectralLibraryEntry entry) {
     originalValuesByEntry.remove(entry);
     changedFieldsByEntry.remove(entry);
+    updateAnyEntryEditsState();
   }
 
   /**
@@ -403,6 +407,17 @@ public final class SpectralLibraryEditorModel {
     if (changedFields.isEmpty()) {
       changedFieldsByEntry.remove(entry);
     }
+
+    updateAnyEntryEditsState();
+  }
+
+  /**
+   * Returns an observable property indicating whether any entry currently has edits.
+   *
+   * @return read-only property for global edited-entry state.
+   */
+  public @NotNull ReadOnlyBooleanProperty anyEntryEditsProperty() {
+    return anyEntryEdits;
   }
 
   /**
@@ -411,6 +426,13 @@ public final class SpectralLibraryEditorModel {
    * @return {@code true} if any entry is edited.
    */
   public boolean hasAnyEntryEdits() {
-    return !changedFieldsByEntry.isEmpty();
+    return anyEntryEdits.get();
+  }
+
+  /**
+   * Updates the global edited-entry state from the internal tracking maps.
+   */
+  private void updateAnyEntryEditsState() {
+    anyEntryEdits.set(!changedFieldsByEntry.isEmpty());
   }
 }
