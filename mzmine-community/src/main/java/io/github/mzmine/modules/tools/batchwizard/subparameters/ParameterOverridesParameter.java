@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -50,22 +49,23 @@ import org.w3c.dom.NodeList;
 public class ParameterOverridesParameter implements
     UserParameter<List<ParameterOverride>, ParameterCustomizationPane> {
 
-  private static final String PARAMETER_NAME = "parameterCustomization";
   private static final String OVERRIDE_ELEMENT = "override";
   private static final String MODULE_CLASS_ATTR = "moduleClass";
-  private static final String MODULE_NAME_ATTR = "moduleName";
+  private static final String MODULE_UNIQUE_ID_ATTR = "moduleUniqueId";
   private static final String PARAM_NAME_ATTR = "parameterName";
   private static final String SCOPE_ATTR = "scope";
+  private final String name;
 
   private List<ParameterOverride> value;
 
   public ParameterOverridesParameter() {
     this.value = new ArrayList<>();
+    name = "Customization";
   }
 
   @Override
   public String getName() {
-    return PARAMETER_NAME;
+    return name;
   }
 
   @Override
@@ -80,8 +80,14 @@ public class ParameterOverridesParameter implements
 
   @Override
   public boolean checkValue(Collection<String> errorMessages) {
-    // Always valid - can have 0 or more overrides
-    return true;
+
+    boolean check = true;
+    final List<String> myErrors = new ArrayList<>();
+    for (ParameterOverride override : value) {
+      check = check && override.parameterWithValue().checkValue(myErrors);
+    }
+    myErrors.stream().map("Parameter override: %s"::formatted).forEach(errorMessages::add);
+    return check;
   }
 
   @Override
@@ -92,7 +98,7 @@ public class ParameterOverridesParameter implements
     for (int i = 0; i < nodes.getLength(); i++) {
       Element overrideElement = (Element) nodes.item(i);
       String moduleClass = overrideElement.getAttribute(MODULE_CLASS_ATTR);
-      String moduleName = overrideElement.getAttribute(MODULE_NAME_ATTR);
+      String moduleUniqueId = overrideElement.getAttribute(MODULE_UNIQUE_ID_ATTR);
       String paramName = overrideElement.getAttribute(PARAM_NAME_ATTR);
 
       // Load scope with backwards compatibility - default to ALL if not present
@@ -109,7 +115,7 @@ public class ParameterOverridesParameter implements
           .orElse(null);
       parameter.loadValueFromXML(overrideElement);
 
-      overrides.add(new ParameterOverride(moduleClass, moduleName, parameter, scope));
+      overrides.add(new ParameterOverride(moduleClass, moduleUniqueId, parameter, scope));
     }
 
     this.value = overrides;
@@ -126,7 +132,7 @@ public class ParameterOverridesParameter implements
     for (ParameterOverride override : value) {
       Element overrideElement = doc.createElement(OVERRIDE_ELEMENT);
       overrideElement.setAttribute(MODULE_CLASS_ATTR, override.moduleClassName());
-      overrideElement.setAttribute(MODULE_NAME_ATTR, override.moduleName());
+      overrideElement.setAttribute(MODULE_UNIQUE_ID_ATTR, override.moduleUniqueId());
       overrideElement.setAttribute(PARAM_NAME_ATTR, override.parameterWithValue().getName());
       overrideElement.setAttribute(SCOPE_ATTR, override.scope().name());
       override.parameterWithValue().saveValueToXML(overrideElement);

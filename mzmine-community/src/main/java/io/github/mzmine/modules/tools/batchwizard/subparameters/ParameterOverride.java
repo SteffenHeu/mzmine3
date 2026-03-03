@@ -27,6 +27,7 @@ package io.github.mzmine.modules.tools.batchwizard.subparameters;
 
 import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.parameters.Parameter;
+import io.github.mzmine.parameters.parametertypes.EmbeddedParameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
@@ -41,15 +42,15 @@ import org.jetbrains.annotations.NotNull;
  * Represents a single parameter override for a specific module parameter. This class is
  * serializable so it can be saved/loaded with wizard presets.
  */
-public record ParameterOverride(String moduleClassName, String moduleName,
+public record ParameterOverride(String moduleClassName, String moduleUniqueId,
                                 Parameter<?> parameterWithValue, ApplicationScope scope) {
 
   private static final Logger logger = Logger.getLogger(ParameterOverride.class.getName());
 
-  public ParameterOverride(@NotNull String moduleClassName, @NotNull String moduleName,
+  public ParameterOverride(@NotNull String moduleClassName, @NotNull String moduleUniqueId,
       @NotNull final Parameter<?> parameterWithValue, @NotNull ApplicationScope scope) {
     this.moduleClassName = moduleClassName;
-    this.moduleName = moduleName;
+    this.moduleUniqueId = moduleUniqueId;
     this.parameterWithValue = parameterWithValue;
     this.scope = scope;
   }
@@ -111,8 +112,8 @@ public record ParameterOverride(String moduleClassName, String moduleName,
    */
   public String getDisplayValue() {
     String valueAsString = String.valueOf(parameterWithValue.getValue());
-    if (parameterWithValue instanceof OptionalParameter<?> opt) {
-      valueAsString += String.valueOf(opt.getEmbeddedParameter().getValue());
+    if (parameterWithValue instanceof EmbeddedParameter<?, ?, ?> opt) {
+      valueAsString += ", " + opt.getEmbeddedParameter().getValue();
     }
 
     if (valueAsString.length() > 50) {
@@ -123,6 +124,6 @@ public record ParameterOverride(String moduleClassName, String moduleName,
 
   @Override
   public @NotNull String toString() {
-    return moduleName + "." + parameterWithValue.getName() + " = " + getDisplayValue();
+    return moduleUniqueId + "." + parameterWithValue.getName() + " = " + getDisplayValue();
   }
 }
