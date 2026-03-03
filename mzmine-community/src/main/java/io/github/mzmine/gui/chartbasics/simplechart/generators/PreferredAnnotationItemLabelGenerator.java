@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,38 +23,35 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.wavelet;
+package io.github.mzmine.gui.chartbasics.simplechart.generators;
 
-import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.FeatureResolverModule;
-import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverParameters;
-import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
+import io.github.mzmine.gui.chartbasics.simplechart.providers.XYItemObjectProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jfree.chart.labels.XYItemLabelGenerator;
+import org.jfree.data.xy.XYDataset;
 
-public class WaveletResolverModule extends FeatureResolverModule {
-
-  public static final String NAME = "Wavelet feature resolver (experimental)";
-
-  @NotNull
-  @Override
-  public String getName() {
-    return NAME;
-  }
-
-  @Nullable
-  @Override
-  public Class<? extends ParameterSet> getParameterSetClass() {
-    return WaveletResolverParameters.class;
-  }
-
-  @NotNull
-  @Override
-  public String getDescription() {
-    return "Resolves EICs to features by wavelet transform. Supports retention time and mobility resolving.";
-  }
+/**
+ * Generic item label generator for chart datasets that expose {@link FeatureListRow} as item
+ * objects via {@link XYItemObjectProvider}.
+ */
+public class PreferredAnnotationItemLabelGenerator implements XYItemLabelGenerator {
 
   @Override
-  public @NotNull String getUniqueID() {
-    return "wavelet_resolver";
+  public @Nullable String generateLabel(final @NotNull XYDataset dataset, final int series,
+      final int item) {
+    if (!(dataset instanceof XYItemObjectProvider<?> itemObjectProvider)) {
+      return null;
+    }
+
+    final Object itemObject = itemObjectProvider.getItemObject(item);
+    if (!(itemObject instanceof FeatureListRow row)) {
+      return null;
+    }
+
+    final FeatureAnnotation annotation = row.getPreferredAnnotation();
+    return annotation == null ? null : annotation.getCompoundName();
   }
 }

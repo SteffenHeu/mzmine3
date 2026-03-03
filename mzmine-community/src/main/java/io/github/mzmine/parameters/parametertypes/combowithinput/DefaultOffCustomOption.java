@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -23,18 +22,33 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.image;
+package io.github.mzmine.parameters.parametertypes.combowithinput;
 
-import io.github.mzmine.gui.framework.fx.features.SimpleFeatureListTab;
-import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
+import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
+import org.jetbrains.annotations.NotNull;
 
-public class ColocatedImageVisualizerTab extends SimpleFeatureListTab {
+/**
+ * Options for combo parameters that allow a built-in default, an off/disabled state, or a custom
+ * user-defined value.
+ */
+public enum DefaultOffCustomOption implements UniqueIdSupplier {
+  DEFAULT, OFF, CUSTOM;
 
-  public ColocatedImageVisualizerTab(String title, FeatureTableFX table) {
-    super(title, table, true, true);
+  @Override
+  public @NotNull String getUniqueID() {
+    return switch (this) {
+      case DEFAULT -> "default";
+      case OFF -> "off";
+      case CUSTOM -> "custom";
+    };
+  }
 
-    final ColocatedImageVisualizerPane pane = new ColocatedImageVisualizerPane(getParentGroup());
-    pane.autoUpdateProperty().bindBidirectional(updateOnSelectionProperty());
-    setContent(pane);
+  @Override
+  public String toString() {
+    return switch (this) {
+      case DEFAULT -> "Default";
+      case OFF -> "Off";
+      case CUSTOM -> "Custom";
+    };
   }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -12,6 +11,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -22,21 +22,17 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.wavelet;
+package io.github.mzmine.parameters.parametertypes;
 
 /**
- * Intermediate object to store maxima in the CWT.
- *
- * @param index     Index in the original signal
- * @param scale     Scale at which it was prominent
- * @param cwtValue  CWT coefficient value at this point/scale
- * @param originalY y-value in the original signal
+ * Interface for Options of
+ * {@link io.github.mzmine.parameters.parametertypes.ComboParameter<OffDefaultOn>} in
+ * {@link io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter}s to reduce
+ * ambiguity. This is meant to replace a
+ * {@link io.github.mzmine.parameters.parametertypes.BooleanParameter} in an advanced parameter set
+ * to make it clear what the default value is, hence {@link #getValue} may be false or true.
  */
-record PotentialPeak(int index, double scale, double cwtValue, double originalY) {
+public interface OffDefaultOn {
 
-  @Override
-  public String toString() {
-    return "PotentialPeak{index=" + index + ", scale=" + scale + ", cwtValue=" + String.format(
-        "%.2f", cwtValue) + ", y=" + String.format("%.2f", originalY) +  ", y/cwt=" + String.format("%.2f", cwtValue() / Math.sqrt(scale())) + "}";
-  }
+  boolean getValue();
 }

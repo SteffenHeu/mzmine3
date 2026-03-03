@@ -47,7 +47,6 @@ import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.M
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.noiseamplitude.NoiseAmplitudeResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.savitzkygolay.SavitzkyGolayResolverModule;
-import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.wavelet.WaveletResolverModule;
 import io.github.mzmine.modules.dataprocessing.featdet_imagebuilder.ImageBuilderModule;
 import io.github.mzmine.modules.dataprocessing.featdet_imsexpander.ImsExpanderModule;
 import io.github.mzmine.modules.dataprocessing.featdet_maldispotfeaturedetection.MaldiSpotFeatureDetectionModule;
@@ -210,7 +209,8 @@ public abstract class AbstractWorkspace implements Workspace {
 
     menu.setOnShowing(_ -> getWorkspaceMenuHelper().fillRecentProjects(recentProjects));
 
-    addModuleMenuItem(menu, ProjectLoadModule.class, KeyCode.O, KeyCombination.SHORTCUT_DOWN);
+    addMenuItem(menu, "Open project", () -> ProjectLoadModule.openQuickSelect(), KeyCode.O, KeyCombination.SHORTCUT_DOWN);
+    addModuleMenuItem(menu, ProjectLoadModule.class, KeyCode.O, KeyCombination.SHORTCUT_DOWN, KeyCombination.SHIFT_DOWN);
     menu.getItems().add(recentProjects);
     addModuleMenuItem(menu, ProjectSaveModule.class, KeyCode.S, KeyCombination.SHORTCUT_DOWN);
     addModuleMenuItem(menu, ProjectSaveAsModule.class, KeyCode.S, KeyCombination.SHORTCUT_DOWN,
@@ -261,8 +261,7 @@ public abstract class AbstractWorkspace implements Workspace {
 
   protected Menu buildDefaultResolvingSubMenu() {
     return addModuleMenuItems("Resolving", MinimumSearchFeatureResolverModule.class,
-        NoiseAmplitudeResolverModule.class, SavitzkyGolayResolverModule.class,
-        WaveletResolverModule.class);
+        NoiseAmplitudeResolverModule.class, SavitzkyGolayResolverModule.class);
   }
 
   protected Menu buildDefaultFeatureListExportSubMenu() {
