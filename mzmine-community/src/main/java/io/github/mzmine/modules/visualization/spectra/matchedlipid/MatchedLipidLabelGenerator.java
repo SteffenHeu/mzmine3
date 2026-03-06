@@ -26,6 +26,7 @@
 package io.github.mzmine.modules.visualization.spectra.matchedlipid;
 
 import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRuleType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
@@ -35,6 +36,8 @@ import java.util.Map;
 import javafx.util.Pair;
 import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.data.xy.XYDataset;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class MatchedLipidLabelGenerator implements XYItemLabelGenerator {
 
@@ -144,8 +147,9 @@ public class MatchedLipidLabelGenerator implements XYItemLabelGenerator {
     return false;
   }
 
-  private String buildFragmentAnnotation(LipidFragment lipidFragment, boolean showAccuracy) {
-    StringBuilder sb = new StringBuilder();
+  private @NotNull String buildFragmentAnnotation(final @NotNull LipidFragment lipidFragment,
+      final boolean showAccuracy) {
+    final StringBuilder sb = new StringBuilder();
     if (lipidFragment.getLipidFragmentInformationLevelType()
         .equals(LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL)) {
       sb.append(lipidFragment.getLipidChainType().getName()).append(" ")
@@ -170,8 +174,12 @@ public class MatchedLipidLabelGenerator implements XYItemLabelGenerator {
       }
     } else {
       sb.append(lipidFragment.getRuleType().toString()).append("\n")
-          .append(lipidFragment.getIonFormula()).append("\n")
-          .append(ConfigService.getConfiguration().getMZFormat().format(lipidFragment.getMzExact()));
+          .append(lipidFragment.getIonFormula()).append("\n");
+      final @Nullable String nlFormula = getHeadgroupNeutralLossFormula(lipidFragment);
+      if (nlFormula != null) {
+        sb.append("NL: ").append(nlFormula).append("\n");
+      }
+      sb.append(ConfigService.getConfiguration().getMZFormat().format(lipidFragment.getMzExact()));
       // accuracy
       if (showAccuracy) {
         float ppm = (float) ((lipidFragment.getMzExact() - lipidFragment.getDataPoint().getMZ())
@@ -181,5 +189,15 @@ public class MatchedLipidLabelGenerator implements XYItemLabelGenerator {
       }
     }
     return sb.toString();
+  }
+
+  private static @Nullable String getHeadgroupNeutralLossFormula(
+      final @NotNull LipidFragment lipidFragment) {
+    if (lipidFragment.getRuleType() != LipidFragmentationRuleType.HEADGROUP_FRAGMENT_NL) {
+      return null;
+    }
+
+    final @Nullable String formula = lipidFragment.getOriginatingRuleFormula();
+    return formula == null || formula.isBlank() ? null : formula;
   }
 }
