@@ -1372,13 +1372,16 @@ public enum LipidClasses implements ILipidClass {
           "C6H12O6"), //
       new LipidFragmentationRule(PolarityType.POSITIVE, IonizationType.POSITIVE_HYDROGEN,
           LipidFragmentationRuleType.SPHINGOLIPID_DI_HYDROXY_BACKBONE_CHAIN_MINUS_FORMULA_FRAGMENT,
-          LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL, "HO"), //
+          LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL, "HO", LipidFragmentationRuleRating.MINOR),
+      //
       new LipidFragmentationRule(PolarityType.POSITIVE, IonizationType.POSITIVE_HYDROGEN,
           LipidFragmentationRuleType.SPHINGOLIPID_DI_HYDROXY_BACKBONE_CHAIN_MINUS_FORMULA_FRAGMENT,
-          LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL, "H3O2"), //
+          LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL, "H3O2", LipidFragmentationRuleRating.MINOR),
+      //
       new LipidFragmentationRule(PolarityType.POSITIVE, IonizationType.POSITIVE_HYDROGEN,
           LipidFragmentationRuleType.SPHINGOLIPID_DI_HYDROXY_BACKBONE_CHAIN_MINUS_FORMULA_FRAGMENT,
-          LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL, "CH3O2"), //
+          LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL, "CH3O2",
+          LipidFragmentationRuleRating.MINOR), //
 
       new LipidFragmentationRule(PolarityType.NEGATIVE, IonizationType.ACETATE,
           LipidFragmentationRuleType.HEADGROUP_FRAGMENT_NL, LipidAnnotationLevel.SPECIES_LEVEL,
@@ -1438,7 +1441,7 @@ public enum LipidClasses implements ILipidClass {
 
       new LipidFragmentationRule(PolarityType.NEGATIVE, IonizationType.ACETATE,
           LipidFragmentationRuleType.HEADGROUP_FRAGMENT_NL, LipidAnnotationLevel.SPECIES_LEVEL,
-          "C2H4O2"), //
+          "C2H4O2", LipidFragmentationRuleRating.MINOR), //
       new LipidFragmentationRule(PolarityType.NEGATIVE, IonizationType.ACETATE,
           LipidFragmentationRuleType.HEADGROUP_FRAGMENT_NL, LipidAnnotationLevel.SPECIES_LEVEL,
           "C8H14O7"), //
@@ -1448,7 +1451,7 @@ public enum LipidClasses implements ILipidClass {
 
       new LipidFragmentationRule(PolarityType.NEGATIVE, IonizationType.FORMATE,
           LipidFragmentationRuleType.HEADGROUP_FRAGMENT_NL, LipidAnnotationLevel.SPECIES_LEVEL,
-          "H2CO2"), //
+          "H2CO2", LipidFragmentationRuleRating.MINOR), //
       new LipidFragmentationRule(PolarityType.NEGATIVE, IonizationType.FORMATE,
           LipidFragmentationRuleType.HEADGROUP_FRAGMENT_NL, LipidAnnotationLevel.SPECIES_LEVEL,
           "C6H11O6"), //
@@ -1496,7 +1499,7 @@ public enum LipidClasses implements ILipidClass {
       //TODO more testing required
       new LipidFragmentationRule(PolarityType.NEGATIVE, IonizationType.ACETATE,
           LipidFragmentationRuleType.HEADGROUP_FRAGMENT_NL, LipidAnnotationLevel.SPECIES_LEVEL,
-          "C2H4O2"), //
+          "C2H4O2", LipidFragmentationRuleRating.MINOR), //
       new LipidFragmentationRule(PolarityType.NEGATIVE, IonizationType.ACETATE,
           LipidFragmentationRuleType.HEADGROUP_FRAGMENT_NL, LipidAnnotationLevel.SPECIES_LEVEL,
           "C8H14O7"), //
