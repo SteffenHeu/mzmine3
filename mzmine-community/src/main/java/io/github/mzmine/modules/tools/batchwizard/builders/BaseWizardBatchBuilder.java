@@ -1440,7 +1440,7 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
     param.setParameter(LipidAnnotationParameters.lipidAnalysisType,
         isImaging ? LipidAnalysisType.IMAGING : LipidAnalysisType.LC_REVERSED_PHASE);
     param.setParameter(LipidAnnotationParameters.searchForMSMSFragments, !isImaging);
-    param.setParameter(LipidAnnotationParameters.minimumOverallQualityScore, 0.1);
+    param.setParameter(LipidAnnotationParameters.minimumOverallQualityScore, 0.6);
     param.setParameter(LipidAnnotationParameters.customLipidClasses, false);
     final var ms2Param = param.getParameter(LipidAnnotationParameters.searchForMSMSFragments)
         .getEmbeddedParameters();
