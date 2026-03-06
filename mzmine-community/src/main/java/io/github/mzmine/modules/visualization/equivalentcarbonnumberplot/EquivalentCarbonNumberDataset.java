@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,7 +28,6 @@ package io.github.mzmine.modules.visualization.equivalentcarbonnumberplot;
 import static java.util.Objects.requireNonNullElse;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
@@ -42,11 +41,11 @@ import io.github.mzmine.taskcontrol.TaskPriority;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.taskcontrol.TaskStatusListener;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;
 import org.jetbrains.annotations.NotNull;
@@ -68,7 +67,6 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
   private double[] yValues;
   private final FeatureListRow[] lipidRows;
   private final List<FeatureListRow> selectedRows;
-  private final List<MatchedLipid> matchedLipids = new ArrayList<>();
   private final ILipidClass selectedLipidClass;
   private final int selectedDBENumber;
   private List<MatchedLipid> lipidsForDBE;
@@ -80,11 +78,6 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
     this.lipidRows = lipidRows;
     this.selectedLipidClass = selectedLipidClass;
     this.selectedDBENumber = selectedDBENumber;
-    for (FeatureListRow featureListRow : lipidRows) {
-      if (featureListRow instanceof ModularFeatureListRow) {
-        matchedLipids.add(featureListRow.get(LipidMatchListType.class).get(0));
-      }
-    }
     MZmineCore.getTaskController().addTask(this);
   }
 
@@ -94,57 +87,47 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
     setStatus(TaskStatus.PROCESSING);
     if (isCanceled()) {
       setStatus(TaskStatus.CANCELED);
+      return;
     }
-    Map<ILipidClass, Map<Integer, List<MatchedLipid>>> groupedLipids = matchedLipids.stream()
-        .collect(
-            Collectors.groupingBy(matchedLipid -> matchedLipid.getLipidAnnotation().getLipidClass(),
-                Collectors.groupingBy(matchedLipid -> {
-                  ILipidAnnotation lipidAnnotation = matchedLipid.getLipidAnnotation();
-                  if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-                    return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-                        molecularAnnotation.getAnnotation()).getValue();
-                  } else if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
-                    return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-                        lipidAnnotation.getAnnotation()).getValue();
-                  } else {
-                    return -1;
-                  }
-                }, Collectors.toList())));
 
-    Map<Integer, List<MatchedLipid>> lipidsOfClass = groupedLipids.get(selectedLipidClass);
+    final List<MatchedLipid> selectedLipids = new ArrayList<>();
+    final List<Double> xValueList = new ArrayList<>();
+    final List<Double> yValueList = new ArrayList<>();
+    for (final FeatureListRow lipidRow : lipidRows) {
+      final Float rowRt = lipidRow.getAverageRT();
+      if (rowRt == null || !Float.isFinite(rowRt)) {
+        continue;
+      }
 
-    if (lipidsOfClass != null) {
-      lipidsForDBE = lipidsOfClass.get(selectedDBENumber);
+      final List<MatchedLipid> featureLipids = lipidRow.get(LipidMatchListType.class);
+      if (featureLipids == null || featureLipids.isEmpty()) {
+        continue;
+      }
 
-      if (lipidsForDBE != null) {
-        xValues = new double[lipidsForDBE.size()];
-        yValues = new double[lipidsForDBE.size()];
-
-        for (int i = 0; i < lipidsForDBE.size(); i++) {
-          // get number of Carbons
-          ILipidAnnotation lipidAnnotation = lipidsForDBE.get(i).getLipidAnnotation();
-          if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-            yValues[i] = MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-                molecularAnnotation.getAnnotation()).getKey();
-          } else if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
-            yValues[i] = MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-                lipidAnnotation.getAnnotation()).getKey();
-          }
-          for (FeatureListRow lipidRow : lipidRows) {
-            List<MatchedLipid> featureLipids = lipidRow.get(LipidMatchListType.class);
-
-            if (!featureLipids.isEmpty()) {
-              MatchedLipid featureMatchedLipid = featureLipids.get(0);
-
-              if (lipidsForDBE.get(i).equals(featureMatchedLipid)) {
-                xValues[i] = lipidRow.getAverageRT();
-                break;
-              }
-            }
-          }
+      final Set<Integer> addedCarbonsForRow = new HashSet<>();
+      for (final MatchedLipid featureMatchedLipid : featureLipids) {
+        if (!featureMatchedLipid.getLipidAnnotation().getLipidClass().equals(selectedLipidClass)) {
+          continue;
         }
+
+        final int dbe = extractDbe(featureMatchedLipid.getLipidAnnotation());
+        if (dbe != selectedDBENumber) {
+          continue;
+        }
+
+        final int carbons = extractCarbons(featureMatchedLipid.getLipidAnnotation());
+        if (carbons < 0 || !addedCarbonsForRow.add(carbons)) {
+          continue;
+        }
+
+        selectedLipids.add(featureMatchedLipid);
+        xValueList.add(rowRt.doubleValue());
+        yValueList.add((double) carbons);
       }
     }
+    lipidsForDBE = selectedLipids;
+    xValues = xValueList.stream().mapToDouble(Double::doubleValue).toArray();
+    yValues = yValueList.stream().mapToDouble(Double::doubleValue).toArray();
     finishedSteps = 1;
     setStatus(TaskStatus.FINISHED);
   }
@@ -260,5 +243,29 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
       logger.log(Level.SEVERE, message, exceptionToLog);
     }
     setStatus(TaskStatus.ERROR);
+  }
+
+  private static int extractDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
+    if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
+      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+          molecularAnnotation.getAnnotation()).getValue();
+    } else if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
+      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+          lipidAnnotation.getAnnotation()).getValue();
+    } else {
+      return -1;
+    }
+  }
+
+  private static int extractCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
+    if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
+      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+          molecularAnnotation.getAnnotation()).getKey();
+    } else if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
+      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+          lipidAnnotation.getAnnotation()).getKey();
+    } else {
+      return -1;
+    }
   }
 }

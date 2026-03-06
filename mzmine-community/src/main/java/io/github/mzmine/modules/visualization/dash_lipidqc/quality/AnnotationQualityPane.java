@@ -87,6 +87,8 @@ public class AnnotationQualityPane extends BorderPane {
 
   private static final double METRIC_BAR_WIDTH = 230d;
   private static final double METRIC_BAR_HEIGHT = 16d;
+  private static final double ISOMER_EXACT_MASS_TOLERANCE = 1e-6d;
+  private static final double OVERALL_SCORE_TIE_TOLERANCE = 1e-6d;
   private final LipidAnnotationQCDashboardModel model;
   private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
   private final javafx.scene.layout.VBox content = new javafx.scene.layout.VBox(8);
@@ -180,6 +182,14 @@ public class AnnotationQualityPane extends BorderPane {
       kendrickReason.setMaxWidth(Double.MAX_VALUE);
       kendrickReason.setStyle(qualityWarningStyle());
       content.getChildren().add(kendrickReason);
+    }
+    final @Nullable String isomerScoreTieWarning = detectIsomerScoreTieWarning(result.qualityCards());
+    if (isomerScoreTieWarning != null) {
+      final Label tieWarning = new Label(isomerScoreTieWarning);
+      tieWarning.setWrapText(true);
+      tieWarning.setMaxWidth(Double.MAX_VALUE);
+      tieWarning.setStyle(qualityWarningStyle());
+      content.getChildren().add(tieWarning);
     }
     if (result.falseNegativeCandidate() != null && result.falseNegativeQualityCard() != null) {
       final Label falseNegativeReason = new Label(
@@ -660,6 +670,47 @@ public class AnnotationQualityPane extends BorderPane {
 
   private static @NotNull String normalizeAdduct(final @Nullable String adduct) {
     return adduct == null ? "" : adduct.replaceAll("\\s+", "").toLowerCase();
+  }
+
+  private static @Nullable String detectIsomerScoreTieWarning(
+      final @NotNull List<QualityCardData> qualityCards) {
+    if (qualityCards.size() < 2) {
+      return null;
+    }
+
+    for (int i = 0; i < qualityCards.size() - 1; i++) {
+      final QualityCardData left = qualityCards.get(i);
+      for (int j = i + 1; j < qualityCards.size(); j++) {
+        final QualityCardData right = qualityCards.get(j);
+        if (!isIsomerScoreTie(left, right)) {
+          continue;
+        }
+        return "Potential isomer tie: " + formatCardTitle(left.match()) + " and "
+            + formatCardTitle(right.match()) + " have the same overall quality score ("
+            + String.format("%.1f%%", left.overall() * 100d) + ").";
+      }
+    }
+    return null;
+  }
+
+  private static boolean isIsomerScoreTie(final @NotNull QualityCardData left,
+      final @NotNull QualityCardData right) {
+    if (Math.abs(left.overall() - right.overall()) > OVERALL_SCORE_TIE_TOLERANCE) {
+      return false;
+    }
+
+    final String leftAnnotation = Objects.toString(left.match().getLipidAnnotation().getAnnotation(),
+        "");
+    final String rightAnnotation = Objects.toString(right.match().getLipidAnnotation().getAnnotation(),
+        "");
+    if (leftAnnotation.equals(rightAnnotation)) {
+      return false;
+    }
+
+    final double leftExactMass = MatchedLipid.getExactMass(left.match());
+    final double rightExactMass = MatchedLipid.getExactMass(right.match());
+    return Double.isFinite(leftExactMass) && Double.isFinite(rightExactMass)
+           && Math.abs(leftExactMass - rightExactMass) <= ISOMER_EXACT_MASS_TOLERANCE;
   }
 
   private void showPlaceholder(final @NotNull String text) {

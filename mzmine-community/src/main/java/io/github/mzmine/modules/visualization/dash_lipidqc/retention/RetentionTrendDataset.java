@@ -27,9 +27,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 import org.jetbrains.annotations.NotNull;
@@ -51,22 +52,28 @@ final class RetentionTrendDataset extends AbstractXYDataset {
     final List<MatchedLipid> lipidList = new ArrayList<>();
     final List<FeatureListRow> rowList = new ArrayList<>();
     for (final FeatureListRow row : rows) {
-      final @Nullable MatchedLipid match = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
-          row);
-      if (match == null || row.getAverageRT() == null) {
+      final Float rowRt = row.getAverageRT();
+      if (rowRt == null || !Float.isFinite(rowRt)) {
         continue;
       }
-      if (!predicate.test(match)) {
+      final List<MatchedLipid> rowMatches = row.getLipidMatches();
+      if (rowMatches.isEmpty()) {
         continue;
       }
-      final double y = yValueExtractor.applyAsDouble(match);
-      if (!Double.isFinite(y)) {
-        continue;
+      final Set<Double> addedYValues = new HashSet<>();
+      for (final MatchedLipid match : rowMatches) {
+        if (!predicate.test(match)) {
+          continue;
+        }
+        final double y = yValueExtractor.applyAsDouble(match);
+        if (!Double.isFinite(y) || !addedYValues.add(y)) {
+          continue;
+        }
+        lipidList.add(match);
+        rowList.add(row);
+        xList.add(rowRt.doubleValue());
+        yList.add(y);
       }
-      lipidList.add(match);
-      rowList.add(row);
-      xList.add((double) row.getAverageRT());
-      yList.add(y);
     }
     xValues = xList.stream().mapToDouble(Double::doubleValue).toArray();
     yValues = yList.stream().mapToDouble(Double::doubleValue).toArray();

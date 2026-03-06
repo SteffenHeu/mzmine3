@@ -39,7 +39,6 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
-import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalsePositiveUtils;
@@ -952,9 +951,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
 
   private @Nullable FeatureListRow findRowForLipid(@NotNull MatchedLipid clickedLipid) {
     for (final FeatureListRow candidate : getCurrentRowsWithLipidIds()) {
-      final @Nullable MatchedLipid selectedMatch =
-          LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(candidate);
-      if (selectedMatch != null && clickedLipid.equals(selectedMatch)) {
+      if (candidate.getLipidMatches().stream().anyMatch(clickedLipid::equals)) {
         return candidate;
       }
     }

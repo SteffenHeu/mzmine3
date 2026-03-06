@@ -91,10 +91,7 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
           return;
         }
         final int matchCount = (int) rowsWithLipidIds.stream()
-            .map(LipidQcAnnotationSelectionUtils::getPreferredLipidMatch)
-            .filter(java.util.Objects::nonNull)
-            .filter(match -> match.getLipidAnnotation().getLipidClass().equals(selectedClass))
-            .filter(match -> EquivalentCarbonNumberPane.extractDbe(match.getLipidAnnotation()) == dbe)
+            .filter(row -> hasMatchingClassAndDbeAnnotation(row, selectedClass, dbe))
             .count();
         if (matchCount < 3) {
           result = new RetentionComputationResult(
@@ -190,5 +187,18 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
     final @Nullable KendrickFalseNegativeCandidate potential =
         new KendrickFalseNegativeDetector(modularFeatureList).detectCandidate(selectedRow);
     return potential == null ? null : potential.match();
+  }
+
+  private static boolean hasMatchingClassAndDbeAnnotation(final @NotNull FeatureListRow row,
+      final @NotNull ILipidClass selectedClass, final int dbe) {
+    for (final MatchedLipid match : row.getLipidMatches()) {
+      if (!match.getLipidAnnotation().getLipidClass().equals(selectedClass)) {
+        continue;
+      }
+      if (EquivalentCarbonNumberPane.extractDbe(match.getLipidAnnotation()) == dbe) {
+        return true;
+      }
+    }
+    return false;
   }
 }

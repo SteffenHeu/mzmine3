@@ -40,9 +40,11 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidCl
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.TreeMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -283,25 +285,8 @@ public final class LipidQcScoringUtils {
     final List<double[]> carbonTrendPoints = new ArrayList<>();
     final List<double[]> dbeTrendPoints = new ArrayList<>();
     for (final FeatureListRow other : featureList.getRows()) {
-      final List<MatchedLipid> otherMatches = other.getLipidMatches();
-      if (otherMatches.isEmpty() || other.getAverageRT() == null) {
-        continue;
-      }
-      final MatchedLipid otherMatch = otherMatches.getFirst();
-      if (!otherMatch.getLipidAnnotation().getLipidClass().equals(selectedClass)) {
-        continue;
-      }
-      final int otherCarbons = extractTrendCarbons(otherMatch.getLipidAnnotation());
-      final int otherDbe = extractTrendDbe(otherMatch.getLipidAnnotation());
-      if (otherCarbons < 0 || otherDbe < 0) {
-        continue;
-      }
-      if (otherDbe == selectedDbe) {
-        carbonTrendPoints.add(new double[]{otherCarbons, other.getAverageRT()});
-      }
-      if (otherCarbons == selectedCarbons) {
-        dbeTrendPoints.add(new double[]{otherDbe, other.getAverageRT()});
-      }
+      collectTrendPointsFromRow(other, selectedClass, selectedCarbons, selectedDbe,
+          carbonTrendPoints, dbeTrendPoints);
     }
 
     final TrendScore carbonsTrend = computeTrendScore(carbonTrendPoints, selectedCarbons,
@@ -310,6 +295,42 @@ public final class LipidQcScoringUtils {
         methodLength);
     final double combined = combineTrendScores(carbonsTrend, dbeTrend);
     return new ElutionOrderMetrics(combined, carbonsTrend, dbeTrend, null);
+  }
+
+  private static void collectTrendPointsFromRow(final @NotNull FeatureListRow row,
+      final @NotNull ILipidClass selectedClass, final int selectedCarbons,
+      final int selectedDbe, final @NotNull List<double[]> carbonTrendPoints,
+      final @NotNull List<double[]> dbeTrendPoints) {
+    final Float rowRt = row.getAverageRT();
+    if (rowRt == null || !Float.isFinite(rowRt)) {
+      return;
+    }
+
+    final List<MatchedLipid> rowMatches = row.getLipidMatches();
+    if (rowMatches.isEmpty()) {
+      return;
+    }
+
+    final Set<Integer> addedCarbons = new HashSet<>();
+    final Set<Integer> addedDbes = new HashSet<>();
+    final double rtValue = rowRt.doubleValue();
+    for (final MatchedLipid rowMatch : rowMatches) {
+      if (!rowMatch.getLipidAnnotation().getLipidClass().equals(selectedClass)) {
+        continue;
+      }
+      final int rowCarbons = extractTrendCarbons(rowMatch.getLipidAnnotation());
+      final int rowDbe = extractTrendDbe(rowMatch.getLipidAnnotation());
+      if (rowCarbons < 0 || rowDbe < 0) {
+        continue;
+      }
+
+      if (rowDbe == selectedDbe && addedCarbons.add(rowCarbons)) {
+        carbonTrendPoints.add(new double[]{rowCarbons, rtValue});
+      }
+      if (rowCarbons == selectedCarbons && addedDbes.add(rowDbe)) {
+        dbeTrendPoints.add(new double[]{rowDbe, rtValue});
+      }
+    }
   }
 
   private static @NotNull ElutionOrderMetrics computeHilicElutionOrderMetrics(
