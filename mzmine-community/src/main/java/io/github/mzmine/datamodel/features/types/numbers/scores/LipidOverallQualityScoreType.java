@@ -38,7 +38,9 @@ import io.github.mzmine.datamodel.features.types.numbers.abstr.PercentType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidQcWeightParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ComponentWeights;
 import java.util.List;
 import java.util.Optional;
 import java.util.WeakHashMap;
@@ -119,7 +121,7 @@ public class LipidOverallQualityScoreType extends PercentType {
       final ScoringContext scoringContext = resolveScoringContext(featureList, match);
       final double score = computeCombinedAnnotationScore(featureList, row, match,
           scoringContext.includeMs2Score(), scoringContext.includeElutionOrderScore(),
-          scoringContext.analysisType());
+          scoringContext.analysisType(), scoringContext.componentWeights());
       return (float) clampToUnit(score);
     }
 
@@ -160,9 +162,15 @@ public class LipidOverallQualityScoreType extends PercentType {
             .getParameter(LipidAnnotationParameters.lipidAnalysisType).getValue();
         final boolean includeElutionOrderScore =
             analysisType == null || analysisType.hasRetentionTimePattern();
+        final @Nullable ComponentWeights componentWeights =
+            method.getParameters().getParameter(LipidAnnotationParameters.customQcWeights).getValue()
+                ? LipidQcWeightParameters.toComponentWeights(
+                    method.getParameters().getParameter(LipidAnnotationParameters.customQcWeights)
+                        .getEmbeddedParameters(), analysisType)
+                : null;
         return Optional.of(
             new ScoringContext(Boolean.TRUE.equals(useMs2), includeElutionOrderScore,
-                analysisType));
+                analysisType, componentWeights));
       } catch (RuntimeException ignored) {
         // fall through to fallback scoring if older parameter versions are loaded
       }
@@ -174,7 +182,7 @@ public class LipidOverallQualityScoreType extends PercentType {
       final @NotNull ModularFeatureList featureList, final @NotNull MatchedLipid match) {
     final boolean includeMs2Score =
         match.getMatchedFragments() != null && !match.getMatchedFragments().isEmpty();
-    return new ScoringContext(includeMs2Score, hasRetentionTimePattern(featureList), null);
+    return new ScoringContext(includeMs2Score, hasRetentionTimePattern(featureList), null, null);
   }
 
   private static boolean hasRetentionTimePattern(final @NotNull ModularFeatureList featureList) {
@@ -192,7 +200,8 @@ public class LipidOverallQualityScoreType extends PercentType {
   }
 
   private record ScoringContext(boolean includeMs2Score, boolean includeElutionOrderScore,
-                                @Nullable LipidAnalysisType analysisType) {
+                                @Nullable LipidAnalysisType analysisType,
+                                @Nullable ComponentWeights componentWeights) {
 
   }
 

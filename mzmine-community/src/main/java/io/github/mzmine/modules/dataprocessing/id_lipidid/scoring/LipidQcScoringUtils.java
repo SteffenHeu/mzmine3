@@ -37,6 +37,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -64,7 +65,8 @@ import org.jetbrains.annotations.Nullable;
  * <p>
  * Always included:
  * <ul>
- *   <li>MS1 mass accuracy: linear scaling, {@code 0 ppm -> 1.0}, {@code >= 5 ppm -> 0.0}</li>
+ *   <li>MS1 mass accuracy: linear scaling, {@code 0 ppm -> 1.0},
+ *   {@code >= configured MS1 tolerance -> 0.0}</li>
  *   <li>Lipid ion vs ion identity adduct agreement: binary ({@code 1.0} if equal, else
  *   {@code 0.0})</li>
  *   <li>Isotope pattern similarity (missing measured or theoretical pattern -> {@code 0.0})</li>
@@ -85,9 +87,13 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class LipidQcScoringUtils {
 
+  public static final int MIN_SUPPORTED_COMPONENT_WEIGHT = 0;
+  public static final int MAX_SUPPORTED_COMPONENT_WEIGHT = 100;
+
   private static final double RT_DELTA_NO_PENALTY_NORMALIZED = 0.006d;
   private static final double RT_DELTA_FULL_PENALTY_NORMALIZED = 0.07d;
   private static final double RT_DELTA_PENALTY_EXPONENT = 1.35d;
+  private static final double DEFAULT_MS1_SCORING_PPM_TOLERANCE = 5d;
   private static final double WEIGHT_MS1 = 40d;
   private static final double WEIGHT_ADDUCT_MATCH = 10d;
   private static final double WEIGHT_ADDUCT_NO_ION_IDENTITY = 10d;
@@ -135,6 +141,42 @@ public final class LipidQcScoringUtils {
                                     @NotNull TrendScore dbeTrend,
                                     @Nullable String detailOverride) {
 
+  }
+
+  /**
+   * Component weights used by overall lipid annotation quality scoring.
+   * <p>
+   * Values are clamped to {@code [0, 100]}.
+   */
+  public record ComponentWeights(double ms1Weight, double adductMatchWeight,
+                                 double adductNoIonIdentityWeight, double adductMismatchWeight,
+                                 double isotopeWeight, double interferenceWeight,
+                                 double ms2Weight, double elutionOrderNoTrendWeight,
+                                 double elutionOrderWithTrendWeight) {
+
+    public ComponentWeights {
+      ms1Weight = clampWeightToSupportedRange(ms1Weight);
+      adductMatchWeight = clampWeightToSupportedRange(adductMatchWeight);
+      adductNoIonIdentityWeight = clampWeightToSupportedRange(adductNoIonIdentityWeight);
+      adductMismatchWeight = clampWeightToSupportedRange(adductMismatchWeight);
+      isotopeWeight = clampWeightToSupportedRange(isotopeWeight);
+      interferenceWeight = clampWeightToSupportedRange(interferenceWeight);
+      ms2Weight = clampWeightToSupportedRange(ms2Weight);
+      elutionOrderNoTrendWeight = clampWeightToSupportedRange(elutionOrderNoTrendWeight);
+      elutionOrderWithTrendWeight = clampWeightToSupportedRange(elutionOrderWithTrendWeight);
+    }
+  }
+
+  public static @NotNull ComponentWeights defaultComponentWeights(
+      final @Nullable LipidAnalysisType analysisType) {
+    final LipidAnalysisType resolvedType =
+        analysisType == null ? LipidAnalysisType.LC_REVERSED_PHASE : analysisType;
+    return switch (resolvedType) {
+      case LC_REVERSED_PHASE, LC_HILIC, DIRECT_INFUSION, IMAGING ->
+          new ComponentWeights(WEIGHT_MS1, WEIGHT_ADDUCT_MATCH, WEIGHT_ADDUCT_NO_ION_IDENTITY,
+              WEIGHT_ADDUCT_MISMATCH, WEIGHT_ISOTOPE, WEIGHT_INTERFERENCE, WEIGHT_MS2,
+              WEIGHT_ELUTION_ORDER_NO_TREND, WEIGHT_ELUTION_ORDER_WITH_TREND);
+    };
   }
 
   /**
@@ -190,6 +232,30 @@ public final class LipidQcScoringUtils {
       }
       try {
         return appliedMethod.getParameters().getParameter(LipidAnnotationParameters.lipidAnalysisType)
+            .getValue();
+      } catch (RuntimeException ignored) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Detects MS1 matching tolerance from the latest applied {@link LipidAnnotationModule} step.
+   *
+   * @param featureList feature list that contains applied methods
+   * @return detected tolerance or {@code null} if unavailable
+   */
+  public static @Nullable MZTolerance detectMs1Tolerance(
+      final @NotNull ModularFeatureList featureList) {
+    final List<FeatureListAppliedMethod> appliedMethods = featureList.getAppliedMethods();
+    for (int i = appliedMethods.size() - 1; i >= 0; i--) {
+      final FeatureListAppliedMethod appliedMethod = appliedMethods.get(i);
+      if (!(appliedMethod.getModule() instanceof LipidAnnotationModule)) {
+        continue;
+      }
+      try {
+        return appliedMethod.getParameters().getParameter(LipidAnnotationParameters.mzTolerance)
             .getValue();
       } catch (RuntimeException ignored) {
         return null;
@@ -431,6 +497,13 @@ public final class LipidQcScoringUtils {
     return Math.max(0d, Math.min(1d, value));
   }
 
+  private static double clampWeightToSupportedRange(final double value) {
+    if (!Double.isFinite(value)) {
+      return 0d;
+    }
+    return Math.max(MIN_SUPPORTED_COMPONENT_WEIGHT, Math.min(MAX_SUPPORTED_COMPONENT_WEIGHT, value));
+  }
+
   private static double normalizeRtDeltaByMethodLength(final double deltaRt,
       final double methodLength) {
     if (!Double.isFinite(deltaRt) || !Double.isFinite(methodLength) || methodLength <= 0d) {
@@ -514,19 +587,53 @@ public final class LipidQcScoringUtils {
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
       final boolean includeMs2Score, final boolean includeElutionOrderScore,
       final @Nullable LipidAnalysisType analysisType) {
+    return computeCombinedAnnotationScore(featureList, row, match, includeMs2Score,
+        includeElutionOrderScore, analysisType, null);
+  }
+
+  /**
+   * Computes the overall annotation score for a specific analysis mode and optional custom
+   * component weights.
+   */
+  public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
+      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore,
+      final @Nullable LipidAnalysisType analysisType,
+      final @Nullable ComponentWeights customComponentWeights) {
+    return computeCombinedAnnotationScore(featureList, row, match, includeMs2Score,
+        includeElutionOrderScore, analysisType, customComponentWeights, null);
+  }
+
+  /**
+   * Computes the overall annotation score for a specific analysis mode and optional custom
+   * component weights.
+   */
+  public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
+      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore,
+      final @Nullable LipidAnalysisType analysisType,
+      final @Nullable ComponentWeights customComponentWeights,
+      final @Nullable MZTolerance ms1Tolerance) {
+    final LipidAnalysisType resolvedAnalysisType =
+        analysisType != null ? analysisType : detectLipidAnalysisType(featureList);
+    final ComponentWeights componentWeights =
+        Objects.requireNonNullElse(customComponentWeights,
+            defaultComponentWeights(resolvedAnalysisType));
+    final @Nullable MZTolerance resolvedMs1Tolerance =
+        ms1Tolerance != null ? ms1Tolerance : detectMs1Tolerance(featureList);
     final double elutionOrderWeight;
     final double elutionOrderScore;
     if (includeElutionOrderScore) {
       final ElutionOrderMetrics elutionMetrics = computeElutionOrderMetrics(featureList, row, match,
-          analysisType);
+          resolvedAnalysisType);
       elutionOrderScore = elutionMetrics.combinedScore();
-      elutionOrderWeight = computeElutionOrderWeight(elutionMetrics);
+      elutionOrderWeight = computeElutionOrderWeight(elutionMetrics, componentWeights);
     } else {
       elutionOrderScore = 0d;
-      elutionOrderWeight = WEIGHT_ELUTION_ORDER_WITH_TREND;
+      elutionOrderWeight = componentWeights.elutionOrderWithTrendWeight();
     }
     return computeOverallQualityScore(row, match, elutionOrderScore, elutionOrderWeight,
-        includeMs2Score, includeElutionOrderScore);
+        includeMs2Score, includeElutionOrderScore, componentWeights, resolvedMs1Tolerance);
   }
 
   /**
@@ -600,50 +707,99 @@ public final class LipidQcScoringUtils {
       final double elutionOrderScore, final boolean includeMs2Score,
       final boolean includeElutionOrderScore, final double adductWeight,
       final double elutionOrderWeight) {
-    double weightedSum = WEIGHT_MS1 * clampToUnit(ms1Score)
-        + Math.max(0d, adductWeight) * clampToUnit(adductScore)
-        + WEIGHT_ISOTOPE * clampToUnit(isotopeScore)
-        + WEIGHT_INTERFERENCE * clampToUnit(interferenceScore);
-    double weightSum = WEIGHT_MS1 + Math.max(0d, adductWeight) + WEIGHT_ISOTOPE + WEIGHT_INTERFERENCE;
+    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
+        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
+        defaultComponentWeights(LipidAnalysisType.LC_REVERSED_PHASE), adductWeight,
+        elutionOrderWeight);
+  }
+
+  /**
+   * Computes the weighted overall quality score from normalized component scores and explicit
+   * component weights.
+   */
+  public static double computeWeightedQualityScore(final double ms1Score, final double ms2Score,
+      final double adductScore, final double isotopeScore, final double interferenceScore,
+      final double elutionOrderScore, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore, final @NotNull ComponentWeights componentWeights,
+      final double adductWeight, final double elutionOrderWeight) {
+    final double resolvedMs1Weight = clampWeightToSupportedRange(componentWeights.ms1Weight());
+    final double resolvedIsotopeWeight =
+        clampWeightToSupportedRange(componentWeights.isotopeWeight());
+    final double resolvedInterferenceWeight =
+        clampWeightToSupportedRange(componentWeights.interferenceWeight());
+    final double resolvedMs2Weight = clampWeightToSupportedRange(componentWeights.ms2Weight());
+    final double resolvedAdductWeight = Math.max(0d, adductWeight);
+    final double resolvedElutionWeight = Math.max(0d, elutionOrderWeight);
+
+    double weightedSum = resolvedMs1Weight * clampToUnit(ms1Score)
+        + resolvedAdductWeight * clampToUnit(adductScore)
+        + resolvedIsotopeWeight * clampToUnit(isotopeScore)
+        + resolvedInterferenceWeight * clampToUnit(interferenceScore);
+    double weightSum =
+        resolvedMs1Weight + resolvedAdductWeight + resolvedIsotopeWeight + resolvedInterferenceWeight;
 
     if (includeMs2Score) {
-      weightedSum += WEIGHT_MS2 * clampToUnit(ms2Score);
-      weightSum += WEIGHT_MS2;
+      weightedSum += resolvedMs2Weight * clampToUnit(ms2Score);
+      weightSum += resolvedMs2Weight;
     }
     if (includeElutionOrderScore) {
-      weightedSum += Math.max(0d, elutionOrderWeight) * clampToUnit(elutionOrderScore);
-      weightSum += Math.max(0d, elutionOrderWeight);
+      weightedSum += resolvedElutionWeight * clampToUnit(elutionOrderScore);
+      weightSum += resolvedElutionWeight;
     }
     return weightSum <= 0d ? 0d : clampToUnit(weightedSum / weightSum);
   }
 
   private static double computeOverallQualityScore(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match, final double elutionOrderScore,
-      final double elutionOrderWeight,
-      final boolean includeMs2Score, final boolean includeElutionOrderScore) {
-    final double ms1Score = computeMs1Score(row, match);
+      final double elutionOrderWeight, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore, final @NotNull ComponentWeights componentWeights,
+      final @Nullable MZTolerance ms1Tolerance) {
+    final double ms1Score = computeMs1Score(row, match, ms1Tolerance);
     final double ms2Score = computeMs2Score(match);
     final double adductScore = computeAdductScore(row, match);
-    final double adductWeight = computeAdductWeight(row, match);
+    final double adductWeight = computeAdductWeight(row, match, componentWeights);
     final double isotopeScore = computeIsotopeScore(row, match);
     final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
     final double interferenceScore = computeInterferenceScore(interferenceMetrics.totalPenaltyCount());
     return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
         interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
-        adductWeight, elutionOrderWeight);
+        componentWeights, adductWeight, elutionOrderWeight);
   }
 
-  private static double computeMs1Score(final @NotNull FeatureListRow row,
+  public static double computeMs1Score(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
+    return computeMs1Score(row, match, null);
+  }
+
+  public static double computeMs1Score(final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match, final @Nullable MZTolerance ms1Tolerance) {
     final double exactMz = MatchedLipid.getExactMass(match);
     final double observedMz =
         match.getAccurateMz() != null ? match.getAccurateMz() : row.getAverageMZ();
     final double ppm = (observedMz - exactMz) / exactMz * 1e6;
     final double absPpm = Math.abs(ppm);
+    return computeMs1ScoreFromPpm(absPpm, exactMz, ms1Tolerance);
+  }
+
+  public static double computeMs1ScoreFromPpm(final double absPpm, final double mzValue,
+      final @Nullable MZTolerance ms1Tolerance) {
     if (!Double.isFinite(absPpm)) {
       return 0d;
     }
-    return clampToUnit(1d - Math.min(absPpm, 5d) / 5d);
+    final double ppmTolerance = resolveMs1ScoringPpmTolerance(mzValue, ms1Tolerance);
+    return clampToUnit(1d - Math.min(absPpm, ppmTolerance) / ppmTolerance);
+  }
+
+  public static double resolveMs1ScoringPpmTolerance(final double mzValue,
+      final @Nullable MZTolerance ms1Tolerance) {
+    if (!Double.isFinite(mzValue) || mzValue <= 0d || ms1Tolerance == null) {
+      return DEFAULT_MS1_SCORING_PPM_TOLERANCE;
+    }
+    final double ppmTolerance = ms1Tolerance.getPpmToleranceForMass(mzValue);
+    if (!Double.isFinite(ppmTolerance) || ppmTolerance <= 0d) {
+      return DEFAULT_MS1_SCORING_PPM_TOLERANCE;
+    }
+    return ppmTolerance;
   }
 
   private static double computeMs2Score(final @NotNull MatchedLipid match) {
@@ -671,12 +827,18 @@ public final class LipidQcScoringUtils {
    */
   public static double computeAdductWeight(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match) {
+    return computeAdductWeight(row, match, defaultComponentWeights(null));
+  }
+
+  public static double computeAdductWeight(final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match, final @NotNull ComponentWeights componentWeights) {
     if (row.getBestIonIdentity() == null || match.getIonizationType() == null) {
-      return WEIGHT_ADDUCT_NO_ION_IDENTITY;
+      return componentWeights.adductNoIonIdentityWeight();
     }
     final String featureAdduct = normalizeAdduct(row.getBestIonIdentity().getAdduct());
     final String lipidAdduct = normalizeAdduct(match.getIonizationType().getAdductName());
-    return featureAdduct.equals(lipidAdduct) ? WEIGHT_ADDUCT_MATCH : WEIGHT_ADDUCT_MISMATCH;
+    return featureAdduct.equals(lipidAdduct) ? componentWeights.adductMatchWeight()
+        : componentWeights.adductMismatchWeight();
   }
 
   /**
@@ -687,11 +849,17 @@ public final class LipidQcScoringUtils {
    * </ul>
    */
   public static double computeElutionOrderWeight(final @Nullable ElutionOrderMetrics metrics) {
+    return computeElutionOrderWeight(metrics, defaultComponentWeights(null));
+  }
+
+  public static double computeElutionOrderWeight(final @Nullable ElutionOrderMetrics metrics,
+      final @NotNull ComponentWeights componentWeights) {
     if (metrics == null) {
-      return WEIGHT_ELUTION_ORDER_NO_TREND;
+      return componentWeights.elutionOrderNoTrendWeight();
     }
     final boolean trendAvailable = metrics.carbonsTrend().available() || metrics.dbeTrend().available();
-    return trendAvailable ? WEIGHT_ELUTION_ORDER_WITH_TREND : WEIGHT_ELUTION_ORDER_NO_TREND;
+    return trendAvailable ? componentWeights.elutionOrderWithTrendWeight()
+        : componentWeights.elutionOrderNoTrendWeight();
   }
 
   private static double computeIsotopeScore(final @NotNull FeatureListRow row,

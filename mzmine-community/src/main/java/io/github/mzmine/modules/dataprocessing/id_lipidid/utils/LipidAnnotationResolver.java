@@ -27,6 +27,7 @@ package io.github.mzmine.modules.dataprocessing.id_lipidid.utils;
 
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.clampToUnit;
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeMs1Score;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
@@ -41,6 +42,8 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAn
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.ILipidChain;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ComponentWeights;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -75,6 +78,8 @@ public class LipidAnnotationResolver {
   private final boolean includeElutionOrderScore;
   private final double minimumOverallQualityScore;
   private final @Nullable LipidAnalysisType lipidAnalysisType;
+  private final @Nullable ComponentWeights customQcWeights;
+  private final @Nullable MZTolerance mzToleranceMS1;
 
   private int maximumIdNumber;
   private static final LipidFactory LIPID_FACTORY = new LipidFactory();
@@ -102,6 +107,26 @@ public class LipidAnnotationResolver {
       final boolean addMissingSpeciesLevelAnnotation, final boolean includeMs2Score,
       final boolean includeElutionOrderScore, final double minimumOverallQualityScore,
       final @Nullable LipidAnalysisType lipidAnalysisType) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, includeMs2Score,
+        includeElutionOrderScore, minimumOverallQualityScore, lipidAnalysisType, null);
+  }
+
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore, final double minimumOverallQualityScore,
+      final @Nullable LipidAnalysisType lipidAnalysisType,
+      final @Nullable ComponentWeights customQcWeights) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, includeMs2Score,
+        includeElutionOrderScore, minimumOverallQualityScore, lipidAnalysisType, customQcWeights,
+        null);
+  }
+
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final boolean includeMs2Score,
+      final boolean includeElutionOrderScore, final double minimumOverallQualityScore,
+      final @Nullable LipidAnalysisType lipidAnalysisType,
+      final @Nullable ComponentWeights customQcWeights,
+      final @Nullable MZTolerance mzToleranceMS1) {
     this.keepIsobars = keepIsobars;
     this.keepIsomers = keepIsomers;
     this.addMissingSpeciesLevelAnnotation = addMissingSpeciesLevelAnnotation;
@@ -109,6 +134,8 @@ public class LipidAnnotationResolver {
     this.includeElutionOrderScore = includeElutionOrderScore;
     this.minimumOverallQualityScore = clampToUnit(minimumOverallQualityScore);
     this.lipidAnalysisType = lipidAnalysisType;
+    this.customQcWeights = customQcWeights;
+    this.mzToleranceMS1 = mzToleranceMS1;
     this.maximumIdNumber = -1;
   }
 
@@ -139,8 +166,18 @@ public class LipidAnnotationResolver {
       final boolean includeMs2Score, final boolean includeElutionOrderScore,
       final double minimumOverallQualityScore,
       final @Nullable LipidAnalysisType lipidAnalysisType) {
+    this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, maximumIdNumber,
+        includeMs2Score, includeElutionOrderScore, minimumOverallQualityScore, lipidAnalysisType,
+        null);
+  }
+
+  public LipidAnnotationResolver(final boolean keepIsobars, final boolean keepIsomers,
+      final boolean addMissingSpeciesLevelAnnotation, final int maximumIdNumber,
+      final boolean includeMs2Score, final boolean includeElutionOrderScore,
+      final double minimumOverallQualityScore, final @Nullable LipidAnalysisType lipidAnalysisType,
+      final @Nullable ComponentWeights customQcWeights) {
     this(keepIsobars, keepIsomers, addMissingSpeciesLevelAnnotation, includeMs2Score,
-        includeElutionOrderScore, minimumOverallQualityScore, lipidAnalysisType);
+        includeElutionOrderScore, minimumOverallQualityScore, lipidAnalysisType, customQcWeights);
     this.maximumIdNumber = maximumIdNumber;
   }
 
@@ -272,7 +309,7 @@ public class LipidAnnotationResolver {
 
   private double computePreFilterRankingScore(final @NotNull FeatureListRow featureListRow,
       final @NotNull MatchedLipid matchedLipid) {
-    final double ms1Score = computeMs1Score(featureListRow, matchedLipid);
+    final double ms1Score = computeMs1Score(featureListRow, matchedLipid, mzToleranceMS1);
     final Double preferenceScore = computeRelativeRuleIntensityPreferenceScore(matchedLipid);
     final double prePreferenceScore;
     if (includeMs2Score) {
@@ -290,22 +327,10 @@ public class LipidAnnotationResolver {
       final @NotNull MatchedLipid matchedLipid) {
     if (featureListRow.getFeatureList() instanceof ModularFeatureList modularFeatureList) {
       return computeCombinedAnnotationScore(modularFeatureList, featureListRow, matchedLipid,
-          includeMs2Score, includeElutionOrderScore, lipidAnalysisType);
+          includeMs2Score, includeElutionOrderScore, lipidAnalysisType, customQcWeights,
+          mzToleranceMS1);
     }
     return computePreFilterRankingScore(featureListRow, matchedLipid);
-  }
-
-  private static double computeMs1Score(final @NotNull FeatureListRow featureListRow,
-      final @NotNull MatchedLipid matchedLipid) {
-    final double exactMz = MatchedLipid.getExactMass(matchedLipid);
-    final Double accurateMz = matchedLipid.getAccurateMz();
-    final double observedMz = accurateMz != null ? accurateMz : featureListRow.getAverageMZ();
-    final double ppm = (observedMz - exactMz) / exactMz * 1e6;
-    final double absPpm = Math.abs(ppm);
-    if (!Double.isFinite(absPpm)) {
-      return 0d;
-    }
-    return clampToUnit(1d - Math.min(absPpm, 5d) / 5d);
   }
 
   private static double safeMs2Score(final @Nullable MatchedLipid matchedLipid) {

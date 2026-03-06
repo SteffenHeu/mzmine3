@@ -78,7 +78,13 @@ public class LipidAnnotationParameters extends SimpleParameterSet {
       "Minimum overall quality score [%]", """
       Minimum QC-based lipid annotation score required to keep an annotation.
       The score combines MS1, optional MS2, adduct, isotope, interference, and optional RT elution order.
-      """, 0.4);
+      """, 0.6);
+
+  public static final OptionalModuleParameter<LipidQcWeightParameters> customQcWeights = new OptionalModuleParameter<>(
+      "Override quality score weights", """
+      Optionally override component weights used in the lipid QC score.
+      Defaults match the current scoring algorithm. Weights can be set from 0 to 100.
+      """, new LipidQcWeightParameters(), false);
 
   public static final OptionalModuleParameter<LipidAnnotationMSMSParameters> searchForMSMSFragments = new OptionalModuleParameter<>(
       "Search for lipid class specific fragments in MS/MS spectra",
@@ -95,8 +101,8 @@ public class LipidAnnotationParameters extends SimpleParameterSet {
 
   public LipidAnnotationParameters() {
     super(new Parameter[]{featureLists, lipidAnalysisType, lipidClasses, lipidChainParameters,
-            mzTolerance, minimumOverallQualityScore, searchForMSMSFragments, customLipidClasses,
-            advanced},
+            mzTolerance, minimumOverallQualityScore, customQcWeights, searchForMSMSFragments,
+            customLipidClasses, advanced},
         "https://mzmine.github.io/mzmine_documentation/module_docs/id_lipid_annotation/lipid-annotation.html");
   }
 
@@ -120,6 +126,6 @@ public class LipidAnnotationParameters extends SimpleParameterSet {
 
   @Override
   public int getVersion() {
-    return 4;
+    return 5;
   }
 }

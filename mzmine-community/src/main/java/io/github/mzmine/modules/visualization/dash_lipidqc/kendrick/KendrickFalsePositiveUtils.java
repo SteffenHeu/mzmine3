@@ -29,6 +29,8 @@ import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQc
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeElutionOrderMetrics;
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeInterferenceMetrics;
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeInterferenceScore;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeMs1Score;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.detectMs1Tolerance;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
@@ -60,10 +62,11 @@ public final class KendrickFalsePositiveUtils {
     final List<String> reasons = new ArrayList<>();
     final double overall;
     if (!includeRetentionTimeAnalysis) {
-      overall = computeLegacyOverallQualityScore(row, match, 0d, false);
+      overall = computeLegacyOverallQualityScore(featureList, row, match, 0d, false);
     } else {
       final ElutionOrderMetrics elution = computeElutionOrderMetrics(featureList, row, match);
-      overall = computeLegacyOverallQualityScore(row, match, elution.combinedScore(), true);
+      overall = computeLegacyOverallQualityScore(featureList, row, match, elution.combinedScore(),
+          true);
       if (elution.carbonsTrend().available()
           && elution.carbonsTrend().score() < OUTLIER_ELUTION_THRESHOLD) {
         reasons.add("carbon trend %.0f%% is below %.0f%%".formatted(
@@ -89,10 +92,11 @@ public final class KendrickFalsePositiveUtils {
     return String.join("; ", reasons);
   }
 
-  private static double computeLegacyOverallQualityScore(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match, final double elutionOrderScore,
+  private static double computeLegacyOverallQualityScore(final @NotNull ModularFeatureList featureList,
+      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
+      final double elutionOrderScore,
       final boolean includeRetentionTimeAnalysis) {
-    final double ms1Score = computeMs1Score(row, match);
+    final double ms1Score = computeMs1Score(row, match, detectMs1Tolerance(featureList));
     final double ms2Score = computeMs2Score(match);
     final double adductScore = computeAdductScore(row, match);
     final double isotopeScore = computeIsotopeScore(row, match);
@@ -102,19 +106,6 @@ public final class KendrickFalsePositiveUtils {
         + (includeRetentionTimeAnalysis ? elutionOrderScore : 0d);
     final int scoreCount = includeRetentionTimeAnalysis ? 6 : 5;
     return scoreSum / scoreCount;
-  }
-
-  private static double computeMs1Score(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match) {
-    final double exactMz = MatchedLipid.getExactMass(match);
-    final double observedMz =
-        match.getAccurateMz() != null ? match.getAccurateMz() : row.getAverageMZ();
-    final double ppm = (observedMz - exactMz) / exactMz * 1e6;
-    final double absPpm = Math.abs(ppm);
-    if (!Double.isFinite(absPpm)) {
-      return 0d;
-    }
-    return clampToUnit(1d - Math.min(absPpm, 5d) / 5d);
   }
 
   private static double computeMs2Score(final @NotNull MatchedLipid match) {

@@ -42,6 +42,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidCla
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidIon;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.custom_class.CustomLipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.custom_class.CustomLipidClassParameters;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ComponentWeights;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -58,6 +59,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Task to search and annotate lipids in feature list
@@ -87,6 +89,7 @@ public class LipidAnnotationTask extends AbstractTask {
   private final ParameterSet parameters;
   private final FragmentScanSelection scanMergeSelect;
   private final @NotNull LipidAnalysisType lipidAnalysisType;
+  private final @Nullable ComponentWeights customQcWeights;
 
   public LipidAnnotationTask(ParameterSet parameters, FeatureList featureList,
       @NotNull Instant moduleCallDate) {
@@ -115,6 +118,14 @@ public class LipidAnnotationTask extends AbstractTask {
         LipidAnalysisType.LC_REVERSED_PHASE);
     this.minimumOverallQualityScore = parameters.getParameter(
         LipidAnnotationParameters.minimumOverallQualityScore).getValue();
+    if (parameters.getParameter(LipidAnnotationParameters.customQcWeights).getValue()) {
+      final LipidQcWeightParameters weightParameters = parameters.getParameter(
+          LipidAnnotationParameters.customQcWeights).getEmbeddedParameters();
+      this.customQcWeights = LipidQcWeightParameters.toComponentWeights(weightParameters,
+          lipidAnalysisType);
+    } else {
+      this.customQcWeights = null;
+    }
     this.searchForMSMSFragments = parameters.getParameter(
         LipidAnnotationParameters.searchForMSMSFragments).getValue();
     if (searchForMSMSFragments.booleanValue()) {
@@ -227,7 +238,8 @@ public class LipidAnnotationTask extends AbstractTask {
       }
       if (!possibleRowAnnotations.isEmpty()) {
         LipidAnnotationUtils.addAnnotationsToFeatureList(row, possibleRowAnnotations,
-            lipidAnalysisType, searchForMSMSFragments, minimumOverallQualityScore);
+            lipidAnalysisType, searchForMSMSFragments, minimumOverallQualityScore,
+            customQcWeights, mzTolerance);
       }
       finishedSteps++;
     });

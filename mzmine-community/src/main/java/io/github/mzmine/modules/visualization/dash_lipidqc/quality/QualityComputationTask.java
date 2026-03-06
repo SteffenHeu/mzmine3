@@ -141,7 +141,7 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
 
   private @NotNull QualityCardData createQualityCardData(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match, final @NotNull InterferenceMetrics interferenceMetrics) {
-    final QualityMetric ms1 = AnnotationQualityPane.evaluateMs1(row, match);
+    final QualityMetric ms1 = AnnotationQualityPane.evaluateMs1(row, featureList, match);
     final QualityMetric ms2 = AnnotationQualityPane.evaluateMs2(match);
     final QualityMetric adduct = AnnotationQualityPane.evaluateAdduct(row, match);
     final QualityMetric isotope = AnnotationQualityPane.evaluateIsotope(row, match);

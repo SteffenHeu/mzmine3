@@ -26,6 +26,7 @@
 package io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules;
 
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.clampToUnit;
+import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeMs1Score;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.DataPoint;
@@ -52,6 +53,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidCl
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidCategories;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidIon;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ComponentWeights;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidAnnotationResolver;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidFactory;
 import io.github.mzmine.parameters.ParameterSet;
@@ -164,7 +166,7 @@ public class LipidAnnotationUtils {
         if (searchForMSMSFragments) {
           possibleRowAnnotations.addAll(
               searchMsmsFragments(row, lipidIon.ionizationType(), lipidIon.lipidAnnotation(),
-                  parameters, mzToleranceMS2, keepUnconfirmedAnnotations, lipidCategory,
+                  parameters, mzTolerance, mzToleranceMS2, keepUnconfirmedAnnotations, lipidCategory,
                   scanMergeSelect));
         } else {
 
@@ -183,7 +185,8 @@ public class LipidAnnotationUtils {
    */
   private static @NotNull Set<MatchedLipid> searchMsmsFragments(final @NotNull FeatureListRow row,
       final @NotNull IonizationType ionization, final @NotNull ILipidAnnotation lipid,
-      final @NotNull ParameterSet parameters, final @NotNull MZTolerance mzToleranceMS2,
+      final @NotNull ParameterSet parameters, final @NotNull MZTolerance mzToleranceMS1,
+      final @NotNull MZTolerance mzToleranceMS2,
       final boolean keepUnconfirmedAnnotations, final @NotNull LipidCategories lipidCategory,
       final @NotNull FragmentScanSelection scanMergeSelect) {
     final Set<MatchedLipid> matchedLipids = new HashSet<>();
@@ -255,7 +258,7 @@ public class LipidAnnotationUtils {
         matchedLipids.add(unconfirmedMatchedLipid);
       }
       if (!matchedLipids.isEmpty() && matchedLipids.size() > 1) {
-        onlyKeepBestAnnotations(row, matchedLipids, true);
+        onlyKeepBestAnnotations(row, matchedLipids, true, mzToleranceMS1);
       }
     }
 
@@ -323,7 +326,8 @@ public class LipidAnnotationUtils {
   }
 
   private static void onlyKeepBestAnnotations(final @NotNull FeatureListRow row,
-      final @NotNull Set<MatchedLipid> matchedLipids, final boolean includeMs2Score) {
+      final @NotNull Set<MatchedLipid> matchedLipids, final boolean includeMs2Score,
+      final @NotNull MZTolerance mzToleranceMS1) {
     final Map<String, List<MatchedLipid>> matchedLipidsByAnnotation = matchedLipids.stream()
         .filter(Objects::nonNull).collect(Collectors.groupingBy(
             matchedLipid -> matchedLipid.getLipidAnnotation().getAnnotation()));
@@ -335,7 +339,8 @@ public class LipidAnnotationUtils {
     for (final List<MatchedLipid> matchedLipidGroup : duplicateMatchedLipids) {
       if (matchedLipidGroup.size() > 1) {
         final MatchedLipid bestMatch = matchedLipidGroup.stream().max(Comparator.comparingDouble(
-                matchedLipid -> preResolverRankingScore(row, matchedLipid, includeMs2Score)))
+                matchedLipid -> preResolverRankingScore(row, matchedLipid, includeMs2Score,
+                    mzToleranceMS1)))
             .orElse(null);
         matchedLipidGroup.remove(bestMatch);
 
@@ -355,7 +360,9 @@ public class LipidAnnotationUtils {
   public static void addAnnotationsToFeatureList(final @NotNull FeatureListRow row,
       final @NotNull Set<MatchedLipid> possibleRowAnnotations,
       final @NotNull LipidAnalysisType lipidAnalysisType, final boolean includeMs2Score,
-      final double minimumOverallQualityScore) {
+      final double minimumOverallQualityScore,
+      final @Nullable ComponentWeights customQcWeights,
+      final @Nullable MZTolerance mzToleranceMS1) {
     //consider previous annotations
     final List<MatchedLipid> previousLipidMatches = row.getLipidMatches();
     if (!previousLipidMatches.isEmpty()) {
@@ -363,7 +370,7 @@ public class LipidAnnotationUtils {
     }
     final LipidAnnotationResolver lipidAnnotationResolver = new LipidAnnotationResolver(true, true,
         true, includeMs2Score, lipidAnalysisType.hasRetentionTimePattern(),
-        minimumOverallQualityScore, lipidAnalysisType);
+        minimumOverallQualityScore, lipidAnalysisType, customQcWeights, mzToleranceMS1);
     List<MatchedLipid> finalResults = lipidAnnotationResolver.resolveFeatureListRowMatchedLipids(
         row, possibleRowAnnotations);
 
@@ -374,25 +381,13 @@ public class LipidAnnotationUtils {
   }
 
   private static double preResolverRankingScore(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid matchedLipid, final boolean includeMs2Score) {
-    final double ms1Score = computeMs1Score(row, matchedLipid);
+      final @NotNull MatchedLipid matchedLipid, final boolean includeMs2Score,
+      final @NotNull MZTolerance mzToleranceMS1) {
+    final double ms1Score = computeMs1Score(row, matchedLipid, mzToleranceMS1);
     if (includeMs2Score) {
       return (ms1Score + safeMs2Score(matchedLipid)) / 2d;
     }
     return ms1Score;
-  }
-
-  private static double computeMs1Score(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid matchedLipid) {
-    final double exactMz = MatchedLipid.getExactMass(matchedLipid);
-    final Double accurateMz = matchedLipid.getAccurateMz();
-    final double observedMz = accurateMz != null ? accurateMz : row.getAverageMZ();
-    final double ppm = (observedMz - exactMz) / exactMz * 1e6;
-    final double absPpm = Math.abs(ppm);
-    if (!Double.isFinite(absPpm)) {
-      return 0d;
-    }
-    return clampToUnit(1d - Math.min(absPpm, 5d) / 5d);
   }
 
   private static double safeMs2Score(final @Nullable MatchedLipid matchedLipid) {
