@@ -335,6 +335,12 @@ public class KendrickPane extends BorderPane {
     final var baseRenderer = plot.getRenderer();
     final var tooltipGenerator =
         baseRenderer != null ? baseRenderer.getDefaultToolTipGenerator() : null;
+    final var itemLabelGenerator =
+        baseRenderer != null ? baseRenderer.getDefaultItemLabelGenerator() : null;
+    final var itemLabelPaint = baseRenderer != null ? baseRenderer.getDefaultItemLabelPaint()
+        : null;
+    final boolean itemLabelsVisible = baseRenderer != null && Boolean.TRUE.equals(
+        baseRenderer.getDefaultItemLabelsVisible());
     final PaintScale colorScale =
         baseRenderer instanceof ColoredBubbleDatasetRenderer colored ? colored.getPaintScale()
             : new LookupPaintScale(0d, 1d, Color.GRAY);
@@ -344,12 +350,26 @@ public class KendrickPane extends BorderPane {
     if (tooltipGenerator != null) {
       colorRenderer.setDefaultToolTipGenerator(tooltipGenerator);
     }
+    if (itemLabelGenerator != null) {
+      colorRenderer.setDefaultItemLabelGenerator(itemLabelGenerator);
+    }
+    if (itemLabelPaint != null) {
+      colorRenderer.setDefaultItemLabelPaint(itemLabelPaint);
+    }
+    colorRenderer.setDefaultItemLabelsVisible(itemLabelsVisible);
 
     filteredOutRenderer = new AlphaBubbleDatasetRenderer(0.35f);
     filteredOutRenderer.setPaintScale(new LookupPaintScale(0d, 1d, Color.GRAY));
     if (tooltipGenerator != null) {
       filteredOutRenderer.setDefaultToolTipGenerator(tooltipGenerator);
     }
+    if (itemLabelGenerator != null) {
+      filteredOutRenderer.setDefaultItemLabelGenerator(itemLabelGenerator);
+    }
+    if (itemLabelPaint != null) {
+      filteredOutRenderer.setDefaultItemLabelPaint(itemLabelPaint);
+    }
+    filteredOutRenderer.setDefaultItemLabelsVisible(itemLabelsVisible);
 
     newChart.addChartMouseListener(new ChartMouseListenerFX() {
       @Override
