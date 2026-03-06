@@ -98,23 +98,26 @@ public class IsotopePane extends BorderPane {
       return;
     }
 
+    final Color measuredColor = ConfigService.getDefaultColorPalette().getNegativeColorAWT();
+    final Color theoreticalColor = ConfigService.getDefaultColorPalette().getPositiveColorAWT();
+
     final ColoredXYBarRenderer measuredRenderer = new ColoredXYBarRenderer(false);
     measuredRenderer.setDefaultItemLabelGenerator(new SpectraItemLabelGenerator(plot));
     plot.addDataSet(new ColoredXYDataset(
             new MassSpectrumProvider(result.measuredPattern(), "Isotope pattern",
-            ConfigService.getDefaultColorPalette().getAWT(0))), Color.black, false,
+                measuredColor)), measuredColor, false,
         measuredRenderer,
         false, false);
 
     if (result.theoreticalPattern() != null) {
       final XYLineAndShapeRenderer theoreticalRenderer = new XYLineAndShapeRenderer(false, true);
-      theoreticalRenderer.setSeriesPaint(0, new Color(220, 40, 40));
+      theoreticalRenderer.setSeriesPaint(0, theoreticalColor);
       theoreticalRenderer.setSeriesShape(0, new Ellipse2D.Double(-4, -4, 8, 8));
       theoreticalRenderer.setSeriesStroke(0, new java.awt.BasicStroke(1.8f));
       theoreticalRenderer.setSeriesVisibleInLegend(0, true);
       plot.addDataSet(new ColoredXYDataset(
           new MassSpectrumProvider(result.theoreticalPattern(), "Theoretical isotope pattern",
-              new Color(220, 40, 40))), Color.RED, false, theoreticalRenderer, false, false);
+              theoreticalColor)), theoreticalColor, false, theoreticalRenderer, false, false);
     }
     setCenter(plot);
   }
