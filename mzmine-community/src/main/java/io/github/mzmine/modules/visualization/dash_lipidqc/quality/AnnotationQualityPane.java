@@ -51,6 +51,7 @@ import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickRevi
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.FeatureTableFXUtil;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.awt.Color;
@@ -310,7 +311,7 @@ public class AnnotationQualityPane extends BorderPane {
         LipidQcScoringUtils.detectLipidAnalysisType(featureList),
         LipidAnalysisType.LC_REVERSED_PHASE);
     LipidAnnotationUtils.addAnnotationsToFeatureList(row, annotationsToAdd, analysisType, false,
-        0d);
+        0d, null, LipidQcScoringUtils.detectMs1Tolerance(featureList));
     refreshAfterAnnotationDelete(row);
   }
 
@@ -590,13 +591,14 @@ public class AnnotationQualityPane extends BorderPane {
   }
 
   static @NotNull QualityMetric evaluateMs1(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match) {
+      final @Nullable ModularFeatureList featureList, final @NotNull MatchedLipid match) {
     final double exactMz = MatchedLipid.getExactMass(match);
     final double observedMz =
         match.getAccurateMz() != null ? match.getAccurateMz() : row.getAverageMZ();
     final double ppm = (observedMz - exactMz) / exactMz * 1e6;
-    final double absPpm = Math.abs(ppm);
-    final double score = Double.isFinite(absPpm) ? clampToUnit(1d - Math.min(absPpm, 5d) / 5d) : 0d;
+    final @Nullable MZTolerance ms1Tolerance =
+        featureList == null ? null : LipidQcScoringUtils.detectMs1Tolerance(featureList);
+    final double score = LipidQcScoringUtils.computeMs1Score(row, match, ms1Tolerance);
     return new QualityMetric(score, String.format("%.2f ppm", ppm));
   }
 
