@@ -41,6 +41,7 @@ public class LipidAnnotationQCDashboardController extends
 
   public LipidAnnotationQCDashboardController() {
     super(new LipidAnnotationQCDashboardModel());
+    new LipidAnnotationQCDashboardInteractor(model);
     model.featureListProperty().subscribe(flist -> {
       model.getFeatureTableFx().setFeatureList(flist);
       model.getPaneGroup().featureTableFXProperty().set(model.getFeatureTableFx());

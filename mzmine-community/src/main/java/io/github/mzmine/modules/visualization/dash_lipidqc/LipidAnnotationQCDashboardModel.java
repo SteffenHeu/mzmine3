@@ -31,16 +31,18 @@ import io.github.mzmine.gui.framework.fx.features.ParentFeatureListPaneGroup;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FxFeatureTableController;
 import java.util.List;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Data model for the lipid annotation quality control dashboard. Holds the active feature list,
- * the currently selected row, and references to the embedded feature table controller and the
- * shared pane group.
+ * the currently selected row, references to the embedded feature table controller, the preferred
+ * lipid annotation level, and the retention time analysis enabled flag.
  */
 public class LipidAnnotationQCDashboardModel {
 
@@ -51,6 +53,9 @@ public class LipidAnnotationQCDashboardModel {
   private final ObjectProperty<@NotNull FeatureTableFX> featureTableFx = new ReadOnlyObjectWrapper<>(
       featureTableController.get().getFeatureTable());
   private final ObjectProperty<@Nullable FeatureListRow> row = new SimpleObjectProperty<>();
+  private final ObjectProperty<@NotNull PreferredLipidLevelOption> preferredLipidLevel =
+      new SimpleObjectProperty<>(PreferredLipidLevelOption.MOLECULAR_SPECIES);
+  private final BooleanProperty retentionTimeAnalysisEnabled = new SimpleBooleanProperty(true);
 
   // todo: remove? not used anywhere?
   private final ParentFeatureListPaneGroup paneGroup = new ParentFeatureListPaneGroup();
@@ -89,6 +94,30 @@ public class LipidAnnotationQCDashboardModel {
 
   public ObjectProperty<@Nullable FeatureListRow> rowProperty() {
     return row;
+  }
+
+  public @NotNull PreferredLipidLevelOption getPreferredLipidLevel() {
+    return preferredLipidLevel.get();
+  }
+
+  public void setPreferredLipidLevel(@NotNull PreferredLipidLevelOption option) {
+    preferredLipidLevel.set(option);
+  }
+
+  public ObjectProperty<@NotNull PreferredLipidLevelOption> preferredLipidLevelProperty() {
+    return preferredLipidLevel;
+  }
+
+  public boolean isRetentionTimeAnalysisEnabled() {
+    return retentionTimeAnalysisEnabled.get();
+  }
+
+  public void setRetentionTimeAnalysisEnabled(final boolean enabled) {
+    retentionTimeAnalysisEnabled.set(enabled);
+  }
+
+  public BooleanProperty retentionTimeAnalysisEnabledProperty() {
+    return retentionTimeAnalysisEnabled;
   }
 
   public ParentFeatureListPaneGroup getPaneGroup() {
