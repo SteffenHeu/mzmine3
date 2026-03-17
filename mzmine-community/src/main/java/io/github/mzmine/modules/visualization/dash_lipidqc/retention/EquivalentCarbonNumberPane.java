@@ -98,7 +98,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   private static final int COMBINED_DBE_FN_DATASET_INDEX = 15;
   private static final @NotNull Color SELECTED_POINT_COLOR = ConfigService.getDefaultColorPalette()
       .getPositiveColorAWT();
-  private final LipidAnnotationQCDashboardModel model;
+  private final @NotNull LipidAnnotationQCDashboardModel model;
   private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
   private final @NotNull Label placeholder = FxLabels.newLabel(
       "Select a row with lipid annotations.");
@@ -106,10 +106,30 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   private final ComboBox<RetentionTrendMode> trendModeCombo = new ComboBox<>(
       FXCollections.observableArrayList(RetentionTrendMode.values()));
   private List<FeatureListRow> rowsWithLipidIds = List.of();
-  private @Nullable FeatureListRow selectedRow;
 
   public EquivalentCarbonNumberPane(final @NotNull LipidAnnotationQCDashboardModel model) {
     this.model = model;
+    model.featureListProperty().subscribe(flist -> {
+      if (model.isRetentionTimeAnalysisEnabled()) {
+        rowsWithLipidIds = flist.getRows().stream()
+            .filter(EquivalentCarbonNumberPane::rowHasMatchedLipidSignals)
+            .map(r -> (FeatureListRow) r).toList();
+        requestUpdate();
+      }
+    });
+    model.rowProperty().subscribe(_ -> {
+      if (model.isRetentionTimeAnalysisEnabled()) {
+        requestUpdate();
+      }
+    });
+    model.retentionTimeAnalysisEnabledProperty().subscribe(enabled -> {
+      if (enabled) {
+        rowsWithLipidIds = model.getFeatureList().getRows().stream()
+            .filter(EquivalentCarbonNumberPane::rowHasMatchedLipidSignals)
+            .map(r -> (FeatureListRow) r).toList();
+        requestUpdate();
+      }
+    });
     trendModeCombo.getSelectionModel().select(RetentionTrendMode.COMBINED_CARBON_DBE_TRENDS);
     trendModeCombo.valueProperty().addListener((_, _, _) -> requestUpdate());
     final HBox trendRow = new HBox(6, FxLabels.newLabel("Trend:"), trendModeCombo);
@@ -129,15 +149,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     return paneTitle;
   }
 
-  public void setFeatureList(final @NotNull ModularFeatureList featureList) {
-    rowsWithLipidIds = featureList.getRows().stream()
-        .filter(EquivalentCarbonNumberPane::rowHasMatchedLipidSignals)
-        .map(r -> (FeatureListRow) r).toList();
-    requestUpdate();
-  }
-
-  public void setRow(final @Nullable FeatureListRow row) {
-    selectedRow = row;
+  public void requestRefresh() {
     requestUpdate();
   }
 
@@ -149,7 +161,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   private void requestUpdate() {
     final List<FeatureListRow> currentRowsWithLipidIds = getCurrentRowsWithLipidIds();
     final RetentionTrendMode mode = trendModeCombo.getValue();
-    scheduler.onTaskThreadDelayed(new RetentionComputationTask(this, selectedRow,
+    scheduler.onTaskThreadDelayed(new RetentionComputationTask(this, model.getRow(),
         currentRowsWithLipidIds, mode), Duration.millis(120));
   }
 
@@ -187,12 +199,12 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     final EquivalentCarbonNumberDataset dataset = new EquivalentCarbonNumberDataset(
         currentRowsWithLipidIds, currentRowsWithLipidIds.toArray(new FeatureListRow[0]),
         selectedClass, dbe);
-    final int selectedRowId = selectedRow == null ? -1 : selectedRow.getID();
+    final int selectedRowId = model.getRow() == null ? -1 : model.getRow().getID();
     final Runnable renderChart = () -> {
       if (trendModeCombo.getValue() != RetentionTrendMode.ECN_CARBON_TREND) {
         return;
       }
-      if (selectedRowId >= 0 && (selectedRow == null || selectedRow.getID() != selectedRowId)) {
+      if (selectedRowId >= 0 && (model.getRow() == null || model.getRow().getID() != selectedRowId)) {
         return;
       }
       final EquivalentCarbonNumberChart chart = new EquivalentCarbonNumberChart("",
@@ -233,22 +245,22 @@ public class EquivalentCarbonNumberPane extends BorderPane {
         public void chartMouseMoved(final ChartMouseEventFX event) {
         }
       });
-      if (selectedRow != null) {
-        highlightSelectedLipid(chart, selectedRow, selectedMatch);
+      if (model.getRow() != null) {
+        highlightSelectedLipid(chart, model.getRow(), selectedMatch);
       }
-      final @Nullable SelectionQualityFlag selectionQualityFlag = selectedRow == null ? null
-          : determineSelectionQualityFlag(selectedRow);
+      final @Nullable SelectionQualityFlag selectionQualityFlag = model.getRow() == null ? null
+          : determineSelectionQualityFlag(model.getRow());
       final int falsePositiveCount = addEcnFalsePositiveOverlay(chart, dataset);
       final int selectedCarbons = extractCarbons(selectedMatch.getLipidAnnotation());
-      if (selectedRow != null
+      if (model.getRow() != null
           && selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE) {
         if (selectedCarbons >= 0) {
           addFalseNegativeSelectionOverlay(chart.getChart().getXYPlot(), FN_OVERLAY_DATASET_INDEX,
-              0, selectedRow.getAverageRT(), selectedCarbons);
+              0, model.getRow().getAverageRT(), selectedCarbons);
         }
       }
-      if (selectedRow != null && selectedCarbons >= 0) {
-        ensurePointVisible(chart.getChart().getXYPlot(), selectedRow.getAverageRT(),
+      if (model.getRow() != null && selectedCarbons >= 0) {
+        ensurePointVisible(chart.getChart().getXYPlot(), model.getRow().getAverageRT(),
             selectedCarbons, 0);
       }
       chart.setMinSize(250, 120);
@@ -313,19 +325,19 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       }
     });
 
-    if (selectedRow != null) {
-      highlightSelectedTrendPoint(chart, selectedRow, selectedDbe);
+    if (model.getRow() != null) {
+      highlightSelectedTrendPoint(chart, model.getRow(), selectedDbe);
     }
-    final @Nullable SelectionQualityFlag selectionQualityFlag = selectedRow == null ? null
-        : determineSelectionQualityFlag(selectedRow);
+    final @Nullable SelectionQualityFlag selectionQualityFlag = model.getRow() == null ? null
+        : determineSelectionQualityFlag(model.getRow());
     final int falsePositiveCount = addTrendFalsePositiveOverlay(chart.getChart().getXYPlot(),
         trendDataset, FP_OVERLAY_DATASET_INDEX, 0);
-    if (selectedRow != null && selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE) {
+    if (model.getRow() != null && selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE) {
       addFalseNegativeSelectionOverlay(chart.getChart().getXYPlot(), FN_OVERLAY_DATASET_INDEX, 0,
-          selectedRow.getAverageRT(), selectedDbe);
+          model.getRow().getAverageRT(), selectedDbe);
     }
-    if (selectedRow != null) {
-      ensurePointVisible(chart.getChart().getXYPlot(), selectedRow.getAverageRT(), selectedDbe, 0);
+    if (model.getRow() != null) {
+      ensurePointVisible(chart.getChart().getXYPlot(), model.getRow().getAverageRT(), selectedDbe, 0);
     }
     updatePaneTitle(
         "Retention time analysis: " + selectedClass.getAbbr() + " DBE C=" + carbons + " (R2 "
@@ -374,12 +386,12 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       }
     });
 
-    if (selectedRow != null) {
-      highlightSelectedCombinedTrendPoints(chart, selectedRow, selectedCarbons, selectedDbe,
+    if (model.getRow() != null) {
+      highlightSelectedCombinedTrendPoints(chart, model.getRow(), selectedCarbons, selectedDbe,
           chartResult);
     }
-    final @Nullable SelectionQualityFlag selectionQualityFlag = selectedRow == null ? null
-        : determineSelectionQualityFlag(selectedRow);
+    final @Nullable SelectionQualityFlag selectionQualityFlag = model.getRow() == null ? null
+        : determineSelectionQualityFlag(model.getRow());
     int falsePositiveCount = 0;
     if (carbonTrendDataset != null && chartResult.carbonsAxisIndex() >= 0) {
       falsePositiveCount += addTrendFalsePositiveOverlay(chart.getChart().getXYPlot(),
@@ -389,27 +401,27 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       falsePositiveCount += addTrendFalsePositiveOverlay(chart.getChart().getXYPlot(),
           dbeTrendDataset, COMBINED_DBE_FP_DATASET_INDEX, chartResult.dbeAxisIndex());
     }
-    if (selectedRow != null
+    if (model.getRow() != null
         && selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE
-        && selectedRow.getAverageRT() != null) {
+        && model.getRow().getAverageRT() != null) {
       if (chartResult.carbonsAxisIndex() >= 0) {
         addFalseNegativeSelectionOverlay(chart.getChart().getXYPlot(),
             COMBINED_CARBON_FN_DATASET_INDEX, chartResult.carbonsAxisIndex(),
-            selectedRow.getAverageRT(), selectedCarbons);
+            model.getRow().getAverageRT(), selectedCarbons);
       }
       if (chartResult.dbeAxisIndex() >= 0) {
         addFalseNegativeSelectionOverlay(chart.getChart().getXYPlot(),
-            COMBINED_DBE_FN_DATASET_INDEX, chartResult.dbeAxisIndex(), selectedRow.getAverageRT(),
+            COMBINED_DBE_FN_DATASET_INDEX, chartResult.dbeAxisIndex(), model.getRow().getAverageRT(),
             selectedDbe);
       }
     }
-    if (selectedRow != null) {
+    if (model.getRow() != null) {
       if (chartResult.carbonsAxisIndex() >= 0) {
-        ensurePointVisible(chart.getChart().getXYPlot(), selectedRow.getAverageRT(),
+        ensurePointVisible(chart.getChart().getXYPlot(), model.getRow().getAverageRT(),
             selectedCarbons, chartResult.carbonsAxisIndex());
       }
       if (chartResult.dbeAxisIndex() >= 0) {
-        ensurePointVisible(chart.getChart().getXYPlot(), selectedRow.getAverageRT(), selectedDbe,
+        ensurePointVisible(chart.getChart().getXYPlot(), model.getRow().getAverageRT(), selectedDbe,
             chartResult.dbeAxisIndex());
       }
     }
@@ -907,7 +919,10 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   }
 
   private @NotNull SelectionQualityFlag determineSelectionQualityFlag(
-      final @NotNull FeatureListRow row) {
+      final @Nullable FeatureListRow row) {
+    if(row == null) {
+      return SelectionQualityFlag.NONE;
+    }
     if (!(row.getFeatureList() instanceof ModularFeatureList modularFeatureList)) {
       return SelectionQualityFlag.NONE;
     }
@@ -974,9 +989,9 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   }
 
   private static void highlightSelectedLipid(EquivalentCarbonNumberChart chart,
-      final @NotNull FeatureListRow row, final @NotNull MatchedLipid selectedMatch) {
+      final @Nullable FeatureListRow row, final @NotNull MatchedLipid selectedMatch) {
     final int carbons = extractCarbons(selectedMatch.getLipidAnnotation());
-    if (carbons < 0 || row.getAverageRT() == null) {
+    if (row == null || carbons < 0 || row.getAverageRT() == null) {
       return;
     }
     addSelectedOverlayPoint(chart.getChart().getXYPlot(), 2, 0, row.getAverageRT(), carbons,
@@ -984,8 +999,8 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   }
 
   private static void highlightSelectedTrendPoint(final @NotNull EChartViewer chart,
-      final @NotNull FeatureListRow row, final double yValue) {
-    if (row.getAverageRT() == null || !Double.isFinite(yValue)) {
+      final @Nullable FeatureListRow row, final double yValue) {
+    if (row == null || row.getAverageRT() == null || !Double.isFinite(yValue)) {
       return;
     }
     addSelectedOverlayPoint(chart.getChart().getXYPlot(), 2, 0, row.getAverageRT(), yValue,

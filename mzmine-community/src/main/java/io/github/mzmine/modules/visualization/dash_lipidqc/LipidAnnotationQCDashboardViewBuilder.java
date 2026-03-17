@@ -87,8 +87,8 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     final ComboBox<PreferredLipidLevelOption> preferredLevelCombo = new ComboBox<>(
         FXCollections.observableArrayList(PreferredLipidLevelOption.values()));
     preferredLevelCombo.getSelectionModel().select(model.getPreferredLipidLevel());
-    final LipidSummaryPane summaryPane = new LipidSummaryPane(model, filterState,
-        preferredLevelCombo);
+    final LipidSummaryPane summaryPane = new LipidSummaryPane(model.featureListProperty(),
+        filterState, preferredLevelCombo, model.getFeatureTableFx());
     summaryPane.setOnGroupSelectedRowIds(
         rowIds -> Platform.runLater(() -> selectAndScrollToGroupRow(model, rowIds)));
 
@@ -101,8 +101,6 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     retentionDisabledLabel.setStyle("-fx-padding: 8;");
 
     model.retentionTimeAnalysisEnabledProperty().subscribe(enabled -> {
-      qualityPane.setIncludeRetentionTimeAnalysis(enabled);
-      kendrickPane.setIncludeRetentionTimeAnalysis(enabled);
       if (retentionTitleLabel != null) {
         retentionTitleLabel.textProperty().unbind();
       }
@@ -122,19 +120,14 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     final Runnable refreshAllDashboardPlots = () -> {
       final @Nullable ModularFeatureList currentFeatureList = model.getFeatureList();
       final @Nullable FeatureListRow selectedRow = model.getRow();
-      summaryPane.setFeatureList(currentFeatureList);
-      qualityPane.setFeatureList(currentFeatureList);
-      kendrickPane.setFeatureList(currentFeatureList);
+      summaryPane.requestRefresh();
+      qualityPane.requestRefresh();
+      kendrickPane.requestRefresh();
       if (model.isRetentionTimeAnalysisEnabled()) {
-        ecnPane.setFeatureList(currentFeatureList);
+        ecnPane.requestRefresh();
       }
       isotopePane.setFeatureList(currentFeatureList);
       matchedSignalsPane.setFeatureList(currentFeatureList);
-      qualityPane.setRow(selectedRow);
-      kendrickPane.setRow(selectedRow);
-      if (model.isRetentionTimeAnalysisEnabled()) {
-        ecnPane.setRow(selectedRow);
-      }
       isotopePane.setRow(selectedRow);
       matchedSignalsPane.setRow(selectedRow);
     };
@@ -187,24 +180,13 @@ public class LipidAnnotationQCDashboardViewBuilder extends
         }
       }
       isotopePane.setRow(row);
-      if (model.isRetentionTimeAnalysisEnabled()) {
-        ecnPane.setRow(row);
-      }
       matchedSignalsPane.setRow(row);
-      kendrickPane.setRow(row);
-      qualityPane.setRow(row);
     });
 
     model.featureListProperty().subscribe(flist -> {
       updateLipidAnnotationListener.run();
-      if (model.isRetentionTimeAnalysisEnabled()) {
-        ecnPane.setFeatureList(flist);
-      }
       isotopePane.setFeatureList(flist);
       matchedSignalsPane.setFeatureList(flist);
-      kendrickPane.setFeatureList(flist);
-      summaryPane.setFeatureList(flist);
-      qualityPane.setFeatureList(flist);
       Platform.runLater(() -> selectFirstVisibleRow(model));
     });
 

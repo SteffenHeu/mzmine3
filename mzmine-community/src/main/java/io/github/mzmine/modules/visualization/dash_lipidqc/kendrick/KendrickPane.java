@@ -103,14 +103,11 @@ public class KendrickPane extends BorderPane {
       "Select a feature list to build Kendrick plot.");
   private final @NotNull ComboBox<KendrickReviewMode> reviewModeSelector = new ComboBox<>(
       FXCollections.observableArrayList(KendrickReviewMode.values()));
-  private @Nullable ModularFeatureList featureList;
   private @Nullable KendrickMassPlotXYZDataset baseDataset;
   private @Nullable KendrickMassPlotChart chart;
   private @Nullable ColoredBubbleDatasetRenderer colorRenderer;
   private @Nullable ColoredBubbleDatasetRenderer filteredOutRenderer;
   private @Nullable KendrickFalseNegativeDetector falseNegativeDetector;
-  private @Nullable FeatureListRow selectedRow;
-  private boolean includeRetentionTimeAnalysis = true;
   private @NotNull KendrickReviewMode reviewMode = KendrickReviewMode.NONE;
   private @Nullable Consumer<KendrickReviewMode> onReviewModeChanged;
   private long filterRequestId;
@@ -119,6 +116,9 @@ public class KendrickPane extends BorderPane {
       final @NotNull DashboardFilterState filterState) {
     this.model = model;
     this.filterState = filterState;
+    model.featureListProperty().subscribe(this::onFeatureListChanged);
+    model.rowProperty().subscribe(_ -> updateSelectionOverlay());
+    model.retentionTimeAnalysisEnabledProperty().subscribe(_ -> applyFilters());
     reviewModeSelector.getSelectionModel().select(reviewMode);
     reviewModeSelector.valueProperty().addListener((_, _, mode) -> {
       if (mode == null || mode == reviewMode) {
@@ -153,22 +153,11 @@ public class KendrickPane extends BorderPane {
     return reviewMode;
   }
 
-  public void setRow(final @Nullable FeatureListRow row) {
-    selectedRow = row;
-    updateSelectionOverlay();
-  }
-
-  public void setFeatureList(final @NotNull ModularFeatureList featureList) {
-    if (this.featureList == featureList && chart != null && baseDataset != null) {
-      applyFilters();
-      return;
-    }
-
+  private void onFeatureListChanged(final @NotNull ModularFeatureList featureList) {
     if (baseDataset != null && baseDataset.getStatus() == TaskStatus.PROCESSING) {
       baseDataset.cancel();
     }
     discardChart();
-    this.featureList = featureList;
     if (featureList.getNumberOfRows() == 0) {
       showPlaceholder("Feature list has no rows.");
       return;
@@ -201,11 +190,7 @@ public class KendrickPane extends BorderPane {
     });
   }
 
-  public void setIncludeRetentionTimeAnalysis(final boolean includeRetentionTimeAnalysis) {
-    if (this.includeRetentionTimeAnalysis == includeRetentionTimeAnalysis) {
-      return;
-    }
-    this.includeRetentionTimeAnalysis = includeRetentionTimeAnalysis;
+  public void requestRefresh() {
     applyFilters();
   }
 
@@ -220,9 +205,9 @@ public class KendrickPane extends BorderPane {
     final boolean multiGroupSelection = filterState.getBarSelectedGroups().size() > 1;
     final long requestId = ++filterRequestId;
     filterScheduler.onTaskThreadDelayed(new KendrickFilterComputationTask(this, requestId,
-        Objects.requireNonNull(baseDataset), featureList, visibleIds,
+        Objects.requireNonNull(baseDataset), model.getFeatureList(), visibleIds,
         filterState.getBarSelectedRowColors(), multiGroupSelection,
-        includeRetentionTimeAnalysis, reviewMode), Duration.millis(120));
+        model.isRetentionTimeAnalysisEnabled(), reviewMode), Duration.millis(120));
   }
 
   void applyFilterComputationResult(final @NotNull KendrickFilterComputationResult result) {
@@ -492,6 +477,7 @@ public class KendrickPane extends BorderPane {
     plot.setRenderer(TREND_OVERLAY_DATASET_INDEX, null);
     plot.setDataset(SELECTION_OVERLAY_DATASET_INDEX, null);
     plot.setRenderer(SELECTION_OVERLAY_DATASET_INDEX, null);
+    final @Nullable FeatureListRow selectedRow = model.getRow();
     if (selectedRow == null) {
       return;
     }
@@ -520,11 +506,12 @@ public class KendrickPane extends BorderPane {
     plot.setDataset(SELECTION_OVERLAY_DATASET_INDEX, selectedDataset);
     plot.setRenderer(SELECTION_OVERLAY_DATASET_INDEX,
         new SelectedLipidOverlayRenderer(getSelectedLabel(selectedRow)));
-    updateFalseNegativeTrendOverlay(plot);
+    updateFalseNegativeTrendOverlay(plot, selectedRow);
   }
 
-  private void updateFalseNegativeTrendOverlay(final @NotNull XYPlot plot) {
-    if (selectedRow == null || reviewMode != KendrickReviewMode.POTENTIAL_FALSE_NEGATIVE
+  private void updateFalseNegativeTrendOverlay(final @NotNull XYPlot plot,
+      final @NotNull FeatureListRow selectedRow) {
+    if (reviewMode != KendrickReviewMode.POTENTIAL_FALSE_NEGATIVE
         || falseNegativeDetector == null) {
       return;
     }

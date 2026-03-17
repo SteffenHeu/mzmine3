@@ -32,7 +32,8 @@ import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
+import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
+import javafx.beans.property.ObjectProperty;
 import io.github.mzmine.modules.visualization.dash_lipidqc.state.DashboardFilterState;
 import java.awt.Color;
 import java.awt.Font;
@@ -80,7 +81,6 @@ import javafx.scene.input.MouseButton;
  */
 public class LipidSummaryPane extends BorderPane {
 
-  private final @NotNull LipidAnnotationQCDashboardModel model;
   private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
   private final @NotNull Label placeholder = new Label("Select a feature list with lipid annotations.");
   private final @NotNull DashboardFilterState filterState;
@@ -90,17 +90,19 @@ public class LipidSummaryPane extends BorderPane {
       FXCollections.observableArrayList(SummaryCountMode.values()));
   private final @NotNull Button clearFilterButton;
 
-  private @Nullable ModularFeatureList featureList;
+  private final @NotNull ObjectProperty<@NotNull ModularFeatureList> featureListProperty;
   private @Nullable String selectedGroup;
   private final @NotNull LinkedHashSet<String> selectedGroups = new LinkedHashSet<>();
   private final @NotNull Map<String, Set<Integer>> groupToRowIds = new TreeMap<>();
   private @Nullable Consumer<Set<Integer>> onGroupSelectedRowIds;
 
-  public LipidSummaryPane(final @NotNull LipidAnnotationQCDashboardModel model,
+  public LipidSummaryPane(final @NotNull ObjectProperty<@NotNull ModularFeatureList> featureListProperty,
       final @NotNull DashboardFilterState filterState,
-      final @NotNull ComboBox<?> preferredLevelCombo) {
-    this.model = model;
+      final @NotNull ComboBox<?> preferredLevelCombo,
+      final @NotNull FeatureTableFX featureTableFx) {
     this.filterState = filterState;
+    this.featureListProperty = featureListProperty;
+    featureListProperty.subscribe(_ -> requestChartUpdate());
 
     groupSelector.getSelectionModel().select(SummaryGroup.LIPID_SUBCLASS);
     countModeSelector.getSelectionModel().select(SummaryCountMode.ROW_COUNT);
@@ -128,7 +130,7 @@ public class LipidSummaryPane extends BorderPane {
     filterAccordion.setExpandedPane(null);
     setBottom(filterAccordion);
 
-    model.getFeatureTableFx().sceneProperty().addListener((_, _, scene) -> {
+    featureTableFx.sceneProperty().addListener((_, _, scene) -> {
       if (scene != null) {
         scene.getRoot().styleProperty().addListener((_, _, _) -> requestChartUpdate());
       }
@@ -144,8 +146,7 @@ public class LipidSummaryPane extends BorderPane {
     requestChartUpdate();
   }
 
-  public void setFeatureList(final @NotNull ModularFeatureList featureList) {
-    this.featureList = featureList;
+  public void requestRefresh() {
     requestChartUpdate();
   }
 
@@ -154,7 +155,7 @@ public class LipidSummaryPane extends BorderPane {
     final SummaryCountMode countMode = countModeSelector.getValue();
     selectedGroup = selectedGroups.stream().findFirst().orElse(null);
     scheduler.onTaskThreadDelayed(
-        new SummaryComputationTask(this, featureList, grouping, countMode, selectedGroup),
+        new SummaryComputationTask(this, featureListProperty.get(), grouping, countMode, selectedGroup),
         Duration.millis(120));
   }
 
