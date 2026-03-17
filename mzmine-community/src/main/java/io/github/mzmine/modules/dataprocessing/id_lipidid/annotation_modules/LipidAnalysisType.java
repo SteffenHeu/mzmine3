@@ -28,6 +28,10 @@ package io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules;
 import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Defines the type of lipid analysis experiment (e.g. reversed-phase LC-MS, HILIC, direct
+ * infusion, imaging) and whether a retention-time elution pattern is expected for QC scoring.
+ */
 public enum LipidAnalysisType implements UniqueIdSupplier {
   LC_REVERSED_PHASE("lc_reversed_phase", "LC-MS (reversed phase)", true),
   LC_HILIC("lc_hilic", "LC-MS (HILIC)", true),

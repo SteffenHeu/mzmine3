@@ -29,6 +29,10 @@ import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Computation result for the matched signals pane, holding the representative MS2 scan and the
+ * preferred matched lipid for a selected feature list row.
+ */
 record MatchedSignalsComputationResult(@Nullable String placeholderText,
                                        @Nullable Scan representativeMs2Scan,
                                        @Nullable MatchedLipid match) {

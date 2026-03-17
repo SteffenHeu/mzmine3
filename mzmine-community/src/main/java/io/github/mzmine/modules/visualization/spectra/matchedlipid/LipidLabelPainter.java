@@ -37,6 +37,10 @@ import java.util.Arrays;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Utility class for painting bordered text labels at a given anchor position on a {@link Graphics2D}
+ * context, used to annotate lipid fragment signals in matched-lipid spectrum charts.
+ */
 public final class LipidLabelPainter {
 
   private static final double X_PADDING = 6d;

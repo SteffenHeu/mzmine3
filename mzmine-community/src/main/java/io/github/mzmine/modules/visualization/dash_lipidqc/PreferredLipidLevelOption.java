@@ -28,6 +28,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Enum representing the preferred lipid annotation level (species or molecular species) to display
+ * in the QC dashboard view.
+ */
 enum PreferredLipidLevelOption {
   SPECIES("Species level", LipidAnnotationLevel.SPECIES_LEVEL), MOLECULAR_SPECIES(
       "Molecular species level", LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL);

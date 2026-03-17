@@ -27,6 +27,11 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Computation result for the retention trend pane, containing either a
+ * {@link RetentionComputationPayload} with chart data or a placeholder message if no suitable
+ * data is available.
+ */
 record RetentionComputationResult(@Nullable String placeholderText,
                                   @Nullable RetentionComputationPayload payload) {
 

@@ -37,6 +37,10 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Background task that computes ECN and DBE retention trend datasets for the
+ * {@link EquivalentCarbonNumberPane} in the lipid QC dashboard.
+ */
 final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumberPane> {
 
   private final @Nullable FeatureListRow selectedRow;

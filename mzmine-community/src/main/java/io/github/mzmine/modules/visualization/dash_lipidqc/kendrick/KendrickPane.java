@@ -82,6 +82,10 @@ import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
+/**
+ * Dashboard panel displaying a Kendrick mass plot with optional QC review overlays that highlight
+ * potential false-positive or false-negative lipid annotations.
+ */
 public class KendrickPane extends BorderPane {
 
   private static final double KMD_MIN = -1d;

@@ -28,6 +28,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.parameters.impl.CurrentProjectNoDialogParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
 
+/**
+ * Parameters for the lipid annotation QC dashboard module. Accepts a single feature list that will
+ * be opened in the dashboard.
+ */
 public class LipidAnnotationQCDashboardParameters extends CurrentProjectNoDialogParameterSet {
 
   public static final FeatureListsParameter flists = new FeatureListsParameter(1, 1);

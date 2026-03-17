@@ -37,6 +37,11 @@ import javafx.beans.property.SimpleObjectProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Data model for the lipid annotation quality control dashboard. Holds the active feature list,
+ * the currently selected row, and references to the embedded feature table controller and the
+ * shared pane group.
+ */
 public class LipidAnnotationQCDashboardModel {
 
   private final ObjectProperty<@NotNull ModularFeatureList> featureList = new SimpleObjectProperty<>(
@@ -46,6 +51,8 @@ public class LipidAnnotationQCDashboardModel {
   private final ObjectProperty<@NotNull FeatureTableFX> featureTableFx = new ReadOnlyObjectWrapper<>(
       featureTableController.get().getFeatureTable());
   private final ObjectProperty<@Nullable FeatureListRow> row = new SimpleObjectProperty<>();
+
+  // todo: remove? not used anywhere?
   private final ParentFeatureListPaneGroup paneGroup = new ParentFeatureListPaneGroup();
 
   public @NotNull ModularFeatureList getFeatureList() {

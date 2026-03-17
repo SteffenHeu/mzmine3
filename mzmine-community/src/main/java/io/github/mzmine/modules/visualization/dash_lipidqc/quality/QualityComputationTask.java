@@ -51,6 +51,11 @@ import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Background task that computes all annotation quality metrics (MS1, MS2, adduct, isotope,
+ * elution order, interference, false-positive/negative flags) for the selected row and pushes the
+ * result to the {@link AnnotationQualityPane}.
+ */
 final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
 
   private final @Nullable FeatureListRow row;

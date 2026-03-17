@@ -54,6 +54,10 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 
+/**
+ * Dashboard panel that displays the measured versus theoretical isotope pattern for the currently
+ * selected lipid annotation, helping to assess MS1-level isotope fit quality.
+ */
 public class IsotopePane extends BorderPane {
 
   private static final double APPROX_INSTRUMENT_RESOLUTION = 100_000d;

@@ -44,6 +44,10 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRendererState;
 import org.jfree.data.xy.XYDataset;
 
+/**
+ * Bar renderer for lipid matched-fragment spectrum plots that draws styled signal bars and
+ * collision-avoiding, connector-linked labels for each annotated fragment peak.
+ */
 public class StyledLipidSpectrumBarRenderer extends ColoredXYBarRenderer {
 
   private static final double LABEL_CLIP_PADDING = 2d;

@@ -30,6 +30,10 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.gui.mainwindow.SimpleTab;
 import java.util.Collection;
 
+/**
+ * Main-window tab that hosts the lipid annotation quality control dashboard, delegating feature
+ * list selection to the underlying {@link LipidAnnotationQCDashboardController}.
+ */
 public class LipidAnnotationQCDashboardTab extends SimpleTab {
 
   private final LipidAnnotationQCDashboardController controller;

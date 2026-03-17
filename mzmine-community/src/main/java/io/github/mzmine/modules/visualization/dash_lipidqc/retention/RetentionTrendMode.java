@@ -27,6 +27,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Defines which retention trend visualisation is shown in the {@link EquivalentCarbonNumberPane}:
+ * ECN carbon trend, DBE trend, or both combined.
+ */
 enum RetentionTrendMode {
   ECN_CARBON_TREND("ECN carbon trend"), DBE_TREND("DBE trend"), COMBINED_CARBON_DBE_TRENDS(
       "Combined C+DBE trends");

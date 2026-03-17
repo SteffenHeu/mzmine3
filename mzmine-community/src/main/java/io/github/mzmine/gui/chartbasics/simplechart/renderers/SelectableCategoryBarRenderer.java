@@ -34,6 +34,11 @@ import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.renderer.category.BarRenderer;
 import org.jfree.chart.renderer.category.StandardBarPainter;
 
+/**
+ * Category bar renderer that highlights a selected bar (or a set of bars with explicit color
+ * overrides) using the application colour palette, while drawing all other bars in a neutral
+ * colour.
+ */
 public class SelectableCategoryBarRenderer extends BarRenderer {
 
   private final @NotNull Color selectedColor = ConfigService.getDefaultColorPalette()

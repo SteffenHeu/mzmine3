@@ -30,6 +30,10 @@ import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Background task that computes measured and theoretical isotope pattern datasets for the
+ * {@link IsotopePane} in the lipid QC dashboard.
+ */
 final class IsotopeComputationTask extends FxUpdateTask<IsotopePane> {
 
   private final @Nullable FeatureListRow row;

@@ -37,6 +37,10 @@ import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRendererState;
 import org.jfree.data.xy.XYDataset;
 
+/**
+ * Bubble dataset renderer that applies a configurable alpha transparency when drawing each bubble,
+ * delegating all other rendering to {@link ColoredBubbleDatasetRenderer}.
+ */
 public class AlphaBubbleDatasetRenderer extends ColoredBubbleDatasetRenderer {
 
   private final float alpha;

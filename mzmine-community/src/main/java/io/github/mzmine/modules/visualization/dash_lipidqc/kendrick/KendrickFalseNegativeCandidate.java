@@ -29,6 +29,11 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Data record representing a potentially missing (false negative) lipid annotation detected via
+ * Kendrick mass defect and DBE trend analysis, together with the predicted class, trend
+ * coefficients, and a human-readable detail string.
+ */
 public record KendrickFalseNegativeCandidate(@NotNull MatchedLipid match, double overallScore,
                                              @NotNull String detail,
                                              @NotNull String predictedClassName,

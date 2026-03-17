@@ -31,6 +31,11 @@ import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * MVCI controller for the lipid annotation quality control dashboard. Wires the
+ * {@link LipidAnnotationQCDashboardModel} to the view and forwards feature-list selection changes
+ * to the model.
+ */
 public class LipidAnnotationQCDashboardController extends
     FxController<LipidAnnotationQCDashboardModel> {
 

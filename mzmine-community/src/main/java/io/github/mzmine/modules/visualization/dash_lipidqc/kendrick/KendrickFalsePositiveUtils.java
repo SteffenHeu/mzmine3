@@ -43,6 +43,10 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Utility class for detecting potentially false-positive lipid annotations based on overall QC
+ * score, elution order consistency, and isobaric interference metrics.
+ */
 public final class KendrickFalsePositiveUtils {
 
   private static final double OUTLIER_OVERALL_THRESHOLD = 0.5d;

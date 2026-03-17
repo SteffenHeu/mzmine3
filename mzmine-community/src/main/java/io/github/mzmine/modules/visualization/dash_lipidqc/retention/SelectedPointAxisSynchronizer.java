@@ -30,6 +30,10 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.event.AxisChangeEvent;
 import org.jfree.chart.event.AxisChangeListener;
 
+/**
+ * Synchronises two JFreeChart {@link NumberAxis} instances so that when a user zooms one axis the
+ * selected data point stays visible at the same relative position on both axes.
+ */
 final class SelectedPointAxisSynchronizer {
 
   private final @NotNull NumberAxis primaryAxis;

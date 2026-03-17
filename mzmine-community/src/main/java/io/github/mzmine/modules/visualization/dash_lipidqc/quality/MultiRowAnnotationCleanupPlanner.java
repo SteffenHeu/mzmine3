@@ -46,6 +46,11 @@ import java.util.TreeMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Utility class that analyses a feature list and computes a {@link MultiRowAnnotationCleanupPlan}
+ * based on the given {@link MultiRowAnnotationCleanupOptions}, resolving preferred ionisation types
+ * and score-based removal rules per lipid class.
+ */
 final class MultiRowAnnotationCleanupPlanner {
 
   private MultiRowAnnotationCleanupPlanner() {

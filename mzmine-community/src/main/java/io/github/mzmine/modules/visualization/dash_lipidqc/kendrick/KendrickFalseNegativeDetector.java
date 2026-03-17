@@ -71,6 +71,11 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Detects potentially missed lipid annotations in the Kendrick plot space.
  */
+/**
+ * Detects candidate false-negative lipid annotations by predicting the expected Kendrick mass
+ * defect trend and DBE pattern for the surrounding lipid class, then flagging rows whose measured
+ * values deviate from those predictions.
+ */
 public final class KendrickFalseNegativeDetector {
 
   private static final double CH2_EXACT_MASS = FormulaUtils.calculateExactMass("CH2");

@@ -83,6 +83,11 @@ import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
+/**
+ * Dashboard panel that displays ECN (equivalent carbon number) and DBE retention trend plots for
+ * the selected lipid annotation, helping to validate whether the annotation follows the expected
+ * reversed-phase or HILIC elution pattern.
+ */
 public class EquivalentCarbonNumberPane extends BorderPane {
 
   private static final int FP_OVERLAY_DATASET_INDEX = 5;

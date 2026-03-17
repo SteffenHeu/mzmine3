@@ -87,6 +87,12 @@ import org.jetbrains.annotations.Nullable;
  *   <li>Direct infusion / imaging: unavailable ({@code 0.0})</li>
  * </ul>
  */
+/**
+ * Utility class providing scoring functions for lipid annotation quality control. Computes
+ * individual quality metrics (MS1 mass accuracy, MS2 fragmentation, adduct probability, isotope
+ * pattern, elution order, isobaric interference) and combines them into a single weighted overall
+ * annotation score.
+ */
 public final class LipidQcScoringUtils {
 
   public static final int MIN_SUPPORTED_COMPONENT_WEIGHT = 0;

@@ -39,6 +39,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * MZmine module that opens the lipid annotation quality control dashboard for inspecting and
+ * reviewing lipid annotations in a selected feature list.
+ */
 public class LipidAnnotationQCDashboardModule extends AbstractRunnableModule {
 
   public LipidAnnotationQCDashboardModule() {

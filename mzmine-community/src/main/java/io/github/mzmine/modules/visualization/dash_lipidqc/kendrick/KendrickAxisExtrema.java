@@ -25,6 +25,10 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.kendrick;
 
+/**
+ * Value record holding the minimum, maximum, and availability flag for a single axis of a Kendrick
+ * mass plot, used to restore or restrict axis ranges after dataset updates.
+ */
 record KendrickAxisExtrema(double min, double max, boolean available) {
 
 }

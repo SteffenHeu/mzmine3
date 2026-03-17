@@ -37,6 +37,11 @@ import java.util.function.ToDoubleFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * JFreeChart XYZ bubble dataset holding a predicate-filtered subset of rows from a full
+ * {@link io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotXYZDataset},
+ * with an optional Z-value override for custom colouring.
+ */
 public class KendrickSubsetDataset extends org.jfree.data.xy.AbstractXYZDataset
     implements XYZBubbleDataset, XYItemObjectProvider<FeatureListRow>, ToolTipTextProvider {
 

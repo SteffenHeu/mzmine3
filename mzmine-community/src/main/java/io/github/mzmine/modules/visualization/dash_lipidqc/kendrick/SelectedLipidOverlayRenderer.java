@@ -41,6 +41,10 @@ import org.jfree.chart.renderer.xy.XYItemRendererState;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.data.xy.XYDataset;
 
+/**
+ * Renderer that draws a highlighted circle and text label at the position of the currently
+ * selected lipid on a Kendrick or ECN scatter plot.
+ */
 public class SelectedLipidOverlayRenderer extends XYLineAndShapeRenderer {
 
   private final @NotNull String label;

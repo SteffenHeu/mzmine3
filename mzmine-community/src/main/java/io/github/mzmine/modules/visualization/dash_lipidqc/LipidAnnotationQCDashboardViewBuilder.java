@@ -75,6 +75,11 @@ import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * View builder for the lipid annotation QC dashboard. Assembles the multi-pane layout (summary,
+ * Kendrick, quality, retention, matched signals, isotope) and wires selection listeners between the
+ * feature table and the dashboard panes.
+ */
 public class LipidAnnotationQCDashboardViewBuilder extends
     FxViewBuilder<LipidAnnotationQCDashboardModel> {
 
@@ -188,7 +193,7 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     model.featureTableFxProperty().get().getSelectionModel().selectedItemProperty()
         .addListener((_, _, row) -> model.setRow(row == null ? null : row.getValue()));
     model.featureTableFxProperty().get().getFilteredRowItems().addListener(
-        (javafx.collections.ListChangeListener<javafx.scene.control.TreeItem<io.github.mzmine.datamodel.features.ModularFeatureListRow>>) _ -> Platform.runLater(
+        (javafx.collections.ListChangeListener<javafx.scene.control.TreeItem<ModularFeatureListRow>>) _ -> Platform.runLater(
             () -> {
               refreshAllDashboardPlots.run();
               selectFirstVisibleRow(model);

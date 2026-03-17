@@ -27,6 +27,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Sealed interface for the payload produced by a retention trend computation. Implemented by
+ * {@link EcnRetentionPayload}, {@link DbeRetentionPayload}, and {@link CombinedRetentionPayload}.
+ */
 sealed interface RetentionComputationPayload permits EcnRetentionPayload, DbeRetentionPayload,
     CombinedRetentionPayload {
 

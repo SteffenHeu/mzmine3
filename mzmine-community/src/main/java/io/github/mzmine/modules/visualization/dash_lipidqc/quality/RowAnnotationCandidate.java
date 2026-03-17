@@ -29,6 +29,10 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Value record pairing a feature list row with a matched lipid annotation and its pre-computed
+ * combined QC score, used during multi-row annotation cleanup planning.
+ */
 record RowAnnotationCandidate(@NotNull FeatureListRow row, @NotNull MatchedLipid match,
                               double combinedScore) {
 

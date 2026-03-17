@@ -31,6 +31,11 @@ import java.util.Map;
 import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Immutable configuration record for the multi-row annotation cleanup operation, specifying the
+ * preferred ionisation type per lipid class, score-based keep rules, and how to handle remaining
+ * annotations after a removal.
+ */
 record MultiRowAnnotationCleanupOptions(
     @NotNull Map<String, IonizationType> preferredIonizationByLipidClass,
     @NotNull Set<String> keepHighestScoreByLipidClass,

@@ -37,6 +37,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.data.xy.AbstractXYDataset;
 
+/**
+ * JFreeChart XY dataset built from a predicate-filtered set of lipid-annotated feature list rows,
+ * mapping a configurable y-value (e.g. ECN or DBE) against retention time.
+ */
 final class RetentionTrendDataset extends AbstractXYDataset {
 
   private final @NotNull double[] xValues;

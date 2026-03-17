@@ -32,6 +32,10 @@ import java.util.Map;
 import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Immutable plan record describing which lipid annotations will be removed per row and which
+ * annotation will remain selected after the cleanup is applied.
+ */
 record MultiRowAnnotationCleanupPlan(
     @NotNull Map<FeatureListRow, Set<MatchedLipid>> annotationsToRemoveByRow,
     @NotNull Map<FeatureListRow, MatchedLipid> selectedRemainingAnnotationByRow) {

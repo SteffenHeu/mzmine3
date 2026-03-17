@@ -31,6 +31,11 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidCl
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Computation payload for the ECN (equivalent carbon number) vs. retention-time trend
+ * visualisation, carrying the selected match, all rows with lipid IDs, the selected class, and
+ * the fixed DBE.
+ */
 record EcnRetentionPayload(@NotNull RetentionTrendMode mode,
                            @NotNull MatchedLipid selectedMatch,
                            @NotNull List<FeatureListRow> rowsWithLipidIds,

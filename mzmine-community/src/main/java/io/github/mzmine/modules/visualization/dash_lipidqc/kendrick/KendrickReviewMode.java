@@ -27,6 +27,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.kendrick;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Review mode for the Kendrick mass plot pane, controlling whether no overlay, potential
+ * false-positive, or potential false-negative annotations are highlighted.
+ */
 public enum KendrickReviewMode {
   NONE("None"),
   POTENTIAL_FALSE_POSITIVE("Potentially false positive"),

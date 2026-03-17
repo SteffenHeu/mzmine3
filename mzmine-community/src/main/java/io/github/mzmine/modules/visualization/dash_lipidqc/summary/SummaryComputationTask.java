@@ -44,6 +44,10 @@ import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Background task that groups lipid annotations by the selected {@link SummaryGroup} hierarchy
+ * and computes annotation counts for the {@link LipidSummaryPane} bar chart.
+ */
 final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
 
   private static final Pattern SUBCLASS_TOKEN_PATTERN = Pattern.compile(

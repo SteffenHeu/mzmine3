@@ -30,6 +30,10 @@ import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Background task that looks up the representative MS2 scan and preferred lipid match for a
+ * selected row and pushes the result to the {@link MatchedSignalsPane}.
+ */
 final class MatchedSignalsComputationTask extends FxUpdateTask<MatchedSignalsPane> {
 
   private final @Nullable FeatureListRow row;

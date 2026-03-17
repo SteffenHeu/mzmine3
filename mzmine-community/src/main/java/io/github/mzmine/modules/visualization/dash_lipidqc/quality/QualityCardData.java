@@ -28,6 +28,11 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Data record holding all individual quality metric scores (MS1, MS2, adduct, isotope, elution
+ * order, interference) together with the overall combined score for a single matched lipid in the
+ * annotation quality pane.
+ */
 record QualityCardData(@NotNull MatchedLipid match, @NotNull QualityMetric ms1,
                        @NotNull QualityMetric ms2, @NotNull QualityMetric adduct,
                        @NotNull QualityMetric isotope, @NotNull QualityMetric elutionOrder,

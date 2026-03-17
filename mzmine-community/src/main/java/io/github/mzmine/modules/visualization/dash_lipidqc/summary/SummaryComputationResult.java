@@ -30,6 +30,10 @@ import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Computation result for the lipid summary pane, containing grouped annotation counts, row-ID
+ * sets, tooltip strings, total count, and the currently selected group label.
+ */
 record SummaryComputationResult(@Nullable String placeholderText,
                                 @NotNull SummaryGroup grouping,
                                 @NotNull SummaryCountMode countMode,

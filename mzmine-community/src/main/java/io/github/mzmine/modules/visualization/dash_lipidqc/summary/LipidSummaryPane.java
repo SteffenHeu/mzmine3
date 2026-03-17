@@ -74,6 +74,10 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import io.github.mzmine.gui.chartbasics.gui.javafx.EChartViewer;
 import javafx.scene.input.MouseButton;
 
+/**
+ * Dashboard panel that displays a bar chart summarising lipid annotations grouped by subclass,
+ * main class, or category, with click-to-filter interaction linked to the other dashboard panes.
+ */
 public class LipidSummaryPane extends BorderPane {
 
   private final @NotNull LipidAnnotationQCDashboardModel model;

@@ -52,6 +52,11 @@ import javafx.util.Callback;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Feature data type that computes and displays the overall lipid annotation quality score,
+ * combining MS1 accuracy, MS2 fragmentation, elution order, and interference metrics into a single
+ * normalised percentage value.
+ */
 public class LipidOverallQualityScoreType extends PercentType {
 
   private static final WeakHashMap<ModularFeatureList, ContextCacheEntry> CONTEXT_CACHE = new WeakHashMap<>();

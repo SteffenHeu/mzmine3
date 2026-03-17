@@ -32,6 +32,11 @@ import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.renderer.LookupPaintScale;
 import org.jfree.chart.renderer.PaintScale;
 
+/**
+ * Computation result for the Kendrick filter, holding the base dataset, review mode, filtered-in
+ * and filtered-out subsets, outlier dataset, colour scales, and an optional false-negative
+ * detector for the current feature list.
+ */
 record KendrickFilterComputationResult(long requestId,
                                        @NotNull KendrickMassPlotXYZDataset baseDataset,
                                        @NotNull KendrickReviewMode reviewMode,

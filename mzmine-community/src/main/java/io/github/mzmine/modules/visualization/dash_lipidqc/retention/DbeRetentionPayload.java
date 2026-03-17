@@ -29,6 +29,10 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Computation payload for the DBE (degree of unsaturation) vs. retention-time trend
+ * visualisation, carrying the selected match, class, fixed carbon count, and the trend dataset.
+ */
 record DbeRetentionPayload(@NotNull RetentionTrendMode mode,
                            @NotNull MatchedLipid selectedMatch,
                            @NotNull ILipidClass selectedClass,

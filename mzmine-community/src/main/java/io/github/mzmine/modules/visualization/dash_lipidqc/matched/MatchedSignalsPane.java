@@ -46,6 +46,10 @@ import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Dashboard panel that displays the annotated lipid fragment spectrum for the selected feature
+ * list row, showing matched and unmatched signals side-by-side.
+ */
 public class MatchedSignalsPane extends BorderPane {
 
   private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();

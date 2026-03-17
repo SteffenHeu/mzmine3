@@ -35,6 +35,10 @@ import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Factory for building the standard grid layout used in the lipid annotation QC dashboard,
+ * wrapping panes in titled subsections and arranging them in a six-cell grid.
+ */
 public final class DashboardLayoutFactory {
 
   private DashboardLayoutFactory() {

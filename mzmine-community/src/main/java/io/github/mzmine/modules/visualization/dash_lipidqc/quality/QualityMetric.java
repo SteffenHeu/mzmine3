@@ -27,6 +27,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Simple value record combining a normalised quality score (0–1) with a human-readable detail
+ * string for a single annotation quality dimension.
+ */
 record QualityMetric(double score, @NotNull String detail) {
 
 }

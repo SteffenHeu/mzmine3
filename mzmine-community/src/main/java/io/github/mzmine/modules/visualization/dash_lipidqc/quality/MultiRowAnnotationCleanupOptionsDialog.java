@@ -50,6 +50,11 @@ import javafx.scene.layout.VBox;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Internal dialog for configuring the multi-row annotation cleanup options. Lets the user choose
+ * preferred ionisation types per lipid class and previews the resulting
+ * {@link MultiRowAnnotationCleanupPlan} before applying it.
+ */
 final class MultiRowAnnotationCleanupOptionsDialog {
 
   private final @NotNull ModularFeatureList featureList;

@@ -32,6 +32,11 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Utility class for resolving the preferred {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid}
+ * for a feature list row in the lipid QC dashboard, respecting the user's preferred-annotation
+ * setting and falling back to the first match.
+ */
 public final class LipidQcAnnotationSelectionUtils {
 
   private LipidQcAnnotationSelectionUtils() {

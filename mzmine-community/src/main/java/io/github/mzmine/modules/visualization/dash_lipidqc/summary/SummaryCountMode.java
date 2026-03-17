@@ -27,6 +27,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.summary;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Defines how annotations are counted in the lipid summary bar chart: either by total feature list
+ * rows or by the number of unique annotation identities.
+ */
 enum SummaryCountMode {
   ROW_COUNT("Rows", "Number of lipid annotations", "Lipid annotations",
       "Total lipids: "), UNIQUE_ANNOTATIONS("Unique annotations",

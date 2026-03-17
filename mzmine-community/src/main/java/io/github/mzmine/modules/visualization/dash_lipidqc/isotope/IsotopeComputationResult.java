@@ -28,6 +28,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.isotope;
 import io.github.mzmine.datamodel.IsotopePattern;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Computation result for the isotope pane, holding the measured and theoretical isotope patterns
+ * for a selected feature list row, or a placeholder message if no pattern is available.
+ */
 record IsotopeComputationResult(@Nullable String placeholderText,
                                 @Nullable IsotopePattern measuredPattern,
                                 @Nullable IsotopePattern theoreticalPattern) {

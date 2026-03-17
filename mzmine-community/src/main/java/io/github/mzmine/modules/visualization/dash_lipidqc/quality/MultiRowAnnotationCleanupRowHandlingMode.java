@@ -27,6 +27,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
 
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Defines how the remaining annotations of a row are treated when one of its lipid annotations is
+ * removed during the multi-row cleanup operation.
+ */
 enum MultiRowAnnotationCleanupRowHandlingMode {
   DISCARD_LOWER_THAN_REMOVED(
       "Discard all annotations with lower score than removed annotation"),

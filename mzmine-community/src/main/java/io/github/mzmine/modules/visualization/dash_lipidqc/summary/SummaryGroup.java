@@ -28,6 +28,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.summary;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Defines the grouping hierarchy used for the lipid summary bar chart: lipid subclass, main class,
+ * or category.
+ */
 enum SummaryGroup {
   LIPID_SUBCLASS("Lipid subclass") {
     @Override

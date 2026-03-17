@@ -32,6 +32,11 @@ import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Mutable state object that tracks which rows and groups are currently selected in the lipid QC
+ * dashboard summary bar chart, propagating selection changes to all dashboard panes via a shared
+ * onChange callback.
+ */
 public final class DashboardFilterState {
 
   private @NotNull Set<Integer> barSelectedRowIds = Set.of();

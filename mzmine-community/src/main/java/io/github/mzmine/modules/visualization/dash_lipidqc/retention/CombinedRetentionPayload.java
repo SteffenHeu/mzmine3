@@ -30,6 +30,11 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidCl
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Computation payload for the combined carbon-count + DBE retention trend visualisation, carrying
+ * the selected match, class, separate carbon and DBE datasets, and the axis indices used in the
+ * shared chart.
+ */
 record CombinedRetentionPayload(@NotNull RetentionTrendMode mode,
                                 @NotNull MatchedLipid selectedMatch,
                                 @NotNull ILipidClass selectedClass,

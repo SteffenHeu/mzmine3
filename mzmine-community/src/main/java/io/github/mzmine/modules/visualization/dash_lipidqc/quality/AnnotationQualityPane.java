@@ -83,6 +83,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.renderer.PaintScale;
 
+/**
+ * Dashboard panel that shows detailed per-metric quality cards (MS1, MS2, adduct, isotope,
+ * elution order, interference) for the selected lipid annotation, and provides access to the
+ * multi-row annotation cleanup workflow.
+ */
 public class AnnotationQualityPane extends BorderPane {
 
   private static final double METRIC_BAR_WIDTH = 230d;

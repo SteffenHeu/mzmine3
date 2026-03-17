@@ -45,6 +45,10 @@ import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.renderer.LookupPaintScale;
 import org.jfree.chart.renderer.PaintScale;
 
+/**
+ * Background task that computes Kendrick filter datasets and QC review overlays (false positives,
+ * false negatives) for the {@link KendrickPane} in the lipid QC dashboard.
+ */
 final class KendrickFilterComputationTask extends FxUpdateTask<KendrickPane> {
 
   private final long requestId;

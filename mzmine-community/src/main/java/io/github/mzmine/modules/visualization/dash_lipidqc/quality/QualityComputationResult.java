@@ -33,6 +33,11 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Computation result for the annotation quality pane, containing quality cards for all candidate
+ * annotations, interference and duplicate-row information, and optional false-positive / false-
+ * negative flags for the selected row.
+ */
 record QualityComputationResult(@Nullable String placeholderText,
                                 @Nullable MatchedLipid selectedAnnotation,
                                 @NotNull InterferenceMetrics interferenceMetrics,
