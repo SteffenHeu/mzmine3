@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -22,44 +23,50 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.javafx.mvci;
+package io.github.mzmine.parameters.parametertypes.proxy;
 
-import javafx.scene.layout.Region;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import io.github.mzmine.javafx.mvci.FxUpdateTask;
+import io.github.mzmine.util.web.ProxyTestUtils;
 
-/**
- * MVCI controller with cached view. This is usually used when a view is exeansive to create and may
- * be removed/added from/to the scene graph often. Otherwise, use the base implementation
- * {@link FxController}
- */
-public abstract class FxCachedViewController<ViewModelClass> extends FxController<ViewModelClass> {
+public class ProxyTestUpdateTask extends FxUpdateTask<ProxyTestDialogModel> {
 
-  @Nullable
-  protected Region cachedView;
+  private boolean testProxy;
+  private boolean testNoProxy;
+  private String results;
+  private String log;
+  private double progress = 0;
 
-  protected FxCachedViewController(@NotNull ViewModelClass model) {
-    super(model);
+  protected ProxyTestUpdateTask(ProxyTestDialogModel model) {
+    super("Proxy test", model);
   }
 
-  /**
-   * Returns cached view or builds it if null
-   */
-  public synchronized @NotNull Region buildView() {
-    if (cachedView == null) {
-      cachedView = super.buildView();
-    }
-    return cachedView;
+  @Override
+  protected void process() {
+    testProxy = ProxyTestUtils.testDefaultClient(true);
+    progress = 0.33;
+    testNoProxy = ProxyTestUtils.testDefaultClient(false);
+    progress = 0.66;
+
+    results = ProxyTestUtils.testAll();
+    log = ProxyTestUtils.logProxyState("Proxy config test: ");
+    progress = 1;
   }
 
-  /**
-   * Clears the internally cached view and returns the old view
-   *
-   * @return the old view
-   */
-  public synchronized @Nullable Region clearCachedView() {
-    Region internalView = cachedView;
-    cachedView = null;
-    return internalView;
+  @Override
+  protected void updateGuiModel() {
+    model.setProxyTest(testProxy);
+    model.setNoProxyTest(testNoProxy);
+    model.setMessage(results + "\n\n" + log);
+    model.setTestsFinished(true);
+  }
+
+  @Override
+  public String getTaskDescription() {
+    return "Running proxy tests";
+  }
+
+  @Override
+  public double getFinishedPercentage() {
+    return progress;
   }
 }
