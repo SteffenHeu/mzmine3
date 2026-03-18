@@ -118,14 +118,14 @@ public class KendrickPane extends BorderPane {
     this.filterState = filterState;
     model.featureListProperty().subscribe(this::onFeatureListChanged);
     model.rowProperty().subscribe(_ -> updateSelectionOverlay());
-    model.retentionTimeAnalysisEnabledProperty().subscribe(_ -> applyFilters());
+    model.retentionTimeAnalysisEnabledProperty().subscribe(_ -> requestUpdate());
     reviewModeSelector.getSelectionModel().select(reviewMode);
     reviewModeSelector.valueProperty().addListener((_, _, mode) -> {
       if (mode == null || mode == reviewMode) {
         return;
       }
       reviewMode = mode;
-      applyFilters();
+      requestUpdate();
       if (onReviewModeChanged != null) {
         onReviewModeChanged.accept(mode);
       }
@@ -190,11 +190,7 @@ public class KendrickPane extends BorderPane {
     });
   }
 
-  public void requestRefresh() {
-    applyFilters();
-  }
-
-  public void applyFilters() {
+  public void requestUpdate() {
     if (chart == null || baseDataset == null || colorRenderer == null
         || filteredOutRenderer == null) {
       return;
@@ -387,7 +383,7 @@ public class KendrickPane extends BorderPane {
     chart = newChart;
     setCenter(newChart);
     optimizeVisibleKendrickAxes(plot);
-    applyFilters();
+    requestUpdate();
   }
 
   private static void optimizeVisibleKendrickAxes(final @NotNull XYPlot plot) {

@@ -149,16 +149,12 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     return paneTitle;
   }
 
-  public void requestRefresh() {
-    requestUpdate();
-  }
-
   private static boolean rowHasMatchedLipidSignals(final @NotNull FeatureListRow row) {
     final List<MatchedLipid> matches = row.get(LipidMatchListType.class);
     return matches != null && !matches.isEmpty();
   }
 
-  private void requestUpdate() {
+  public void requestUpdate() {
     final List<FeatureListRow> currentRowsWithLipidIds = getCurrentRowsWithLipidIds();
     final RetentionTrendMode mode = trendModeCombo.getValue();
     scheduler.onTaskThreadDelayed(new RetentionComputationTask(this, model.getRow(),

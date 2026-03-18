@@ -127,10 +127,6 @@ public class AnnotationQualityPane extends BorderPane {
     BorderPane.setAlignment(placeholder, Pos.CENTER);
   }
 
-  public void requestRefresh() {
-    requestUpdate();
-  }
-
   public void setOnAnnotationsChanged(final @Nullable Runnable onAnnotationsChanged) {
     this.onAnnotationsChanged = onAnnotationsChanged;
   }
@@ -143,7 +139,7 @@ public class AnnotationQualityPane extends BorderPane {
     requestUpdate();
   }
 
-  private void requestUpdate() {
+  public void requestUpdate() {
     scheduler.onTaskThreadDelayed(
         new QualityComputationTask(this, model.getRow(), model.getFeatureList(),
             model.isRetentionTimeAnalysisEnabled(), kendrickReviewMode),

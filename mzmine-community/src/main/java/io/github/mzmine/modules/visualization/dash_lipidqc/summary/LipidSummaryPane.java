@@ -146,11 +146,7 @@ public class LipidSummaryPane extends BorderPane {
     requestChartUpdate();
   }
 
-  public void requestRefresh() {
-    requestChartUpdate();
-  }
-
-  private void requestChartUpdate() {
+  public void requestChartUpdate() {
     final SummaryGroup grouping = groupSelector.getValue();
     final SummaryCountMode countMode = countModeSelector.getValue();
     selectedGroup = selectedGroups.stream().findFirst().orElse(null);
