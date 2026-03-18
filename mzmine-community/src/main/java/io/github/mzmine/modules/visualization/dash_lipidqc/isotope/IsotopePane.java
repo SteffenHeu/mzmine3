@@ -27,27 +27,20 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.isotope;
 
 import io.github.mzmine.datamodel.IsotopePattern;
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.identities.iontype.IonType;
 import io.github.mzmine.datamodel.identities.iontype.IonTypeParser;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.ColoredXYDataset;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.spectra.MassSpectrumProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYBarRenderer;
-import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
 import io.github.mzmine.modules.tools.isotopeprediction.IsotopePatternCalculator;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.renderers.SpectraItemLabelGenerator;
 import java.awt.Color;
 import java.awt.geom.Ellipse2D;
-import javafx.geometry.Pos;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
-import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.axis.NumberAxis;
@@ -58,21 +51,17 @@ import org.openscience.cdk.interfaces.IMolecularFormula;
  * Dashboard panel that displays the measured versus theoretical isotope pattern for the currently
  * selected lipid annotation, helping to assess MS1-level isotope fit quality.
  */
-public class IsotopePane extends BorderPane {
+public class IsotopePane extends DashboardComputationPane {
 
   private static final double APPROX_INSTRUMENT_RESOLUTION = 100_000d;
   private static final double MIN_THEORETICAL_ABUNDANCE = 0.005d;
   private static final double MIN_MERGE_WIDTH = 0.00005d;
 
-  private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
   private final @NotNull SpectraPlot plot = new SpectraPlot();
-  private final @NotNull Label placeholder = new Label("Select a row with an isotope pattern.");
   private @Nullable FeatureListRow row;
 
   public IsotopePane() {
-    setCenter(placeholder);
-    BorderPane.setAlignment(placeholder, Pos.CENTER);
-
+    super("Select a row with an isotope pattern.");
     plot.getXYPlot().getDomainAxis().setLabel("m/z");
     ((NumberAxis) plot.getXYPlot().getDomainAxis()).setNumberFormatOverride(
         ConfigService.getGuiFormats().mzFormat());
@@ -88,7 +77,7 @@ public class IsotopePane extends BorderPane {
   }
 
   private void requestUpdate() {
-    scheduler.onTaskThreadDelayed(new IsotopeComputationTask(this, row), Duration.millis(120));
+    scheduleUpdate(new IsotopeComputationTask(this, row));
   }
 
   void applyComputationResult(final @NotNull IsotopeComputationResult result) {
@@ -132,30 +121,28 @@ public class IsotopePane extends BorderPane {
           null);
     }
 
-    final @Nullable MatchedLipid selectedMatch = resolvePreferredOrPotentialMatch(row);
+    final @Nullable MatchedLipid selectedMatch = LipidQcAnnotationSelectionUtils.getPreferredOrPotentialLipidMatch(
+        row);
     final IsotopePattern theoreticalPattern = resolveTheoreticalPattern(row, selectedMatch);
     return new IsotopeComputationResult(null, measuredPattern, theoreticalPattern);
   }
 
   private static @Nullable IsotopePattern resolveTheoreticalPattern(final @NotNull FeatureListRow row,
       final @Nullable MatchedLipid selectedMatch) {
-    final MatchedLipid target =
-        selectedMatch != null ? selectedMatch
-            : LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
-    if (target == null) {
+    if (selectedMatch == null) {
       return null;
     }
-    IonType adductType = target.getAdductType();
+    IonType adductType = selectedMatch.getAdductType();
     if (adductType == null) {
-      adductType = IonTypeParser.parse(target.getIonizationType().getAdductName());
+      adductType = IonTypeParser.parse(selectedMatch.getIonizationType().getAdductName());
     }
     IsotopePattern pattern = null;
-    final IMolecularFormula neutralFormula = target.getLipidAnnotation().getMolecularFormula();
+    final IMolecularFormula neutralFormula = selectedMatch.getLipidAnnotation().getMolecularFormula();
     if (neutralFormula != null && adductType != null) {
       try {
         final IMolecularFormula ionFormula = adductType.addToFormula(neutralFormula);
         final double referenceMz =
-            target.getAccurateMz() != null ? target.getAccurateMz() : row.getAverageMZ();
+            selectedMatch.getAccurateMz() != null ? selectedMatch.getAccurateMz() : row.getAverageMZ();
         final double mergeWidth = Math.max(MIN_MERGE_WIDTH,
             referenceMz > 0d ? referenceMz / APPROX_INSTRUMENT_RESOLUTION : MIN_MERGE_WIDTH);
         pattern = IsotopePatternCalculator.calculateIsotopePattern(ionFormula,
@@ -174,23 +161,5 @@ public class IsotopePane extends BorderPane {
     return pattern;
   }
 
-  private static @Nullable MatchedLipid resolvePreferredOrPotentialMatch(
-      final @NotNull FeatureListRow row) {
-    final @Nullable MatchedLipid preferred = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
-        row);
-    if (preferred != null) {
-      return preferred;
-    }
-    if (row.getFeatureList() instanceof ModularFeatureList featureList) {
-      final @Nullable KendrickFalseNegativeCandidate potential =
-          new KendrickFalseNegativeDetector(featureList).detectCandidate(row);
-      return potential == null ? null : potential.match();
-    }
-    return null;
-  }
-
-  private void showPlaceholder(final @NotNull String text) {
-    placeholder.setText(text);
-    setCenter(placeholder);
-  }
 }
+

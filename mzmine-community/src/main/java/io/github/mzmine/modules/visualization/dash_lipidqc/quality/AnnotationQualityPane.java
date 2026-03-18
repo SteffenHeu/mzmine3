@@ -38,7 +38,7 @@ import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScaleTransform;
 import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.components.factories.FxLabels;
-import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.javafx.util.FxColorUtil;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
@@ -73,14 +73,12 @@ import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.renderer.PaintScale;
@@ -90,24 +88,22 @@ import org.jfree.chart.renderer.PaintScale;
  * order, interference) for the selected lipid annotation, and provides access to the multi-row
  * annotation cleanup workflow.
  */
-public class AnnotationQualityPane extends BorderPane {
+public class AnnotationQualityPane extends DashboardComputationPane {
 
   private static final double METRIC_BAR_WIDTH = 230d;
   private static final double METRIC_BAR_HEIGHT = 16d;
   private static final double ISOMER_EXACT_MASS_TOLERANCE = 1e-6d;
   private static final double OVERALL_SCORE_TIE_TOLERANCE = 1e-6d;
   private final @NotNull LipidAnnotationQCDashboardModel model;
-  private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
   private final VBox content = new VBox(8);
   private final ScrollPane scrollPane = new ScrollPane();
-  private final @NotNull Label placeholder = FxLabels.newLabel(
-      "Select a row with lipid annotations.");
   private final @NotNull Button removeMultiRowAnnotationsButton;
   private final @NotNull Button setBestPerRowButton;
   private @NotNull KendrickReviewMode kendrickReviewMode = KendrickReviewMode.NONE;
   private @Nullable Runnable onAnnotationsChanged;
 
   public AnnotationQualityPane(final @NotNull LipidAnnotationQCDashboardModel model) {
+    super("Select a row with lipid annotations.");
     this.model = model;
     model.featureListProperty().subscribe(_ -> requestUpdate());
     model.rowProperty().subscribe(_ -> requestUpdate());
@@ -125,8 +121,6 @@ public class AnnotationQualityPane extends BorderPane {
     final Accordion actionsAccordion = new Accordion(actionsPane);
     actionsAccordion.setExpandedPane(null);
     setBottom(actionsAccordion);
-    setCenter(placeholder);
-    BorderPane.setAlignment(placeholder, Pos.CENTER);
   }
 
   public void setOnAnnotationsChanged(final @Nullable Runnable onAnnotationsChanged) {
@@ -142,9 +136,8 @@ public class AnnotationQualityPane extends BorderPane {
   }
 
   public void requestUpdate() {
-    scheduler.onTaskThreadDelayed(
-        new QualityComputationTask(this, model.getRow(), model.getFeatureList(),
-            model.isRetentionTimeAnalysisEnabled(), kendrickReviewMode), Duration.millis(120));
+    scheduleUpdate(new QualityComputationTask(this, model.getRow(), model.getFeatureList(),
+        model.isRetentionTimeAnalysisEnabled(), kendrickReviewMode));
   }
 
   void applyQualityResult(final @NotNull QualityComputationResult result) {
@@ -691,11 +684,6 @@ public class AnnotationQualityPane extends BorderPane {
     final double rightExactMass = MatchedLipid.getExactMass(right.match());
     return Double.isFinite(leftExactMass) && Double.isFinite(rightExactMass)
         && Math.abs(leftExactMass - rightExactMass) <= ISOMER_EXACT_MASS_TOLERANCE;
-  }
-
-  private void showPlaceholder(final @NotNull String text) {
-    placeholder.setText(text);
-    setCenter(placeholder);
   }
 
   private static @NotNull String qualityWarningStyle() {

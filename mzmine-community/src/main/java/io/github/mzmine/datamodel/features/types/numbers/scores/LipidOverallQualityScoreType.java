@@ -55,7 +55,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Feature data type that computes and displays the overall lipid annotation quality score,
  * combining MS1 accuracy, MS2 fragmentation, elution order, and interference metrics into a single
- * normalised percentage value.
+ * normalized percentage value.
  */
 public class LipidOverallQualityScoreType extends PercentType {
 
@@ -77,26 +77,16 @@ public class LipidOverallQualityScoreType extends PercentType {
       final int subColumnIndex) {
     final TreeTableColumn<ModularFeatureListRow, Object> column = DataType.createStandardColumn(
         this, raw, parentType, subColumnIndex);
-    column.setCellValueFactory(
-        new Callback<CellDataFeatures<ModularFeatureListRow, Object>, ObservableValue<Object>>() {
-          @Override
-          public ObservableValue<Object> call(
-              final CellDataFeatures<ModularFeatureListRow, Object> cellDataFeatures) {
-            final ModularFeatureListRow row = cellDataFeatures.getValue().getValue();
-            final MatchedLipid match = resolvePrimaryMatch(row, parentType);
-            if (match == null) {
-              return null;
-            }
-            final Float score = computeOverallScore(row, match);
-            return score == null ? null : new ReadOnlyObjectWrapper<>(score);
-          }
-        });
+    column.setCellValueFactory(cdf -> {
+      final ModularFeatureListRow row = cdf.getValue().getValue();
+      final MatchedLipid match = resolvePrimaryMatch(row, parentType);
+      if (match == null) {
+        return null;
+      }
+      final Float score = computeOverallScore(row, match);
+      return score == null ? null : new ReadOnlyObjectWrapper<>(score);
+    });
     return column;
-  }
-
-  @Override
-  public boolean getDefaultVisibility() {
-    return false;
   }
 
   @Override

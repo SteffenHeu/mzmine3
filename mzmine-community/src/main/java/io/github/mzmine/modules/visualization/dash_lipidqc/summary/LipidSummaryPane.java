@@ -29,7 +29,7 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.SelectableCategoryBarRenderer;
 import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.components.factories.FxLabels;
-import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import javafx.beans.property.ObjectProperty;
@@ -50,12 +50,9 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.ChartFactory;
@@ -78,10 +75,8 @@ import javafx.scene.input.MouseButton;
  * Dashboard panel that displays a bar chart summarising lipid annotations grouped by subclass,
  * main class, or category, with click-to-filter interaction linked to the other dashboard panes.
  */
-public class LipidSummaryPane extends BorderPane {
+public class LipidSummaryPane extends DashboardComputationPane {
 
-  private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
-  private final @NotNull Label placeholder = new Label("Select a feature list with lipid annotations.");
   private final @NotNull DashboardFilterState filterState;
   private final @NotNull ComboBox<SummaryGroup> groupSelector = new ComboBox<>(
       FXCollections.observableArrayList(SummaryGroup.values()));
@@ -99,6 +94,7 @@ public class LipidSummaryPane extends BorderPane {
       final @NotNull DashboardFilterState filterState,
       final @NotNull ComboBox<?> preferredLevelCombo,
       final @NotNull FeatureTableFX featureTableFx) {
+    super("Select a feature list with lipid annotations.");
     this.filterState = filterState;
     this.featureListProperty = featureListProperty;
     featureListProperty.subscribe(_ -> requestChartUpdate());
@@ -134,7 +130,6 @@ public class LipidSummaryPane extends BorderPane {
         scene.getRoot().styleProperty().addListener((_, _, _) -> requestChartUpdate());
       }
     });
-    showPlaceholder("Select a feature list with lipid annotations.");
   }
 
   private void clearSummaryFilter() {
@@ -149,9 +144,9 @@ public class LipidSummaryPane extends BorderPane {
     final SummaryGroup grouping = groupSelector.getValue();
     final SummaryCountMode countMode = countModeSelector.getValue();
     selectedGroup = selectedGroups.stream().findFirst().orElse(null);
-    scheduler.onTaskThreadDelayed(
-        new SummaryComputationTask(this, featureListProperty.get(), grouping, countMode, selectedGroup),
-        Duration.millis(120));
+    scheduleUpdate(
+        new SummaryComputationTask(this, featureListProperty.get(), grouping, countMode,
+            selectedGroup));
   }
 
   void applySummaryResult(final @NotNull SummaryComputationResult result) {
@@ -324,8 +319,5 @@ public class LipidSummaryPane extends BorderPane {
     onGroupSelectedRowIds.accept(Set.copyOf(rowIds));
   }
 
-  private void showPlaceholder(final @NotNull String text) {
-    placeholder.setText(text);
-    setCenter(placeholder);
-  }
 }
+

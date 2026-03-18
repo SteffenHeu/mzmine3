@@ -27,22 +27,17 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.matched;
 
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
-import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraPlot;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.datasets.ScanDataSet;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.spectra.matchedlipid.LipidSpectrumPlot;
 import java.util.Comparator;
 import java.util.List;
-import javafx.geometry.Pos;
-import javafx.scene.control.Label;
-import javafx.scene.layout.BorderPane;
-import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,17 +45,14 @@ import org.jetbrains.annotations.Nullable;
  * Dashboard panel that displays the annotated lipid fragment spectrum for the selected feature
  * list row, showing matched and unmatched signals side-by-side.
  */
-public class MatchedSignalsPane extends BorderPane {
+public class MatchedSignalsPane extends DashboardComputationPane {
 
-  private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
-  private final @NotNull Label placeholder = new Label("Select a row with matched lipid signals.");
   private @Nullable FeatureListRow row;
   private @Nullable LipidSpectrumPlot spectrumPlot;
   private @Nullable SpectraPlot rawSpectrumPlot;
 
   public MatchedSignalsPane() {
-    setCenter(placeholder);
-    BorderPane.setAlignment(placeholder, Pos.CENTER);
+    super("Select a row with matched lipid signals.");
   }
 
   public void setRow(final @Nullable FeatureListRow row) {
@@ -69,8 +61,7 @@ public class MatchedSignalsPane extends BorderPane {
   }
 
   private void requestUpdate() {
-    scheduler.onTaskThreadDelayed(new MatchedSignalsComputationTask(this, row),
-        Duration.millis(120));
+    scheduleUpdate(new MatchedSignalsComputationTask(this, row));
   }
 
   void applyComputationResult(final @NotNull MatchedSignalsComputationResult result) {
@@ -139,8 +130,5 @@ public class MatchedSignalsPane extends BorderPane {
         : scan.getTIC())).orElse(scans.getFirst());
   }
 
-  private void showPlaceholder(final @NotNull String text) {
-    placeholder.setText(text);
-    setCenter(placeholder);
-  }
 }
+

@@ -30,13 +30,10 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.gui.chartbasics.gui.javafx.EChartViewer;
 import io.github.mzmine.javafx.components.factories.FxLabels;
-import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
@@ -64,10 +61,8 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseButton;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.ChartFactory;
@@ -90,7 +85,7 @@ import org.jfree.data.xy.XYSeriesCollection;
  * the selected lipid annotation, helping to validate whether the annotation follows the expected
  * reversed-phase or HILIC elution pattern.
  */
-public class EquivalentCarbonNumberPane extends BorderPane {
+public class EquivalentCarbonNumberPane extends DashboardComputationPane {
 
   private static final int FP_OVERLAY_DATASET_INDEX = 5;
   private static final int FN_OVERLAY_DATASET_INDEX = 6;
@@ -101,15 +96,13 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   private static final @NotNull Color SELECTED_POINT_COLOR = ConfigService.getDefaultColorPalette()
       .getPositiveColorAWT();
   private final @NotNull LipidAnnotationQCDashboardModel model;
-  private final @NotNull LatestTaskScheduler scheduler = new LatestTaskScheduler();
-  private final @NotNull Label placeholder = FxLabels.newLabel(
-      "Select a row with lipid annotations.");
   private final StringProperty paneTitle = new SimpleStringProperty("Retention time analysis");
   private final ComboBox<RetentionTrendMode> trendModeCombo = new ComboBox<>(
       FXCollections.observableArrayList(RetentionTrendMode.values()));
   private List<FeatureListRow> rowsWithLipidIds = List.of();
 
   public EquivalentCarbonNumberPane(final @NotNull LipidAnnotationQCDashboardModel model) {
+    super("Select a row with lipid annotations.");
     this.model = model;
     model.featureListProperty().subscribe(flist -> {
       if (model.isRetentionTimeAnalysisEnabled()) {
@@ -143,8 +136,6 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     final Accordion accordion = new Accordion(controls);
     accordion.setExpandedPane(null);
     setBottom(accordion);
-    setCenter(placeholder);
-    BorderPane.setAlignment(placeholder, Pos.CENTER);
   }
 
   public @NotNull StringProperty paneTitleProperty() {
@@ -159,8 +150,8 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   public void requestUpdate() {
     final List<FeatureListRow> currentRowsWithLipidIds = getCurrentRowsWithLipidIds();
     final RetentionTrendMode mode = trendModeCombo.getValue();
-    scheduler.onTaskThreadDelayed(new RetentionComputationTask(this, model.getRow(),
-        currentRowsWithLipidIds, mode), Duration.millis(120));
+    scheduleUpdate(new RetentionComputationTask(this, model.getRow(),
+        currentRowsWithLipidIds, mode));
   }
 
   void applyComputationResult(final @NotNull RetentionComputationResult result) {
@@ -249,7 +240,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       final @Nullable SelectionQualityFlag selectionQualityFlag = model.getRow() == null ? null
           : determineSelectionQualityFlag(model.getRow());
       final int falsePositiveCount = addEcnFalsePositiveOverlay(chart, dataset);
-      final int selectedCarbons = extractCarbons(selectedMatch.getLipidAnnotation());
+      final int selectedCarbons = LipidQcAnnotationSelectionUtils.extractCarbons(selectedMatch.getLipidAnnotation());
       if (model.getRow() != null
           && selectionQualityFlag == SelectionQualityFlag.POTENTIAL_FALSE_NEGATIVE) {
         if (selectedCarbons >= 0) {
@@ -988,7 +979,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
 
   private static void highlightSelectedLipid(EquivalentCarbonNumberChart chart,
       final @Nullable FeatureListRow row, final @NotNull MatchedLipid selectedMatch) {
-    final int carbons = extractCarbons(selectedMatch.getLipidAnnotation());
+    final int carbons = LipidQcAnnotationSelectionUtils.extractCarbons(selectedMatch.getLipidAnnotation());
     if (row == null || carbons < 0 || row.getAverageRT() == null) {
       return;
     }
@@ -1087,30 +1078,6 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     synchronizer.syncSecondaryToPrimary();
   }
 
-  static int extractDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
-    if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-          molecularAnnotation.getAnnotation()).getValue();
-    }
-    if (lipidAnnotation instanceof SpeciesLevelAnnotation speciesAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-          speciesAnnotation.getAnnotation()).getValue();
-    }
-    return -1;
-  }
-
-  static int extractCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
-    if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-          molecularAnnotation.getAnnotation()).getKey();
-    }
-    if (lipidAnnotation instanceof SpeciesLevelAnnotation speciesAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
-          speciesAnnotation.getAnnotation()).getKey();
-    }
-    return -1;
-  }
-
   private static @NotNull Paint retentionLabelPaint() {
     return ConfigService.getConfiguration().isDarkMode() ? new Color(230, 230, 230)
         : new Color(35, 35, 35);
@@ -1135,11 +1102,6 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   private static void configureNoCrosshair(final @NotNull XYPlot plot) {
     plot.setDomainCrosshairVisible(false);
     plot.setRangeCrosshairVisible(false);
-  }
-
-  private void showPlaceholder(final @NotNull String text) {
-    placeholder.setText(text);
-    setCenter(placeholder);
   }
 
   private enum SelectionQualityFlag {

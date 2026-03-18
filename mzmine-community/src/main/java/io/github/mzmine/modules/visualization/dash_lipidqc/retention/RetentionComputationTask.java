@@ -26,13 +26,12 @@
 package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
-import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
-import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
+import static io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils.extractCarbons;
+import static io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils.extractDbe;
+import static io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils.getPreferredOrPotentialLipidMatch;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -64,11 +63,8 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
       result = new RetentionComputationResult("Select a row with lipid annotations.", null);
       return;
     }
-    @Nullable MatchedLipid selectedMatch = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
-        selectedRow);
-    if (selectedMatch == null) {
-      selectedMatch = getPotentialMatchForUnannotatedRow(selectedRow);
-    }
+    @Nullable MatchedLipid selectedMatch =
+        getPreferredOrPotentialLipidMatch(selectedRow);
     if (selectedMatch == null) {
       result = new RetentionComputationResult(
           "No lipid annotations available for selected row.", null);
@@ -88,7 +84,7 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
 
     switch (mode) {
       case ECN_CARBON_TREND -> {
-        final int dbe = EquivalentCarbonNumberPane.extractDbe(selectedMatch.getLipidAnnotation());
+        final int dbe = extractDbe(selectedMatch.getLipidAnnotation());
         if (dbe < 0) {
           result = new RetentionComputationResult(
               "Cannot determine DBE for selected lipid annotation.", null);
@@ -108,9 +104,9 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
                 matchCount));
       }
       case DBE_TREND -> {
-        final int carbons = EquivalentCarbonNumberPane.extractCarbons(
+        final int carbons = extractCarbons(
             selectedMatch.getLipidAnnotation());
-        final int selectedDbe = EquivalentCarbonNumberPane.extractDbe(
+        final int selectedDbe = extractDbe(
             selectedMatch.getLipidAnnotation());
         if (carbons < 0 || selectedDbe < 0) {
           result = new RetentionComputationResult(
@@ -119,8 +115,8 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
         }
         final RetentionTrendDataset trendDataset = new RetentionTrendDataset(rowsWithLipidIds,
             match -> match.getLipidAnnotation().getLipidClass().equals(selectedClass)
-                && EquivalentCarbonNumberPane.extractCarbons(match.getLipidAnnotation()) == carbons,
-            match -> EquivalentCarbonNumberPane.extractDbe(match.getLipidAnnotation()));
+                && extractCarbons(match.getLipidAnnotation()) == carbons,
+            match -> extractDbe(match.getLipidAnnotation()));
         if (trendDataset.getItemCount(0) < 3) {
           result = new RetentionComputationResult(
               "Not enough lipids for DBE trend model (need at least 3 rows in same class/carbon group).",
@@ -132,9 +128,9 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
                 trendDataset));
       }
       case COMBINED_CARBON_DBE_TRENDS -> {
-        final int selectedCarbons = EquivalentCarbonNumberPane.extractCarbons(
+        final int selectedCarbons = extractCarbons(
             selectedMatch.getLipidAnnotation());
-        final int selectedDbe = EquivalentCarbonNumberPane.extractDbe(
+        final int selectedDbe = extractDbe(
             selectedMatch.getLipidAnnotation());
         if (selectedCarbons < 0 || selectedDbe < 0) {
           result = new RetentionComputationResult(
@@ -144,14 +140,14 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
         final RetentionTrendDataset carbonTrendDataset = new RetentionTrendDataset(
             rowsWithLipidIds,
             match -> match.getLipidAnnotation().getLipidClass().equals(selectedClass)
-                && EquivalentCarbonNumberPane.extractDbe(match.getLipidAnnotation()) == selectedDbe,
-            match -> EquivalentCarbonNumberPane.extractCarbons(match.getLipidAnnotation()));
+                && extractDbe(match.getLipidAnnotation()) == selectedDbe,
+            match -> extractCarbons(match.getLipidAnnotation()));
         final RetentionTrendDataset dbeTrendDataset = new RetentionTrendDataset(
             rowsWithLipidIds,
             match -> match.getLipidAnnotation().getLipidClass().equals(selectedClass)
-                && EquivalentCarbonNumberPane.extractCarbons(
+                && extractCarbons(
                 match.getLipidAnnotation()) == selectedCarbons,
-            match -> EquivalentCarbonNumberPane.extractDbe(match.getLipidAnnotation()));
+            match -> extractDbe(match.getLipidAnnotation()));
         final boolean hasCarbonTrend = carbonTrendDataset.getItemCount(0) >= 2;
         final boolean hasDbeTrend = dbeTrendDataset.getItemCount(0) >= 2;
         if (!hasCarbonTrend && !hasDbeTrend) {
@@ -183,23 +179,13 @@ final class RetentionComputationTask extends FxUpdateTask<EquivalentCarbonNumber
     return 0d;
   }
 
-  private static @Nullable MatchedLipid getPotentialMatchForUnannotatedRow(
-      final @NotNull FeatureListRow selectedRow) {
-    if (!(selectedRow.getFeatureList() instanceof ModularFeatureList modularFeatureList)) {
-      return null;
-    }
-    final @Nullable KendrickFalseNegativeCandidate potential =
-        new KendrickFalseNegativeDetector(modularFeatureList).detectCandidate(selectedRow);
-    return potential == null ? null : potential.match();
-  }
-
   private static boolean hasMatchingClassAndDbeAnnotation(final @NotNull FeatureListRow row,
       final @NotNull ILipidClass selectedClass, final int dbe) {
     for (final MatchedLipid match : row.getLipidMatches()) {
       if (!match.getLipidAnnotation().getLipidClass().equals(selectedClass)) {
         continue;
       }
-      if (EquivalentCarbonNumberPane.extractDbe(match.getLipidAnnotation()) == dbe) {
+      if (extractDbe(match.getLipidAnnotation()) == dbe) {
         return true;
       }
     }

@@ -31,7 +31,7 @@ import io.github.mzmine.gui.chartbasics.chartutils.ColoredBubbleDatasetRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.XYItemObjectProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.AlphaBubbleDatasetRenderer;
 import io.github.mzmine.javafx.components.factories.FxLabels;
-import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
@@ -57,12 +57,9 @@ import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseButton;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.util.Duration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.JFreeChart;
@@ -87,7 +84,7 @@ import org.jfree.data.xy.XYSeriesCollection;
  * Dashboard panel displaying a Kendrick mass plot with optional QC review overlays that highlight
  * potential false-positive or false-negative lipid annotations.
  */
-public class KendrickPane extends BorderPane {
+public class KendrickPane extends DashboardComputationPane {
 
   private static final double KMD_MIN = -1d;
   private static final double KMD_MAX = 1d;
@@ -99,9 +96,6 @@ public class KendrickPane extends BorderPane {
 
   private final @NotNull LipidAnnotationQCDashboardModel model;
   private final @NotNull DashboardFilterState filterState;
-  private final @NotNull LatestTaskScheduler filterScheduler = new LatestTaskScheduler();
-  private final @NotNull Label placeholder = new Label(
-      "Select a feature list to build Kendrick plot.");
   private final @NotNull ComboBox<KendrickReviewMode> reviewModeSelector = new ComboBox<>(
       FXCollections.observableArrayList(KendrickReviewMode.values()));
   private @Nullable KendrickMassPlotXYZDataset baseDataset;
@@ -115,6 +109,7 @@ public class KendrickPane extends BorderPane {
 
   public KendrickPane(final @NotNull LipidAnnotationQCDashboardModel model,
       final @NotNull DashboardFilterState filterState) {
+    super("Select a feature list to build Kendrick plot.");
     this.model = model;
     this.filterState = filterState;
     model.featureListProperty().subscribe(this::onFeatureListChanged);
@@ -138,8 +133,6 @@ public class KendrickPane extends BorderPane {
     final Accordion modeAccordion = new Accordion(modePane);
     modeAccordion.setExpandedPane(null);
     setBottom(modeAccordion);
-    setCenter(placeholder);
-    BorderPane.setAlignment(placeholder, Pos.CENTER);
   }
 
   public void setOnReviewModeChanged(
@@ -201,10 +194,10 @@ public class KendrickPane extends BorderPane {
         : Set.of();
     final boolean multiGroupSelection = filterState.getBarSelectedGroups().size() > 1;
     final long requestId = ++filterRequestId;
-    filterScheduler.onTaskThreadDelayed(new KendrickFilterComputationTask(this, requestId,
+    scheduleUpdate(new KendrickFilterComputationTask(this, requestId,
         Objects.requireNonNull(baseDataset), model.getFeatureList(), visibleIds,
         filterState.getBarSelectedRowColors(), multiGroupSelection,
-        model.isRetentionTimeAnalysisEnabled(), reviewMode), Duration.millis(120));
+        model.isRetentionTimeAnalysisEnabled(), reviewMode));
   }
 
   void applyFilterComputationResult(final @NotNull KendrickFilterComputationResult result) {
@@ -660,7 +653,7 @@ public class KendrickPane extends BorderPane {
   }
 
   private void discardChart() {
-    filterScheduler.cancelTasks();
+    cancelScheduledTasks();
     falseNegativeDetector = null;
     if (chart == null) {
       baseDataset = null;
@@ -674,11 +667,6 @@ public class KendrickPane extends BorderPane {
     setCenter(placeholder);
     chart = null;
     baseDataset = null;
-  }
-
-  private void showPlaceholder(final @NotNull String text) {
-    placeholder.setText(text);
-    setCenter(placeholder);
   }
 
   private record AxisRangeState(boolean autoRange, double lowerBound, double upperBound) {

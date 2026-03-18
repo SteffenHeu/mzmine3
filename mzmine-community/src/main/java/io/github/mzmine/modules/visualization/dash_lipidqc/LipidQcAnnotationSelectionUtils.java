@@ -26,35 +26,87 @@
 package io.github.mzmine.modules.visualization.dash_lipidqc;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Utility class for resolving the preferred {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid}
- * for a feature list row in the lipid QC dashboard, respecting the user's preferred-annotation
- * setting and falling back to the first match.
+ * Utility class for resolving the preferred {@link MatchedLipid} for a feature list row in the
+ * lipid QC dashboard, and for extracting structural properties from lipid annotations.
  */
 public final class LipidQcAnnotationSelectionUtils {
 
   private LipidQcAnnotationSelectionUtils() {
   }
 
-  public static @Nullable MatchedLipid getPreferredLipidMatch(
-      final @NotNull FeatureListRow row) {
+  /**
+   * Returns the preferred lipid match for the given row: the user-preferred annotation if it is a
+   * {@link MatchedLipid}, otherwise the first match in the list, or {@code null} if the list is
+   * empty.
+   */
+  public static @Nullable MatchedLipid getPreferredLipidMatch(final @NotNull FeatureListRow row) {
     final List<MatchedLipid> matches = row.getLipidMatches();
     if (matches.isEmpty()) {
       return null;
     }
-
     final @Nullable FeatureAnnotation preferredAnnotation = row.getPreferredAnnotation();
     if (preferredAnnotation instanceof MatchedLipid preferredLipid) {
       return preferredLipid;
     }
-
     return matches.getFirst();
   }
-}
 
+  /**
+   * Returns the preferred lipid match for the row, falling back to a
+   * {@link KendrickFalseNegativeDetector} candidate when the row has no annotation. Returns
+   * {@code null} if neither source yields a match.
+   */
+  public static @Nullable MatchedLipid getPreferredOrPotentialLipidMatch(
+      final @NotNull FeatureListRow row) {
+    final @Nullable MatchedLipid preferred = getPreferredLipidMatch(row);
+    if (preferred != null) {
+      return preferred;
+    }
+    if (row.getFeatureList() instanceof ModularFeatureList featureList) {
+      final @Nullable KendrickFalseNegativeCandidate potential =
+          new KendrickFalseNegativeDetector(featureList).detectCandidate(row);
+      return potential == null ? null : potential.match();
+    }
+    return null;
+  }
+
+  /**
+   * Extracts the number of double bond equivalents (DBE) from a species- or molecular-species-level
+   * lipid annotation. Returns {@code -1} for other annotation types or when parsing fails.
+   */
+  public static int extractDbe(final @NotNull ILipidAnnotation annotation) {
+    if (!(annotation instanceof SpeciesLevelAnnotation
+        || annotation instanceof MolecularSpeciesLevelAnnotation)) {
+      return -1;
+    }
+    return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+        annotation.getAnnotation()).getValue();
+  }
+
+  /**
+   * Extracts the carbon chain length from a species- or molecular-species-level lipid annotation.
+   * Returns {@code -1} for other annotation types or when parsing fails.
+   */
+  public static int extractCarbons(final @NotNull ILipidAnnotation annotation) {
+    if (!(annotation instanceof SpeciesLevelAnnotation
+        || annotation instanceof MolecularSpeciesLevelAnnotation)) {
+      return -1;
+    }
+    return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+        annotation.getAnnotation()).getKey();
+  }
+}
