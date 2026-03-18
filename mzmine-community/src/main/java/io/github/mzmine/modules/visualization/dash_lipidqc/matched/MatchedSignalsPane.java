@@ -63,10 +63,6 @@ public class MatchedSignalsPane extends BorderPane {
     BorderPane.setAlignment(placeholder, Pos.CENTER);
   }
 
-  public void setFeatureList(final @Nullable ModularFeatureList featureList) {
-    requestUpdate();
-  }
-
   public void setRow(final @Nullable FeatureListRow row) {
     this.row = row;
     requestUpdate();

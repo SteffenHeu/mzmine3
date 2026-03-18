@@ -39,11 +39,9 @@ import io.github.mzmine.javafx.components.factories.FxSplitPanes;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.modules.visualization.dash_lipidqc.isotope.IsotopePane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickPane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.layout.DashboardLayoutFactory;
 import io.github.mzmine.modules.visualization.dash_lipidqc.matched.MatchedSignalsPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.quality.AnnotationQualityPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.retention.EquivalentCarbonNumberPane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.state.DashboardFilterState;
 import io.github.mzmine.modules.visualization.dash_lipidqc.summary.LipidSummaryPane;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import io.github.mzmine.util.FeatureTableFXUtil;
@@ -174,8 +172,6 @@ public class LipidAnnotationQCDashboardViewBuilder extends
 
     model.featureListProperty().subscribe(flist -> {
       updateLipidAnnotationListener.run();
-      isotopePane.setFeatureList(flist);
-      matchedSignalsPane.setFeatureList(flist);
       Platform.runLater(() -> selectFirstVisibleRow(model));
     });
 
@@ -221,8 +217,6 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     if (model.isRetentionTimeAnalysisEnabled()) {
       ecnPane.requestUpdate();
     }
-    isotopePane.setFeatureList(currentFeatureList);
-    matchedSignalsPane.setFeatureList(currentFeatureList);
     isotopePane.setRow(selectedRow);
     matchedSignalsPane.setRow(selectedRow);
   }

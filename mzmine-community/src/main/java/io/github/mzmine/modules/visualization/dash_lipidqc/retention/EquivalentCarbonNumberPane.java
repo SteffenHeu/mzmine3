@@ -46,11 +46,13 @@ import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.Equival
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberDataset;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.FeatureTableFXUtil;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Paint;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
+import java.util.Arrays;
 import java.util.List;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
@@ -501,8 +503,8 @@ public class EquivalentCarbonNumberPane extends BorderPane {
 
   private static @NotNull XYSeriesCollection createRegressionDataset(final double slope,
       final double intercept, final @NotNull RetentionTrendDataset dataset) {
-    final double minX = java.util.Arrays.stream(dataset.getXValues()).min().orElse(0d);
-    final double maxX = java.util.Arrays.stream(dataset.getXValues()).max().orElse(minX);
+    final double minX = Arrays.stream(dataset.getXValues()).min().orElse(0d);
+    final double maxX = Arrays.stream(dataset.getXValues()).max().orElse(minX);
     final XYSeries series = new XYSeries("Regression");
     series.add(minX, slope * minX + intercept);
     series.add(maxX, slope * maxX + intercept);
@@ -705,9 +707,9 @@ public class EquivalentCarbonNumberPane extends BorderPane {
   private static void configureTrendAxisRanges(final @NotNull XYPlot plot,
       final @NotNull RetentionTrendDataset dataset) {
     if (plot.getDomainAxis() instanceof NumberAxis domainAxis) {
-      final double minX = java.util.Arrays.stream(dataset.getXValues()).min()
+      final double minX = Arrays.stream(dataset.getXValues()).min()
           .orElse(Double.NaN);
-      final double maxX = java.util.Arrays.stream(dataset.getXValues()).max()
+      final double maxX = Arrays.stream(dataset.getXValues()).max()
           .orElse(Double.NaN);
       setAxisRangeToData(domainAxis, minX, maxX, true);
     }
@@ -759,8 +761,8 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     if (!Double.isFinite(regression[0]) || !Double.isFinite(regression[1])) {
       return new TrendYBounds(minY, maxY);
     }
-    final double minX = java.util.Arrays.stream(dataset.getXValues()).min().orElse(Double.NaN);
-    final double maxX = java.util.Arrays.stream(dataset.getXValues()).max().orElse(Double.NaN);
+    final double minX = Arrays.stream(dataset.getXValues()).min().orElse(Double.NaN);
+    final double maxX = Arrays.stream(dataset.getXValues()).max().orElse(Double.NaN);
     if (!Double.isFinite(minX) || !Double.isFinite(maxX)) {
       return new TrendYBounds(minY, maxY);
     }
@@ -789,7 +791,7 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     plot.mapDatasetToRangeAxis(datasetIndex, rangeAxisIndex);
     final XYLineAndShapeRenderer regressionRenderer = new XYLineAndShapeRenderer(true, false);
     regressionRenderer.setSeriesPaint(0, linePaint);
-    regressionRenderer.setSeriesStroke(0, new java.awt.BasicStroke(1.6f));
+    regressionRenderer.setSeriesStroke(0, new BasicStroke(1.6f));
     regressionRenderer.setSeriesVisibleInLegend(0, false);
     plot.setRenderer(datasetIndex, regressionRenderer);
   }
@@ -886,12 +888,12 @@ public class EquivalentCarbonNumberPane extends BorderPane {
       final @Nullable String label) {
     final XYLineAndShapeRenderer overlayRenderer = new XYLineAndShapeRenderer(false, true);
     overlayRenderer.setSeriesPaint(0, color);
-    overlayRenderer.setSeriesStroke(0, new java.awt.BasicStroke(2.2f));
+    overlayRenderer.setSeriesStroke(0, new BasicStroke(2.2f));
     overlayRenderer.setSeriesShape(0, shape);
     overlayRenderer.setDefaultShapesFilled(false);
     overlayRenderer.setUseOutlinePaint(true);
     overlayRenderer.setSeriesOutlinePaint(0, color);
-    overlayRenderer.setSeriesOutlineStroke(0, new java.awt.BasicStroke(2.2f));
+    overlayRenderer.setSeriesOutlineStroke(0, new BasicStroke(2.2f));
     if (label != null) {
       overlayRenderer.setDefaultItemLabelGenerator((xyDataset, series, item) -> label);
       overlayRenderer.setDefaultItemLabelsVisible(true);
@@ -1024,8 +1026,8 @@ public class EquivalentCarbonNumberPane extends BorderPane {
     if (!hasCarbonPoint || !hasDbePoint) {
       final ValueMarker selectionMarker = new ValueMarker(rt);
       selectionMarker.setPaint(selectedColor);
-      selectionMarker.setStroke(new java.awt.BasicStroke(1.6f, java.awt.BasicStroke.CAP_BUTT,
-          java.awt.BasicStroke.JOIN_BEVEL, 0f, new float[]{6f, 4f}, 0f));
+      selectionMarker.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_BUTT,
+          BasicStroke.JOIN_BEVEL, 0f, new float[]{6f, 4f}, 0f));
       selectionMarker.setAlpha(0.75f);
       plot.addDomainMarker(selectionMarker);
     } else {
@@ -1053,13 +1055,13 @@ public class EquivalentCarbonNumberPane extends BorderPane {
 
     final XYLineAndShapeRenderer overlayRenderer = new XYLineAndShapeRenderer(false, true);
     overlayRenderer.setSeriesPaint(0, strokePaint);
-    overlayRenderer.setSeriesStroke(0, new java.awt.BasicStroke(2f));
+    overlayRenderer.setSeriesStroke(0, new BasicStroke(2f));
     overlayRenderer.setSeriesShape(0, marker);
     overlayRenderer.setDefaultShapesFilled(true);
     overlayRenderer.setUseOutlinePaint(true);
     overlayRenderer.setSeriesOutlinePaint(0,
         ConfigService.getConfiguration().isDarkMode() ? Color.WHITE : Color.BLACK);
-    overlayRenderer.setSeriesOutlineStroke(0, new java.awt.BasicStroke(1.1f));
+    overlayRenderer.setSeriesOutlineStroke(0, new BasicStroke(1.1f));
     overlayRenderer.setSeriesVisibleInLegend(0, false);
 
     plot.setDataset(datasetIndex, overlayDataset);

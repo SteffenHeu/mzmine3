@@ -107,7 +107,7 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityPane> {
     }
     final List<MatchedLipid> matchSnapshot = List.copyOf(matches);
     final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
-    final MatchedLipid selectedAnnotation = java.util.Objects.requireNonNullElse(
+    final MatchedLipid selectedAnnotation = Objects.requireNonNullElse(
         LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row), matchSnapshot.getFirst());
     final List<MatchedLipid> orderedMatches = new ArrayList<>(matchSnapshot.size());
     orderedMatches.add(selectedAnnotation);

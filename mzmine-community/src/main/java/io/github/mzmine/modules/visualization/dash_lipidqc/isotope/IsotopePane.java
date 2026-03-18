@@ -82,10 +82,6 @@ public class IsotopePane extends BorderPane {
     plot.setMinSize(250, 200);
   }
 
-  public void setFeatureList(final @Nullable ModularFeatureList featureList) {
-    requestUpdate();
-  }
-
   public void setRow(final @Nullable FeatureListRow row) {
     this.row = row;
     requestUpdate();

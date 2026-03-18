@@ -51,11 +51,7 @@ public final class LipidQcAnnotationSelectionUtils {
 
     final @Nullable FeatureAnnotation preferredAnnotation = row.getPreferredAnnotation();
     if (preferredAnnotation instanceof MatchedLipid preferredLipid) {
-      for (final MatchedLipid match : matches) {
-        if (match.equals(preferredLipid)) {
-          return match;
-        }
-      }
+      return preferredLipid;
     }
 
     return matches.getFirst();

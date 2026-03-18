@@ -25,7 +25,6 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.summary;
 
-import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.SelectableCategoryBarRenderer;
 import io.github.mzmine.javafx.components.factories.FxButtons;
@@ -34,7 +33,7 @@ import io.github.mzmine.javafx.mvci.LatestTaskScheduler;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import javafx.beans.property.ObjectProperty;
-import io.github.mzmine.modules.visualization.dash_lipidqc.state.DashboardFilterState;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardFilterState;
 import java.awt.Color;
 import java.awt.Font;
 import java.util.HashMap;

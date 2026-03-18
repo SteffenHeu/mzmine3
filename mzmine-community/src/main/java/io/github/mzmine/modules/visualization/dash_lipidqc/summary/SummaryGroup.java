@@ -33,32 +33,9 @@ import org.jetbrains.annotations.NotNull;
  * or category.
  */
 enum SummaryGroup {
-  LIPID_SUBCLASS("Lipid subclass") {
-    @Override
-    @NotNull
-    String extractGroupLabel(final @NotNull MatchedLipid lipid, final @NotNull String subclassToken) {
-      return subclassToken;
-    }
-
-    @Override
-    @NotNull
-    String extractTooltip(final @NotNull MatchedLipid lipid, final @NotNull String subclassToken) {
-      return lipid.getLipidAnnotation().getLipidClass().getName();
-    }
-  }, LIPID_MAIN_CLASS("Lipid main class") {
-    @Override
-    @NotNull
-    String extractGroupLabel(final @NotNull MatchedLipid lipid, final @NotNull String subclassToken) {
-      return lipid.getLipidAnnotation().getLipidClass().getMainClass().getName();
-    }
-  }, LIPID_CATEGORY("Lipid category") {
-    @Override
-    @NotNull
-    String extractGroupLabel(final @NotNull MatchedLipid lipid, final @NotNull String subclassToken) {
-      return lipid.getLipidAnnotation().getLipidClass().getMainClass().getLipidCategory()
-          .getName();
-    }
-  };
+  LIPID_SUBCLASS("Lipid subclass"),
+  LIPID_MAIN_CLASS("Lipid main class"),
+  LIPID_CATEGORY("Lipid category");
 
   private final @NotNull String axisLabel;
 
@@ -70,12 +47,21 @@ enum SummaryGroup {
     return axisLabel;
   }
 
-  abstract @NotNull String extractGroupLabel(@NotNull MatchedLipid lipid,
-      @NotNull String subclassToken);
+  @NotNull String extractGroupLabel(@NotNull MatchedLipid lipid, @NotNull String subclassToken) {
+    return switch (this) {
+      case LIPID_SUBCLASS -> subclassToken;
+      case LIPID_MAIN_CLASS -> lipid.getLipidAnnotation().getLipidClass().getMainClass().getName();
+      case LIPID_CATEGORY ->
+          lipid.getLipidAnnotation().getLipidClass().getMainClass().getLipidCategory().getName();
+    };
+  }
 
   @NotNull String extractTooltip(final @NotNull MatchedLipid lipid,
       final @NotNull String subclassToken) {
-    return extractGroupLabel(lipid, subclassToken);
+    return switch (this) {
+      case LIPID_SUBCLASS -> lipid.getLipidAnnotation().getLipidClass().getName();
+      case LIPID_MAIN_CLASS, LIPID_CATEGORY -> extractGroupLabel(lipid, subclassToken);
+    };
   }
 
   @Override
@@ -83,4 +69,3 @@ enum SummaryGroup {
     return axisLabel;
   }
 }
-

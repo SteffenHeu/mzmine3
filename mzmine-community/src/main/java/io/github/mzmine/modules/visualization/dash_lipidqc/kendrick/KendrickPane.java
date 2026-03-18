@@ -36,7 +36,7 @@ import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
-import io.github.mzmine.modules.visualization.dash_lipidqc.state.DashboardFilterState;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardFilterState;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotChart;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotParameters;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotXYZDataset;
@@ -44,6 +44,7 @@ import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickPlotDataT
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.FeatureTableFXUtil;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Paint;
 import java.awt.geom.Ellipse2D;
@@ -541,8 +542,8 @@ public class KendrickPane extends BorderPane {
       trendDataset.addSeries(ch2Series);
       trendRenderer.setSeriesPaint(seriesIndex,
           ConfigService.getDefaultColorPalette().getPositiveColorAWT());
-      trendRenderer.setSeriesStroke(seriesIndex, new java.awt.BasicStroke(1.6f,
-          java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND, 1f,
+      trendRenderer.setSeriesStroke(seriesIndex, new BasicStroke(1.6f,
+          BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f,
           new float[]{5f, 4f}, 0f));
       trendRenderer.setSeriesVisibleInLegend(seriesIndex, false);
       seriesIndex++;
@@ -561,8 +562,8 @@ public class KendrickPane extends BorderPane {
         trendDataset.addSeries(dbeSeries);
         trendRenderer.setSeriesPaint(seriesIndex,
             ConfigService.getDefaultColorPalette().getNeutralColorAWT());
-        trendRenderer.setSeriesStroke(seriesIndex, new java.awt.BasicStroke(1.6f,
-            java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND, 1f,
+        trendRenderer.setSeriesStroke(seriesIndex, new BasicStroke(1.6f,
+            BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 1f,
             new float[]{5f, 4f}, 0f));
         trendRenderer.setSeriesVisibleInLegend(seriesIndex, false);
         seriesIndex++;
@@ -595,7 +596,7 @@ public class KendrickPane extends BorderPane {
       case POTENTIAL_FALSE_NEGATIVE -> ConfigService.getDefaultColorPalette().getPositiveColorAWT();
     };
     outlierRenderer.setSeriesPaint(0, overlayColor);
-    outlierRenderer.setSeriesStroke(0, new java.awt.BasicStroke(1.9f));
+    outlierRenderer.setSeriesStroke(0, new BasicStroke(1.9f));
     outlierRenderer.setSeriesShape(0, new Ellipse2D.Double(-5.5, -5.5, 11, 11));
     outlierRenderer.setDefaultShapesFilled(false);
     outlierRenderer.setSeriesVisibleInLegend(0, false);

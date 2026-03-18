@@ -23,7 +23,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.layout;
+package io.github.mzmine.modules.visualization.dash_lipidqc;
 
 import java.util.List;
 import javafx.scene.control.Label;
@@ -34,28 +34,29 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 import org.jetbrains.annotations.NotNull;
+import javafx.scene.layout.Priority;
 
 /**
  * Factory for building the standard grid layout used in the lipid annotation QC dashboard,
  * wrapping panes in titled subsections and arranging them in a six-cell grid.
  */
-public final class DashboardLayoutFactory {
+final class DashboardLayoutFactory {
 
   private DashboardLayoutFactory() {
   }
 
-  public static @NotNull BorderPane wrapInSubsection(final @NotNull String title,
+  static @NotNull BorderPane wrapInSubsection(final @NotNull String title,
       final @NotNull Region content) {
     final BorderPane pane = new BorderPane(content);
     final Label titleLabel = new Label(title);
     titleLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-padding: 4 6 4 6;");
     pane.setTop(titleLabel);
     pane.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-    VBox.setVgrow(pane, javafx.scene.layout.Priority.ALWAYS);
+    VBox.setVgrow(pane, Priority.ALWAYS);
     return pane;
   }
 
-  public static @NotNull Region createSixPaneLayout(final @NotNull Region summaryPane,
+  static @NotNull Region createSixPaneLayout(final @NotNull Region summaryPane,
       final @NotNull Region kendrickPane, final @NotNull Region qualityPane,
       final @NotNull Region retentionPane, final @NotNull Region matchedSignalsPane,
       final @NotNull Region isotopePane) {
@@ -66,13 +67,13 @@ public final class DashboardLayoutFactory {
     for (int col = 0; col < 3; col++) {
       final ColumnConstraints constraints = new ColumnConstraints();
       constraints.setPercentWidth(100d / 3d);
-      constraints.setHgrow(javafx.scene.layout.Priority.ALWAYS);
+      constraints.setHgrow(Priority.ALWAYS);
       grid.getColumnConstraints().add(constraints);
     }
     for (int row = 0; row < 2; row++) {
       final RowConstraints constraints = new RowConstraints();
       constraints.setPercentHeight(50d);
-      constraints.setVgrow(javafx.scene.layout.Priority.ALWAYS);
+      constraints.setVgrow(Priority.ALWAYS);
       grid.getRowConstraints().add(constraints);
     }
 
@@ -92,18 +93,18 @@ public final class DashboardLayoutFactory {
     grid.add(matchedSignalsPane, 2, 0);
     grid.add(isotopePane, 2, 1);
 
-    GridPane.setHgrow(summaryPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setVgrow(summaryPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setHgrow(kendrickPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setVgrow(kendrickPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setHgrow(qualityPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setVgrow(qualityPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setHgrow(retentionPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setVgrow(retentionPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setHgrow(matchedSignalsPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setVgrow(matchedSignalsPane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setHgrow(isotopePane, javafx.scene.layout.Priority.ALWAYS);
-    GridPane.setVgrow(isotopePane, javafx.scene.layout.Priority.ALWAYS);
+    GridPane.setHgrow(summaryPane, Priority.ALWAYS);
+    GridPane.setVgrow(summaryPane, Priority.ALWAYS);
+    GridPane.setHgrow(kendrickPane, Priority.ALWAYS);
+    GridPane.setVgrow(kendrickPane, Priority.ALWAYS);
+    GridPane.setHgrow(qualityPane, Priority.ALWAYS);
+    GridPane.setVgrow(qualityPane, Priority.ALWAYS);
+    GridPane.setHgrow(retentionPane, Priority.ALWAYS);
+    GridPane.setVgrow(retentionPane, Priority.ALWAYS);
+    GridPane.setHgrow(matchedSignalsPane, Priority.ALWAYS);
+    GridPane.setVgrow(matchedSignalsPane, Priority.ALWAYS);
+    GridPane.setHgrow(isotopePane, Priority.ALWAYS);
+    GridPane.setVgrow(isotopePane, Priority.ALWAYS);
     return grid;
   }
 }

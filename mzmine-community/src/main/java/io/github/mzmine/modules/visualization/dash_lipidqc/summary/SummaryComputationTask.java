@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
@@ -149,7 +150,7 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
     }
     final int totalCount = localCountMode == SummaryCountMode.UNIQUE_ANNOTATIONS
         ? groupToUniqueAnnotations.values().stream().flatMap(Set::stream)
-        .collect(java.util.stream.Collectors.toSet()).size() : totalLipidRows;
+        .collect(Collectors.toSet()).size() : totalLipidRows;
 
     final @Nullable String effectiveSelectedGroup =
         selectedGroup != null && groupToCount.containsKey(selectedGroup) ? selectedGroup : null;

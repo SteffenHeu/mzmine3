@@ -23,7 +23,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.state;
+package io.github.mzmine.modules.visualization.dash_lipidqc;
 
 import java.awt.Color;
 import java.util.Map;
