@@ -72,6 +72,7 @@ public class MatchedLipid implements FeatureAnnotation {
   private static final String XML_MSMS_SCORE = "msmsscore";
   private static final String XML_COMMENT = "comment";
   private static final String XML_STATUS = "status";
+  private static final String XML_OVERALL_QUALITY_SCORE = "overallqualityscore";
 
   private final ILipidAnnotation lipidAnnotation;
   private final Double accurateMz;
@@ -80,6 +81,7 @@ public class MatchedLipid implements FeatureAnnotation {
   private final Double msMsScore;
   private final MatchedLipidStatus status;
   private String comment;
+  private @Nullable Float overallQualityScore;
 
   /**
    * Pattern is calculated for ion so cannot be saved in {@link ILipidAnnotation}
@@ -131,6 +133,7 @@ public class MatchedLipid implements FeatureAnnotation {
     Double msMsScore = null;
     String comment = "";
     MatchedLipidStatus status = null;
+    Float overallQualityScore = null;
     while (reader.hasNext() && !(reader.isEndElement() && (reader.getLocalName().equals(XML_ELEMENT)
         || reader.getLocalName().equals(FeatureAnnotation.XML_ELEMENT)))) {
       reader.next();
@@ -164,6 +167,12 @@ public class MatchedLipid implements FeatureAnnotation {
         }
         case XML_STATUS -> status = MatchedLipidStatus.parseOrElse(reader.getElementText(),
             MatchedLipidStatus.UNCONFIRMED);
+        case XML_OVERALL_QUALITY_SCORE -> {
+          final String text = reader.getElementText();
+          if (!Objects.equals(text, CONST.XML_NULL_VALUE)) {
+            overallQualityScore = Float.parseFloat(text);
+          }
+        }
         default -> {
         }
       }
@@ -176,6 +185,9 @@ public class MatchedLipid implements FeatureAnnotation {
         lipidFragments, msMsScore, status);
     if (comment != null) {
       matchedLipid.setComment(comment);
+    }
+    if (overallQualityScore != null) {
+      matchedLipid.setOverallQualityScore(overallQualityScore);
     }
     return matchedLipid;
   }
@@ -237,6 +249,14 @@ public class MatchedLipid implements FeatureAnnotation {
     return status;
   }
 
+  public @Nullable Float getOverallQualityScore() {
+    return overallQualityScore;
+  }
+
+  public void setOverallQualityScore(@Nullable Float overallQualityScore) {
+    this.overallQualityScore = overallQualityScore;
+  }
+
   @Override
   public String toString() {
     return lipidAnnotation.getAnnotation();
@@ -276,6 +296,13 @@ public class MatchedLipid implements FeatureAnnotation {
     writer.writeEndElement();
     writer.writeStartElement(XML_STATUS);
     writer.writeCharacters(status.name());
+    writer.writeEndElement();
+    writer.writeStartElement(XML_OVERALL_QUALITY_SCORE);
+    if (overallQualityScore != null) {
+      writer.writeCharacters(overallQualityScore.toString());
+    } else {
+      writer.writeCharacters(CONST.XML_NULL_VALUE);
+    }
     writer.writeEndElement();
 
     writeClosingTag(writer);

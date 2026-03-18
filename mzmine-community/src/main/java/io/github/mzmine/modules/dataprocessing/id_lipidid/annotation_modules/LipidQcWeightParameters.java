@@ -39,24 +39,21 @@ import org.jetbrains.annotations.Nullable;
  */
 public class LipidQcWeightParameters extends SimpleParameterSet {
 
-  private static final @NotNull ComponentWeights DEFAULT_WEIGHTS =
-      LipidQcScoringUtils.defaultComponentWeights(LipidAnalysisType.LC_REVERSED_PHASE);
+  private static final @NotNull ComponentWeights DEFAULT_WEIGHTS = LipidQcScoringUtils.defaultComponentWeights(
+      LipidAnalysisType.LC_REVERSED_PHASE);
 
   public static final WeightSliderParameter ms1Weight = new WeightSliderParameter(
-      "MS1 accuracy weight",
-      "Weight for the MS1 mass-accuracy score.", toIntWeight(DEFAULT_WEIGHTS.ms1Weight()),
-      LipidQcScoringUtils.MIN_SUPPORTED_COMPONENT_WEIGHT,
+      "MS1 accuracy weight", "Weight for the MS1 mass-accuracy score.",
+      toIntWeight(DEFAULT_WEIGHTS.ms1Weight()), LipidQcScoringUtils.MIN_SUPPORTED_COMPONENT_WEIGHT,
       LipidQcScoringUtils.MAX_SUPPORTED_COMPONENT_WEIGHT);
 
   public static final WeightSliderParameter ms2Weight = new WeightSliderParameter(
-      "MS2 evidence weight",
-      "Weight for the MS2 explained-intensity score.", toIntWeight(DEFAULT_WEIGHTS.ms2Weight()),
-      LipidQcScoringUtils.MIN_SUPPORTED_COMPONENT_WEIGHT,
+      "MS2 evidence weight", "Weight for the MS2 explained-intensity score.",
+      toIntWeight(DEFAULT_WEIGHTS.ms2Weight()), LipidQcScoringUtils.MIN_SUPPORTED_COMPONENT_WEIGHT,
       LipidQcScoringUtils.MAX_SUPPORTED_COMPONENT_WEIGHT);
 
   public static final WeightSliderParameter adductMatchWeight = new WeightSliderParameter(
-      "Adduct weight (match)",
-      "Weight when feature ion identity adduct and lipid adduct agree.",
+      "Adduct weight (match)", "Weight when feature ion identity adduct and lipid adduct agree.",
       toIntWeight(DEFAULT_WEIGHTS.adductMatchWeight()),
       LipidQcScoringUtils.MIN_SUPPORTED_COMPONENT_WEIGHT,
       LipidQcScoringUtils.MAX_SUPPORTED_COMPONENT_WEIGHT);
@@ -76,8 +73,7 @@ public class LipidQcWeightParameters extends SimpleParameterSet {
       LipidQcScoringUtils.MAX_SUPPORTED_COMPONENT_WEIGHT);
 
   public static final WeightSliderParameter isotopeWeight = new WeightSliderParameter(
-      "Isotope similarity weight",
-      "Weight for isotope pattern similarity score.",
+      "Isotope similarity weight", "Weight for isotope pattern similarity score.",
       toIntWeight(DEFAULT_WEIGHTS.isotopeWeight()),
       LipidQcScoringUtils.MIN_SUPPORTED_COMPONENT_WEIGHT,
       LipidQcScoringUtils.MAX_SUPPORTED_COMPONENT_WEIGHT);
@@ -107,6 +103,11 @@ public class LipidQcWeightParameters extends SimpleParameterSet {
         isotopeWeight, interferenceWeight, elutionOrderNoTrendWeight, elutionOrderWithTrendWeight);
   }
 
+  public @NotNull ComponentWeights toComponentWeights(
+      final @Nullable LipidAnalysisType analysisType) {
+    return toComponentWeights(this, analysisType);
+  }
+
   public static @NotNull ComponentWeights toComponentWeights(
       final @NotNull LipidQcWeightParameters parameters,
       final @Nullable LipidAnalysisType analysisType) {
@@ -120,7 +121,8 @@ public class LipidQcWeightParameters extends SimpleParameterSet {
         resolveWeight(parameters, interferenceWeight, defaults.interferenceWeight()),
         resolveWeight(parameters, ms2Weight, defaults.ms2Weight()),
         resolveWeight(parameters, elutionOrderNoTrendWeight, defaults.elutionOrderNoTrendWeight()),
-        resolveWeight(parameters, elutionOrderWithTrendWeight, defaults.elutionOrderWithTrendWeight()));
+        resolveWeight(parameters, elutionOrderWithTrendWeight,
+            defaults.elutionOrderWithTrendWeight()));
   }
 
   public static void applyDefaultsForAnalysisType(final @NotNull LipidQcWeightParameters parameters,

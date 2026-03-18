@@ -52,10 +52,10 @@ public class EquivalentCarbonNumberModelGridPane extends GridPane {
                 Collectors.groupingBy(matchedLipid -> {
                   ILipidAnnotation lipidAnnotation = matchedLipid.getLipidAnnotation();
                   if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-                    return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+                    return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
                         molecularAnnotation.getAnnotation()).getValue();
                   } else if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
-                    return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+                    return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
                         lipidAnnotation.getAnnotation()).getValue();
                   } else {
                     return -1;

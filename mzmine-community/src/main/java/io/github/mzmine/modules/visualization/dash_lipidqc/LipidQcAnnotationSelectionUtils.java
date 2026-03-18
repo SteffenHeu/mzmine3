@@ -93,7 +93,7 @@ public final class LipidQcAnnotationSelectionUtils {
         || annotation instanceof MolecularSpeciesLevelAnnotation)) {
       return -1;
     }
-    return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+    return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
         annotation.getAnnotation()).getValue();
   }
 
@@ -106,7 +106,7 @@ public final class LipidQcAnnotationSelectionUtils {
         || annotation instanceof MolecularSpeciesLevelAnnotation)) {
       return -1;
     }
-    return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+    return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
         annotation.getAnnotation()).getKey();
   }
 }

@@ -555,6 +555,7 @@ public class AnnotationQualityPane extends DashboardComputationPane {
   }
 
   private void refreshAfterAnnotationDelete(final @Nullable FeatureListRow preferredRow) {
+    LipidQcScoringUtils.rescoreOverallQualityScores(model.getFeatureList());
     model.getFeatureTableFx().refresh();
     final FeatureListRow rowToSelect = preferredRow != null ? preferredRow : model.getRow();
     if (rowToSelect != null) {

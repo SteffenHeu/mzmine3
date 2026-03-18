@@ -42,6 +42,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidCla
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidIon;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.custom_class.CustomLipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.custom_class.CustomLipidClassParameters;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ComponentWeights;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
@@ -238,11 +239,17 @@ public class LipidAnnotationTask extends AbstractTask {
       }
       if (!possibleRowAnnotations.isEmpty()) {
         LipidAnnotationUtils.addAnnotationsToFeatureList(row, possibleRowAnnotations,
-            lipidAnalysisType, searchForMSMSFragments, minimumOverallQualityScore,
-            customQcWeights, mzTolerance);
+            lipidAnalysisType, searchForMSMSFragments, minimumOverallQualityScore, customQcWeights,
+            mzTolerance);
       }
       finishedSteps++;
     });
+
+    // Compute and store overall quality scores after all rows are processed
+    // Done here (not per-row) so context-dependent scores (elution order, interference) are correct
+    LipidQcScoringUtils.computeAndStoreOverallQualityScores((ModularFeatureList) featureList,
+        searchForMSMSFragments, lipidAnalysisType.hasRetentionTimePattern(), lipidAnalysisType,
+        customQcWeights, mzTolerance);
 
     // Add task description to featureList
     (featureList).addDescriptionOfAppliedTask(

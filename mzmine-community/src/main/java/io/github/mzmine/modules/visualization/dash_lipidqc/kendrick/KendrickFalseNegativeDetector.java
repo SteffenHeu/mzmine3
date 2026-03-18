@@ -63,7 +63,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -259,12 +258,12 @@ public final class KendrickFalseNegativeDetector {
 
   private static @Nullable CarbonDbe extractCarbonDbe(final @NotNull ILipidAnnotation annotation) {
     if (annotation instanceof MolecularSpeciesLevelAnnotation molecular) {
-      final var parsed = MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+      final var parsed = MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
           molecular.getAnnotation());
       return new CarbonDbe(parsed.getKey(), parsed.getValue());
     }
     if (annotation instanceof SpeciesLevelAnnotation species) {
-      final var parsed = MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+      final var parsed = MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
           species.getAnnotation());
       return new CarbonDbe(parsed.getKey(), parsed.getValue());
     }

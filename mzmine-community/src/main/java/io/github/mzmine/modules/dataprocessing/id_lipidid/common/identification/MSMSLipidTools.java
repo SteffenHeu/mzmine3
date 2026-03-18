@@ -61,7 +61,7 @@ public class MSMSLipidTools {
     return (intensityMatchedSignals / intensityAllSignals);
   }
 
-  public static Pair<Integer, Integer> getCarbonandDBEFromLipidAnnotaitonString(
+  public static Pair<Integer, Integer> getCarbonAndDbeFromLipidAnnotationString(
       String lipidAnnotation) {
     int numberOfCarbons = 0;
     int doubleBondEquivalents = 0;

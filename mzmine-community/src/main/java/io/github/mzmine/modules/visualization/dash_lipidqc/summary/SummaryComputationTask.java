@@ -214,7 +214,7 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
   }
 
   private static @Nullable String speciesAggregateKey(final @NotNull MatchedLipid lipid) {
-    final var carbonsDbe = MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+    final var carbonsDbe = MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
         lipid.getLipidAnnotation().getAnnotation());
     final int carbons = carbonsDbe.getKey();
     final int dbe = carbonsDbe.getValue();

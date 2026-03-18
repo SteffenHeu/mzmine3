@@ -247,10 +247,10 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
 
   private static int extractDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
     if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+      return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
           molecularAnnotation.getAnnotation()).getValue();
     } else if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+      return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
           lipidAnnotation.getAnnotation()).getValue();
     } else {
       return -1;
@@ -259,10 +259,10 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
 
   private static int extractCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
     if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation molecularAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+      return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
           molecularAnnotation.getAnnotation()).getKey();
     } else if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
-      return MSMSLipidTools.getCarbonandDBEFromLipidAnnotaitonString(
+      return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
           lipidAnnotation.getAnnotation()).getKey();
     } else {
       return -1;
