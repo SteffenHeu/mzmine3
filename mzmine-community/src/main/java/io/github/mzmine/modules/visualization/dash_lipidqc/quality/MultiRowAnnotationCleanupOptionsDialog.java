@@ -29,6 +29,7 @@ import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.components.factories.FxComboBox;
 import io.github.mzmine.javafx.components.factories.FxLabels;
+import io.github.mzmine.main.ConfigService;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -63,7 +64,8 @@ final class MultiRowAnnotationCleanupOptionsDialog {
   private final @NotNull Map<String, CheckBox> keepHighestByLipidClass = new LinkedHashMap<>();
   private final @NotNull CheckBox alwaysKeepHighestScore;
   private final @NotNull ComboBox<MultiRowAnnotationCleanupRowHandlingMode> rowHandlingModeCombo;
-  private final @NotNull Label ionPreferenceLabel = FxLabels.newLabel("Preferred ion per lipid class:");
+  private final @NotNull Label ionPreferenceLabel = FxLabels.newLabel(
+      "Preferred ion per lipid class:");
   private final @NotNull ScrollPane ionPreferenceScrollPane;
   private final @NotNull Label summaryLabel = FxLabels.newLabel("");
   private final @NotNull Dialog<ButtonType> dialog = new Dialog<>();
@@ -75,10 +77,10 @@ final class MultiRowAnnotationCleanupOptionsDialog {
     this.featureList = featureList;
     this.includeRetentionTimeAnalysis = includeRetentionTimeAnalysis;
 
-    final Map<String, List<IonizationType>> ionsByClass =
-        MultiRowAnnotationCleanupPlanner.collectAvailableIonizationsByLipidClass(featureList);
-    final Map<String, IonizationType> defaultPreferredByClass =
-        MultiRowAnnotationCleanupPlanner.defaultPreferredIonizationByLipidClass(featureList);
+    final Map<String, List<IonizationType>> ionsByClass = MultiRowAnnotationCleanupPlanner.collectAvailableIonizationsByLipidClass(
+        featureList);
+    final Map<String, IonizationType> defaultPreferredByClass = MultiRowAnnotationCleanupPlanner.defaultPreferredIonizationByLipidClass(
+        featureList);
 
     alwaysKeepHighestScore = new CheckBox(
         "Always keep highest-score lipid annotation regardless of preferred ion");
@@ -139,15 +141,19 @@ final class MultiRowAnnotationCleanupOptionsDialog {
     summaryLabel.setWrapText(true);
     summaryLabel.setStyle("-fx-font-weight: bold;");
 
-    final VBox content = new VBox(8, alwaysKeepHighestScore,
-        ionPreferenceLabel, ionPreferenceScrollPane, rowHandlingRow,
-        summaryLabel);
+    final VBox content = new VBox(8, alwaysKeepHighestScore, ionPreferenceLabel,
+        ionPreferenceScrollPane, rowHandlingRow, summaryLabel);
     content.setPrefWidth(640);
 
     dialog.setTitle("Remove multi-row annotations");
     dialog.setHeaderText("Choose retention options for duplicated annotations");
     dialog.getDialogPane().setContent(content);
     dialog.getDialogPane().getButtonTypes().addAll(applyButtonType, ButtonType.CANCEL);
+    dialog.getDialogPane().sceneProperty().subscribe((scene) -> {
+      if (scene != null) {
+        ConfigService.getConfiguration().getTheme().apply(scene.getStylesheets());
+      }
+    });
 
     updateIonPreferenceControlState();
     updateSummaryAndState();
@@ -213,9 +219,9 @@ final class MultiRowAnnotationCleanupOptionsDialog {
       final String lipidClass = entry.getKey();
       final ComboBox<IonizationType> combo = entry.getValue();
       final CheckBox keepHighest = keepHighestByLipidClass.get(lipidClass);
-      final boolean disableCombo = disableAllPerClassControls
-          || keepHighest != null && keepHighest.isSelected()
-          || combo.getItems().isEmpty();
+      final boolean disableCombo =
+          disableAllPerClassControls || keepHighest != null && keepHighest.isSelected()
+              || combo.getItems().isEmpty();
       combo.setDisable(disableCombo);
       if (combo.getItems().isEmpty()) {
         combo.setPromptText("No ions found");
