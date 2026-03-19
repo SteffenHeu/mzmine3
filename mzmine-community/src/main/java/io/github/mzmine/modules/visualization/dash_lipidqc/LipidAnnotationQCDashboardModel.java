@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -28,6 +27,7 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.gui.framework.fx.features.ParentFeatureListPaneGroup;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FxFeatureTableController;
 import java.util.List;
@@ -53,8 +53,8 @@ public class LipidAnnotationQCDashboardModel {
   private final ObjectProperty<@NotNull FeatureTableFX> featureTableFx = new ReadOnlyObjectWrapper<>(
       featureTableController.get().getFeatureTable());
   private final ObjectProperty<@Nullable FeatureListRow> row = new SimpleObjectProperty<>();
-  private final ObjectProperty<@NotNull PreferredLipidLevelOption> preferredLipidLevel =
-      new SimpleObjectProperty<>(PreferredLipidLevelOption.MOLECULAR_SPECIES);
+  private final ObjectProperty<@NotNull LipidAnnotationLevel> preferredLipidLevel = new SimpleObjectProperty<>(
+      LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL);
   private final BooleanProperty retentionTimeAnalysisEnabled = new SimpleBooleanProperty(true);
 
   // todo: remove? not used anywhere?
@@ -96,15 +96,15 @@ public class LipidAnnotationQCDashboardModel {
     return row;
   }
 
-  public @NotNull PreferredLipidLevelOption getPreferredLipidLevel() {
+  public @NotNull LipidAnnotationLevel getPreferredLipidLevel() {
     return preferredLipidLevel.get();
   }
 
-  public void setPreferredLipidLevel(@NotNull PreferredLipidLevelOption option) {
-    preferredLipidLevel.set(option);
+  public void setPreferredLipidLevel(@NotNull LipidAnnotationLevel level) {
+    preferredLipidLevel.set(level);
   }
 
-  public ObjectProperty<@NotNull PreferredLipidLevelOption> preferredLipidLevelProperty() {
+  public ObjectProperty<@NotNull LipidAnnotationLevel> preferredLipidLevelProperty() {
     return preferredLipidLevel;
   }
 

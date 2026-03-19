@@ -36,6 +36,7 @@ import io.github.mzmine.datamodel.features.types.fx.ColumnType;
 import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.components.factories.FxSplitPanes;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.isotope.IsotopePane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.matched.MatchedSignalsPane;
@@ -81,8 +82,8 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     final AnnotationQualityPane qualityPane = new AnnotationQualityPane(model);
     kendrickPane.setOnReviewModeChanged(qualityPane::setKendrickReviewMode);
     final MatchedSignalsPane matchedSignalsPane = new MatchedSignalsPane();
-    final ComboBox<PreferredLipidLevelOption> preferredLevelCombo = new ComboBox<>(
-        FXCollections.observableArrayList(PreferredLipidLevelOption.values()));
+    final ComboBox<LipidAnnotationLevel> preferredLevelCombo = new ComboBox<>(
+        FXCollections.observableArrayList(LipidAnnotationLevel.values()));
     preferredLevelCombo.getSelectionModel().select(model.getPreferredLipidLevel());
     final LipidSummaryPane summaryPane = new LipidSummaryPane(model.featureListProperty(),
         filterState, preferredLevelCombo, model.getFeatureTableFx());

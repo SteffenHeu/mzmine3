@@ -24,6 +24,7 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids;
 
+import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 import org.jetbrains.annotations.NotNull;
@@ -34,6 +35,24 @@ public interface ILipidAnnotation {
   ILipidClass getLipidClass();
 
   String getAnnotation();
+
+  default String getSpeciesLevelAnnotation() {
+    return LipidFactory.buildAnnotation(getLipidClass(), getSpeciesLevelCarbons(),
+        getSpeciesLevelDBEs(), getSpeciesLevelOxygens());
+  }
+
+  /**
+   *
+   * @param level The annotation level.
+   * @return A string defining this lipid annotation. If molecular species is requested and this
+   * annotation is only a species level, the species level annotation is returned.
+   */
+  default String getAnnotation(LipidAnnotationLevel level) {
+    return switch (level) {
+      case SPECIES_LEVEL -> getSpeciesLevelAnnotation();
+      case MOLECULAR_SPECIES_LEVEL -> getAnnotation();
+    };
+  }
 
   LipidAnnotationLevel getLipidAnnotationLevel();
 

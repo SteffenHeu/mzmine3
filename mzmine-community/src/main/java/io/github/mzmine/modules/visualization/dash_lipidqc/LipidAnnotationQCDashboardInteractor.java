@@ -54,21 +54,12 @@ class LipidAnnotationQCDashboardInteractor {
   LipidAnnotationQCDashboardInteractor(final @NotNull LipidAnnotationQCDashboardModel model) {
     this.model = model;
     model.featureListProperty().subscribe(this::onFeatureListChanged);
-    model.preferredLipidLevelProperty().subscribe(this::onPreferredLipidLevelChanged);
   }
 
   // ── model-property reactions ──────────────────────────────────────────────
 
   private void onFeatureListChanged(final @Nullable ModularFeatureList featureList) {
     model.setRetentionTimeAnalysisEnabled(shouldIncludeRetentionTimeAnalysis(featureList));
-  }
-
-  private void onPreferredLipidLevelChanged(final @Nullable PreferredLipidLevelOption option) {
-    if (option == null) {
-      return;
-    }
-    applyPreferredLipidLevel(model.getFeatureList(), option.level);
-    model.getFeatureTableFx().refresh();
   }
 
   // ── business logic ────────────────────────────────────────────────────────
@@ -105,6 +96,8 @@ class LipidAnnotationQCDashboardInteractor {
    */
   private static void applyPreferredLipidLevel(final @NotNull ModularFeatureList featureList,
       final @NotNull LipidAnnotationLevel level) {
+
+    // todo: add logic to cleanup task
     for (final FeatureListRow row : featureList.getRows()) {
       final List<MatchedLipid> matches = row.getLipidMatches();
       if (matches.isEmpty()) {

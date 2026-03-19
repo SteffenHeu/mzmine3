@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -27,6 +26,7 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.retention;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -122,12 +122,12 @@ final class RetentionTrendDataset extends AbstractXYDataset {
     return item >= 0 && item < rows.length ? rows[item] : null;
   }
 
-  @Nullable String getTooltip(final int item) {
+  @Nullable String getTooltip(final int item, final @NotNull LipidAnnotationLevel level) {
     final MatchedLipid lipid = getMatchedLipid(item);
-    return lipid == null ? null : lipid.getLipidAnnotation().getAnnotation();
+    return lipid == null ? null : lipid.getLipidAnnotation().getAnnotation(level);
   }
 
-  @Nullable String getLabel(final int item) {
+  @Nullable String getLabel(final int item, final @NotNull LipidAnnotationLevel level) {
     final MatchedLipid lipid = getMatchedLipid(item);
     if (lipid == null) {
       return null;
@@ -145,6 +145,6 @@ final class RetentionTrendDataset extends AbstractXYDataset {
         return null;
       }
     }
-    return lipid.getLipidAnnotation().getAnnotation();
+    return lipid.getLipidAnnotation().getAnnotation(level);
   }
 }

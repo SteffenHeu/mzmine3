@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -30,12 +29,13 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.gui.chartbasics.gui.javafx.EChartViewer;
 import io.github.mzmine.javafx.components.factories.FxLabels;
-import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalsePositiveUtils;
@@ -52,13 +52,13 @@ import java.awt.geom.Rectangle2D;
 import java.util.Arrays;
 import java.util.List;
 import javafx.application.Platform;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.geometry.Pos;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.HBox;
@@ -76,7 +76,6 @@ import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.ui.TextAnchor;
-import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 
@@ -280,7 +279,7 @@ public class EquivalentCarbonNumberPane extends DashboardComputationPane {
       final @NotNull ILipidClass selectedClass, final int carbons, final int selectedDbe,
       final @NotNull RetentionTrendDataset trendDataset) {
     final TrendChartResult chartResult = createTrendChart(trendDataset, "Number of DBEs",
-        dbeTrendDatasetColor());
+        dbeTrendDatasetColor(), model.preferredLipidLevelProperty());
     final EChartViewer chart = chartResult.chart();
     configureNoCrosshair(chart.getChart().getXYPlot());
     chart.addChartMouseListener(new ChartMouseListenerFX() {
@@ -340,8 +339,8 @@ public class EquivalentCarbonNumberPane extends DashboardComputationPane {
       final @NotNull ILipidClass selectedClass, final int selectedCarbons,
       final int selectedDbe, final @Nullable RetentionTrendDataset carbonTrendDataset,
       final @Nullable RetentionTrendDataset dbeTrendDataset) {
-    final CombinedTrendChartResult chartResult = createCombinedTrendChart(
-        carbonTrendDataset, dbeTrendDataset);
+    final CombinedTrendChartResult chartResult = createCombinedTrendChart(carbonTrendDataset,
+        dbeTrendDataset, model.preferredLipidLevelProperty());
     final EChartViewer chart = chartResult.chart();
     configureNoCrosshair(chart.getChart().getXYPlot());
     chart.addChartMouseListener(new ChartMouseListenerFX() {
@@ -422,7 +421,8 @@ public class EquivalentCarbonNumberPane extends DashboardComputationPane {
 
 
   private static TrendChartResult createTrendChart(final @NotNull RetentionTrendDataset dataset,
-      final @NotNull String yAxisLabel, final @NotNull Paint trendPaint) {
+      final @NotNull String yAxisLabel, final @NotNull Paint trendPaint,
+      final @NotNull ObjectProperty<LipidAnnotationLevel> levelProperty) {
     final JFreeChart chart = ChartFactory.createScatterPlot("", "Retention time", yAxisLabel,
         dataset, PlotOrientation.VERTICAL, false, true, true);
     final EChartViewer viewer = new EChartViewer(chart);
@@ -434,11 +434,11 @@ public class EquivalentCarbonNumberPane extends DashboardComputationPane {
     pointRenderer.setSeriesShape(0, new Ellipse2D.Double(-3, -3, 6, 6));
     pointRenderer.setSeriesPaint(0, trendPaint);
     pointRenderer.setDefaultItemLabelGenerator(
-        (xyDataset, series, item) -> dataset.getLabel(item));
+        (xyDataset, series, item) -> dataset.getLabel(item, levelProperty.get()));
     pointRenderer.setDefaultItemLabelPaint(retentionLabelPaint());
     pointRenderer.setDefaultItemLabelsVisible(true);
     pointRenderer.setDefaultToolTipGenerator(
-        (xyDataset, series, item) -> dataset.getTooltip(item));
+        (xyDataset, series, item) -> dataset.getTooltip(item, levelProperty.get()));
     plot.setRenderer(0, pointRenderer);
 
     final double[] regression = calculateLinearRegression(dataset);
@@ -506,7 +506,8 @@ public class EquivalentCarbonNumberPane extends DashboardComputationPane {
 
   private static @NotNull CombinedTrendChartResult createCombinedTrendChart(
       final @Nullable RetentionTrendDataset carbonDataset,
-      final @Nullable RetentionTrendDataset dbeDataset) {
+      final @Nullable RetentionTrendDataset dbeDataset,
+      final @NotNull ObjectProperty<LipidAnnotationLevel> levelProperty) {
     final XYPlot plot = new XYPlot();
     configureNoCrosshair(plot);
     final NumberAxis domainAxis = new NumberAxis("Retention time");
@@ -529,8 +530,7 @@ public class EquivalentCarbonNumberPane extends DashboardComputationPane {
       plot.setDataset(carbonDatasetIndex, carbonDataset);
       plot.mapDatasetToRangeAxis(carbonDatasetIndex, carbonAxisIndex);
       plot.setRenderer(carbonDatasetIndex, createTrendPointRenderer(carbonDataset,
-          ecnTrendDatasetColor(),
-          new Ellipse2D.Double(-3.2d, -3.2d, 6.4d, 6.4d)));
+          ecnTrendDatasetColor(), new Ellipse2D.Double(-3.2d, -3.2d, 6.4d, 6.4d), levelProperty));
       final double[] regression = calculateLinearRegression(carbonDataset);
       carbonR2 = regression[2];
       appendRegressionDatasetIfValid(plot, carbonRegressionIndex, regression, carbonDataset,
@@ -543,8 +543,7 @@ public class EquivalentCarbonNumberPane extends DashboardComputationPane {
       plot.setDataset(dbeDatasetIndex, dbeDataset);
       plot.mapDatasetToRangeAxis(dbeDatasetIndex, dbeAxisIndex);
       plot.setRenderer(dbeDatasetIndex, createTrendPointRenderer(dbeDataset,
-          dbeTrendDatasetColor(),
-          new Rectangle2D.Double(-3d, -3d, 6d, 6d)));
+          dbeTrendDatasetColor(), new Rectangle2D.Double(-3d, -3d, 6d, 6d), levelProperty));
       final double[] regression = calculateLinearRegression(dbeDataset);
       dbeR2 = regression[2];
       appendRegressionDatasetIfValid(plot, dbeRegressionIndex, regression, dbeDataset,
@@ -789,16 +788,17 @@ public class EquivalentCarbonNumberPane extends DashboardComputationPane {
 
   private static @NotNull XYLineAndShapeRenderer createTrendPointRenderer(
       final @NotNull RetentionTrendDataset dataset, final @NotNull Paint seriesPaint,
-      final @NotNull java.awt.Shape seriesShape) {
+      final @NotNull java.awt.Shape seriesShape,
+      final @NotNull ObjectProperty<LipidAnnotationLevel> levelProperty) {
     final XYLineAndShapeRenderer pointRenderer = new XYLineAndShapeRenderer(false, true);
     pointRenderer.setSeriesShape(0, seriesShape);
     pointRenderer.setSeriesPaint(0, seriesPaint);
     pointRenderer.setDefaultItemLabelGenerator(
-        (xyDataset, series, item) -> dataset.getLabel(item));
+        (xyDataset, series, item) -> dataset.getLabel(item, levelProperty.get()));
     pointRenderer.setDefaultItemLabelPaint(retentionLabelPaint());
     pointRenderer.setDefaultItemLabelsVisible(true);
     pointRenderer.setDefaultToolTipGenerator(
-        (xyDataset, series, item) -> dataset.getTooltip(item));
+        (xyDataset, series, item) -> dataset.getTooltip(item, levelProperty.get()));
     pointRenderer.setSeriesVisibleInLegend(0, false);
     return pointRenderer;
   }

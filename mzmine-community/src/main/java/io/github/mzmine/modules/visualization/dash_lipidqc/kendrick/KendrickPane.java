@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -31,12 +30,13 @@ import io.github.mzmine.gui.chartbasics.chartutils.ColoredBubbleDatasetRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.XYItemObjectProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.AlphaBubbleDatasetRenderer;
 import io.github.mzmine.javafx.components.factories.FxLabels;
-import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardFilterState;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
-import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardFilterState;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotChart;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotParameters;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotXYZDataset;
@@ -68,6 +68,7 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.entity.XYItemEntity;
 import org.jfree.chart.fx.interaction.ChartMouseEventFX;
 import org.jfree.chart.fx.interaction.ChartMouseListenerFX;
+import org.jfree.chart.labels.XYItemLabelGenerator;
 import org.jfree.chart.plot.DatasetRenderingOrder;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.LookupPaintScale;
@@ -314,8 +315,6 @@ public class KendrickPane extends DashboardComputationPane {
     final var baseRenderer = plot.getRenderer();
     final var tooltipGenerator =
         baseRenderer != null ? baseRenderer.getDefaultToolTipGenerator() : null;
-    final var itemLabelGenerator =
-        baseRenderer != null ? baseRenderer.getDefaultItemLabelGenerator() : null;
     final var itemLabelPaint = baseRenderer != null ? baseRenderer.getDefaultItemLabelPaint()
         : null;
     final boolean itemLabelsVisible = baseRenderer != null && Boolean.TRUE.equals(
@@ -324,14 +323,16 @@ public class KendrickPane extends DashboardComputationPane {
         baseRenderer instanceof ColoredBubbleDatasetRenderer colored ? colored.getPaintScale()
             : new LookupPaintScale(0d, 1d, Color.GRAY);
 
+    // decision: replace the base renderer's label generator with a level-aware one so the
+    // preferred lipid level property is read at render time, not captured at chart-build time
+    final var levelAwareLabelGenerator = buildLevelAwareLabelGenerator();
+
     colorRenderer = new AlphaBubbleDatasetRenderer(1f);
     colorRenderer.setPaintScale(colorScale);
     if (tooltipGenerator != null) {
       colorRenderer.setDefaultToolTipGenerator(tooltipGenerator);
     }
-    if (itemLabelGenerator != null) {
-      colorRenderer.setDefaultItemLabelGenerator(itemLabelGenerator);
-    }
+    colorRenderer.setDefaultItemLabelGenerator(levelAwareLabelGenerator);
     if (itemLabelPaint != null) {
       colorRenderer.setDefaultItemLabelPaint(itemLabelPaint);
     }
@@ -342,9 +343,7 @@ public class KendrickPane extends DashboardComputationPane {
     if (tooltipGenerator != null) {
       filteredOutRenderer.setDefaultToolTipGenerator(tooltipGenerator);
     }
-    if (itemLabelGenerator != null) {
-      filteredOutRenderer.setDefaultItemLabelGenerator(itemLabelGenerator);
-    }
+    filteredOutRenderer.setDefaultItemLabelGenerator(levelAwareLabelGenerator);
     if (itemLabelPaint != null) {
       filteredOutRenderer.setDefaultItemLabelPaint(itemLabelPaint);
     }
@@ -608,13 +607,34 @@ public class KendrickPane extends DashboardComputationPane {
     return null;
   }
 
-  private static @NotNull String getSelectedLabel(final @NotNull FeatureListRow row) {
+  private @NotNull XYItemLabelGenerator buildLevelAwareLabelGenerator() {
+    return (xyDataset, series, item) -> {
+      if (!(xyDataset instanceof XYItemObjectProvider<?> provider)) {
+        return null;
+      }
+      final Object obj = provider.getItemObject(item);
+      if (!(obj instanceof FeatureListRow row)) {
+        return null;
+      }
+      final @Nullable MatchedLipid match = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
+          row);
+      if (match == null) {
+        return null;
+      }
+      final LipidAnnotationLevel level = model.getPreferredLipidLevel();
+      final String annotation = match.getLipidAnnotation().getAnnotation(level);
+      return annotation.length() > 52 ? annotation.substring(0, 49) + "..." : annotation;
+    };
+  }
+
+  private @NotNull String getSelectedLabel(final @NotNull FeatureListRow row) {
     final @Nullable MatchedLipid selectedMatch = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
         row);
     if (selectedMatch == null) {
       return "Row " + row.getID();
     }
-    final String annotation = selectedMatch.getLipidAnnotation().getAnnotation();
+    final String annotation = selectedMatch.getLipidAnnotation()
+        .getAnnotation(model.getPreferredLipidLevel());
     return annotation.length() > 52 ? annotation.substring(0, 49) + "..." : annotation;
   }
 

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -25,9 +24,21 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids;
 
+import org.jetbrains.annotations.NotNull;
+
 public enum LipidAnnotationLevel {
 
-  SPECIES_LEVEL, //
-  MOLECULAR_SPECIES_LEVEL //
+  SPECIES_LEVEL("Species level"), //
+  MOLECULAR_SPECIES_LEVEL("Molecular species level"); //
 
+  private final @NotNull String label;
+
+  LipidAnnotationLevel(final @NotNull String label) {
+    this.label = label;
+  }
+
+  @Override
+  public @NotNull String toString() {
+    return label;
+  }
 }
