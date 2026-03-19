@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -23,17 +22,45 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
+package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Value record pairing a feature list row with a matched lipid annotation and its pre-computed
- * combined QC score, used during multi-row annotation cleanup planning.
+ * Immutable plan record describing which lipid annotations will be removed per row and which
+ * annotation will remain selected after the cleanup is applied.
  */
-record RowAnnotationCandidate(@NotNull FeatureListRow row, @NotNull MatchedLipid match,
-                              double combinedScore) {
+public record MultiRowAnnotationCleanupPlan(
+    @NotNull Map<FeatureListRow, Set<MatchedLipid>> annotationsToRemoveByRow,
+    @NotNull Map<FeatureListRow, MatchedLipid> selectedRemainingAnnotationByRow) {
 
+  public MultiRowAnnotationCleanupPlan {
+    final Map<FeatureListRow, Set<MatchedLipid>> copiedRemovals = new LinkedHashMap<>();
+    for (final Map.Entry<FeatureListRow, Set<MatchedLipid>> entry : annotationsToRemoveByRow.entrySet()) {
+      if (entry.getValue().isEmpty()) {
+        continue;
+      }
+      copiedRemovals.put(entry.getKey(), Set.copyOf(entry.getValue()));
+    }
+    annotationsToRemoveByRow = Map.copyOf(copiedRemovals);
+    selectedRemainingAnnotationByRow = Map.copyOf(
+        new LinkedHashMap<>(selectedRemainingAnnotationByRow));
+  }
+
+  public int removedAnnotationCount() {
+    return annotationsToRemoveByRow.values().stream().mapToInt(Set::size).sum();
+  }
+
+  public int affectedRowCount() {
+    return annotationsToRemoveByRow.size();
+  }
+
+  public boolean hasRemovals() {
+    return removedAnnotationCount() > 0;
+  }
 }

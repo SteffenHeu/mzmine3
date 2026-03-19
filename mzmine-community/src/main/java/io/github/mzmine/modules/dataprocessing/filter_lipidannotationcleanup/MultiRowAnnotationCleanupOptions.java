@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -23,29 +22,27 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
+package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
+import io.github.mzmine.datamodel.IonizationType;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Defines how the remaining annotations of a row are treated when one of its lipid annotations is
- * removed during the multi-row cleanup operation.
+ * Immutable configuration record for the multi-row annotation cleanup operation, specifying the
+ * preferred ionisation type per lipid class, score-based keep rules, and how to handle remaining
+ * annotations after a removal.
  */
-enum MultiRowAnnotationCleanupRowHandlingMode {
-  DISCARD_LOWER_THAN_REMOVED(
-      "Discard all annotations with lower score than removed annotation"),
-  DISCARD_ALL_IF_ANY_REMOVED("Discard all annotations if any annotation of the row is removed"),
-  SELECT_REMAINING_HIGHEST_SCORE(
-      "Select remaining annotation with highest score, regardless of what was removed");
+public record MultiRowAnnotationCleanupOptions(
+    @NotNull Map<String, IonizationType> preferredIonizationByLipidClass,
+    @NotNull Set<String> keepHighestScoreByLipidClass, boolean alwaysKeepHighestScore,
+    @NotNull MultiRowAnnotationCleanupRowHandlingMode rowHandlingMode) {
 
-  private final @NotNull String label;
-
-  MultiRowAnnotationCleanupRowHandlingMode(final @NotNull String label) {
-    this.label = label;
-  }
-
-  @Override
-  public @NotNull String toString() {
-    return label;
+  public MultiRowAnnotationCleanupOptions {
+    preferredIonizationByLipidClass = Map.copyOf(
+        new LinkedHashMap<>(preferredIonizationByLipidClass));
+    keepHighestScoreByLipidClass = Set.copyOf(keepHighestScoreByLipidClass);
   }
 }

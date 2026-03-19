@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -23,7 +22,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
+package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
 
@@ -51,12 +50,12 @@ import org.jetbrains.annotations.Nullable;
  * based on the given {@link MultiRowAnnotationCleanupOptions}, resolving preferred ionisation types
  * and score-based removal rules per lipid class.
  */
-final class MultiRowAnnotationCleanupPlanner {
+public final class MultiRowAnnotationCleanupPlanner {
 
   private MultiRowAnnotationCleanupPlanner() {
   }
 
-  static @NotNull Map<String, List<IonizationType>> collectAvailableIonizationsByLipidClass(
+  public static @NotNull Map<String, List<IonizationType>> collectAvailableIonizationsByLipidClass(
       final @NotNull ModularFeatureList featureList) {
     final Map<String, Map<IonizationType, Integer>> countsByClass = collectClassIonizationCounts(
         featureList);
@@ -75,20 +74,19 @@ final class MultiRowAnnotationCleanupPlanner {
     return availableByClass;
   }
 
-  static @NotNull Map<String, IonizationType> defaultPreferredIonizationByLipidClass(
+  public static @NotNull Map<String, IonizationType> defaultPreferredIonizationByLipidClass(
       final @NotNull ModularFeatureList featureList) {
     final Map<String, Map<IonizationType, Integer>> countsByClass = collectClassIonizationCounts(
         featureList);
     final Map<String, IonizationType> defaults = new LinkedHashMap<>();
     for (final Entry<String, Map<IonizationType, Integer>> entry : countsByClass.entrySet()) {
-      final IonizationType preferred = entry.getValue().entrySet().stream()
-          .max((left, right) -> {
-            final int countCmp = Integer.compare(left.getValue(), right.getValue());
-            if (countCmp != 0) {
-              return countCmp;
-            }
-            return right.getKey().toString().compareTo(left.getKey().toString());
-          }).map(Entry::getKey).orElse(null);
+      final IonizationType preferred = entry.getValue().entrySet().stream().max((left, right) -> {
+        final int countCmp = Integer.compare(left.getValue(), right.getValue());
+        if (countCmp != 0) {
+          return countCmp;
+        }
+        return right.getKey().toString().compareTo(left.getKey().toString());
+      }).map(Entry::getKey).orElse(null);
       if (preferred != null) {
         defaults.put(entry.getKey(), preferred);
       }
@@ -96,7 +94,7 @@ final class MultiRowAnnotationCleanupPlanner {
     return defaults;
   }
 
-  static @NotNull MultiRowAnnotationCleanupPlan buildCleanupPlan(
+  public static @NotNull MultiRowAnnotationCleanupPlan buildCleanupPlan(
       final @NotNull ModularFeatureList featureList, final boolean includeRetentionTimeAnalysis,
       final @NotNull MultiRowAnnotationCleanupOptions options) {
     final Map<String, List<RowAnnotationCandidate>> candidatesByAnnotation = new TreeMap<>();
@@ -142,18 +140,19 @@ final class MultiRowAnnotationCleanupPlanner {
     return new MultiRowAnnotationCleanupPlan(removalsByRow, selectedRemainingByRow);
   }
 
-  static void applyCleanupPlan(final @NotNull MultiRowAnnotationCleanupPlan cleanupPlan) {
+  public static void applyCleanupPlan(final @NotNull MultiRowAnnotationCleanupPlan cleanupPlan) {
     final Set<FeatureListRow> rowsToUpdate = new LinkedHashSet<>();
     rowsToUpdate.addAll(cleanupPlan.annotationsToRemoveByRow().keySet());
     rowsToUpdate.addAll(cleanupPlan.selectedRemainingAnnotationByRow().keySet());
 
     for (final FeatureListRow targetRow : rowsToUpdate) {
-      final Set<MatchedLipid> removals = cleanupPlan.annotationsToRemoveByRow().getOrDefault(
-          targetRow, Set.of());
+      final Set<MatchedLipid> removals = cleanupPlan.annotationsToRemoveByRow()
+          .getOrDefault(targetRow, Set.of());
       final MatchedLipid selected = cleanupPlan.selectedRemainingAnnotationByRow().get(targetRow);
 
       final List<MatchedLipid> original = targetRow.getLipidMatches();
-      final List<MatchedLipid> updated = original.stream().filter(match -> !removals.contains(match))
+      final List<MatchedLipid> updated = original.stream()
+          .filter(match -> !removals.contains(match))
           .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
       if (selected != null && updated.remove(selected)) {
         updated.addFirst(selected);
@@ -179,9 +178,9 @@ final class MultiRowAnnotationCleanupPlanner {
       }
       switch (options.rowHandlingMode()) {
         case DISCARD_LOWER_THAN_REMOVED -> {
-          final double threshold = rowRemovals.stream()
-              .mapToDouble(removed -> scoreFor(affectedRow, removed, featureList,
-                  includeRetentionTimeAnalysis, scoreCache)).max().orElse(Double.NaN);
+          final double threshold = rowRemovals.stream().mapToDouble(
+              removed -> scoreFor(affectedRow, removed, featureList, includeRetentionTimeAnalysis,
+                  scoreCache)).max().orElse(Double.NaN);
           if (!Double.isFinite(threshold)) {
             continue;
           }
@@ -200,10 +199,9 @@ final class MultiRowAnnotationCleanupPlanner {
           if (remaining.size() <= 1) {
             continue;
           }
-          final MatchedLipid bestRemaining = remaining.stream()
-              .max(Comparator.comparingDouble(
-                  match -> scoreFor(affectedRow, match, featureList, includeRetentionTimeAnalysis,
-                      scoreCache))).orElse(null);
+          final MatchedLipid bestRemaining = remaining.stream().max(Comparator.comparingDouble(
+              match -> scoreFor(affectedRow, match, featureList, includeRetentionTimeAnalysis,
+                  scoreCache))).orElse(null);
           if (bestRemaining != null) {
             selectedRemainingByRow.put(affectedRow, bestRemaining);
           }
@@ -263,8 +261,8 @@ final class MultiRowAnnotationCleanupPlanner {
     return rowCmp;
   }
 
-  private static boolean useHighestScoreSelectionForClass(final @NotNull RowAnnotationCandidate left,
-      final @NotNull RowAnnotationCandidate right,
+  private static boolean useHighestScoreSelectionForClass(
+      final @NotNull RowAnnotationCandidate left, final @NotNull RowAnnotationCandidate right,
       final @NotNull MultiRowAnnotationCleanupOptions options) {
     if (options.alwaysKeepHighestScore()) {
       return true;
@@ -279,10 +277,11 @@ final class MultiRowAnnotationCleanupPlanner {
       final @NotNull MultiRowAnnotationCleanupOptions options) {
     final IonizationType preferredIonization = options.preferredIonizationByLipidClass()
         .get(lipidClassLabel(candidate.match()));
-    return preferredIonization != null && preferredIonization == candidate.match().getIonizationType();
+    return preferredIonization != null && preferredIonization == candidate.match()
+        .getIonizationType();
   }
 
-  private static @NotNull String lipidClassLabel(final @NotNull MatchedLipid match) {
+  public static @NotNull String lipidClassLabel(final @NotNull MatchedLipid match) {
     final ILipidClass lipidClass = match.getLipidAnnotation().getLipidClass();
     if (lipidClass == null) {
       return "Unknown class";
@@ -295,8 +294,9 @@ final class MultiRowAnnotationCleanupPlanner {
     return name.isBlank() ? "Unknown class" : name;
   }
 
-  private static double scoreFor(final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
-      final @NotNull ModularFeatureList featureList, final boolean includeRetentionTimeAnalysis,
+  private static double scoreFor(final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match, final @NotNull ModularFeatureList featureList,
+      final boolean includeRetentionTimeAnalysis,
       final @NotNull Map<FeatureListRow, Map<MatchedLipid, Double>> scoreCache) {
     return scoreCache.computeIfAbsent(row, _ -> new HashMap<>()).computeIfAbsent(match,
         key -> computeAnnotationScore(featureList, row, key, includeRetentionTimeAnalysis));
@@ -305,6 +305,7 @@ final class MultiRowAnnotationCleanupPlanner {
   private static double computeAnnotationScore(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
       final boolean includeRetentionTimeAnalysis) {
-    return computeCombinedAnnotationScore(featureList, row, match, true, includeRetentionTimeAnalysis);
+    return computeCombinedAnnotationScore(featureList, row, match, true,
+        includeRetentionTimeAnalysis);
   }
 }

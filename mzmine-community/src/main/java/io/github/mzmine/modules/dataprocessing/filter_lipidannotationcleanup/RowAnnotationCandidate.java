@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -23,27 +22,17 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
+package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
-import io.github.mzmine.datamodel.IonizationType;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Immutable configuration record for the multi-row annotation cleanup operation, specifying the
- * preferred ionisation type per lipid class, score-based keep rules, and how to handle remaining
- * annotations after a removal.
+ * Value record pairing a feature list row with a matched lipid annotation and its pre-computed
+ * combined QC score, used during multi-row annotation cleanup planning.
  */
-record MultiRowAnnotationCleanupOptions(
-    @NotNull Map<String, IonizationType> preferredIonizationByLipidClass,
-    @NotNull Set<String> keepHighestScoreByLipidClass,
-    boolean alwaysKeepHighestScore, @NotNull MultiRowAnnotationCleanupRowHandlingMode rowHandlingMode) {
+public record RowAnnotationCandidate(@NotNull FeatureListRow row, @NotNull MatchedLipid match,
+                                     double combinedScore) {
 
-  MultiRowAnnotationCleanupOptions {
-    preferredIonizationByLipidClass = Map.copyOf(
-        new LinkedHashMap<>(preferredIonizationByLipidClass));
-    keepHighestScoreByLipidClass = Set.copyOf(keepHighestScoreByLipidClass);
-  }
 }

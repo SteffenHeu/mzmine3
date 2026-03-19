@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -77,6 +76,7 @@ import io.github.mzmine.modules.dataprocessing.filter_ims_msms_refinement.ImsMs2
 import io.github.mzmine.modules.dataprocessing.filter_interestingfeaturefinder.AnnotateIsomersModule;
 import io.github.mzmine.modules.dataprocessing.filter_isotopefinder.IsotopeFinderModule;
 import io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule;
+import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.LipidAnnotationCleanupModule;
 import io.github.mzmine.modules.dataprocessing.filter_maldigroupms2.MaldiGroupMS2Module;
 import io.github.mzmine.modules.dataprocessing.filter_maldipseudofilegenerator.MaldiPseudoFileGeneratorModule;
 import io.github.mzmine.modules.dataprocessing.filter_merge.RawFileMergeModule;
@@ -346,6 +346,7 @@ public class BatchModeModulesList {
            * {@link io.github.mzmine.modules.MZmineModuleCategory.MainCategory#FEATURE_PROCESSING}
            */
           ClearFeatureAnnotationsModule.class, //
+          LipidAnnotationCleanupModule.class, //
           LinearNormalizerModule.class, //
           RTCorrectionModule.class, //
           ScanRtCorrectionModule.class, //

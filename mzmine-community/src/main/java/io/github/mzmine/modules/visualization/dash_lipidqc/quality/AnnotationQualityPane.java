@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -38,20 +37,27 @@ import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScaleTransform;
 import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.components.factories.FxLabels;
-import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.javafx.util.FxColorUtil;
 import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.main.MZmineCore;
+import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.LipidAnnotationCleanupModule;
+import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.LipidAnnotationCleanupParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
+import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickReviewMode;
+import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import io.github.mzmine.taskcontrol.Task;
+import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.FeatureTableFXUtil;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.awt.Color;
@@ -64,6 +70,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.control.Accordion;
 import javafx.scene.control.Alert;
@@ -462,20 +469,20 @@ public class AnnotationQualityPane extends DashboardComputationPane {
   }
 
   private void removeMultiRowAnnotations() {
-    final @NotNull ModularFeatureList featureList = model.getFeatureList();
-    final MultiRowAnnotationCleanupOptionsDialog dialog = new MultiRowAnnotationCleanupOptionsDialog(
-        featureList, model.isRetentionTimeAnalysisEnabled());
-    final Optional<MultiRowAnnotationCleanupPlan> cleanupPlan = dialog.showAndWait();
-    if (cleanupPlan.isEmpty()) {
+    final ParameterSet parameters = MZmineCore.getConfiguration()
+        .getModuleParameters(LipidAnnotationCleanupModule.class).cloneParameterSet();
+    parameters.getParameter(LipidAnnotationCleanupParameters.featureLists)
+        .setValue(new FeatureListsSelection(model.getFeatureList()));
+    parameters.getParameter(LipidAnnotationCleanupParameters.includeRetentionTimeInScoring)
+        .setValue(model.isRetentionTimeAnalysisEnabled());
+    if (parameters.showSetupDialog(true) != ExitCode.OK) {
       return;
     }
-    if (!cleanupPlan.get().hasRemovals()) {
-      DesktopService.getDesktop()
-          .displayMessage("Annotation actions", "No multi-row annotations would be removed.");
-      return;
-    }
-    MultiRowAnnotationCleanupPlanner.applyCleanupPlan(cleanupPlan.get());
-    refreshAfterAnnotationDelete(model.getRow());
+    final FeatureListRow currentRow = model.getRow();
+    final List<Task> tasks = MZmineCore.runMZmineModule(LipidAnnotationCleanupModule.class,
+        parameters);
+    tasks.forEach(task -> task.setOnFinished(
+        () -> Platform.runLater(() -> refreshAfterAnnotationDelete(currentRow))));
   }
 
   private void setHighestScoreAnnotationOnAllRows() {
