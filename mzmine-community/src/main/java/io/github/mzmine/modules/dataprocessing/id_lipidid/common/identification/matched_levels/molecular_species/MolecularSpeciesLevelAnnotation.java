@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -88,6 +87,21 @@ public class MolecularSpeciesLevelAnnotation implements ILipidAnnotation {
 
   public List<ILipidChain> getLipidChains() {
     return lipidChains;
+  }
+
+  @Override
+  public int getSpeciesLevelCarbons() {
+    return lipidChains.stream().mapToInt(ILipidChain::getNumberOfCarbons).sum();
+  }
+
+  @Override
+  public int getSpeciesLevelDBEs() {
+    return lipidChains.stream().mapToInt(ILipidChain::getNumberOfDBEs).sum();
+  }
+
+  @Override
+  public int getSpeciesLevelOxygens() {
+    return lipidChains.stream().mapToInt(ILipidChain::getNumberOfOxygens).sum();
   }
 
   @Override

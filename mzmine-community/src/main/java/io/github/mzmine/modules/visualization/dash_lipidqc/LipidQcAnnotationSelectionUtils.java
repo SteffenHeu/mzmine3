@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -28,10 +27,7 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
@@ -85,28 +81,22 @@ public final class LipidQcAnnotationSelectionUtils {
   }
 
   /**
-   * Extracts the number of double bond equivalents (DBE) from a species- or molecular-species-level
-   * lipid annotation. Returns {@code -1} for other annotation types or when parsing fails.
+   * Extracts the number of double bond equivalents (DBE) from a lipid annotation at species level.
+   * Works for both {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation}
+   * and {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation}
+   * (sums chains).
    */
   public static int extractDbe(final @NotNull ILipidAnnotation annotation) {
-    if (!(annotation instanceof SpeciesLevelAnnotation
-        || annotation instanceof MolecularSpeciesLevelAnnotation)) {
-      return -1;
-    }
-    return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
-        annotation.getAnnotation()).getValue();
+    return annotation.getSpeciesLevelDBEs();
   }
 
   /**
-   * Extracts the carbon chain length from a species- or molecular-species-level lipid annotation.
-   * Returns {@code -1} for other annotation types or when parsing fails.
+   * Extracts the carbon chain length from a lipid annotation at species level. Works for both
+   * {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation}
+   * and {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation}
+   * (sums chains).
    */
   public static int extractCarbons(final @NotNull ILipidAnnotation annotation) {
-    if (!(annotation instanceof SpeciesLevelAnnotation
-        || annotation instanceof MolecularSpeciesLevelAnnotation)) {
-      return -1;
-    }
-    return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
-        annotation.getAnnotation()).getKey();
+    return annotation.getSpeciesLevelCarbons();
   }
 }

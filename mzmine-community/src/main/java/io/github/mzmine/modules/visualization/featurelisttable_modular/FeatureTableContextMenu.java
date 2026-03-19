@@ -69,7 +69,6 @@ import io.github.mzmine.modules.dataprocessing.id_biotransformer.BioTransformerM
 import io.github.mzmine.modules.dataprocessing.id_formulaprediction.FormulaPredictionModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_nist.NistMsSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_pubchemsearch.gui.PubChemResultsController;
@@ -326,8 +325,10 @@ public class FeatureTableContextMenu extends ContextMenu {
   }
 
   private boolean isMatchingLevel(@NotNull MatchedLipid match, @NotNull LipidAnnotationLevel level) {
+    // decision: species level matches all annotations since species-level properties
+    // (total carbons/DBEs) can be derived from any annotation type via ILipidAnnotation
     return switch (level) {
-      case SPECIES_LEVEL -> match.getLipidAnnotation() instanceof SpeciesLevelAnnotation;
+      case SPECIES_LEVEL -> true;
       case MOLECULAR_SPECIES_LEVEL ->
           match.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation;
     };

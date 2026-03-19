@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -27,6 +26,7 @@ package io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids;
 
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
+import org.jetbrains.annotations.NotNull;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 
 public interface ILipidAnnotation {
@@ -38,6 +38,17 @@ public interface ILipidAnnotation {
   LipidAnnotationLevel getLipidAnnotationLevel();
 
   IMolecularFormula getMolecularFormula();
+
+  // total carbons/DBEs/oxygens at the species level (sum of chains for molecular species)
+  int getSpeciesLevelCarbons();
+
+  int getSpeciesLevelDBEs();
+
+  int getSpeciesLevelOxygens();
+
+  default @NotNull String getSpeciesLevelKey() {
+    return getLipidClass().getName() + "|" + getSpeciesLevelCarbons() + ":" + getSpeciesLevelDBEs();
+  }
 
   void saveToXML(XMLStreamWriter writer) throws XMLStreamException;
 

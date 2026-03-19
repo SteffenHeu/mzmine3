@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -31,10 +30,7 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.parameters.ParameterSet;
@@ -498,21 +494,11 @@ public final class LipidQcScoringUtils {
   }
 
   private static int extractTrendDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
-    if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation
-        || lipidAnnotation instanceof SpeciesLevelAnnotation) {
-      return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
-          lipidAnnotation.getAnnotation()).getValue();
-    }
-    return -1;
+    return lipidAnnotation.getSpeciesLevelDBEs();
   }
 
   private static int extractTrendCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
-    if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation
-        || lipidAnnotation instanceof SpeciesLevelAnnotation) {
-      return MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
-          lipidAnnotation.getAnnotation()).getKey();
-    }
-    return -1;
+    return lipidAnnotation.getSpeciesLevelCarbons();
   }
 
   /**

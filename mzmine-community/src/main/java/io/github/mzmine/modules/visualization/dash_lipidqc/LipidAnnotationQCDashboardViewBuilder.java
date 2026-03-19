@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -190,12 +189,7 @@ public class LipidAnnotationQCDashboardViewBuilder extends
         DashboardLayoutFactory.wrapInSubsection("Matched lipid signals", matchedSignalsPane),
         DashboardLayoutFactory.wrapInSubsection("Isotope pattern", isotopePane));
 
-    preferredLevelCombo.setOnAction(_ -> {
-      final PreferredLipidLevelOption option = preferredLevelCombo.getValue();
-      if (option != null) {
-        model.setPreferredLipidLevel(option);
-      }
-    });
+    preferredLevelCombo.valueProperty().bindBidirectional(model.preferredLipidLevelProperty());
     model.preferredLipidLevelProperty().subscribe(
         _ -> refreshAllDashboardPlots(summaryPane, qualityPane, kendrickPane, ecnPane, isotopePane,
             matchedSignalsPane));
@@ -209,7 +203,6 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       AnnotationQualityPane qualityPane, KendrickPane kendrickPane,
       EquivalentCarbonNumberPane ecnPane, IsotopePane isotopePane,
       MatchedSignalsPane matchedSignalsPane) {
-    final @Nullable ModularFeatureList currentFeatureList = model.getFeatureList();
     final @Nullable FeatureListRow selectedRow = model.getRow();
     summaryPane.requestChartUpdate();
     qualityPane.requestUpdate();

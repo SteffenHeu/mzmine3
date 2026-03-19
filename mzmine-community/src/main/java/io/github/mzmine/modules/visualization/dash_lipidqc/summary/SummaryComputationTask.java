@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -29,7 +28,6 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
@@ -39,9 +37,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -119,13 +117,12 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
         continue;
       }
 
+      // collect species-level keys from molecular species annotations to avoid double-counting
+      // when both species-level and molecular species-level annotations exist for the same species
       final Set<String> rowMolecularAggregateKeys = new HashSet<>();
       for (final MatchedLipid lipid : matches) {
         if (lipid.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation) {
-          final String speciesKey = speciesAggregateKey(lipid);
-          if (speciesKey != null) {
-            rowMolecularAggregateKeys.add(speciesKey);
-          }
+          rowMolecularAggregateKeys.add(lipid.getLipidAnnotation().getSpeciesLevelKey());
         }
       }
       final Set<String> rowUniqueAnnotationKeys = new HashSet<>();
@@ -199,28 +196,17 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
 
   private static @Nullable String uniqueAnnotationKey(final @NotNull MatchedLipid lipid,
       final @NotNull Set<String> rowMolecularAggregateKeys) {
-    final String annotation = lipid.getLipidAnnotation().getAnnotation();
-    final String speciesAggregateKey = speciesAggregateKey(lipid);
+    final String speciesKey = lipid.getLipidAnnotation().getSpeciesLevelKey();
     if (lipid.getLipidAnnotation() instanceof SpeciesLevelAnnotation) {
-      if (speciesAggregateKey != null && rowMolecularAggregateKeys.contains(speciesAggregateKey)) {
+      // skip species-level annotation if the same species is already covered by a molecular annotation
+      if (rowMolecularAggregateKeys.contains(speciesKey)) {
         return null;
       }
-      return speciesAggregateKey == null ? "S|" + annotation : "S|" + speciesAggregateKey;
+      return "S|" + speciesKey;
     }
     if (lipid.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation) {
-      return "M|" + annotation;
+      return "M|" + lipid.getLipidAnnotation().getAnnotation();
     }
-    return "A|" + annotation;
-  }
-
-  private static @Nullable String speciesAggregateKey(final @NotNull MatchedLipid lipid) {
-    final var carbonsDbe = MSMSLipidTools.getCarbonAndDbeFromLipidAnnotationString(
-        lipid.getLipidAnnotation().getAnnotation());
-    final int carbons = carbonsDbe.getKey();
-    final int dbe = carbonsDbe.getValue();
-    if (carbons < 0 || dbe < 0) {
-      return null;
-    }
-    return lipid.getLipidAnnotation().getLipidClass().getName() + "|" + carbons + ":" + dbe;
+    return "A|" + lipid.getLipidAnnotation().getAnnotation();
   }
 }

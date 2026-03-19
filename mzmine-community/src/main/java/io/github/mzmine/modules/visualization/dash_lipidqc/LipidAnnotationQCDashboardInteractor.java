@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -33,7 +32,6 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.Lip
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,8 +123,10 @@ class LipidAnnotationQCDashboardInteractor {
 
   private static boolean isMatchingLevel(final @NotNull MatchedLipid match,
       final @NotNull LipidAnnotationLevel level) {
+    // decision: species level matches all annotations since species-level properties
+    // (total carbons/DBEs) can be derived from any annotation type via ILipidAnnotation
     return switch (level) {
-      case SPECIES_LEVEL -> match.getLipidAnnotation() instanceof SpeciesLevelAnnotation;
+      case SPECIES_LEVEL -> true;
       case MOLECULAR_SPECIES_LEVEL ->
           match.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation;
     };
