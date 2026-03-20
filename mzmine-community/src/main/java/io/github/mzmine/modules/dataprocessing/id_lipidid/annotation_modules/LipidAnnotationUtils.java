@@ -33,6 +33,7 @@ import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.fragmentation.ILipidFragmentFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.fragmentation.LipidFragmentFactory;
@@ -47,7 +48,6 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.ISpeciesLevelMatchedLipidFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SphingolipidSpeciesLevelMatchedLipidFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SterolSpeciesLevelMatchedLipidFactory;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidCategories;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;

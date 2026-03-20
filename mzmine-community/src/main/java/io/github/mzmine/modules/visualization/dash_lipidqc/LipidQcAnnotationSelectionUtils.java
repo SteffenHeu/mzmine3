@@ -27,8 +27,10 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MolecularSpeciesLevelAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeDetector;
 import java.util.List;
@@ -82,21 +84,21 @@ public final class LipidQcAnnotationSelectionUtils {
 
   /**
    * Extracts the number of double bond equivalents (DBE) from a lipid annotation at species level.
-   * Works for both {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation}
-   * and {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation}
+   * Works for both {@link SpeciesLevelAnnotation}
+   * and {@link MolecularSpeciesLevelAnnotation}
    * (sums chains).
    */
   public static int extractDbe(final @NotNull ILipidAnnotation annotation) {
-    return annotation.getSpeciesLevelDBEs();
+    return annotation.getChainDoubleBondCount();
   }
 
   /**
    * Extracts the carbon chain length from a lipid annotation at species level. Works for both
-   * {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation}
-   * and {@link io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation}
+   * {@link SpeciesLevelAnnotation}
+   * and {@link MolecularSpeciesLevelAnnotation}
    * (sums chains).
    */
   public static int extractCarbons(final @NotNull ILipidAnnotation annotation) {
-    return annotation.getSpeciesLevelCarbons();
+    return annotation.getChainCarbonCount();
   }
 }

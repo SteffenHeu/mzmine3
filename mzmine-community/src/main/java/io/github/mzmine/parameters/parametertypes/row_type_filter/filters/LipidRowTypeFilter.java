@@ -28,10 +28,10 @@ import static io.github.mzmine.parameters.parametertypes.row_type_filter.filters
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MolecularSpeciesLevelAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.parameters.parametertypes.row_type_filter.MatchingMode;
 import io.github.mzmine.parameters.parametertypes.row_type_filter.QueryFormatException;
 import io.github.mzmine.parameters.parametertypes.row_type_filter.RowTypeFilterOption;
@@ -126,8 +126,8 @@ class LipidRowTypeFilter extends AbstractRowTypeFilter {
     }
 
     if (annotation instanceof SpeciesLevelAnnotation) {
-      return matchesSpeciesLevel(annotation.getSpeciesLevelCarbons(),
-          annotation.getSpeciesLevelDBEs(), annotation.getSpeciesLevelOxygens());
+      return matchesSpeciesLevel(annotation.getChainCarbonCount(),
+          annotation.getChainDoubleBondCount(), annotation.getSpeciesLevelOxygens());
 
     } else if (annotation instanceof MolecularSpeciesLevelAnnotation molecularSpecies) {
       // TODO not sure if all chains are defined here for all classes - therefore also try name parsing

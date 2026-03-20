@@ -28,9 +28,10 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MolecularSpeciesLevelAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.molecular_species.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import java.util.HashSet;
 import java.util.List;
@@ -44,8 +45,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Background task that groups lipid annotations by the selected {@link SummaryGroup} hierarchy
- * and computes annotation counts for the {@link LipidSummaryPane} bar chart.
+ * Background task that groups lipid annotations by the selected {@link SummaryGroup} hierarchy and
+ * computes annotation counts for the {@link LipidSummaryPane} bar chart.
  */
 final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
 
@@ -66,8 +67,7 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
     this.grouping = grouping;
     this.countMode = countMode;
     this.selectedGroup = selectedGroup;
-    final SummaryGroup fallbackGrouping =
-        grouping != null ? grouping : SummaryGroup.LIPID_SUBCLASS;
+    final SummaryGroup fallbackGrouping = grouping != null ? grouping : SummaryGroup.LIPID_SUBCLASS;
     final SummaryCountMode fallbackCountMode =
         countMode != null ? countMode : SummaryCountMode.ROW_COUNT;
     result = new SummaryComputationResult("Select a feature list with lipid annotations.",
@@ -104,12 +104,13 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
       }
       totalLipidRows++;
       if (localCountMode == SummaryCountMode.ROW_COUNT) {
-        final @Nullable MatchedLipid lipid =
-            LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(row);
+        final @Nullable MatchedLipid lipid = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
+            row);
         if (lipid == null) {
           continue;
         }
-        final String groupName = localGrouping.extractGroupLabel(lipid, extractSubclassToken(lipid));
+        final String groupName = localGrouping.extractGroupLabel(lipid,
+            extractSubclassToken(lipid));
         groupTooltip.putIfAbsent(groupName,
             localGrouping.extractTooltip(lipid, extractSubclassToken(lipid)));
         groupToCount.merge(groupName, 1, Integer::sum);
@@ -122,12 +123,13 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
       final Set<String> rowMolecularAggregateKeys = new HashSet<>();
       for (final MatchedLipid lipid : matches) {
         if (lipid.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation) {
-          rowMolecularAggregateKeys.add(lipid.getLipidAnnotation().getSpeciesLevelKey());
+          rowMolecularAggregateKeys.add(getSpeciesLevelKey(lipid.getLipidAnnotation()));
         }
       }
       final Set<String> rowUniqueAnnotationKeys = new HashSet<>();
       for (final MatchedLipid lipid : matches) {
-        final String groupName = localGrouping.extractGroupLabel(lipid, extractSubclassToken(lipid));
+        final String groupName = localGrouping.extractGroupLabel(lipid,
+            extractSubclassToken(lipid));
         groupTooltip.putIfAbsent(groupName,
             localGrouping.extractTooltip(lipid, extractSubclassToken(lipid)));
         groupToRowIds.computeIfAbsent(groupName, _ -> new HashSet<>()).add(row.getID());
@@ -142,12 +144,12 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
       }
     }
     if (localCountMode == SummaryCountMode.UNIQUE_ANNOTATIONS) {
-      groupToUniqueAnnotations.forEach((group, annotations) -> groupToCount.put(group,
-          annotations.size()));
+      groupToUniqueAnnotations.forEach(
+          (group, annotations) -> groupToCount.put(group, annotations.size()));
     }
-    final int totalCount = localCountMode == SummaryCountMode.UNIQUE_ANNOTATIONS
-        ? groupToUniqueAnnotations.values().stream().flatMap(Set::stream)
-        .collect(Collectors.toSet()).size() : totalLipidRows;
+    final int totalCount =
+        localCountMode == SummaryCountMode.UNIQUE_ANNOTATIONS ? groupToUniqueAnnotations.values()
+            .stream().flatMap(Set::stream).collect(Collectors.toSet()).size() : totalLipidRows;
 
     final @Nullable String effectiveSelectedGroup =
         selectedGroup != null && groupToCount.containsKey(selectedGroup) ? selectedGroup : null;
@@ -196,17 +198,24 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
 
   private static @Nullable String uniqueAnnotationKey(final @NotNull MatchedLipid lipid,
       final @NotNull Set<String> rowMolecularAggregateKeys) {
-    final String speciesKey = lipid.getLipidAnnotation().getSpeciesLevelKey();
-    if (lipid.getLipidAnnotation() instanceof SpeciesLevelAnnotation) {
-      // skip species-level annotation if the same species is already covered by a molecular annotation
-      if (rowMolecularAggregateKeys.contains(speciesKey)) {
-        return null;
+    final String speciesKey = getSpeciesLevelKey(lipid.getLipidAnnotation());
+    switch (lipid.getLipidAnnotation()) {
+      case SpeciesLevelAnnotation _ -> {
+        // skip species-level annotation if the same species is already covered by a molecular annotation
+        if (rowMolecularAggregateKeys.contains(speciesKey)) {
+          return null;
+        }
+        return "S|" + speciesKey;
       }
-      return "S|" + speciesKey;
+      case MolecularSpeciesLevelAnnotation _ -> {
+        return "M|" + lipid.getLipidAnnotation().getAnnotation();
+      }
     }
-    if (lipid.getLipidAnnotation() instanceof MolecularSpeciesLevelAnnotation) {
-      return "M|" + lipid.getLipidAnnotation().getAnnotation();
-    }
-    return "A|" + lipid.getLipidAnnotation().getAnnotation();
+  }
+
+  private static @NotNull String getSpeciesLevelKey(@NotNull ILipidAnnotation annotation) {
+    // todo: can this be replaced by getSpeciesLevelAnnotation? Is the abbreviation unique enough?
+    return annotation.getLipidClass().getName() + "|" + annotation.getChainCarbonCount() + ":"
+        + annotation.getChainDoubleBondCount();
   }
 }

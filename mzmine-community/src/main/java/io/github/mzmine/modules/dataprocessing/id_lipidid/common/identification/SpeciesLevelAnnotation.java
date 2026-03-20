@@ -22,9 +22,8 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.species_level;
+package io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification;
 
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidClasses;
@@ -38,7 +37,7 @@ import javax.xml.stream.XMLStreamWriter;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 import org.openscience.cdk.tools.manipulator.MolecularFormulaManipulator;
 
-public class SpeciesLevelAnnotation implements ILipidAnnotation {
+public final class SpeciesLevelAnnotation implements ILipidAnnotation {
 
   private static final String XML_ELEMENT = "lipidannotation";
   private static final String XML_LIPID_CLASS = "lipidclass";
@@ -101,12 +100,12 @@ public class SpeciesLevelAnnotation implements ILipidAnnotation {
   }
 
   @Override
-  public int getSpeciesLevelCarbons() {
+  public int getChainCarbonCount() {
     return numberOfCarbons;
   }
 
   @Override
-  public int getSpeciesLevelDBEs() {
+  public int getChainDoubleBondCount() {
     return numberOfDBEs;
   }
 

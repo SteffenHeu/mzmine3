@@ -70,7 +70,7 @@ public class EquivalentCarbonNumberModelGridPane extends GridPane {
         .collect(
             Collectors.groupingBy(matchedLipid -> matchedLipid.getLipidAnnotation().getLipidClass(),
                 Collectors.groupingBy(
-                    matchedLipid -> matchedLipid.getLipidAnnotation().getSpeciesLevelDBEs(),
+                    matchedLipid -> matchedLipid.getLipidAnnotation().getChainDoubleBondCount(),
                     Collectors.toList())));
 
     // sort by lipid class

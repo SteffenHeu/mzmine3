@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -94,7 +93,7 @@ public class LipidMatchListType extends ListWithSubsType<MatchedLipid> implement
         double exactMass = MatchedLipid.getExactMass(match);
         yield (float) ((exactMass - match.getAccurateMz()) / exactMass) * 1000000;
       }
-      case LipidOverallQualityScoreType _ -> null; // created on demand in cell factory
+      case LipidOverallQualityScoreType _ -> match.getOverallQualityScore();
       case AnnotationSummaryType _ -> null; // created on demand in cell factory
       default -> throw new UnsupportedOperationException(
           "DataType %s is not covered in map".formatted(subType.toString()));

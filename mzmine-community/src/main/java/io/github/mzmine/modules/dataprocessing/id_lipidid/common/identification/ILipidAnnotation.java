@@ -22,23 +22,25 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids;
+package io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification;
 
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
-import org.jetbrains.annotations.NotNull;
 import org.openscience.cdk.interfaces.IMolecularFormula;
 
-public interface ILipidAnnotation {
+public sealed interface ILipidAnnotation permits SpeciesLevelAnnotation,
+    MolecularSpeciesLevelAnnotation {
 
   ILipidClass getLipidClass();
 
   String getAnnotation();
 
   default String getSpeciesLevelAnnotation() {
-    return LipidFactory.buildAnnotation(getLipidClass(), getSpeciesLevelCarbons(),
-        getSpeciesLevelDBEs(), getSpeciesLevelOxygens());
+    return LipidFactory.buildAnnotation(getLipidClass(), getChainCarbonCount(),
+        getChainDoubleBondCount(), getSpeciesLevelOxygens());
   }
 
   /**
@@ -59,15 +61,11 @@ public interface ILipidAnnotation {
   IMolecularFormula getMolecularFormula();
 
   // total carbons/DBEs/oxygens at the species level (sum of chains for molecular species)
-  int getSpeciesLevelCarbons();
+  int getChainCarbonCount();
 
-  int getSpeciesLevelDBEs();
+  int getChainDoubleBondCount();
 
   int getSpeciesLevelOxygens();
-
-  default @NotNull String getSpeciesLevelKey() {
-    return getLipidClass().getName() + "|" + getSpeciesLevelCarbons() + ":" + getSpeciesLevelDBEs();
-  }
 
   void saveToXML(XMLStreamWriter writer) throws XMLStreamException;
 

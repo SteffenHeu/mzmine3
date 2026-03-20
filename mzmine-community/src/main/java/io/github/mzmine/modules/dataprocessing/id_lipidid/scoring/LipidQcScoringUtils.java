@@ -30,8 +30,8 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.ParameterUtils;
@@ -494,11 +494,11 @@ public final class LipidQcScoringUtils {
   }
 
   private static int extractTrendDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getSpeciesLevelDBEs();
+    return lipidAnnotation.getChainDoubleBondCount();
   }
 
   private static int extractTrendCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getSpeciesLevelCarbons();
+    return lipidAnnotation.getChainCarbonCount();
   }
 
   /**

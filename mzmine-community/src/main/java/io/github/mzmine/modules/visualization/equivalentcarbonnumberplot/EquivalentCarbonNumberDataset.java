@@ -29,8 +29,8 @@ import static java.util.Objects.requireNonNullElse;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.main.MZmineCore;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.taskcontrol.Task;
 import io.github.mzmine.taskcontrol.TaskPriority;
@@ -242,10 +242,10 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
   }
 
   private static int extractDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getSpeciesLevelDBEs();
+    return lipidAnnotation.getChainDoubleBondCount();
   }
 
   private static int extractCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getSpeciesLevelCarbons();
+    return lipidAnnotation.getChainCarbonCount();
   }
 }
