@@ -63,7 +63,7 @@ public class IonizationPreferenceParameter implements
   private @NotNull List<IonizationPreference> value;
 
   public IonizationPreferenceParameter() {
-    this.name = "Ionization preferences";
+    this.name = "Ion preferences";
     this.description =
         "Per lipid class preferred ionization rules, specified by lipid hierarchy scope. "
             + "If no rule matches a lipid class, the highest-scoring annotation is kept (default).";

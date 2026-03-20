@@ -24,13 +24,17 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
+import io.github.mzmine.javafx.components.factories.FxLabels;
+import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.IonizationPreferenceParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
+import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Parameters for {@link LipidAnnotationCleanupModule}. The module removes duplicate lipid
@@ -65,5 +69,13 @@ public class LipidAnnotationCleanupParameters extends SimpleParameterSet {
   @Override
   public @NotNull IonMobilitySupport getIonMobilitySupport() {
     return IonMobilitySupport.SUPPORTED;
+  }
+
+  @Override
+  public @Nullable Region getMessage() {
+    return FxLayout.newAccordion(true, FxLayout.newTitledPane("Information", FxLabels.newLabel("""
+        This module removes annotations of the same lipid as different ion species. /
+        If a [M+H]+ and [M+Na]+ are of PC 36:2 are present, only the preferred species will be kept. /
+        Unless specified otherwise, the row with the higher overall score is kept.""")));
   }
 }
