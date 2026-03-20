@@ -27,7 +27,6 @@ package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScaleTransform;
 import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.components.factories.FxLabels;
@@ -40,7 +39,6 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.Lip
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
 import io.github.mzmine.modules.visualization.dash_lipidqc.DashboardComputationPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
@@ -56,12 +54,9 @@ import io.github.mzmine.util.FeatureTableFXUtil;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.awt.Color;
 import java.awt.Paint;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -99,8 +94,6 @@ public class AnnotationQualityPane extends DashboardComputationPane {
   private final @NotNull LipidAnnotationQCDashboardModel model;
   private final VBox content = new VBox(8);
   private final ScrollPane scrollPane = new ScrollPane();
-  private final @NotNull Button removeMultiRowAnnotationsButton;
-  private final @NotNull Button setBestPerRowButton;
   private @NotNull KendrickReviewMode kendrickReviewMode = KendrickReviewMode.NONE;
   private @Nullable Runnable onAnnotationsChanged;
 
@@ -112,11 +105,9 @@ public class AnnotationQualityPane extends DashboardComputationPane {
     model.retentionTimeAnalysisEnabledProperty().subscribe(_ -> requestUpdate());
     scrollPane.setFitToWidth(true);
     scrollPane.setContent(content);
-    removeMultiRowAnnotationsButton = FxButtons.createButton("Remove multi-row annotations",
-        this::removeMultiRowAnnotations);
-    setBestPerRowButton = FxButtons.createButton("Set all rows to highest-score annotation",
-        this::setHighestScoreAnnotationOnAllRows);
-    final VBox actionBox = new VBox(6, removeMultiRowAnnotationsButton, setBestPerRowButton);
+    @NotNull Button removeMultiRowAnnotationsButton = FxButtons.createButton(
+        "Remove multi-row annotations", this::removeMultiRowAnnotations);
+    final VBox actionBox = new VBox(6, removeMultiRowAnnotationsButton);
     actionBox.setAlignment(Pos.TOP_LEFT);
     final TitledPane actionsPane = new TitledPane("Annotation actions", actionBox);
     actionsPane.setCollapsible(true);
@@ -206,7 +197,7 @@ public class AnnotationQualityPane extends DashboardComputationPane {
             Optional.ofNullable(LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(r))
                 .map(match -> match.getLipidAnnotation().getAnnotation()).orElse(null), annotation))
         .filter(r -> r.getID() != selectedRowId)
-        .sorted((a, b) -> Integer.compare(a.getID(), b.getID())).map(r -> (FeatureListRow) r)
+        .sorted(Comparator.comparingInt(FeatureListRow::getID))
         .toList();
   }
 
@@ -464,7 +455,7 @@ public class AnnotationQualityPane extends DashboardComputationPane {
   }
 
   private void removeMultiRowAnnotations() {
-    final ParameterSet parameters = MZmineCore.getConfiguration()
+    final ParameterSet parameters = ConfigService.getConfiguration()
         .getModuleParameters(LipidAnnotationCleanupModule.class).cloneParameterSet();
     parameters.getParameter(LipidAnnotationCleanupParameters.featureLists)
         .setValue(new FeatureListsSelection(model.getFeatureList()));
@@ -480,81 +471,6 @@ public class AnnotationQualityPane extends DashboardComputationPane {
         parameters);
     tasks.forEach(task -> task.setOnFinished(
         () -> Platform.runLater(() -> refreshAfterAnnotationDelete(currentRow))));
-  }
-
-  private void setHighestScoreAnnotationOnAllRows() {
-    final @NotNull ModularFeatureList featureList = model.getFeatureList();
-    final Map<FeatureListRow, MatchedLipid> bestMatchByRow = planBestAnnotationPerRow(featureList,
-        model.isRetentionTimeAnalysisEnabled());
-    final int changedRows = countPlannedSetBestUpdates(bestMatchByRow);
-    if (changedRows <= 0) {
-      DesktopService.getDesktop().displayMessage("Annotation actions",
-          "All rows already use the highest-score annotation as selected annotation.");
-      return;
-    }
-    if (!confirmSetBestAction(changedRows)) {
-      return;
-    }
-    for (final Map.Entry<FeatureListRow, MatchedLipid> entry : bestMatchByRow.entrySet()) {
-      final FeatureListRow candidateRow = entry.getKey();
-      final MatchedLipid bestMatch = entry.getValue();
-      final List<MatchedLipid> reordered = new ArrayList<>(candidateRow.getLipidMatches());
-      if (!reordered.remove(bestMatch)) {
-        continue;
-      }
-      reordered.add(0, bestMatch);
-      candidateRow.setLipidAnnotations(reordered);
-    }
-    refreshAfterAnnotationDelete(model.getRow());
-  }
-
-  private boolean confirmSetBestAction(final int changedRows) {
-    final String rowText = changedRows == 1 ? "1 row" : changedRows + " rows";
-    final String message = "Set highest-score annotation as selected annotation for " + rowText
-        + ". No annotations will be removed. Continue?";
-    final Alert alert = new Alert(Alert.AlertType.CONFIRMATION, message, ButtonType.YES,
-        ButtonType.NO);
-    alert.setTitle("Confirm selected-annotation update");
-    alert.setHeaderText("Set all rows to highest-score annotation");
-    final Optional<ButtonType> result = alert.showAndWait();
-    return result.isPresent() && ButtonType.YES.equals(result.get());
-  }
-
-  private static @NotNull Map<FeatureListRow, MatchedLipid> planBestAnnotationPerRow(
-      final @NotNull ModularFeatureList featureList, final boolean includeRetentionTimeAnalysis) {
-    final Map<FeatureListRow, MatchedLipid> bestMatchByRow = new LinkedHashMap<>();
-    for (final FeatureListRow candidateRow : featureList.getRows()) {
-      final List<MatchedLipid> matches = candidateRow.getLipidMatches();
-      if (matches.size() <= 1) {
-        continue;
-      }
-      final MatchedLipid bestMatch = matches.stream().max(Comparator.comparingDouble(
-              a -> combinedAnnotationScore(featureList, candidateRow, a, includeRetentionTimeAnalysis)))
-          .orElse(null);
-      if (bestMatch != null) {
-        bestMatchByRow.put(candidateRow, bestMatch);
-      }
-    }
-    return bestMatchByRow;
-  }
-
-  private static int countPlannedSetBestUpdates(
-      final @NotNull Map<FeatureListRow, MatchedLipid> bestMatchByRow) {
-    int changes = 0;
-    for (final Map.Entry<FeatureListRow, MatchedLipid> entry : bestMatchByRow.entrySet()) {
-      final List<MatchedLipid> matches = entry.getKey().getLipidMatches();
-      if (!matches.isEmpty() && !Objects.equals(matches.getFirst(), entry.getValue())) {
-        changes++;
-      }
-    }
-    return changes;
-  }
-
-  private static double combinedAnnotationScore(final @NotNull ModularFeatureList featureList,
-      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
-      final boolean includeRetentionTimeAnalysis) {
-    return LipidQcScoringUtils.computeCombinedAnnotationScore(featureList, row, match, true,
-        includeRetentionTimeAnalysis);
   }
 
   private void refreshAfterAnnotationDelete(final @Nullable FeatureListRow preferredRow) {
@@ -619,17 +535,6 @@ public class AnnotationQualityPane extends DashboardComputationPane {
         row.getBestIsotopePattern(), match.getIsotopePattern(),
         new io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance(0.003, 10d), 0d);
     return new QualityMetric(score, "Similarity score " + String.format("%.2f", score));
-  }
-
-  static @NotNull QualityMetric evaluateElutionOrder(final @Nullable ModularFeatureList featureList,
-      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match) {
-    if (featureList == null || row.getAverageRT() == null) {
-      return new QualityMetric(0.4, "Missing RT context");
-    }
-    final ElutionOrderMetrics metrics = LipidQcScoringUtils.computeElutionOrderMetrics(featureList,
-        row, match);
-    return new QualityMetric(metrics.combinedScore(),
-        LipidQcScoringUtils.formatElutionOrderDetail(metrics));
   }
 
   private static @NotNull javafx.scene.paint.Color qualityScoreColor(final double score) {

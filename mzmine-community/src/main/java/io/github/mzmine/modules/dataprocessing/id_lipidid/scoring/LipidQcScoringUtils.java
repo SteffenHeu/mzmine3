@@ -36,8 +36,10 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidCl
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import io.github.mzmine.util.Comparators;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -1051,5 +1053,11 @@ public final class LipidQcScoringUtils {
         match.setOverallQualityScore((float) clampToUnit(score));
       }
     }
+  }
+
+  public static void sortLipidAnnotationsByOverallScore(@NotNull final FeatureListRow row) {
+    row.setLipidAnnotations(row.getLipidMatches().stream().sorted(
+            Comparator.comparing(MatchedLipid::getOverallQualityScore, Comparators.scoreDescending()))
+        .toList());
   }
 }

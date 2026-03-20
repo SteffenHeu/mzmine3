@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -198,7 +197,7 @@ public class LipidAnnotationTask extends AbstractTask {
   public void run() {
     setStatus(TaskStatus.PROCESSING);
 
-    logger.info("Starting lipid annotation in " + featureList);
+    logger.finest("Starting lipid annotation in " + featureList);
 
     List<FeatureListRow> rows = featureList.getRows();
     if (featureList instanceof ModularFeatureList) {
@@ -247,9 +246,12 @@ public class LipidAnnotationTask extends AbstractTask {
 
     // Compute and store overall quality scores after all rows are processed
     // Done here (not per-row) so context-dependent scores (elution order, interference) are correct
+    logger.finest(
+        "Computing overall lipid quality scores for " + featureList.getRows().size() + " rows");
     LipidQcScoringUtils.computeAndStoreOverallQualityScores((ModularFeatureList) featureList,
         searchForMSMSFragments, lipidAnalysisType.hasRetentionTimePattern(), lipidAnalysisType,
         customQcWeights, mzTolerance);
+    featureList.getRows().forEach(LipidQcScoringUtils::sortLipidAnnotationsByOverallScore);
 
     // Add task description to featureList
     (featureList).addDescriptionOfAppliedTask(
@@ -258,7 +260,7 @@ public class LipidAnnotationTask extends AbstractTask {
 
     setStatus(TaskStatus.FINISHED);
 
-    logger.info("Finished lipid annotation task for " + featureList);
+    logger.finest("Finished lipid annotation task for " + featureList);
   }
 
   @NotNull
