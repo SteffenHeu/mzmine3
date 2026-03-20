@@ -46,7 +46,7 @@ public class StandardCompoundNormalizationTypeModule implements NormalizationTyp
 
   @Override
   public @NotNull String getName() {
-    return "Standard compounds";
+    return NormalizationType.StandardCompounds.toString();
   }
 
   @Override

@@ -35,10 +35,10 @@ public enum NormalizationType implements ModuleOptionsEnum<NormalizationTypeModu
       MedianFeatureIntensityNormalizationTypeModule.class), //
   MaximumFeatureHeight("Maximum peak intensity", "maximum_feature_height",
       MaximumFeatureHeightNormalizationTypeModule.class), //
-  TotalRawSignal("TIC normalization", "tic", TotalRawSignalNormalizationTypeModule.class), //
+  TotalRawSignal("Spectral TIC", "spectral_tic", TotalRawSignalNormalizationTypeModule.class), //
   MetadataColumn("Metadata column", "metadata_column",
       MetadataColumnNormalizationTypeModule.class),  //
-  StandardCompounds("Standard compounds", "standard_compounds",
+  StandardCompounds("Internal standard compounds", "standard_compounds",
       StandardCompoundNormalizationTypeModule.class);
 
   private final String name;

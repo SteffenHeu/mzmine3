@@ -84,8 +84,8 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
   @Override
   public @NotNull String getUniqueID() {
     return switch (this) {
-      case NORMALIZED_AREA -> "normalized_area";
-      case NORMALIZED_HEIGHT -> "normalized_height";
+      case NORMALIZED_AREA -> NormalizedAreaType.UNIQUE_ID;
+      case NORMALIZED_HEIGHT -> NormalizedHeightType.UNIQUE_ID;
       case Area -> "Area"; // upper case for compatibility
       case Height -> "Height"; // upper case for compatibility
     };

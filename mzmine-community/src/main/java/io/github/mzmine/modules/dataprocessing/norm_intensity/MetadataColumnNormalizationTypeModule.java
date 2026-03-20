@@ -44,7 +44,7 @@ public class MetadataColumnNormalizationTypeModule implements NormalizationTypeM
 
   @Override
   public @NotNull String getName() {
-    return "Metadata column";
+    return NormalizationType.MetadataColumn.toString();
   }
 
   @Override

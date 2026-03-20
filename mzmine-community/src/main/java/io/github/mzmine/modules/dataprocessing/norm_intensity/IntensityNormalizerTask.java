@@ -121,9 +121,16 @@ class IntensityNormalizerTask extends AbstractTask {
     }
 
     final MetadataTable metadata = ProjectService.getMetadata();
-    final Map<@NotNull RawDataFile, @NotNull NormalizationFunction> fileToFunction = normalizationTypeModule.createReferenceFunctions(
-        referenceFiles, originalFeatureList, metadata, mainParameters,
-        normalizationTypeModuleParameters);
+    final Map<@NotNull RawDataFile, @NotNull NormalizationFunction> fileToFunction;
+    try {
+      fileToFunction = normalizationTypeModule.createReferenceFunctions(
+          referenceFiles, originalFeatureList, metadata, mainParameters,
+          normalizationTypeModuleParameters);
+    } catch (IllegalStateException e) {
+      // expected misconfiguration like missing metadata columns
+      error(e.getMessage());
+      return;
+    }
 
     final NormalizedAreaType normAreaType = DataTypes.get(NormalizedAreaType.class);
     final NormalizedHeightType normHeightType = DataTypes.get(NormalizedHeightType.class);
