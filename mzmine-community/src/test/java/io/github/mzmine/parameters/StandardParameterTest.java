@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -28,15 +27,19 @@ package io.github.mzmine.parameters;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 
+import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.IonizationPreference;
 import io.github.mzmine.modules.dataprocessing.filter_sortannotations.CombinedScoreWeights;
 import io.github.mzmine.modules.dataprocessing.filter_sortannotations.CombinedScoreWeightsParameter;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidCategories;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.EmbeddedParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
+import io.github.mzmine.parameters.parametertypes.IonizationPreferenceParameter;
 import io.github.mzmine.parameters.parametertypes.MultiChoiceParameter;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.StringParameter;
@@ -58,6 +61,16 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 class StandardParameterTest {
+
+  static IonizationPreferenceParameter ionizationPreferenceParam() {
+    final IonizationPreferenceParameter param = new IonizationPreferenceParameter();
+    param.setValue(List.of(
+        new IonizationPreference(LipidCategories.GLYCEROPHOSPHOLIPIDS, null, null,
+            IonizationType.POSITIVE_HYDROGEN),
+        new IonizationPreference(LipidCategories.SPHINGOLIPIDS, null, null,
+            IonizationType.SODIUM)));
+    return param;
+  }
 
   static List<ParameterTestCase> defaultCases() {
     final StringParameter stringParam = new StringParameter("name", "", "myvalue");
@@ -92,7 +105,11 @@ class StandardParameterTest {
         new ParameterTestCase(new OptionalParameter<>(comboParam, true), false,
             PolarityType.POSITIVE), //
         new ParameterTestCase(new OptionalParameter<>(stringParam, true), false,
-            "otherEmbeddedValue") //
+            "otherEmbeddedValue"), //
+        // ionization preference parameter
+        new ParameterTestCase<>(ionizationPreferenceParam(), List.of(
+            new IonizationPreference(LipidCategories.GLYCEROLIPIDS, null, null,
+                IonizationType.AMMONIUM))) //
     );
     return tests;
   }
