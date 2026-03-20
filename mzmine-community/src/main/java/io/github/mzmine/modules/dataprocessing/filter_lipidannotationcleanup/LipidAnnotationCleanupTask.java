@@ -29,6 +29,7 @@ import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.MZmineModule;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
@@ -56,7 +57,7 @@ public class LipidAnnotationCleanupTask extends AbstractFeatureListTask {
   private final @NotNull ModularFeatureList featureList;
   private final @NotNull List<IonizationPreference> ionizationPreferences;
   private final @NotNull MultiRowAnnotationCleanupRowHandlingMode rowHandlingMode;
-  private final boolean includeRetentionTimeInScoring;
+  private final LipidAnalysisType analysisType;
 
   protected LipidAnnotationCleanupTask(@Nullable final MemoryMapStorage storage,
       @NotNull final Instant moduleCallDate,
@@ -68,8 +69,7 @@ public class LipidAnnotationCleanupTask extends AbstractFeatureListTask {
     this.ionizationPreferences = parameters.getValue(
         LipidAnnotationCleanupParameters.ionizationPreferences);
     this.rowHandlingMode = parameters.getValue(LipidAnnotationCleanupParameters.rowHandlingMode);
-    this.includeRetentionTimeInScoring = parameters.getValue(
-        LipidAnnotationCleanupParameters.includeRetentionTimeInScoring);
+    analysisType = parameters.getValue(LipidAnnotationCleanupParameters.lipidAnalysisType);
   }
 
   @Override
@@ -109,7 +109,7 @@ public class LipidAnnotationCleanupTask extends AbstractFeatureListTask {
         preferredIonByClass, Set.of(), false, rowHandlingMode);
 
     final MultiRowAnnotationCleanupPlan plan = MultiRowAnnotationCleanupPlanner.buildCleanupPlan(
-        featureList, includeRetentionTimeInScoring, options);
+        featureList, analysisType, options);
 
     if (!plan.hasRemovals()) {
       logger.info("No multi-row lipid annotations to clean up in " + featureList.getName());

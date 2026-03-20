@@ -24,12 +24,6 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.quality;
 
-import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.clampToUnit;
-import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
-import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeElutionOrderMetrics;
-import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.formatElutionOrderDetail;
-import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.interferenceDetail;
-
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
@@ -63,6 +57,7 @@ import io.github.mzmine.util.color.SimpleColorPalette;
 import java.awt.Color;
 import java.awt.Paint;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -157,7 +152,7 @@ public class AnnotationQualityPane extends DashboardComputationPane {
     final InterferenceMetrics interferenceMetrics = result.interferenceMetrics();
     if (interferenceMetrics.totalPenaltyCount() > 0) {
       final Label warning = new Label(
-          "Potential interference: " + interferenceDetail(interferenceMetrics));
+          "Potential interference: " + LipidQcScoringUtils.interferenceDetail(interferenceMetrics));
       warning.setWrapText(true);
       warning.setMaxWidth(Double.MAX_VALUE);
       warning.setStyle(qualityWarningStyle());
@@ -473,8 +468,10 @@ public class AnnotationQualityPane extends DashboardComputationPane {
         .getModuleParameters(LipidAnnotationCleanupModule.class).cloneParameterSet();
     parameters.getParameter(LipidAnnotationCleanupParameters.featureLists)
         .setValue(new FeatureListsSelection(model.getFeatureList()));
-    parameters.getParameter(LipidAnnotationCleanupParameters.includeRetentionTimeInScoring)
-        .setValue(model.isRetentionTimeAnalysisEnabled());
+    parameters.setParameter(LipidAnnotationCleanupParameters.lipidAnalysisType,
+        Objects.requireNonNullElse(
+            LipidQcScoringUtils.detectLipidAnalysisType(model.getFeatureList()),
+            LipidAnalysisType.LC_REVERSED_PHASE));
     if (parameters.showSetupDialog(true) != ExitCode.OK) {
       return;
     }
@@ -531,9 +528,8 @@ public class AnnotationQualityPane extends DashboardComputationPane {
       if (matches.size() <= 1) {
         continue;
       }
-      final MatchedLipid bestMatch = matches.stream().max((a, b) -> Double.compare(
-              combinedAnnotationScore(featureList, candidateRow, a, includeRetentionTimeAnalysis),
-              combinedAnnotationScore(featureList, candidateRow, b, includeRetentionTimeAnalysis)))
+      final MatchedLipid bestMatch = matches.stream().max(Comparator.comparingDouble(
+              a -> combinedAnnotationScore(featureList, candidateRow, a, includeRetentionTimeAnalysis)))
           .orElse(null);
       if (bestMatch != null) {
         bestMatchByRow.put(candidateRow, bestMatch);
@@ -557,7 +553,7 @@ public class AnnotationQualityPane extends DashboardComputationPane {
   private static double combinedAnnotationScore(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
       final boolean includeRetentionTimeAnalysis) {
-    return computeCombinedAnnotationScore(featureList, row, match, true,
+    return LipidQcScoringUtils.computeCombinedAnnotationScore(featureList, row, match, true,
         includeRetentionTimeAnalysis);
   }
 
@@ -595,7 +591,8 @@ public class AnnotationQualityPane extends DashboardComputationPane {
   }
 
   static @NotNull QualityMetric evaluateMs2(final @NotNull MatchedLipid match) {
-    final double explained = clampToUnit(match.getMsMsScore() == null ? 0d : match.getMsMsScore());
+    final double explained = LipidQcScoringUtils.clampToUnit(
+        match.getMsMsScore() == null ? 0d : match.getMsMsScore());
     return new QualityMetric(explained,
         String.format("%.1f", explained * 100d) + "% explained intensity");
   }
@@ -629,8 +626,10 @@ public class AnnotationQualityPane extends DashboardComputationPane {
     if (featureList == null || row.getAverageRT() == null) {
       return new QualityMetric(0.4, "Missing RT context");
     }
-    final ElutionOrderMetrics metrics = computeElutionOrderMetrics(featureList, row, match);
-    return new QualityMetric(metrics.combinedScore(), formatElutionOrderDetail(metrics));
+    final ElutionOrderMetrics metrics = LipidQcScoringUtils.computeElutionOrderMetrics(featureList,
+        row, match);
+    return new QualityMetric(metrics.combinedScore(),
+        LipidQcScoringUtils.formatElutionOrderDetail(metrics));
   }
 
   private static @NotNull javafx.scene.paint.Color qualityScoreColor(final double score) {
@@ -638,7 +637,7 @@ public class AnnotationQualityPane extends DashboardComputationPane {
     final PaintScale scoreScale = new SimpleColorPalette(defaultPalette.getNegativeColor(),
         defaultPalette.getNeutralColor(), defaultPalette.getPositiveColor()).toPaintScale(
         PaintScaleTransform.LINEAR, Range.closed(0d, 1d));
-    final Paint awtPaint = scoreScale.getPaint(clampToUnit(score));
+    final Paint awtPaint = scoreScale.getPaint(LipidQcScoringUtils.clampToUnit(score));
     if (awtPaint instanceof Color awtColor) {
       return FxColorUtil.awtColorToFX(awtColor);
     }

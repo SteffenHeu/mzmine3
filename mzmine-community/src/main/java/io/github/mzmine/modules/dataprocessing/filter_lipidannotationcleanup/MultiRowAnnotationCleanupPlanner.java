@@ -24,13 +24,13 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
-import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
-
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -95,7 +95,7 @@ public final class MultiRowAnnotationCleanupPlanner {
   }
 
   public static @NotNull MultiRowAnnotationCleanupPlan buildCleanupPlan(
-      final @NotNull ModularFeatureList featureList, final boolean includeRetentionTimeAnalysis,
+      final @NotNull ModularFeatureList featureList, LipidAnalysisType analysisType,
       final @NotNull MultiRowAnnotationCleanupOptions options) {
     final Map<String, List<RowAnnotationCandidate>> candidatesByAnnotation = new TreeMap<>();
     final Map<FeatureListRow, Map<MatchedLipid, Double>> scoreCache = new HashMap<>();
@@ -106,8 +106,7 @@ public final class MultiRowAnnotationCleanupPlanner {
         if (annotation.isBlank()) {
           continue;
         }
-        final double score = computeAnnotationScore(featureList, candidateRow, match,
-            includeRetentionTimeAnalysis);
+        final double score = computeAnnotationScore(featureList, candidateRow, match, analysisType);
         scoreCache.computeIfAbsent(candidateRow, _ -> new HashMap<>()).put(match, score);
         candidatesByAnnotation.computeIfAbsent(annotation, _ -> new ArrayList<>())
             .add(new RowAnnotationCandidate(candidateRow, match, score));
@@ -134,7 +133,7 @@ public final class MultiRowAnnotationCleanupPlanner {
     }
 
     final Map<FeatureListRow, MatchedLipid> selectedRemainingByRow = new LinkedHashMap<>();
-    applyRowHandlingOptions(featureList, includeRetentionTimeAnalysis, options, removalsByRow,
+    applyRowHandlingOptions(featureList, analysisType, options, removalsByRow,
         selectedRemainingByRow, scoreCache);
 
     return new MultiRowAnnotationCleanupPlan(removalsByRow, selectedRemainingByRow);
@@ -164,7 +163,7 @@ public final class MultiRowAnnotationCleanupPlanner {
   }
 
   private static void applyRowHandlingOptions(final @NotNull ModularFeatureList featureList,
-      final boolean includeRetentionTimeAnalysis,
+      final @NotNull LipidAnalysisType analysisType,
       final @NotNull MultiRowAnnotationCleanupOptions options,
       final @NotNull Map<FeatureListRow, Set<MatchedLipid>> removalsByRow,
       final @NotNull Map<FeatureListRow, MatchedLipid> selectedRemainingByRow,
@@ -179,14 +178,14 @@ public final class MultiRowAnnotationCleanupPlanner {
       switch (options.rowHandlingMode()) {
         case DISCARD_LOWER_THAN_REMOVED -> {
           final double threshold = rowRemovals.stream().mapToDouble(
-              removed -> scoreFor(affectedRow, removed, featureList, includeRetentionTimeAnalysis,
-                  scoreCache)).max().orElse(Double.NaN);
+                  removed -> scoreFor(affectedRow, removed, featureList, analysisType, scoreCache))
+              .max().orElse(Double.NaN);
           if (!Double.isFinite(threshold)) {
             continue;
           }
           for (final MatchedLipid remaining : affectedRow.getLipidMatches()) {
-            final double score = scoreFor(affectedRow, remaining, featureList,
-                includeRetentionTimeAnalysis, scoreCache);
+            final double score = scoreFor(affectedRow, remaining, featureList, analysisType,
+                scoreCache);
             if (score < threshold) {
               rowRemovals.add(remaining);
             }
@@ -200,11 +199,9 @@ public final class MultiRowAnnotationCleanupPlanner {
             continue;
           }
           final MatchedLipid bestRemaining = remaining.stream().max(Comparator.comparingDouble(
-              match -> scoreFor(affectedRow, match, featureList, includeRetentionTimeAnalysis,
-                  scoreCache))).orElse(null);
-          if (bestRemaining != null) {
-            selectedRemainingByRow.put(affectedRow, bestRemaining);
-          }
+                  match -> scoreFor(affectedRow, match, featureList, analysisType, scoreCache)))
+              .orElse(null);
+          selectedRemainingByRow.put(affectedRow, bestRemaining);
         }
       }
     }
@@ -296,16 +293,16 @@ public final class MultiRowAnnotationCleanupPlanner {
 
   private static double scoreFor(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match, final @NotNull ModularFeatureList featureList,
-      final boolean includeRetentionTimeAnalysis,
+      final LipidAnalysisType analysisType,
       final @NotNull Map<FeatureListRow, Map<MatchedLipid, Double>> scoreCache) {
-    return scoreCache.computeIfAbsent(row, _ -> new HashMap<>()).computeIfAbsent(match,
-        key -> computeAnnotationScore(featureList, row, key, includeRetentionTimeAnalysis));
+    return scoreCache.computeIfAbsent(row, _ -> new HashMap<>())
+        .computeIfAbsent(match, key -> computeAnnotationScore(featureList, row, key, analysisType));
   }
 
   private static double computeAnnotationScore(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
-      final boolean includeRetentionTimeAnalysis) {
-    return computeCombinedAnnotationScore(featureList, row, match, true,
-        includeRetentionTimeAnalysis);
+      final @NotNull LipidAnalysisType analysisType) {
+    return LipidQcScoringUtils.computeCombinedAnnotationScore(featureList, row, match, true,
+        analysisType.hasRetentionTimePattern(), analysisType);
   }
 }

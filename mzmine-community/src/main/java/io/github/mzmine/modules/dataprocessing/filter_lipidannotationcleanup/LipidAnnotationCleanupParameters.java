@@ -24,9 +24,9 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
+import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
-import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.IonizationPreferenceParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
@@ -54,13 +54,12 @@ public class LipidAnnotationCleanupParameters extends SimpleParameterSet {
       MultiRowAnnotationCleanupRowHandlingMode.values(),
       MultiRowAnnotationCleanupRowHandlingMode.DISCARD_LOWER_THAN_REMOVED);
 
-  public static final BooleanParameter includeRetentionTimeInScoring = new BooleanParameter(
-      "Include retention time in scoring",
-      "Whether retention time elution-order analysis factors into the combined "
-          + "annotation quality score used for winner selection.", true);
+  public static final ComboParameter<LipidAnalysisType> lipidAnalysisType = new ComboParameter<>(
+      "Analyisis type", "Define the instrumental setup used for this analysis",
+      LipidAnalysisType.values(), LipidAnalysisType.LC_REVERSED_PHASE);
 
   public LipidAnnotationCleanupParameters() {
-    super(featureLists, ionizationPreferences, rowHandlingMode, includeRetentionTimeInScoring);
+    super(featureLists, ionizationPreferences, rowHandlingMode, lipidAnalysisType);
   }
 
   @Override
