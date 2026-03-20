@@ -59,7 +59,7 @@ public class LipidAnnotationCleanupParameters extends SimpleParameterSet {
       MultiRowAnnotationCleanupRowHandlingMode.DISCARD_LOWER_THAN_REMOVED);
 
   public static final ComboParameter<LipidAnalysisType> lipidAnalysisType = new ComboParameter<>(
-      "Analyisis type", "Define the instrumental setup used for this analysis",
+      "Analysis type", "Define the instrumental setup used for this analysis",
       LipidAnalysisType.values(), LipidAnalysisType.LC_REVERSED_PHASE);
 
   public LipidAnnotationCleanupParameters() {
