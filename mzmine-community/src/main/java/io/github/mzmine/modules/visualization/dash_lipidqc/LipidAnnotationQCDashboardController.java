@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -28,6 +27,9 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
+import io.github.mzmine.modules.visualization.dash_lipidqc.quality.AnnotationQualityController;
+import io.github.mzmine.util.FeatureTableFXUtil;
+import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,6 +41,8 @@ import org.jetbrains.annotations.Nullable;
 public class LipidAnnotationQCDashboardController extends
     FxController<LipidAnnotationQCDashboardModel> {
 
+  private final AnnotationQualityController qualityController = new AnnotationQualityController();
+
   public LipidAnnotationQCDashboardController() {
     super(new LipidAnnotationQCDashboardModel());
     new LipidAnnotationQCDashboardInteractor(model);
@@ -46,11 +50,26 @@ public class LipidAnnotationQCDashboardController extends
       model.getFeatureTableFx().setFeatureList(flist);
       model.getPaneGroup().featureTableFXProperty().set(model.getFeatureTableFx());
     });
+    // Bidirectional bindings keep both models in sync in both directions
+    model.featureListProperty().bindBidirectional(qualityController.featureListProperty());
+    model.rowProperty().bindBidirectional(qualityController.rowProperty());
+    model.retentionTimeAnalysisEnabledProperty()
+        .bindBidirectional(qualityController.retentionTimeAnalysisEnabledProperty());
+    // Callbacks for side effects that cannot be expressed as property bindings
+    qualityController.setOnReselectRow(row -> {
+      if (row != null) {
+        FeatureTableFXUtil.selectAndScrollTo(row, model.getFeatureTableFx());
+      }
+    });
+    qualityController.setOnFeatureTableRefresh(() -> model.getFeatureTableFx().refresh());
   }
 
   @Override
   protected @NotNull FxViewBuilder<LipidAnnotationQCDashboardModel> getViewBuilder() {
-    return new LipidAnnotationQCDashboardViewBuilder(model);
+    final Region qualityView = qualityController.buildView();
+    return new LipidAnnotationQCDashboardViewBuilder(model, qualityView,
+        qualityController::setKendrickReviewMode, qualityController::setOnAnnotationsChanged,
+        qualityController::requestUpdate);
   }
 
   public void setFeatureList(@Nullable ModularFeatureList flist) {
@@ -64,4 +83,3 @@ public class LipidAnnotationQCDashboardController extends
     model.getPaneGroup().disposeListeners();
   }
 }
-

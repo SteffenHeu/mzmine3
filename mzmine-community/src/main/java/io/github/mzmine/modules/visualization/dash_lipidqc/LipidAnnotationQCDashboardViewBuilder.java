@@ -39,8 +39,8 @@ import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.isotope.IsotopePane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickPane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickReviewMode;
 import io.github.mzmine.modules.visualization.dash_lipidqc.matched.MatchedSignalsPane;
-import io.github.mzmine.modules.visualization.dash_lipidqc.quality.AnnotationQualityPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.retention.EquivalentCarbonNumberPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.summary.LipidSummaryPane;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
@@ -50,6 +50,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Orientation;
@@ -69,8 +70,21 @@ import org.jetbrains.annotations.Nullable;
 public class LipidAnnotationQCDashboardViewBuilder extends
     FxViewBuilder<LipidAnnotationQCDashboardModel> {
 
-  protected LipidAnnotationQCDashboardViewBuilder(LipidAnnotationQCDashboardModel model) {
+  private final Region qualityView;
+  private final Consumer<KendrickReviewMode> setKendrickReviewMode;
+  private final Consumer<Runnable> setOnAnnotationsChanged;
+  private final Runnable requestQualityUpdate;
+
+  protected LipidAnnotationQCDashboardViewBuilder(
+      final @NotNull LipidAnnotationQCDashboardModel model, final @NotNull Region qualityView,
+      final @NotNull Consumer<KendrickReviewMode> setKendrickReviewMode,
+      final @NotNull Consumer<Runnable> setOnAnnotationsChanged,
+      final @NotNull Runnable requestQualityUpdate) {
     super(model);
+    this.qualityView = qualityView;
+    this.setKendrickReviewMode = setKendrickReviewMode;
+    this.setOnAnnotationsChanged = setOnAnnotationsChanged;
+    this.requestQualityUpdate = requestQualityUpdate;
   }
 
   @Override
@@ -79,8 +93,7 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     final IsotopePane isotopePane = new IsotopePane();
     final EquivalentCarbonNumberPane ecnPane = new EquivalentCarbonNumberPane(model);
     final KendrickPane kendrickPane = new KendrickPane(model, filterState);
-    final AnnotationQualityPane qualityPane = new AnnotationQualityPane(model);
-    kendrickPane.setOnReviewModeChanged(qualityPane::setKendrickReviewMode);
+    kendrickPane.setOnReviewModeChanged(setKendrickReviewMode);
     final MatchedSignalsPane matchedSignalsPane = new MatchedSignalsPane();
     final ComboBox<LipidAnnotationLevel> preferredLevelCombo = new ComboBox<>(
         FXCollections.observableArrayList(LipidAnnotationLevel.values()));
@@ -120,7 +133,7 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       if (lipidAnnotationRefreshScheduled.compareAndSet(false, true)) {
         Platform.runLater(() -> {
           lipidAnnotationRefreshScheduled.set(false);
-          refreshAllDashboardPlots(summaryPane, qualityPane, kendrickPane, ecnPane, isotopePane,
+          refreshAllDashboardPlots(summaryPane, kendrickPane, ecnPane, isotopePane,
               matchedSignalsPane);
         });
       }
@@ -145,8 +158,8 @@ public class LipidAnnotationQCDashboardViewBuilder extends
       }
     };
 
-    qualityPane.setOnAnnotationsChanged(
-        () -> refreshAllDashboardPlots(summaryPane, qualityPane, kendrickPane, ecnPane, isotopePane,
+    setOnAnnotationsChanged.accept(
+        () -> refreshAllDashboardPlots(summaryPane, kendrickPane, ecnPane, isotopePane,
             matchedSignalsPane));
 
     model.featureTableFxProperty().get().getSelectionModel().selectedItemProperty()
@@ -154,7 +167,7 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     model.featureTableFxProperty().get().getFilteredRowItems().addListener(
         (javafx.collections.ListChangeListener<javafx.scene.control.TreeItem<ModularFeatureListRow>>) _ -> Platform.runLater(
             () -> {
-              refreshAllDashboardPlots(summaryPane, qualityPane, kendrickPane, ecnPane, isotopePane,
+              refreshAllDashboardPlots(summaryPane, kendrickPane, ecnPane, isotopePane,
                   matchedSignalsPane);
               selectFirstVisibleRow(model);
             }));
@@ -185,14 +198,14 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     final Region dashboardContent = DashboardLayoutFactory.createSixPaneLayout(
         DashboardLayoutFactory.wrapInSubsection("Lipid annotation summary", summaryPane),
         DashboardLayoutFactory.wrapInSubsection("Kendrick mass plot", kendrickPane),
-        DashboardLayoutFactory.wrapInSubsection("Lipid annotation quality", qualityPane),
+        DashboardLayoutFactory.wrapInSubsection("Lipid annotation quality", qualityView),
         retentionSection,
         DashboardLayoutFactory.wrapInSubsection("Matched lipid signals", matchedSignalsPane),
         DashboardLayoutFactory.wrapInSubsection("Isotope pattern", isotopePane));
 
     preferredLevelCombo.valueProperty().bindBidirectional(model.preferredLipidLevelProperty());
     model.preferredLipidLevelProperty().subscribe(
-        _ -> refreshAllDashboardPlots(summaryPane, qualityPane, kendrickPane, ecnPane, isotopePane,
+        _ -> refreshAllDashboardPlots(summaryPane, kendrickPane, ecnPane, isotopePane,
             matchedSignalsPane));
     final var mainSplit = FxSplitPanes.newSplitPane(0.68, Orientation.VERTICAL, dashboardContent,
         model.getFeatureTableController().buildView());
@@ -200,13 +213,13 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     return mainSplit;
   }
 
-  private void refreshAllDashboardPlots(LipidSummaryPane summaryPane,
-      AnnotationQualityPane qualityPane, KendrickPane kendrickPane,
-      EquivalentCarbonNumberPane ecnPane, IsotopePane isotopePane,
-      MatchedSignalsPane matchedSignalsPane) {
+  private void refreshAllDashboardPlots(final @NotNull LipidSummaryPane summaryPane,
+      final @NotNull KendrickPane kendrickPane, final @NotNull EquivalentCarbonNumberPane ecnPane,
+      final @NotNull IsotopePane isotopePane,
+      final @NotNull MatchedSignalsPane matchedSignalsPane) {
     final @Nullable FeatureListRow selectedRow = model.getRow();
     summaryPane.requestChartUpdate();
-    qualityPane.requestUpdate();
+    requestQualityUpdate.run();
     kendrickPane.requestUpdate();
     if (model.isRetentionTimeAnalysisEnabled()) {
       ecnPane.requestUpdate();
@@ -310,5 +323,4 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     }
     return null;
   }
-
 }
