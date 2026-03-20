@@ -42,6 +42,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.IntStream;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,6 +56,9 @@ public final class MultiRowAnnotationCleanupPlanner {
   private MultiRowAnnotationCleanupPlanner() {
   }
 
+  /**
+   * Collects lipid-class-specific available ionizations sorted by prevalence
+   */
   public static @NotNull Map<String, List<IonizationType>> collectAvailableIonizationsByLipidClass(
       final @NotNull ModularFeatureList featureList) {
     final Map<String, Map<IonizationType, Integer>> countsByClass = collectClassIonizationCounts(
@@ -74,6 +78,18 @@ public final class MultiRowAnnotationCleanupPlanner {
     return availableByClass;
   }
 
+  /**
+   * Determines the default preferred ionization type for each lipid class based on their prevalence
+   * in the provided feature list. The method scans the feature list to collect counts of ionization
+   * types for each lipid class and selects the most common one as the default. If multiple
+   * ionization types have the same count, ties are resolved lexicographically by ionization type
+   * name.
+   *
+   * @param featureList the feature list containing lipid data from which ionization type counts are
+   *                    collected, must not be null.
+   * @return a map where the keys are lipid class names and values are the most preferred ionization
+   * types for each class.
+   */
   public static @NotNull Map<String, IonizationType> defaultPreferredIonizationByLipidClass(
       final @NotNull ModularFeatureList featureList) {
     final Map<String, Map<IonizationType, Integer>> countsByClass = collectClassIonizationCounts(
@@ -115,20 +131,23 @@ public final class MultiRowAnnotationCleanupPlanner {
 
     final Map<FeatureListRow, Set<MatchedLipid>> removalsByRow = new LinkedHashMap<>();
     for (final Entry<String, List<RowAnnotationCandidate>> entry : candidatesByAnnotation.entrySet()) {
-      final List<RowAnnotationCandidate> candidates = entry.getValue();
-      if (candidates.size() <= 1) {
-        continue;
-      }
-      final RowAnnotationCandidate winner = selectWinner(candidates, options);
-      if (winner == null) {
-        continue;
-      }
-      for (final RowAnnotationCandidate candidate : candidates) {
-        if (candidate == winner) {
+      final List<List<RowAnnotationCandidate>> clusters = partitionByRtScope(entry.getValue(),
+          options.duplicateScope());
+      for (final List<RowAnnotationCandidate> cluster : clusters) {
+        if (cluster.size() <= 1) {
           continue;
         }
-        removalsByRow.computeIfAbsent(candidate.row(), _ -> new LinkedHashSet<>())
-            .add(candidate.match());
+        final RowAnnotationCandidate winner = selectWinner(cluster, options);
+        if (winner == null) {
+          continue;
+        }
+        for (final RowAnnotationCandidate candidate : cluster) {
+          if (candidate == winner) {
+            continue;
+          }
+          removalsByRow.computeIfAbsent(candidate.row(), _ -> new LinkedHashSet<>())
+              .add(candidate.match());
+        }
       }
     }
 
@@ -276,6 +295,59 @@ public final class MultiRowAnnotationCleanupPlanner {
         .get(lipidClassLabel(candidate.match()));
     return preferredIonization != null && preferredIonization == candidate.match()
         .getIonizationType();
+  }
+
+  /**
+   * Splits candidates into RT clusters so that only rows within tolerance of each other compete as
+   * duplicates. Uses connected-component grouping via union-find: if A–B and B–C are within
+   * tolerance, all three end up in the same group even if A–C is not.
+   *
+   * <p>When scope is {@link DuplicateAnnotationScope#ALL_RTS} or the RT tolerance is null, all
+   * candidates form a single group (current behaviour).
+   *
+   * <p>Rows with a null average RT are treated as always within tolerance (no false exclusions).
+   */
+  private static List<List<RowAnnotationCandidate>> partitionByRtScope(
+      final List<RowAnnotationCandidate> candidates, final DuplicateAnnotationScopeFilter scope) {
+    if (scope.scope() == DuplicateAnnotationScope.ALL_RTS || scope.rtTolerance() == null) {
+      // single group — preserves current behaviour
+      return List.of(candidates);
+    }
+    final int n = candidates.size();
+    // clusterRep[i] = index of the representative candidate for candidate i's cluster
+    final int[] clusterRep = IntStream.range(0, n).toArray();
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        final Float rtI = candidates.get(i).row().getAverageRT();
+        final Float rtJ = candidates.get(j).row().getAverageRT();
+        // null RT treated as always within tolerance (safe fallback — no false exclusions)
+        if (rtI == null || rtJ == null || scope.rtTolerance().checkWithinTolerance(rtI, rtJ)) {
+          union(clusterRep, i, j);
+        }
+      }
+    }
+    final Map<Integer, List<RowAnnotationCandidate>> groups = new LinkedHashMap<>();
+    for (int i = 0; i < n; i++) {
+      groups.computeIfAbsent(find(clusterRep, i), _ -> new ArrayList<>()).add(candidates.get(i));
+    }
+    return List.copyOf(groups.values());
+  }
+
+  private static int find(final int[] clusterRep, int i) {
+    while (clusterRep[i] != i) {
+      // path compression: skip one level to shorten future lookups
+      clusterRep[i] = clusterRep[clusterRep[i]];
+      i = clusterRep[i];
+    }
+    return i;
+  }
+
+  private static void union(final int[] clusterRep, final int i, final int j) {
+    final int ri = find(clusterRep, i);
+    final int rj = find(clusterRep, j);
+    if (ri != rj) {
+      clusterRep[ri] = rj;
+    }
   }
 
   public static @NotNull String lipidClassLabel(final @NotNull MatchedLipid match) {

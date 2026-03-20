@@ -58,6 +58,7 @@ public class LipidAnnotationCleanupTask extends AbstractFeatureListTask {
   private final @NotNull List<IonizationPreference> ionizationPreferences;
   private final @NotNull MultiRowAnnotationCleanupRowHandlingMode rowHandlingMode;
   private final LipidAnalysisType analysisType;
+  private final @NotNull DuplicateAnnotationScopeFilter duplicateScope;
 
   protected LipidAnnotationCleanupTask(@Nullable final MemoryMapStorage storage,
       @NotNull final Instant moduleCallDate,
@@ -70,6 +71,7 @@ public class LipidAnnotationCleanupTask extends AbstractFeatureListTask {
         LipidAnnotationCleanupParameters.ionizationPreferences);
     this.rowHandlingMode = parameters.getValue(LipidAnnotationCleanupParameters.rowHandlingMode);
     analysisType = parameters.getValue(LipidAnnotationCleanupParameters.lipidAnalysisType);
+    duplicateScope = parameters.getValue(LipidAnnotationCleanupParameters.duplicateScope);
   }
 
   @Override
@@ -106,7 +108,7 @@ public class LipidAnnotationCleanupTask extends AbstractFeatureListTask {
     // classes WITH a preferredIon entry use ionization-first comparison
     // classes WITHOUT an entry: isPreferredIonization() returns false → falls through to score
     final MultiRowAnnotationCleanupOptions options = new MultiRowAnnotationCleanupOptions(
-        preferredIonByClass, Set.of(), false, rowHandlingMode);
+        preferredIonByClass, Set.of(), false, rowHandlingMode, duplicateScope);
 
     final MultiRowAnnotationCleanupPlan plan = MultiRowAnnotationCleanupPlanner.buildCleanupPlan(
         featureList, analysisType, options);

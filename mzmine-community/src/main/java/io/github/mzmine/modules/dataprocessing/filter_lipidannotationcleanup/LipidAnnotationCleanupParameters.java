@@ -24,7 +24,8 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
-import io.github.mzmine.javafx.components.factories.FxLabels;
+import io.github.mzmine.javafx.components.factories.FxTextFlows;
+import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
@@ -62,8 +63,10 @@ public class LipidAnnotationCleanupParameters extends SimpleParameterSet {
       "Analysis type", "Define the instrumental setup used for this analysis",
       LipidAnalysisType.values(), LipidAnalysisType.LC_REVERSED_PHASE);
 
+  public static final DuplicateAnnotationScopeParameter duplicateScope = new DuplicateAnnotationScopeParameter();
+
   public LipidAnnotationCleanupParameters() {
-    super(featureLists, ionizationPreferences, rowHandlingMode, lipidAnalysisType);
+    super(featureLists, ionizationPreferences, rowHandlingMode, lipidAnalysisType, duplicateScope);
   }
 
   @Override
@@ -73,9 +76,10 @@ public class LipidAnnotationCleanupParameters extends SimpleParameterSet {
 
   @Override
   public @Nullable Region getMessage() {
-    return FxLayout.newAccordion(true, FxLayout.newTitledPane("Information", FxLabels.newLabel("""
-        This module removes annotations of the same lipid as different ion species. /
-        If a [M+H]+ and [M+Na]+ are of PC 36:2 are present, only the preferred species will be kept. /
-        Unless specified otherwise, the row with the higher overall score is kept.""")));
+    return FxLayout.newAccordion(true,
+        FxLayout.newTitledPane("Information", FxTextFlows.newTextFlow(FxTexts.text("""
+            This module removes annotations of the same lipid as different ion species. \
+            If a [M+H]+ and [M+Na]+ are of PC 36:2 are present, only the preferred species will be kept. \
+            Unless specified otherwise, the row with the higher overall score is kept."""))));
   }
 }

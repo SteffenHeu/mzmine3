@@ -24,26 +24,25 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup;
 
-import io.github.mzmine.datamodel.IonizationType;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Immutable configuration record for the multi-row annotation cleanup operation, specifying the
- * preferred ionisation type per lipid class, score-based keep rules, and how to handle remaining
- * annotations after a removal.
- */
-public record MultiRowAnnotationCleanupOptions(
-    @NotNull Map<String, IonizationType> preferredIonizationByLipidClass,
-    @NotNull Set<String> keepHighestScoreByLipidClass, boolean alwaysKeepHighestScore,
-    @NotNull MultiRowAnnotationCleanupRowHandlingMode rowHandlingMode,
-    @NotNull DuplicateAnnotationScopeFilter duplicateScope) {
+public enum DuplicateAnnotationScope implements UniqueIdSupplier {
+  ALL_RTS, WITHIN_RT_TOLERANCE;
 
-  public MultiRowAnnotationCleanupOptions {
-    preferredIonizationByLipidClass = Map.copyOf(
-        new LinkedHashMap<>(preferredIonizationByLipidClass));
-    keepHighestScoreByLipidClass = Set.copyOf(keepHighestScoreByLipidClass);
+  @Override
+  public String toString() {
+    return switch (this) {
+      case ALL_RTS -> "Clear same annotation across all RTs";
+      case WITHIN_RT_TOLERANCE -> "Clear within RT tolerance";
+    };
+  }
+
+  @Override
+  public @NotNull String getUniqueID() {
+    return switch (this) {
+      case ALL_RTS -> "all_rts";
+      case WITHIN_RT_TOLERANCE -> "within_rt_tolerance";
+    };
   }
 }

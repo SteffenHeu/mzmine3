@@ -30,6 +30,9 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.DuplicateAnnotationScope;
+import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.DuplicateAnnotationScopeFilter;
+import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.DuplicateAnnotationScopeParameter;
 import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.IonizationPreference;
 import io.github.mzmine.modules.dataprocessing.filter_sortannotations.CombinedScoreWeights;
 import io.github.mzmine.modules.dataprocessing.filter_sortannotations.CombinedScoreWeightsParameter;
@@ -54,6 +57,7 @@ import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlacehold
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelectionType;
+import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import java.text.DecimalFormat;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -109,7 +113,12 @@ class StandardParameterTest {
         // ionization preference parameter
         new ParameterTestCase<>(ionizationPreferenceParam(), List.of(
             new IonizationPreference(LipidCategories.GLYCEROLIPIDS, null, null,
-                IonizationType.AMMONIUM))) //
+                IonizationType.AMMONIUM))), //
+        // duplicate annotation scope parameter
+        new ParameterTestCase<>(new DuplicateAnnotationScopeParameter(),
+            new DuplicateAnnotationScopeFilter(DuplicateAnnotationScope.WITHIN_RT_TOLERANCE,
+                new RTTolerance(0.2f, RTTolerance.Unit.MINUTES)),
+            new RTTolerance(0.3f, RTTolerance.Unit.MINUTES)) //
     );
     return tests;
   }
