@@ -27,7 +27,6 @@ package io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRatingGate;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MolecularSpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
@@ -37,6 +36,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFra
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.ILipidChain;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.LipidChainFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.LipidChainType;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidFactory;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.FormulaUtils;
@@ -66,7 +66,7 @@ public class SphingoMolecularSpeciesLevelMatchedLipidFactory implements
     final Set<LipidFragment> molecularSpeciesFragments = annotatedFragments.stream().filter(
         fragment -> fragment.getLipidFragmentInformationLevelType()
             .equals(LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL)).collect(Collectors.toSet());
-    if (!molecularSpeciesFragments.isEmpty() && LipidFragmentationRatingGate.hasSufficientEvidence(
+    if (!molecularSpeciesFragments.isEmpty() && LipidQcScoringUtils.hasSufficientEvidence(
         molecularSpeciesFragments)) {
       IMolecularFormula lipidFormula = null;
       try {
@@ -116,7 +116,7 @@ public class SphingoMolecularSpeciesLevelMatchedLipidFactory implements
         Set<LipidFragment> fittingFragments = extractFragmentsForFittingChains(
             molecularSpeciesLevelAnnotation.getLipidChains(),
             detectedFragmentsWithChainInformation);
-        if (!fittingFragments.isEmpty() && LipidFragmentationRatingGate.hasSufficientEvidence(
+        if (!fittingFragments.isEmpty() && LipidQcScoringUtils.hasSufficientEvidence(
             fittingFragments)) {
           MatchedLipid newMolecularSpeciesLevelMatch = buildNewMolecularSpeciesLevelMatch(
               fittingFragments, molecularSpeciesLevelAnnotation, accurateMz, massList, minMsMsScore,

@@ -27,7 +27,6 @@ package io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRatingGate;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MolecularSpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
@@ -37,6 +36,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFra
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.ILipidChain;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.LipidChainFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.lipidchain.LipidChainType;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidFactory;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.FormulaUtils;
@@ -69,7 +69,7 @@ public class GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory implement
     final Set<LipidFragment> molecularSpeciesFragments = annotatedFragments.stream().filter(
         fragment -> fragment.getLipidFragmentInformationLevelType()
             .equals(LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL)).collect(Collectors.toSet());
-    if (!molecularSpeciesFragments.isEmpty() && LipidFragmentationRatingGate.hasSufficientEvidence(
+    if (!molecularSpeciesFragments.isEmpty() && LipidQcScoringUtils.hasSufficientEvidence(
         molecularSpeciesFragments)) {
       IMolecularFormula lipidFormula = null;
       try {
@@ -349,7 +349,7 @@ public class GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory implement
           double precursorMz = FormulaUtils.calculateMzRatio(lipidFormula);
           Double msMsScore = MSMS_LIPID_TOOLS.calculateMsMsScore(massList, entry.getValue(),
               precursorMz, mzTolRangeMSMS);
-          if (msMsScore >= minMsMsScore && LipidFragmentationRatingGate.hasSufficientEvidence(
+          if (msMsScore >= minMsMsScore && LipidQcScoringUtils.hasSufficientEvidence(
               entry.getValue())) {
             matchedLipids.add(
                 new MatchedLipid(lipidAnnotation, accurateMz, ionizationType, entry.getValue(),
@@ -407,7 +407,7 @@ public class GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory implement
       final @NotNull ILipidAnnotation lipidAnnotation, final @NotNull Double accurateMz,
       final @NotNull DataPoint[] massList, final @NotNull List<ILipidChain> predictedChains,
       final @NotNull MZTolerance mzTolRangeMSMS, final @NotNull IonizationType ionizationType) {
-    if (detectedFragments.isEmpty() || !LipidFragmentationRatingGate.hasSufficientEvidence(
+    if (detectedFragments.isEmpty() || !LipidQcScoringUtils.hasSufficientEvidence(
         detectedFragments)) {
       return null;
     }
@@ -435,7 +435,7 @@ public class GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory implement
       final @NotNull ILipidAnnotation lipidAnnotation, final @NotNull Double accurateMz,
       final @NotNull DataPoint[] massList, final @NotNull List<ILipidChain> predictedChains,
       final @NotNull MZTolerance mzTolRangeMSMS, final @NotNull IonizationType ionizationType) {
-    if (detectedFragments.isEmpty() || !LipidFragmentationRatingGate.hasSufficientEvidence(
+    if (detectedFragments.isEmpty() || !LipidQcScoringUtils.hasSufficientEvidence(
         detectedFragments)) {
       return null;
     }

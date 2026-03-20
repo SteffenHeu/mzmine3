@@ -27,11 +27,11 @@ package io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRatingGate;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.FormulaUtils;
 import java.util.Set;
@@ -53,7 +53,7 @@ public class GlyceroAndGlycerophosphoSpeciesLevelMatchedLipidFactory implements
     final Set<LipidFragment> speciesLevelFragments = annotatedFragments.stream().filter(
         lipidFragment -> lipidFragment.getLipidFragmentInformationLevelType()
             .equals(LipidAnnotationLevel.SPECIES_LEVEL)).collect(Collectors.toSet());
-    if (!speciesLevelFragments.isEmpty() && LipidFragmentationRatingGate.hasSufficientEvidence(
+    if (!speciesLevelFragments.isEmpty() && LipidQcScoringUtils.hasSufficientEvidence(
         speciesLevelFragments)) {
       IMolecularFormula lipidFormula = null;
       try {

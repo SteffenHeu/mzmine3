@@ -31,14 +31,17 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.Lip
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRuleRating;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.Comparators;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -117,6 +120,20 @@ public final class LipidQcScoringUtils {
   private static final double HILIC_WINDOW_EDGE_RELATIVE_TOLERANCE = 0.02d;
 
   private LipidQcScoringUtils() {
+  }
+
+  public static boolean hasSufficientEvidence(final @NotNull Collection<LipidFragment> fragments) {
+    final long majorCount = fragments.stream().filter(
+        fragment -> fragment.getLipidFragmentationRuleRating()
+            == LipidFragmentationRuleRating.MAJOR).count();
+    if (majorCount > 0) {
+      return true;
+    }
+
+    final long minorCount = fragments.stream().filter(
+        fragment -> fragment.getLipidFragmentationRuleRating()
+            == LipidFragmentationRuleRating.MINOR).count();
+    return minorCount >= 2;
   }
 
   /**
