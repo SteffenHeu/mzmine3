@@ -30,7 +30,6 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRatingGate;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
@@ -98,17 +97,8 @@ public class SphingoMolecularSpeciesLevelMatchedLipidFactory implements
       final @NotNull DataPoint[] massList, final double minMsMsScore,
       final @NotNull MZTolerance mzTolRangeMSMS, final @NotNull IonizationType ionizationType) {
     Set<MatchedLipid> matchedMolecularSpeciesLevelAnnotations = new HashSet<>();
-    int totalNumberOfCAtoms = 0;
-    int totalNumberOfDBEs = 0;
-    if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
-      totalNumberOfCAtoms = ((SpeciesLevelAnnotation) lipidAnnotation).getNumberOfCarbons();
-      totalNumberOfDBEs = ((SpeciesLevelAnnotation) lipidAnnotation).getNumberOfDBEs();
-    } else if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation) {
-      totalNumberOfCAtoms = ((MolecularSpeciesLevelAnnotation) lipidAnnotation).getLipidChains()
-          .stream().mapToInt(ILipidChain::getNumberOfCarbons).sum();
-      totalNumberOfDBEs = ((MolecularSpeciesLevelAnnotation) lipidAnnotation).getLipidChains()
-          .stream().mapToInt(ILipidChain::getNumberOfDBEs).sum();
-    }
+    final int totalNumberOfCAtoms = lipidAnnotation.getChainCarbonCount();
+    final int totalNumberOfDBEs = lipidAnnotation.getChainDoubleBondCount();
     Set<LipidFragment> detectedFragmentsWithChainInformation = detectedFragments.stream().filter(
         fragment -> fragment.getLipidFragmentInformationLevelType()
             .equals(LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL)).collect(Collectors.toSet());

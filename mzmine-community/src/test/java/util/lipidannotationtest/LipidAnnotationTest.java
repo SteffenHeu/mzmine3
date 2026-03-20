@@ -617,15 +617,13 @@ class LipidAnnotationTest {
 
 
   private void checkLipidAnnotation(LipidAnnotationMsMsTestResource testSpectrum) {
-    Set<MatchedLipid> matchedLipids = new HashSet<>();
-    ILipidAnnotation lipidAnnotation = testSpectrum.getTestLipid();
-    SpeciesLevelAnnotation speciesLevelAnnotation = null;
-    if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
-      speciesLevelAnnotation = (SpeciesLevelAnnotation) lipidAnnotation;
-    } else if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation) {
-      speciesLevelAnnotation = convertMolecularSpeciesLevelToSpeciesLevel(
-          (MolecularSpeciesLevelAnnotation) lipidAnnotation);
-    }
+    final Set<MatchedLipid> matchedLipids = new HashSet<>();
+    final ILipidAnnotation lipidAnnotation = testSpectrum.getTestLipid();
+    final SpeciesLevelAnnotation speciesLevelAnnotation = switch (lipidAnnotation) {
+      case SpeciesLevelAnnotation speciesLevel -> speciesLevel;
+      case MolecularSpeciesLevelAnnotation molecularSpecies ->
+          convertMolecularSpeciesLevelToSpeciesLevel(molecularSpecies);
+    };
 
     LipidFragmentationRule[] rules = speciesLevelAnnotation.getLipidClass().getFragmentationRules();
     Set<LipidFragment> annotatedFragments = new HashSet<>();
@@ -645,102 +643,104 @@ class LipidAnnotationTest {
 
     Assertions.assertTrue(annotatedFragments.size() >= 1, "No fragments detected");
     // check for class specific fragments like head group fragment
-    if (testSpectrum.getTestLipid() instanceof SpeciesLevelAnnotation) {
-      ISpeciesLevelMatchedLipidFactory matchedLipidFactory = null;
-      switch (testSpectrum.getTestLipid().getLipidClass().getMainClass().getLipidCategory()) {
-        case FATTYACYLS -> {
-          matchedLipidFactory = new FattyAcylSpeciesLevelMatchedLipidFactory();
-          matchedLipids.add(
-              matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
-                  annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
-                  testSpectrum.getIonizationType()));
-        }
-        case GLYCEROLIPIDS -> {
-          matchedLipidFactory = new GlyceroAndGlycerophosphoSpeciesLevelMatchedLipidFactory();
-          matchedLipids.add(
-              matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
-                  annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
-                  testSpectrum.getIonizationType()));
-        }
-        case GLYCEROPHOSPHOLIPIDS -> {
-          matchedLipidFactory = new GlyceroAndGlycerophosphoSpeciesLevelMatchedLipidFactory();
-          matchedLipids.add(
-              matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
-                  annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
-                  testSpectrum.getIonizationType()));
-        }
-        case SPHINGOLIPIDS -> {
-          matchedLipidFactory = new SphingolipidSpeciesLevelMatchedLipidFactory();
-          matchedLipids.add(
-              matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
-                  annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
-                  testSpectrum.getIonizationType()));
-        }
-        case STEROLLIPIDS -> {
-          matchedLipidFactory = new SterolSpeciesLevelMatchedLipidFactory();
-          matchedLipids.add(
-              matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
-                  annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
-                  testSpectrum.getIonizationType()));
+    switch (lipidAnnotation) {
+      case SpeciesLevelAnnotation _ -> {
+        ISpeciesLevelMatchedLipidFactory matchedLipidFactory = null;
+        switch (lipidAnnotation.getLipidClass().getMainClass().getLipidCategory()) {
+          case FATTYACYLS -> {
+            matchedLipidFactory = new FattyAcylSpeciesLevelMatchedLipidFactory();
+            matchedLipids.add(
+                matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
+                    annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
+                    testSpectrum.getIonizationType()));
+          }
+          case GLYCEROLIPIDS -> {
+            matchedLipidFactory = new GlyceroAndGlycerophosphoSpeciesLevelMatchedLipidFactory();
+            matchedLipids.add(
+                matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
+                    annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
+                    testSpectrum.getIonizationType()));
+          }
+          case GLYCEROPHOSPHOLIPIDS -> {
+            matchedLipidFactory = new GlyceroAndGlycerophosphoSpeciesLevelMatchedLipidFactory();
+            matchedLipids.add(
+                matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
+                    annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
+                    testSpectrum.getIonizationType()));
+          }
+          case SPHINGOLIPIDS -> {
+            matchedLipidFactory = new SphingolipidSpeciesLevelMatchedLipidFactory();
+            matchedLipids.add(
+                matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
+                    annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
+                    testSpectrum.getIonizationType()));
+          }
+          case STEROLLIPIDS -> {
+            matchedLipidFactory = new SterolSpeciesLevelMatchedLipidFactory();
+            matchedLipids.add(
+                matchedLipidFactory.validateSpeciesLevelAnnotation(0.0, speciesLevelAnnotation,
+                    annotatedFragments, massList.getDataPoints(), 0.0, mzTolerance,
+                    testSpectrum.getIonizationType()));
+          }
         }
       }
-    } else if (testSpectrum.getTestLipid() instanceof MolecularSpeciesLevelAnnotation) {
-
-      IMolecularSpeciesLevelMatchedLipidFactory matchedLipidFactory = null;
-      switch (testSpectrum.getTestLipid().getLipidClass().getMainClass().getLipidCategory()) {
-        case FATTYACYLS -> {
-          matchedLipidFactory = new FattyAcylMolecularSpeciesLevelMatchedLipidFactory();
-          Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
-              annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
-              mzTolerance, testSpectrum.getIonizationType());
-          for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
-            matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
-                matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
-                0.0, mzTolerance, testSpectrum.getIonizationType()));
+      case MolecularSpeciesLevelAnnotation _ -> {
+        IMolecularSpeciesLevelMatchedLipidFactory matchedLipidFactory = null;
+        switch (lipidAnnotation.getLipidClass().getMainClass().getLipidCategory()) {
+          case FATTYACYLS -> {
+            matchedLipidFactory = new FattyAcylMolecularSpeciesLevelMatchedLipidFactory();
+            Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
+                annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
+                mzTolerance, testSpectrum.getIonizationType());
+            for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
+              matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
+                  matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
+                  0.0, mzTolerance, testSpectrum.getIonizationType()));
+            }
           }
-        }
-        case GLYCEROLIPIDS -> {
-          matchedLipidFactory = new GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory();
-          Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
-              annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
-              mzTolerance, testSpectrum.getIonizationType());
-          for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
-            matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
-                matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
-                0.0, mzTolerance, testSpectrum.getIonizationType()));
+          case GLYCEROLIPIDS -> {
+            matchedLipidFactory = new GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory();
+            Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
+                annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
+                mzTolerance, testSpectrum.getIonizationType());
+            for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
+              matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
+                  matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
+                  0.0, mzTolerance, testSpectrum.getIonizationType()));
+            }
           }
-        }
-        case GLYCEROPHOSPHOLIPIDS -> {
-          matchedLipidFactory = new GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory();
-          Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
-              annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
-              mzTolerance, testSpectrum.getIonizationType());
-          for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
-            matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
-                matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
-                0.0, mzTolerance, testSpectrum.getIonizationType()));
+          case GLYCEROPHOSPHOLIPIDS -> {
+            matchedLipidFactory = new GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory();
+            Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
+                annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
+                mzTolerance, testSpectrum.getIonizationType());
+            for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
+              matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
+                  matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
+                  0.0, mzTolerance, testSpectrum.getIonizationType()));
+            }
           }
-        }
-        case SPHINGOLIPIDS -> {
-          matchedLipidFactory = new SphingoMolecularSpeciesLevelMatchedLipidFactory();
-          Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
-              annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
-              mzTolerance, testSpectrum.getIonizationType());
-          for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
-            matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
-                matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
-                0.0, mzTolerance, testSpectrum.getIonizationType()));
+          case SPHINGOLIPIDS -> {
+            matchedLipidFactory = new SphingoMolecularSpeciesLevelMatchedLipidFactory();
+            Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
+                annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
+                mzTolerance, testSpectrum.getIonizationType());
+            for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
+              matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
+                  matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
+                  0.0, mzTolerance, testSpectrum.getIonizationType()));
+            }
           }
-        }
-        case STEROLLIPIDS -> {
-          matchedLipidFactory = new SterolMolecularSpeciesLevelMatchedLipidFactory();
-          Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
-              annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
-              mzTolerance, testSpectrum.getIonizationType());
-          for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
-            matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
-                matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
-                0.0, mzTolerance, testSpectrum.getIonizationType()));
+          case STEROLLIPIDS -> {
+            matchedLipidFactory = new SterolMolecularSpeciesLevelMatchedLipidFactory();
+            Set<MatchedLipid> matchedMolecularSpeciesLevelMatches = matchedLipidFactory.predictMolecularSpeciesLevelMatches(
+                annotatedFragments, speciesLevelAnnotation, 0.0, massList.getDataPoints(), 0.0,
+                mzTolerance, testSpectrum.getIonizationType());
+            for (MatchedLipid matchedLipid : matchedMolecularSpeciesLevelMatches) {
+              matchedLipids.add(matchedLipidFactory.validateMolecularSpeciesLevelAnnotation(0.0,
+                  matchedLipid.getLipidAnnotation(), annotatedFragments, massList.getDataPoints(),
+                  0.0, mzTolerance, testSpectrum.getIonizationType()));
+            }
           }
         }
       }

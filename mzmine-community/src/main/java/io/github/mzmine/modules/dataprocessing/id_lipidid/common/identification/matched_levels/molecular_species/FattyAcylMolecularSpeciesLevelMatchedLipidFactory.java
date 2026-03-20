@@ -29,8 +29,6 @@ import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRatingGate;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MSMSLipidTools;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.MolecularSpeciesLevelAnnotation;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.SpeciesLevelAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
@@ -103,18 +101,9 @@ public class FattyAcylMolecularSpeciesLevelMatchedLipidFactory implements
     Set<MatchedLipid> matchedMolecularSpeciesLevelAnnotations = new HashSet<>();
 
     // get number of total C atoms, double bonds and number of chains
-    int totalNumberOfCAtoms = 0;
-    int totalNumberOfDBEs = 0;
-    if (lipidAnnotation instanceof SpeciesLevelAnnotation) {
-      totalNumberOfCAtoms = ((SpeciesLevelAnnotation) lipidAnnotation).getNumberOfCarbons();
-      totalNumberOfDBEs = ((SpeciesLevelAnnotation) lipidAnnotation).getNumberOfDBEs();
-    } else if (lipidAnnotation instanceof MolecularSpeciesLevelAnnotation) {
-      totalNumberOfCAtoms = ((MolecularSpeciesLevelAnnotation) lipidAnnotation).getLipidChains()
-          .stream().mapToInt(ILipidChain::getNumberOfCarbons).sum();
-      totalNumberOfDBEs = ((MolecularSpeciesLevelAnnotation) lipidAnnotation).getLipidChains()
-          .stream().mapToInt(ILipidChain::getNumberOfDBEs).sum();
-    }
-    int chainsInLipid = lipidAnnotation.getLipidClass().getChainTypes().length;
+    final int totalNumberOfCAtoms = lipidAnnotation.getChainCarbonCount();
+    final int totalNumberOfDBEs = lipidAnnotation.getChainDoubleBondCount();
+    final int chainsInLipid = lipidAnnotation.getLipidClass().getChainTypes().length;
 
     for (int i = 0; i < chains.size(); i++) {
       int carbonOne = chains.get(i).getNumberOfCarbons();

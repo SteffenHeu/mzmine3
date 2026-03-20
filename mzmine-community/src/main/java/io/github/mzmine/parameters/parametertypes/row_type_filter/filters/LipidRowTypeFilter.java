@@ -125,21 +125,20 @@ class LipidRowTypeFilter extends AbstractRowTypeFilter {
       return false;
     }
 
-    if (annotation instanceof SpeciesLevelAnnotation) {
-      return matchesSpeciesLevel(annotation.getChainCarbonCount(),
-          annotation.getChainDoubleBondCount(), annotation.getSpeciesLevelOxygens());
+    return switch (annotation) {
+      case SpeciesLevelAnnotation speciesLevel ->
+          matchesSpeciesLevel(speciesLevel.getChainCarbonCount(),
+              speciesLevel.getChainDoubleBondCount(), speciesLevel.getSpeciesLevelOxygens());
+      case MolecularSpeciesLevelAnnotation molecularSpecies -> {
+        // TODO not sure if all chains are defined here for all classes - therefore also try name parsing
+        // like spingolipids?
+        final LipidFlexibleNotation flexible = LipidFlexibleNotationParser.toFlexible(
+            molecularSpecies);
 
-    } else if (annotation instanceof MolecularSpeciesLevelAnnotation molecularSpecies) {
-      // TODO not sure if all chains are defined here for all classes - therefore also try name parsing
-      // like spingolipids?
-      final LipidFlexibleNotation flexible = LipidFlexibleNotationParser.toFlexible(
-          molecularSpecies);
-
-      // class already matched
-      return matchesFlexible(flexible, false) || matchesLipidName(annotation.getAnnotation());
-    } else {
-      throw new IllegalArgumentException("Unsupported lipid annotation type: " + annotation);
-    }
+        // class already matched
+        yield matchesFlexible(flexible, false) || matchesLipidName(annotation.getAnnotation());
+      }
+    };
   }
 
   private boolean matchesFlexible(LipidFlexibleNotation flexible, boolean matchClass) {
