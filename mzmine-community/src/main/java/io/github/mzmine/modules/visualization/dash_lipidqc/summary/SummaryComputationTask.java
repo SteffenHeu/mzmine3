@@ -215,7 +215,7 @@ final class SummaryComputationTask extends FxUpdateTask<LipidSummaryPane> {
 
   private static @NotNull String getSpeciesLevelKey(@NotNull ILipidAnnotation annotation) {
     // todo: can this be replaced by getSpeciesLevelAnnotation? Is the abbreviation unique enough?
-    return annotation.getLipidClass().getName() + "|" + annotation.getChainCarbonCount() + ":"
-        + annotation.getChainDoubleBondCount();
+    return annotation.getLipidClass().getName() + "|" + annotation.getChainsCarbonCount() + ":"
+        + annotation.getChainsDoubleBondCount();
   }
 }

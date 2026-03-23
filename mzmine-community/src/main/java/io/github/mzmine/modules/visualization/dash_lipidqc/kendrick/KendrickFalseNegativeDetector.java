@@ -254,8 +254,8 @@ public final class KendrickFalseNegativeDetector {
   }
 
   private static @Nullable CarbonDbe extractCarbonDbe(final @NotNull ILipidAnnotation annotation) {
-    final int carbons = annotation.getChainCarbonCount();
-    final int dbe = annotation.getChainDoubleBondCount();
+    final int carbons = annotation.getChainsCarbonCount();
+    final int dbe = annotation.getChainsDoubleBondCount();
     if (carbons <= 0 || dbe < 0) {
       return null;
     }

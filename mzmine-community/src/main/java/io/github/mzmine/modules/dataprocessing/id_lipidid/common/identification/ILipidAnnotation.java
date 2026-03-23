@@ -39,8 +39,8 @@ public sealed interface ILipidAnnotation permits SpeciesLevelAnnotation,
   String getAnnotation();
 
   default String getSpeciesLevelAnnotation() {
-    return LipidFactory.buildAnnotation(getLipidClass(), getChainCarbonCount(),
-        getChainDoubleBondCount(), getSpeciesLevelOxygens());
+    return LipidFactory.buildAnnotation(getLipidClass(), getChainsCarbonCount(),
+        getChainsDoubleBondCount(), getSpeciesLevelOxygens());
   }
 
   /**
@@ -60,10 +60,16 @@ public sealed interface ILipidAnnotation permits SpeciesLevelAnnotation,
 
   IMolecularFormula getMolecularFormula();
 
-  // total carbons/DBEs/oxygens at the species level (sum of chains for molecular species)
-  int getChainCarbonCount();
+  /**
+   *
+   * @return Number of carbon atoms in all chains.
+   */
+  int getChainsCarbonCount();
 
-  int getChainDoubleBondCount();
+  /**
+   * @return Number of double bonds in all chains.
+   */
+  int getChainsDoubleBondCount();
 
   int getSpeciesLevelOxygens();
 

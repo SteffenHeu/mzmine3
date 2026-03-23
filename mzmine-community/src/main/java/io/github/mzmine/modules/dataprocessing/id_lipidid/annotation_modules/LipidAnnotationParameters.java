@@ -46,6 +46,7 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParamete
 import io.github.mzmine.util.ExitCode;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Parameters for lipid annotation module
@@ -126,6 +127,15 @@ public class LipidAnnotationParameters extends SimpleParameterSet {
 
   @Override
   public int getVersion() {
-    return 5;
+    return 3;
+  }
+
+  @Override
+  public @Nullable String getVersionMessage(int version) {
+    return switch (version) {
+      case 3 ->
+          "Added overall quality scores, added Elution order profiling based on analysis type (RP, HLIC).";
+      default -> null;
+    };
   }
 }

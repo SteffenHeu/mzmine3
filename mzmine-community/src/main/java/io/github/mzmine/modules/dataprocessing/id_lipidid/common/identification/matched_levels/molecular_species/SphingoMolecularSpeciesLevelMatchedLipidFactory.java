@@ -97,8 +97,8 @@ public class SphingoMolecularSpeciesLevelMatchedLipidFactory implements
       final @NotNull DataPoint[] massList, final double minMsMsScore,
       final @NotNull MZTolerance mzTolRangeMSMS, final @NotNull IonizationType ionizationType) {
     Set<MatchedLipid> matchedMolecularSpeciesLevelAnnotations = new HashSet<>();
-    final int totalNumberOfCAtoms = lipidAnnotation.getChainCarbonCount();
-    final int totalNumberOfDBEs = lipidAnnotation.getChainDoubleBondCount();
+    final int totalNumberOfCAtoms = lipidAnnotation.getChainsCarbonCount();
+    final int totalNumberOfDBEs = lipidAnnotation.getChainsDoubleBondCount();
     Set<LipidFragment> detectedFragmentsWithChainInformation = detectedFragments.stream().filter(
         fragment -> fragment.getLipidFragmentInformationLevelType()
             .equals(LipidAnnotationLevel.MOLECULAR_SPECIES_LEVEL)).collect(Collectors.toSet());

@@ -111,8 +111,8 @@ public class GlyceroAndPhosphoMolecularSpeciesLevelMatchedLipidFactory implement
     Set<MatchedLipid> matchedMolecularSpeciesLevelAnnotations = new HashSet<>();
 
     // get number of total C atoms, double bonds and number of chains
-    final int totalNumberOfCAtoms = lipidAnnotation.getChainCarbonCount();
-    final int totalNumberOfDBEs = lipidAnnotation.getChainDoubleBondCount();
+    final int totalNumberOfCAtoms = lipidAnnotation.getChainsCarbonCount();
+    final int totalNumberOfDBEs = lipidAnnotation.getChainsDoubleBondCount();
     final int chainsInLipid = lipidAnnotation.getLipidClass().getChainTypes().length;
 
     for (int i = 0; i < chains.size(); i++) {

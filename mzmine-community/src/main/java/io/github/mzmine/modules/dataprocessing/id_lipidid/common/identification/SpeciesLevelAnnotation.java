@@ -100,12 +100,12 @@ public final class SpeciesLevelAnnotation implements ILipidAnnotation {
   }
 
   @Override
-  public int getChainCarbonCount() {
+  public int getChainsCarbonCount() {
     return numberOfCarbons;
   }
 
   @Override
-  public int getChainDoubleBondCount() {
+  public int getChainsDoubleBondCount() {
     return numberOfDBEs;
   }
 

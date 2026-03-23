@@ -127,8 +127,8 @@ class LipidRowTypeFilter extends AbstractRowTypeFilter {
 
     return switch (annotation) {
       case SpeciesLevelAnnotation speciesLevel ->
-          matchesSpeciesLevel(speciesLevel.getChainCarbonCount(),
-              speciesLevel.getChainDoubleBondCount(), speciesLevel.getSpeciesLevelOxygens());
+          matchesSpeciesLevel(speciesLevel.getChainsCarbonCount(),
+              speciesLevel.getChainsDoubleBondCount(), speciesLevel.getSpeciesLevelOxygens());
       case MolecularSpeciesLevelAnnotation molecularSpecies -> {
         // TODO not sure if all chains are defined here for all classes - therefore also try name parsing
         // like spingolipids?

@@ -242,10 +242,10 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
   }
 
   private static int extractDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getChainDoubleBondCount();
+    return lipidAnnotation.getChainsDoubleBondCount();
   }
 
   private static int extractCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getChainCarbonCount();
+    return lipidAnnotation.getChainsCarbonCount();
   }
 }

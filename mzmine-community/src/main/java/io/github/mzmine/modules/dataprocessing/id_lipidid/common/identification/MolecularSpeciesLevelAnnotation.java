@@ -89,12 +89,12 @@ public final class MolecularSpeciesLevelAnnotation implements ILipidAnnotation {
   }
 
   @Override
-  public int getChainCarbonCount() {
+  public int getChainsCarbonCount() {
     return lipidChains.stream().mapToInt(ILipidChain::getNumberOfCarbons).sum();
   }
 
   @Override
-  public int getChainDoubleBondCount() {
+  public int getChainsDoubleBondCount() {
     return lipidChains.stream().mapToInt(ILipidChain::getNumberOfDBEs).sum();
   }
 

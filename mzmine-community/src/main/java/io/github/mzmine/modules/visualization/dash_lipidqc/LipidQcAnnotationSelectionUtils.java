@@ -89,7 +89,7 @@ public final class LipidQcAnnotationSelectionUtils {
    * (sums chains).
    */
   public static int extractDbe(final @NotNull ILipidAnnotation annotation) {
-    return annotation.getChainDoubleBondCount();
+    return annotation.getChainsDoubleBondCount();
   }
 
   /**
@@ -99,6 +99,6 @@ public final class LipidQcAnnotationSelectionUtils {
    * (sums chains).
    */
   public static int extractCarbons(final @NotNull ILipidAnnotation annotation) {
-    return annotation.getChainCarbonCount();
+    return annotation.getChainsCarbonCount();
   }
 }

@@ -513,11 +513,11 @@ public final class LipidQcScoringUtils {
   }
 
   private static int extractTrendDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getChainDoubleBondCount();
+    return lipidAnnotation.getChainsDoubleBondCount();
   }
 
   private static int extractTrendCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getChainCarbonCount();
+    return lipidAnnotation.getChainsCarbonCount();
   }
 
   /**
