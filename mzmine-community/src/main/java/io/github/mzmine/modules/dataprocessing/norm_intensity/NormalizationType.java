@@ -28,7 +28,7 @@ import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnum;
 import org.jetbrains.annotations.NotNull;
 
 public enum NormalizationType implements ModuleOptionsEnum<NormalizationTypeModule> {
-
+  NoNormalization("No normalization", "no_normalization", NoNormalizationTypeModule.class), //
   AverageIntensity("Average intensity", "average_intensity",
       AverageIntensityNormalizationTypeModule.class), //
   MedianFeatureIntensity("Median feature intensity", "median_feature_intensity",
@@ -50,6 +50,21 @@ public enum NormalizationType implements ModuleOptionsEnum<NormalizationTypeModu
     this.name = name;
     this.stableId = stableId;
     this.moduleClass = moduleClass;
+  }
+
+  /**
+   * @return All internal normalizers. Currently only standard compound normalzier but could be
+   * extended for lipid normalizer or similar.
+   */
+  public static NormalizationType[] internalSampleNormalizers() {
+    return new NormalizationType[]{NoNormalization, StandardCompounds};
+  }
+
+  /**
+   * @return all normalizers that correct intra batch drift
+   */
+  public static NormalizationType[] intraBatchDriftNormalizers() {
+    return new NormalizationType[]{NoNormalization, AverageIntensity, TotalRawSignal};
   }
 
   @Override

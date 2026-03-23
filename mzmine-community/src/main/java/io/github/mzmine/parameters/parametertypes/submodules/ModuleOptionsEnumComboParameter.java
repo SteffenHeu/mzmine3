@@ -60,6 +60,14 @@ public class ModuleOptionsEnumComboParameter<EnumType extends Enum<EnumType> & M
     this(name, description, defaultValue.getDeclaringClass().getEnumConstants(), defaultValue);
   }
 
+  /**
+   * Uses first option as default
+   */
+  public ModuleOptionsEnumComboParameter(final String name, final String description,
+      @NotNull final EnumType[] options) {
+    this(name, description, options, options[0]);
+  }
+
   public ModuleOptionsEnumComboParameter(final String name, final String description,
       @NotNull final EnumType[] options, @NotNull final EnumType defaultValue) {
 
