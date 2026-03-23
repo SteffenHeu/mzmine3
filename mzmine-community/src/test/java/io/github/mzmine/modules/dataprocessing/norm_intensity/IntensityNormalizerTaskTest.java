@@ -60,9 +60,9 @@ class IntensityNormalizerTaskTest {
   private static ParameterSet buildParams(AbundanceMeasure measure,
       OriginalFeatureListOption handleOriginal) {
     return IntensityNormalizerParameters.create(
-        new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), "norm", null,
-        NormalizationType.AverageIntensity, createFactorParameters(), measure, handleOriginal,
-        List.of());
+        new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), "norm", null, null,
+        NormalizationType.AverageIntensity, createFactorParameters(), null, null, measure,
+        handleOriginal, List.of());
   }
 
   /**

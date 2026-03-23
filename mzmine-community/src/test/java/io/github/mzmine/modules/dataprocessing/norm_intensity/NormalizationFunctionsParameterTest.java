@@ -312,9 +312,9 @@ class NormalizationFunctionsParameterTest {
       final @NotNull OriginalFeatureListOption handleOriginal,
       final @NotNull List<NormalizationFunction> normalizationFunctions) {
     return IntensityNormalizerParameters.create(
-        new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), suffix, null,
+        new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), suffix, null, null,
         NormalizationType.TotalRawSignal,
-        FactorNormalizationModuleParameters.create(List.of(SampleType.QC)), abundanceMeasure,
-        handleOriginal, normalizationFunctions);
+        FactorNormalizationModuleParameters.create(List.of(SampleType.QC)), null, null,
+        abundanceMeasure, handleOriginal, normalizationFunctions);
   }
 }
