@@ -25,7 +25,7 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.addRow;
-import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFactorParameters;
+import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFeatureIntensityParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createMainParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -46,7 +46,7 @@ class MaximumFeatureHeightNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsUsesMaximumFeatureAbundance() {
-    final MaximumFeatureHeightNormalizationTypeModule module = new MaximumFeatureHeightNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl fileA = createRawFile("file_a", LocalDateTime.of(2026, 1, 1, 10, 0));
     final RawDataFileImpl fileB = createRawFile("file_b", LocalDateTime.of(2026, 1, 1, 10, 5));
 
@@ -56,7 +56,8 @@ class MaximumFeatureHeightNormalizationTypeModuleTest {
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
         List.of(fileA, fileB), featureList, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createFactorParameters());
+        createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.MAX));
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));
@@ -70,13 +71,14 @@ class MaximumFeatureHeightNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsThrowsIfNoFeaturesFound() {
-    final MaximumFeatureHeightNormalizationTypeModule module = new MaximumFeatureHeightNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl file = createRawFile("empty_file", LocalDateTime.of(2026, 1, 1, 10, 0));
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
         () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
-            createMainParameters(AbundanceMeasure.Height), createFactorParameters()));
+            createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+                FeatureIntensityNormalizationMode.MAX)));
 
     assertEquals("No features found for file: empty_file", exception.getMessage());
   }

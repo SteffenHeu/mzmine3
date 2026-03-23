@@ -42,7 +42,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -58,16 +57,12 @@ public abstract class AbstractFactorNormalizationTypeModule implements Normaliza
   private static final Logger logger = Logger.getLogger(
       AbstractFactorNormalizationTypeModule.class.getName());
 
-  @Override
-  public final @NotNull Class<? extends ParameterSet> getParameterSetClass() {
-    return FactorNormalizationModuleParameters.class;
-  }
-
   @NotNull
   public List<RawDataFile> getReferenceSamples(@NotNull final FeatureList flist,
       @NotNull final ParameterSet normalizationModuleParameters) {
+    // all parametersets need to use the same FeatureIntensityNormalizationParameters.samplesTypes parameter
     final var sampleTypeFilter = new SampleTypeFilter(
-        normalizationModuleParameters.getParameter(FactorNormalizationModuleParameters.sampleTypes)
+        normalizationModuleParameters.getParameter(FeatureIntensityNormalizationParameters.sampleTypes)
             .getValue());
     return sampleTypeFilter.filterFiles(flist.getRawDataFiles());
   }

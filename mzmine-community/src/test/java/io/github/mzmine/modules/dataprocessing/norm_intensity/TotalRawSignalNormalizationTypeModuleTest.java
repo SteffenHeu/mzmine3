@@ -25,7 +25,6 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.addScan;
-import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFactorParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createMainParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,14 +34,20 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 
 class TotalRawSignalNormalizationTypeModuleTest {
+
+  static @NotNull TotalRawSignalNormalizationTypeParameters createParameters() {
+    return TotalRawSignalNormalizationTypeParameters.create(List.of(SampleType.QC));
+  }
 
   @Test
   void createReferenceFunctionsUsesMs1TicSum() {
@@ -57,7 +62,7 @@ class TotalRawSignalNormalizationTypeModuleTest {
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, fileA, fileB);
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
         List.of(fileA, fileB), featureList, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createFactorParameters());
+        createMainParameters(AbundanceMeasure.Height), createParameters());
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));
@@ -79,7 +84,7 @@ class TotalRawSignalNormalizationTypeModuleTest {
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
         () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
-            createMainParameters(AbundanceMeasure.Height), createFactorParameters()));
+            createMainParameters(AbundanceMeasure.Height), createParameters()));
 
     assertEquals("No TIC found for file: no_tic", exception.getMessage());
   }

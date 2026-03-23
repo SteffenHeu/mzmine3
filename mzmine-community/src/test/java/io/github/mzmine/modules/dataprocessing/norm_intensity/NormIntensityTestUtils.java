@@ -62,13 +62,15 @@ final class NormIntensityTestUtils {
   static @NotNull ParameterSet createMainParameters(
       final @NotNull AbundanceMeasure abundanceMeasure) {
     return IntensityNormalizerParameters.create(
-        new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), "norm", null, null,
-        NormalizationType.MedianFeatureIntensity, createFactorParameters(), null, null,
-        abundanceMeasure, OriginalFeatureListOption.KEEP, List.of());
+        new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), "norm", null,
+        NormalizationType.NoNormalization, null,
+        NormalizationType.ByFeatureIntensity, createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.MEDIAN), null, abundanceMeasure, OriginalFeatureListOption.KEEP, List.of());
   }
 
-  static @NotNull FactorNormalizationModuleParameters createFactorParameters() {
-    return FactorNormalizationModuleParameters.create(List.of(SampleType.QC));
+  static @NotNull FeatureIntensityNormalizationParameters createFeatureIntensityParameters(
+      FeatureIntensityNormalizationMode mode) {
+    return FeatureIntensityNormalizationParameters.create(List.of(SampleType.QC), mode);
   }
 
   static @NotNull List<FeatureSelection> toFeatureSelections(

@@ -46,6 +46,11 @@ public class TotalRawSignalNormalizationTypeModule extends AbstractFactorNormali
   }
 
   @Override
+  public final @NotNull Class<? extends ParameterSet> getParameterSetClass() {
+    return TotalRawSignalNormalizationTypeParameters.class;
+  }
+
+  @Override
   protected double getNormalizationMetricForFile(@NotNull final RawDataFile file,
       @NotNull final ModularFeatureList featureList,
       @NotNull final ParameterSet linearNormalizerParameters,

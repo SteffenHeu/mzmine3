@@ -25,7 +25,7 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.addRow;
-import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFactorParameters;
+import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFeatureIntensityParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -60,8 +60,10 @@ class IntensityNormalizerTaskTest {
   private static ParameterSet buildParams(AbundanceMeasure measure,
       OriginalFeatureListOption handleOriginal) {
     return IntensityNormalizerParameters.create(
-        new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), "norm", null, null,
-        NormalizationType.AverageIntensity, createFactorParameters(), null, null, measure,
+        new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), "norm", null,
+        NormalizationType.NoNormalization, null,
+        NormalizationType.ByFeatureIntensity, createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.AVERAGE), null, measure,
         handleOriginal, List.of());
   }
 

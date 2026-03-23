@@ -81,14 +81,10 @@ class IntensityNormalizerTask extends AbstractTask {
 
   // Pre-normalization: internal standards
   private final boolean preNormISEnabled;
-  private final StandardCompoundNormalizationTypeParameters preNormISParams;
+  private final ParameterSet preNormISParams;
 
   // Batch-aware main normalization
   private final boolean batchIdEnabled;
-
-  // Post-normalization: global median
-  private final boolean postNormEnabled;
-  private final FactorNormalizationModuleParameters postNormParams;
 
   public IntensityNormalizerTask(MZmineProject project, FeatureList featureList,
       ParameterSet parameters, @Nullable MemoryMapStorage storage,
@@ -111,27 +107,23 @@ class IntensityNormalizerTask extends AbstractTask {
         .getValue();
     totalRows = originalFeatureList.getNumberOfRows();
 
-    // Pre-normalization: metadata
+    // Pre-normalization: metadata (optional)
     final var preMetaParam = parameters.getParameter(
         IntensityNormalizerParameters.preNormMetadata);
-    preNormMetadataEnabled = Boolean.TRUE.equals(preMetaParam.getValue());
+    preNormMetadataEnabled = preMetaParam.getValue();
     preNormMetadataColumn =
         preNormMetadataEnabled ? preMetaParam.getEmbeddedParameter().getValue() : null;
 
-    // Pre-normalization: internal standards
+    // Pre-normalization: internal standards (optional)
     final var preISParam = parameters.getParameter(
-        IntensityNormalizerParameters.preNormInternalStandards);
-    preNormISEnabled = Boolean.TRUE.equals(preISParam.getValue());
-    preNormISParams = preNormISEnabled ? preISParam.getEmbeddedParameters() : null;
+        IntensityNormalizerParameters.preNormInternalStandards). getValueWithParameters();
+    preNormISEnabled = preISParam.value() != NormalizationType.NoNormalization;
+    preNormISParams = preNormISEnabled ? preISParam.parameters() : null;
 
     // Batch-aware main normalization
     final var batchParam = parameters.getParameter(IntensityNormalizerParameters.batchIdColumn);
-    batchIdEnabled = Boolean.TRUE.equals(batchParam.getValue());
+    batchIdEnabled = batchParam.getValue();
 
-    // Post-normalization: global median
-    final var postParam = parameters.getParameter(IntensityNormalizerParameters.postNormGlobal);
-    postNormEnabled = Boolean.TRUE.equals(postParam.getValue());
-    postNormParams = postNormEnabled ? postParam.getEmbeddedParameters() : null;
   }
 
   public double getFinishedPercentage() {
@@ -248,28 +240,8 @@ class IntensityNormalizerTask extends AbstractTask {
               "Intensity normalization by " + normalizationType
                   + (batchIdEnabled ? " (batch-aware)" : "")
                   + (preNormMetadataEnabled ? ", pre: metadata" : "")
-                  + (preNormISEnabled ? ", pre: IS" : "")
-                  + (postNormEnabled ? ", post: global median" : ""),
+                  + (preNormISEnabled ? ", pre: IS" : ""),
               IntensityNormalizerModule.class, appliedMethodParameters, getModuleCallDate()));
-    }
-
-    // ── Pass 4: post-normalization — global median across all samples ──
-    if (postNormEnabled) {
-      final MedianFeatureIntensityNormalizationTypeModule medianModule = new MedianFeatureIntensityNormalizationTypeModule();
-      // Post step uses normalized abundances and runs on ALL sample types (no batch logic).
-      final ParameterSet effectiveMain = withNormalizedAbundanceMeasureNoBatch(mainParameters);
-      final Map<RawDataFile, NormalizationFunction> functions;
-      try {
-        functions = buildAllFileFunctions(medianModule, postNormParams, normalizedFeatureList,
-            effectiveMain, metadata);
-      } catch (IllegalStateException e) {
-        error("Post-normalization global median: " + e.getMessage());
-        return;
-      }
-      applyFunctionsToFeatures(normalizedFeatureList, functions, false);
-      if (isCanceled()) {
-        return;
-      }
     }
 
     // Add normalized feature list to the project.
@@ -335,7 +307,7 @@ class IntensityNormalizerTask extends AbstractTask {
       if (isCanceled()) {
         return;
       }
-      for (final ModularFeature feature : ((ModularFeatureListRow) row).getFeatures()) {
+      for (final ModularFeature feature : row.getFeatures()) {
         final RawDataFile file = feature.getRawDataFile();
         final NormalizationFunction fn = fileToFunction.get(file);
         if (fn == null) {
@@ -369,14 +341,4 @@ class IntensityNormalizerTask extends AbstractTask {
     return cloned;
   }
 
-  /**
-   * Like {@link #withNormalizedAbundanceMeasure(ParameterSet)} but also disables
-   * {@code batchIdColumn} so the post-normalization global step is never batch-scoped.
-   */
-  private @NotNull ParameterSet withNormalizedAbundanceMeasureNoBatch(
-      @NotNull final ParameterSet mainParameters) {
-    final ParameterSet cloned = withNormalizedAbundanceMeasure(mainParameters);
-    cloned.getParameter(IntensityNormalizerParameters.batchIdColumn).setValue(false);
-    return cloned;
-  }
 }

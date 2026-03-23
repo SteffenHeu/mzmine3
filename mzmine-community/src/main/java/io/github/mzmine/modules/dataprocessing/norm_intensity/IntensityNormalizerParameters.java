@@ -28,7 +28,6 @@ import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataColumnParameters.AvailableTypes;
-import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
@@ -42,7 +41,6 @@ import io.github.mzmine.parameters.parametertypes.metadata.MetadataGroupingParam
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
 import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnumComboParameter;
-import io.github.mzmine.parameters.parametertypes.submodules.OptionalModuleParameter;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -65,8 +63,8 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
 
   // ── Pre-normalization step 1: metadata-based (dilution factor, sample weight, injection volume)
   /**
-   * Applied first, before IS and QC-based corrections. Each sample is divided by its metadata
-   * value (e.g. dilution factor, injection volume, sample weight).
+   * Applied first, before IS and QC-based corrections. Each sample is divided by its metadata value
+   * (e.g. dilution factor, injection volume, sample weight).
    */
   public static final OptionalParameter<MetadataGroupingParameter> preNormMetadata = new OptionalParameter<>(
       new MetadataGroupingParameter(NormalizationType.MetadataColumn.toString(), """
@@ -106,21 +104,6 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
           When set, QC drift correction is applied within each batch separately, \
           then batches are aligned by median QC scaling (pooled QC normalization)."""), false);
 
-  // ── Post-normalization: global median (optional, apply last)
-  /**
-   * Applied after IS and QC batch correction to remove any remaining sample-to-sample abundance
-   * differences. Only appropriate when the total metabolite content is assumed equal across all
-   * samples (e.g. technical replicates, same tissue type with same cell count). Do NOT use when
-   * global metabolite differences are biologically meaningful.
-   */
-  public static final OptionalModuleParameter<FactorNormalizationModuleParameters> postNormGlobal = new OptionalModuleParameter<>(
-      "Post-normalization: Global median",
-      "After IS and QC batch correction, apply median normalization across all samples to "
-          + "remove remaining abundance differences. Only use if the total metabolite content "
-          + "is assumed equal across all samples (e.g. technical replicates, same tissue type). "
-          + "Do NOT use if global metabolite changes are biologically meaningful.",
-      createPostNormDefaultParams(), false);
-
   /**
    * Holds the result of the normalization in a
    * {@link io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod} so it can
@@ -135,24 +118,19 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
 
   public IntensityNormalizerParameters() {
     super(new Parameter[]{featureLists, suffix, preNormMetadata, preNormInternalStandards,
-            normalizationType, batchIdColumn, postNormGlobal, featureMeasurementType,
-            handleOriginal, normalizationFunctions},
+            normalizationType, batchIdColumn, featureMeasurementType, handleOriginal,
+            normalizationFunctions},
         "https://mzmine.github.io/mzmine_documentation/module_docs/norm_intensity/norm_intensity.html");
-  }
-
-  private static FactorNormalizationModuleParameters createPostNormDefaultParams() {
-    return FactorNormalizationModuleParameters.create(List.of(SampleType.values()));
   }
 
   public static @NotNull IntensityNormalizerParameters create(
       final @NotNull FeatureListsSelection selectedFeatureLists,
       final @NotNull String selectedSuffix, final @Nullable String selectedPreNormMetadata,
-      final @Nullable ParameterSet selectedPreNormISParameters,
+      final @NotNull NormalizationType selectedInternalNorm,
+      final @Nullable ParameterSet selectedInternalNormParam,
       final @NotNull NormalizationType selectedNormalizationType,
       final @NotNull ParameterSet selectedNormalizationTypeParameters,
-      final @Nullable String selectedBatchIdColumn,
-      final @Nullable ParameterSet selectedPostNormParameters,
-      final @NotNull AbundanceMeasure selectedFeatureMeasurementType,
+      final @Nullable String selectedBatchIdColumn, final @NotNull AbundanceMeasure selectedFeatureMeasurementType,
       final @NotNull OriginalFeatureListOption selectedOriginalFeatureListHandling,
       final @NotNull List<NormalizationFunction> selectedNormalizationFunctions) {
     final IntensityNormalizerParameters parameters = (IntensityNormalizerParameters) new IntensityNormalizerParameters().cloneParameterSet();
@@ -160,24 +138,22 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
     parameters.setParameter(IntensityNormalizerParameters.suffix, selectedSuffix);
     parameters.setParameter(IntensityNormalizerParameters.preNormMetadata,
         selectedPreNormMetadata != null, selectedPreNormMetadata);
-    final var isParam = parameters.getParameter(
+
+    // internal standards
+    final ModuleOptionsEnumComboParameter<NormalizationType> internalNormParent = parameters.getParameter(
         IntensityNormalizerParameters.preNormInternalStandards);
-    isParam.setValue(selectedPreNormISParameters != null);
-    if (selectedPreNormISParameters != null) {
-      isParam.setEmbeddedParameters(
-          (StandardCompoundNormalizationTypeParameters) selectedPreNormISParameters);
+    if (selectedInternalNormParam != null) {
+      internalNormParent.setValue(selectedInternalNorm, selectedInternalNormParam);
+    } else {
+      internalNormParent.setValue(selectedInternalNorm);
     }
+
+    // intra and inter batch correction
     parameters.getParameter(IntensityNormalizerParameters.normalizationType)
         .setValue(selectedNormalizationType,
             selectedNormalizationTypeParameters.cloneParameterSet());
     parameters.setParameter(IntensityNormalizerParameters.batchIdColumn,
         selectedBatchIdColumn != null, selectedBatchIdColumn);
-    final var postParam = parameters.getParameter(IntensityNormalizerParameters.postNormGlobal);
-    postParam.setValue(selectedPostNormParameters != null);
-    if (selectedPostNormParameters != null) {
-      postParam.setEmbeddedParameters(
-          (FactorNormalizationModuleParameters) selectedPostNormParameters);
-    }
     parameters.setParameter(IntensityNormalizerParameters.featureMeasurementType,
         selectedFeatureMeasurementType);
     parameters.setParameter(IntensityNormalizerParameters.handleOriginal,

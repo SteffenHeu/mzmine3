@@ -25,7 +25,7 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.addRow;
-import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFactorParameters;
+import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFeatureIntensityParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createMainParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,11 +43,11 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-class MedianFeatureIntensityNormalizationTypeModuleTest {
+class FeatureIntensityNormalizationModuleTest {
 
   @Test
   void createReferenceFunctionsUsesMedianFeatureIntensity() {
-    final MedianFeatureIntensityNormalizationTypeModule module = new MedianFeatureIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl fileA = createRawFile("file_a", LocalDateTime.of(2026, 1, 1, 10, 0));
     final RawDataFileImpl fileB = createRawFile("file_b", LocalDateTime.of(2026, 1, 1, 10, 5));
 
@@ -59,7 +59,8 @@ class MedianFeatureIntensityNormalizationTypeModuleTest {
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
         List.of(fileA, fileB), featureList, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createFactorParameters());
+        createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.MEDIAN));
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));
@@ -75,13 +76,14 @@ class MedianFeatureIntensityNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsThrowsIfNoFeaturesFound() {
-    final MedianFeatureIntensityNormalizationTypeModule module = new MedianFeatureIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl file = createRawFile("empty_file", LocalDateTime.of(2026, 1, 1, 10, 0));
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
         () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
-            createMainParameters(AbundanceMeasure.Height), createFactorParameters()));
+            createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+                FeatureIntensityNormalizationMode.MEDIAN)));
 
     assertEquals("No features found or median of feature intensities is 0 for file: empty_file",
         exception.getMessage());
@@ -89,7 +91,7 @@ class MedianFeatureIntensityNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsThrowsIfAllAbundancesAreZero() {
-    final MedianFeatureIntensityNormalizationTypeModule module = new MedianFeatureIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl file = createRawFile("zero_file", LocalDateTime.of(2026, 1, 1, 10, 0));
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
     addRow(featureList, 1, file, 0f, null, null);
@@ -97,7 +99,8 @@ class MedianFeatureIntensityNormalizationTypeModuleTest {
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
         () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
-            createMainParameters(AbundanceMeasure.Height), createFactorParameters()));
+            createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+                FeatureIntensityNormalizationMode.MEDIAN)));
 
     assertEquals("No features found or median of feature intensities is 0 for file: zero_file",
         exception.getMessage());
@@ -105,7 +108,7 @@ class MedianFeatureIntensityNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsUsesAreaMeasure() {
-    final MedianFeatureIntensityNormalizationTypeModule module = new MedianFeatureIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl fileA = createRawFile("file_a", LocalDateTime.of(2026, 1, 1, 10, 0));
     final RawDataFileImpl fileB = createRawFile("file_b", LocalDateTime.of(2026, 1, 1, 10, 5));
 
@@ -116,7 +119,8 @@ class MedianFeatureIntensityNormalizationTypeModuleTest {
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
         List.of(fileA, fileB), featureList, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Area), createFactorParameters());
+        createMainParameters(AbundanceMeasure.Area), createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.MEDIAN));
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));
@@ -130,7 +134,7 @@ class MedianFeatureIntensityNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsWorksWithoutRunDate() {
-    final MedianFeatureIntensityNormalizationTypeModule module = new MedianFeatureIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl fileA = createRawFile("file_a", null);
     final RawDataFileImpl fileB = createRawFile("file_b", null);
 
@@ -140,7 +144,8 @@ class MedianFeatureIntensityNormalizationTypeModuleTest {
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
         List.of(fileA, fileB), featureList, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createFactorParameters());
+        createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.MEDIAN));
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));

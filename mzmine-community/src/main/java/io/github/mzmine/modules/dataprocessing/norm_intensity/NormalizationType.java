@@ -29,16 +29,12 @@ import org.jetbrains.annotations.NotNull;
 
 public enum NormalizationType implements ModuleOptionsEnum<NormalizationTypeModule> {
   NoNormalization("No normalization", "no_normalization", NoNormalizationTypeModule.class), //
-  AverageIntensity("Average intensity", "average_intensity",
-      AverageIntensityNormalizationTypeModule.class), //
-  MedianFeatureIntensity("Median feature intensity", "median_feature_intensity",
-      MedianFeatureIntensityNormalizationTypeModule.class), //
-  MaximumFeatureHeight("Maximum peak intensity", "maximum_feature_height",
-      MaximumFeatureHeightNormalizationTypeModule.class), //
+  ByFeatureIntensity("By feature intensity", "feature_intensity_normalization",
+      FeatureIntensityNormalizationModule.class), //
   TotalRawSignal("Spectral TIC", "spectral_tic", TotalRawSignalNormalizationTypeModule.class), //
   MetadataColumn("Metadata column (weight, dilution, ...)", "metadata_column",
       MetadataColumnNormalizationTypeModule.class),  //
-  StandardCompounds("Internal standard compounds", "standard_compounds",
+  StandardCompounds("Internal standard compounds", "internal_standard_compounds",
       StandardCompoundNormalizationTypeModule.class);
 
   private final String name;
@@ -64,7 +60,7 @@ public enum NormalizationType implements ModuleOptionsEnum<NormalizationTypeModu
    * @return all normalizers that correct intra batch drift
    */
   public static NormalizationType[] intraBatchDriftNormalizers() {
-    return new NormalizationType[]{NoNormalization, AverageIntensity, TotalRawSignal};
+    return new NormalizationType[]{NoNormalization, ByFeatureIntensity, TotalRawSignal};
   }
 
   @Override

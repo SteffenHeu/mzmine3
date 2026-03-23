@@ -26,18 +26,25 @@ package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.util.ArrayUtils;
+import io.github.mzmine.util.MathUtils;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
-public class MaximumFeatureHeightNormalizationTypeModule extends
+public class FeatureIntensityNormalizationModule extends
     AbstractFactorNormalizationTypeModule {
 
   @Override
   public @NotNull String getName() {
-    return "Maximum peak intensity";
+    return NormalizationType.ByFeatureIntensity.toString();
+  }
+
+  @Override
+  public final @NotNull Class<? extends ParameterSet> getParameterSetClass() {
+    return FeatureIntensityNormalizationParameters.class;
   }
 
   @Override
@@ -50,20 +57,26 @@ public class MaximumFeatureHeightNormalizationTypeModule extends
     if (abundanceMeasure == null) {
       throw new IllegalStateException("No feature abundance measure selected for normalization.");
     }
+    final FeatureIntensityNormalizationMode mode = moduleSpecificParameters.getValue(
+        FeatureIntensityNormalizationParameters.mode);
 
-    double maximumIntensity = 0d;
-    for (final FeatureListRow featureListRow : featureList.getRows()) {
-      final ModularFeature feature = (ModularFeature) featureListRow.getFeature(file);
-      if (feature != null) {
-        final Float abundance = abundanceMeasure.get(feature);
-        if (abundance != null && maximumIntensity < abundance) {
-          maximumIntensity = abundance;
-        }
-      }
+    final double[] abundances = featureList.stream().map(r -> (ModularFeature) r.getFeature(file))
+        .filter(Objects::nonNull).mapToDouble(abundanceMeasure::getOrNaN)
+        .filter(d -> !Double.isNaN(d)).toArray();
+
+    final double result = switch (mode) {
+      case MEDIAN -> MathUtils.calcMedian(abundances);
+      case AVERAGE ->  MathUtils.calcAvg(abundances);
+      case TIC -> ArrayUtils.sum(abundances);
+      case MAX -> ArrayUtils.max(abundances).orElse(0d);
+    };
+
+    if (Double.compare(result, 0d) == 0) {
+      throw new IllegalStateException(
+          "No features found or %s of feature intensities is 0 for file: %s".formatted(
+              mode, file.getName()));
     }
-    if (Double.compare(maximumIntensity, 0d) == 0) {
-      throw new IllegalStateException("No features found for file: " + file.getName());
-    }
-    return maximumIntensity;
+
+    return result;
   }
 }

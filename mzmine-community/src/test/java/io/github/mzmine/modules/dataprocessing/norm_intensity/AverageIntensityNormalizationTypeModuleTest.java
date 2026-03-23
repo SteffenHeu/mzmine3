@@ -25,7 +25,7 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.addRow;
-import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFactorParameters;
+import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFeatureIntensityParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createMainParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,7 +47,7 @@ class AverageIntensityNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsUsesAverageFeatureIntensity() {
-    final AverageIntensityNormalizationTypeModule module = new AverageIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl fileA = createRawFile("file_a", LocalDateTime.of(2026, 1, 1, 10, 0));
     final RawDataFileImpl fileB = createRawFile("file_b", LocalDateTime.of(2026, 1, 1, 10, 5));
 
@@ -57,7 +57,8 @@ class AverageIntensityNormalizationTypeModuleTest {
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
         List.of(fileA, fileB), featureList, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createFactorParameters());
+        createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.AVERAGE));
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));
@@ -71,7 +72,7 @@ class AverageIntensityNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsUsesSelectedFeatureMeasurementType() {
-    final AverageIntensityNormalizationTypeModule module = new AverageIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl fileA = createRawFile("file_a", LocalDateTime.of(2026, 1, 1, 10, 0));
     final RawDataFileImpl fileB = createRawFile("file_b", LocalDateTime.of(2026, 1, 1, 10, 5));
 
@@ -81,7 +82,8 @@ class AverageIntensityNormalizationTypeModuleTest {
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
         List.of(fileA, fileB), featureList, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Area), createFactorParameters());
+        createMainParameters(AbundanceMeasure.Area), createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.AVERAGE));
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));
@@ -95,20 +97,21 @@ class AverageIntensityNormalizationTypeModuleTest {
 
   @Test
   void createReferenceFunctionsThrowsIfIntensitySumIsZero() {
-    final AverageIntensityNormalizationTypeModule module = new AverageIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl file = createRawFile("empty_file", LocalDateTime.of(2026, 1, 1, 10, 0));
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
         () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
-            createMainParameters(AbundanceMeasure.Height), createFactorParameters()));
+            createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+                FeatureIntensityNormalizationMode.AVERAGE)));
 
     assertEquals("Sum of feature intensities is 0 for file: empty_file", exception.getMessage());
   }
 
   @Test
   void createInterpolatedFunctionInterpolatesFactors() {
-    final AverageIntensityNormalizationTypeModule module = new AverageIntensityNormalizationTypeModule();
+    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl prevFile = createRawFile("prev", LocalDateTime.of(2026, 1, 1, 10, 0));
     final RawDataFileImpl nextFile = createRawFile("next", LocalDateTime.of(2026, 1, 1, 10, 10));
     final RawDataFileImpl targetFile = createRawFile("target", LocalDateTime.of(2026, 1, 1, 10, 5));
@@ -123,7 +126,8 @@ class AverageIntensityNormalizationTypeModuleTest {
 
     final NormalizationFunction result = module.createInterpolatedFunction(targetFile, prevFunction,
         nextFunction, weights, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createFactorParameters());
+        createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
+            FeatureIntensityNormalizationMode.AVERAGE));
 
     final FactorNormalizationFunction interpolated = assertInstanceOf(
         FactorNormalizationFunction.class, result);
