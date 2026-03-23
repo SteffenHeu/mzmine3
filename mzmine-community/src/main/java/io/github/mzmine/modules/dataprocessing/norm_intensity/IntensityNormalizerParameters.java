@@ -31,7 +31,7 @@ import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataCol
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
-import io.github.mzmine.parameters.parametertypes.ComboParameter;
+import io.github.mzmine.parameters.parametertypes.AbundanceMeasureParameter;
 import io.github.mzmine.parameters.parametertypes.HiddenParameter;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter;
@@ -52,21 +52,19 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
   public static final StringParameter suffix = new StringParameter("Name suffix",
       "Suffix to be added to feature list name", "norm");
 
-  public static final ComboParameter<AbundanceMeasure> featureMeasurementType = new ComboParameter<AbundanceMeasure>(
-      "Feature measurement type", "Measure features using",
-      List.of(AbundanceMeasure.Area, AbundanceMeasure.Height), AbundanceMeasure.Height);
+  public static final AbundanceMeasureParameter featureMeasurementType = new AbundanceMeasureParameter(
+      AbundanceMeasure.rawValues(), AbundanceMeasure.Height);
 
+  // TODO enable process in place
   public static final OriginalFeatureListHandlingParameter handleOriginal = new OriginalFeatureListHandlingParameter(
-      "Original feature list",
-      "Defines the processing.\nKEEP is to keep the original feature list and create a new"
-          + "processed list.\nREMOVE saves memory.", false);
+      false, OriginalFeatureListOption.REMOVE);
 
   // ── Pre-normalization step 1: metadata-based (dilution factor, sample weight, injection volume)
   /**
    * Applied first, before IS and QC-based corrections. Each sample is divided by its metadata value
    * (e.g. dilution factor, injection volume, sample weight).
    */
-  public static final OptionalParameter<MetadataGroupingParameter> preNormMetadata = new OptionalParameter<>(
+  public static final OptionalParameter<MetadataGroupingParameter> metadataNormFactorCol = new OptionalParameter<>(
       new MetadataGroupingParameter(NormalizationType.MetadataColumn.toString(), """
           Select numeric metadata values used to normalize each raw file. Each data file must have a value in that column.
           Use 0 to disable normalization for that file.""", AvailableTypes.NUMBER), false);
@@ -77,12 +75,12 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    * internal standard compound(s) in m/z and RT space, correcting for extraction efficiency and
    * matrix effects.
    */
-  public static final ModuleOptionsEnumComboParameter<NormalizationType> preNormInternalStandards = new ModuleOptionsEnumComboParameter<>(
+  public static final ModuleOptionsEnumComboParameter<NormalizationType> internalStandardization = new ModuleOptionsEnumComboParameter<>(
       "Sample-internal normalization",
       "Normalize by internal standard compounds before QC drift correction. "
           + "Corrects for extraction efficiency and matrix effects. "
           + "Each feature is corrected by the nearest or weighted IS compound(s).",
-      NormalizationType.internalSampleNormalizers());
+      NormalizationType.internalSampleNormalizers(), false);
 
   // ── Main normalization: QC-based signal drift correction
   public static final ModuleOptionsEnumComboParameter<NormalizationType> normalizationType = new ModuleOptionsEnumComboParameter<>(
@@ -117,8 +115,8 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
       new NormalizationFunctionsParameter());
 
   public IntensityNormalizerParameters() {
-    super(new Parameter[]{featureLists, suffix, preNormMetadata, preNormInternalStandards,
-            normalizationType, batchIdColumn, featureMeasurementType, handleOriginal,
+    super(new Parameter[]{featureLists, suffix, handleOriginal, featureMeasurementType,
+            metadataNormFactorCol, internalStandardization, normalizationType, batchIdColumn,
             normalizationFunctions},
         "https://mzmine.github.io/mzmine_documentation/module_docs/norm_intensity/norm_intensity.html");
   }
@@ -130,18 +128,19 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
       final @Nullable ParameterSet selectedInternalNormParam,
       final @NotNull NormalizationType selectedNormalizationType,
       final @NotNull ParameterSet selectedNormalizationTypeParameters,
-      final @Nullable String selectedBatchIdColumn, final @NotNull AbundanceMeasure selectedFeatureMeasurementType,
+      final @Nullable String selectedBatchIdColumn,
+      final @NotNull AbundanceMeasure selectedFeatureMeasurementType,
       final @NotNull OriginalFeatureListOption selectedOriginalFeatureListHandling,
       final @NotNull List<NormalizationFunction> selectedNormalizationFunctions) {
     final IntensityNormalizerParameters parameters = (IntensityNormalizerParameters) new IntensityNormalizerParameters().cloneParameterSet();
     parameters.setParameter(IntensityNormalizerParameters.featureLists, selectedFeatureLists);
     parameters.setParameter(IntensityNormalizerParameters.suffix, selectedSuffix);
-    parameters.setParameter(IntensityNormalizerParameters.preNormMetadata,
+    parameters.setParameter(IntensityNormalizerParameters.metadataNormFactorCol,
         selectedPreNormMetadata != null, selectedPreNormMetadata);
 
     // internal standards
     final ModuleOptionsEnumComboParameter<NormalizationType> internalNormParent = parameters.getParameter(
-        IntensityNormalizerParameters.preNormInternalStandards);
+        IntensityNormalizerParameters.internalStandardization);
     if (selectedInternalNormParam != null) {
       internalNormParent.setValue(selectedInternalNorm, selectedInternalNormParam);
     } else {

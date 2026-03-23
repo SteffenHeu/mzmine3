@@ -48,6 +48,10 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
     this.type = type;
   }
 
+  public static @NotNull AbundanceMeasure[] rawValues() {
+    return new AbundanceMeasure[]{Height, Area};
+  }
+
   public Class<? extends DataType<Float>> type() {
     return type;
   }

@@ -109,14 +109,14 @@ class IntensityNormalizerTask extends AbstractTask {
 
     // Pre-normalization: metadata (optional)
     final var preMetaParam = parameters.getParameter(
-        IntensityNormalizerParameters.preNormMetadata);
+        IntensityNormalizerParameters.metadataNormFactorCol);
     preNormMetadataEnabled = preMetaParam.getValue();
     preNormMetadataColumn =
         preNormMetadataEnabled ? preMetaParam.getEmbeddedParameter().getValue() : null;
 
     // Pre-normalization: internal standards (optional)
     final var preISParam = parameters.getParameter(
-        IntensityNormalizerParameters.preNormInternalStandards). getValueWithParameters();
+        IntensityNormalizerParameters.internalStandardization). getValueWithParameters();
     preNormISEnabled = preISParam.value() != NormalizationType.NoNormalization;
     preNormISParams = preNormISEnabled ? preISParam.parameters() : null;
 
