@@ -432,10 +432,7 @@
         onAction="#runModule"
         userData="io.github.mzmine.modules.dataprocessing.norm_rtcalibration.RTCorrectionModule"/>
       <MenuItem text="Linear normalizer" onAction="#runModule"
-        userData="io.github.mzmine.modules.dataprocessing.norm_linear.LinearNormalizerModule"/>
-      <MenuItem text="Standard compound normalizer"
-        onAction="#runModule"
-        userData="io.github.mzmine.modules.dataprocessing.norm_standardcompound.StandardCompoundNormalizerModule"/>
+        userData="io.github.mzmine.modules.dataprocessing.norm_intensity.IntensityNormalizerModule"/>
       <MenuItem text="Retention index calculation"
                 onAction="#runModule"
                 userData="io.github.mzmine.modules.dataprocessing.norm_ri.RICalculationModule"/>

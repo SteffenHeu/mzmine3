@@ -120,11 +120,10 @@ import io.github.mzmine.modules.dataprocessing.id_online_reactivity.OnlineLcReac
 import io.github.mzmine.modules.dataprocessing.id_precursordbsearch.PrecursorDBSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.library_to_featurelist.SpectralLibraryToFeatureListModule;
-import io.github.mzmine.modules.dataprocessing.norm_linear.LinearNormalizerModule;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.IntensityNormalizerModule;
 import io.github.mzmine.modules.dataprocessing.norm_ri.RICalculationModule;
 import io.github.mzmine.modules.dataprocessing.norm_rtcalibration.RTCorrectionModule;
 import io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.ScanRtCorrectionModule;
-import io.github.mzmine.modules.dataprocessing.norm_standardcompound.StandardCompoundNormalizerModule;
 import io.github.mzmine.modules.io.export_ccsbase.CcsBaseExportModule;
 import io.github.mzmine.modules.io.export_compoundAnnotations_csv.CompoundAnnotationsCSVExportModule;
 import io.github.mzmine.modules.io.export_features_all_speclib_matches.ExportAllIdsGraphicalModule;
@@ -347,10 +346,9 @@ public class BatchModeModulesList {
            */
           ClearFeatureAnnotationsModule.class, //
           LipidAnnotationCleanupModule.class, //
-          LinearNormalizerModule.class, //
+          IntensityNormalizerModule.class, //
           RTCorrectionModule.class, //
           ScanRtCorrectionModule.class, //
-          StandardCompoundNormalizerModule.class, //
           RICalculationModule.class, //
 
           /*

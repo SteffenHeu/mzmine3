@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -12,6 +11,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -22,13 +22,19 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.tools.siriusapi;
+package io.github.mzmine.datamodel.features.types.numbers;
 
-public class SiriusDuplicateFeatureIdException extends RuntimeException {
+import org.jetbrains.annotations.NotNull;
 
-  public SiriusDuplicateFeatureIdException(String a, String b) {
-    super(
-        "Error while importing feature from Sirius. The SIRIUS IDs %s and %s have the same external ID (=mzmine ID). Cannot import.".formatted(
-            a, b));
+public class NormalizedHeightType extends HeightType {
+
+  @Override
+  public @NotNull String getUniqueID() {
+    return "height_norm";
+  }
+
+  @Override
+  public @NotNull String getHeaderString() {
+    return "Norm. height";
   }
 }
