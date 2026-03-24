@@ -36,9 +36,8 @@ import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.MemoryMapStorage;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.List;
+import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public class IntensityNormalizerModule implements MZmineProcessingModule {
 
@@ -84,26 +83,27 @@ public class IntensityNormalizerModule implements MZmineProcessingModule {
     return IntensityNormalizerParameters.class;
   }
 
-  public static @NotNull List<NormalizationFunction> getNormalizationFunctionsOfLatestCall(
+  public static @NotNull IntensityNormalizationSummary getNormalizationFunctionsOfLatestCall(
       final @NotNull FeatureList featureList) {
-    final List<NormalizationFunction> normalizationFunctions = ParameterUtils.getParameterValueOfLatestMethodCall(
+    final IntensityNormalizationSummary normalizationFunctions = ParameterUtils.getParameterValueOfLatestMethodCall(
         featureList.getAppliedMethods(), IntensityNormalizerModule.class,
-        IntensityNormalizerParameters.normalizationFunctions);
+        IntensityNormalizerParameters.hiddenNormalizationSummary);
     if (normalizationFunctions == null) {
-      return List.of();
+      return IntensityNormalizationSummary.EMPTY;
     }
-    return List.copyOf(normalizationFunctions);
+    return normalizationFunctions;
   }
 
-  public static @Nullable NormalizationFunction getNormalizationFunctionOfLatestCallForFile(
+  /**
+   * @return stream of {@link NormalizationFunction} to be applied in sequence to any feature of raw
+   * data file
+   */
+  public static @NotNull Stream<NormalizationFunction> streamNormalizationFunctionsOfLatestCallForFile(
       final @NotNull FeatureList featureList, final @NotNull RawDataFile rawDataFile) {
-    for (final NormalizationFunction normalizationFunction : getNormalizationFunctionsOfLatestCall(
-        featureList)) {
-      if (normalizationFunction.rawDataFilePlaceholder().matches(rawDataFile)) {
-        return normalizationFunction;
-      }
-    }
-    return null;
+    IntensityNormalizationSummary summary = getNormalizationFunctionsOfLatestCall(featureList);
+    return summary.steps().stream().map(step -> step.functions().stream()
+        .filter(func -> func.rawDataFilePlaceholder().matches(rawDataFile)).findFirst()
+        .orElse(null));
   }
 
 }

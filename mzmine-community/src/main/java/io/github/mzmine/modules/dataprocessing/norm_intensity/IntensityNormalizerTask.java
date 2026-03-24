@@ -36,6 +36,7 @@ import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.numbers.NormalizedAreaType;
 import io.github.mzmine.datamodel.features.types.numbers.NormalizedHeightType;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.IntensityNormalizationSummaryStep.Type;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils.InterpolationWeights;
@@ -82,8 +83,9 @@ class IntensityNormalizerTask extends AbstractTask {
   private final MetadataNormalizationConfig byMetadataColumn;
 
   // Pre-normalization: internal standards
+  private final NormalizationType internalStandardNormalizer;
   private final boolean internalStandardEnabled;
-  private final ParameterSet internalStandParams;
+  private final ParameterSet internalStandardParams;
 
   // Batch-aware main normalization
   private final @Nullable String batchIdColumn;
@@ -105,7 +107,7 @@ class IntensityNormalizerTask extends AbstractTask {
     final ValueWithParameters<NormalizationType> normalizationTypeWithParameters = parameters.getParameter(
         IntensityNormalizerParameters.normalizationType).getValueWithParameters();
     normalizationType = normalizationTypeWithParameters.value();
-    batchCorrectionEnabled = normalizationType != NormalizationType.NoNormalization;
+    batchCorrectionEnabled = normalizationType.isActive();
     normalizationTypeModule = normalizationType.getModuleInstance();
     normalizationTypeModuleParameters = normalizationTypeWithParameters.parameters();
 
@@ -122,8 +124,9 @@ class IntensityNormalizerTask extends AbstractTask {
     // Pre-normalization: internal standards (optional)
     final var internalParam = parameters.getParameter(
         IntensityNormalizerParameters.internalStandardization).getValueWithParameters();
-    internalStandardEnabled = internalParam.value() != NormalizationType.NoNormalization;
-    internalStandParams = internalStandardEnabled ? internalParam.parameters() : null;
+    internalStandardNormalizer = internalParam.value();
+    internalStandardEnabled = internalStandardNormalizer.isActive();
+    internalStandardParams = internalStandardEnabled ? internalParam.parameters() : null;
 
     // Batch-aware main normalization
     batchIdColumn = parameters.getOptionalValue(IntensityNormalizerParameters.batchIdColumn)
@@ -147,6 +150,10 @@ class IntensityNormalizerTask extends AbstractTask {
     setStatus(TaskStatus.PROCESSING);
     logger.info("Running Intensity normalizer");
 
+    // build up summary as we go
+    final List<IntensityNormalizationSummaryStep> steps = new ArrayList<>(totalNormalizationSteps);
+    final IntensityNormalizationSummary summary = new IntensityNormalizationSummary(steps);
+
     // Create new feature list and copy all rows up front.
     normalizedFeatureList = handleOriginal.isProcessInPlace() ? originalFeatureList
         : FeatureListUtils.createCopy(originalFeatureList, suffix, storage, true);
@@ -165,6 +172,10 @@ class IntensityNormalizerTask extends AbstractTask {
 
     final MetadataTable metadata = ProjectService.getMetadata();
 
+    // first use height or area for normalization, then switch to normalized height or area
+    // in subsequent steps to apply cummulative normalization
+    ParameterSet effectiveMainParams = mainParameters;
+
     // ── Pass 1: pre-normalization by metadata column (dilution factor, sample weight, …) ──
     if (byMetadataEnabled) {
       final MetadataColumnNormalizationTypeModule metadataModule = new MetadataColumnNormalizationTypeModule();
@@ -182,6 +193,9 @@ class IntensityNormalizerTask extends AbstractTask {
         return;
       }
       applyFunctionsToFeatures(normalizedFeatureList, functions);
+      effectiveMainParams = withNormalizedAbundanceMeasure(mainParameters);
+      steps.add(
+          new IntensityNormalizationSummaryStep(Type.METADATA, List.copyOf(functions.values())));
       if (isCanceled()) {
         return;
       }
@@ -189,57 +203,49 @@ class IntensityNormalizerTask extends AbstractTask {
 
     // ── Pass 2: pre-normalization by internal standard compounds ──
     if (internalStandardEnabled) {
-      final StandardCompoundNormalizationTypeModule isModule = new StandardCompoundNormalizationTypeModule();
       // Use normalized abundances as base for IS metric computation if pass 1 already ran.
-      final ParameterSet effectiveMain =
-          byMetadataEnabled ? withNormalizedAbundanceMeasure(mainParameters) : mainParameters;
       final Map<RawDataFile, NormalizationFunction> functions;
       try {
-        functions = buildAllFileFunctions(isModule, internalStandParams, normalizedFeatureList,
-            effectiveMain, metadata);
+        functions = buildAllFileFunctions(internalStandardNormalizer.getModuleInstance(),
+            internalStandardParams, normalizedFeatureList, effectiveMainParams, metadata);
       } catch (IllegalStateException e) {
         error("Pre-normalization internal standards: " + e.getMessage());
         return;
       }
       applyFunctionsToFeatures(normalizedFeatureList, functions);
+      effectiveMainParams = withNormalizedAbundanceMeasure(mainParameters);
+      steps.add(new IntensityNormalizationSummaryStep(Type.SAMPLE_INTERNAL,
+          List.copyOf(functions.values())));
       if (isCanceled()) {
         return;
       }
     }
 
     // ── Pass 3: main normalization (QC drift correction, optionally batch-aware) ──
-    {
-      final boolean priorPassRan = byMetadataEnabled || internalStandardEnabled;
-      final ParameterSet effectiveMain =
-          priorPassRan ? withNormalizedAbundanceMeasure(mainParameters) : mainParameters;
+    if (batchCorrectionEnabled) {
       final Map<RawDataFile, NormalizationFunction> mainFunctions;
       try {
         mainFunctions = buildAllFileFunctions(normalizationTypeModule,
-            normalizationTypeModuleParameters, normalizedFeatureList, effectiveMain, metadata);
+            normalizationTypeModuleParameters, normalizedFeatureList, effectiveMainParams,
+            metadata);
       } catch (IllegalStateException e) {
-        error("Main normalization: " + e.getMessage());
+        error("Error during %s step by %s: ".formatted(
+            IntensityNormalizerParameters.normalizationType.getName(),
+            normalizationTypeModule.getName()) + e.getMessage());
         return;
       }
       applyFunctionsToFeatures(normalizedFeatureList, mainFunctions);
+      effectiveMainParams = withNormalizedAbundanceMeasure(mainParameters);
+      // Store main normalization functions for gap filling / manual integration re-use.
+      steps.add(new IntensityNormalizationSummaryStep(Type.INTRA_BATCH,
+          List.copyOf(mainFunctions.values())));
       if (isCanceled()) {
         return;
       }
 
-      // Store main normalization functions for gap filling / manual integration re-use.
-      final List<NormalizationFunction> finalNormalizationFunctions = new ArrayList<>(
-          originalFeatureList.getNumberOfRawDataFiles());
-      for (final RawDataFile rawDataFile : originalFeatureList.getRawDataFiles()) {
-        final NormalizationFunction fn = mainFunctions.get(rawDataFile);
-        if (fn == null) {
-          throw new IllegalStateException(
-              "No normalization function available for file: " + rawDataFile.getName());
-        }
-        finalNormalizationFunctions.add(fn);
-      }
-
       final ParameterSet appliedMethodParameters = mainParameters.cloneParameterSet(true);
-      appliedMethodParameters.setParameter(IntensityNormalizerParameters.normalizationFunctions,
-          List.copyOf(finalNormalizationFunctions));
+      appliedMethodParameters.setParameter(IntensityNormalizerParameters.hiddenNormalizationSummary,
+          summary);
 
       normalizedFeatureList.addDescriptionOfAppliedTask(new SimpleFeatureListAppliedMethod(
           "Intensity normalization by " + normalizationType + (batchIdEnabled
@@ -303,7 +309,7 @@ class IntensityNormalizerTask extends AbstractTask {
    */
   private void applyFunctionsToFeatures(@NotNull final ModularFeatureList featureList,
       @NotNull final Map<RawDataFile, NormalizationFunction> fileToFunction) {
-    for (final FeatureListRow row : featureList.getRowsCopy()) {
+    for (final FeatureListRow row : featureList.getRows()) {
       if (isCanceled()) {
         return;
       }
@@ -331,9 +337,8 @@ class IntensityNormalizerTask extends AbstractTask {
     final AbundanceMeasure original = mainParameters.getValue(
         IntensityNormalizerParameters.featureMeasurementType);
     final AbundanceMeasure normalized = switch (original) {
-      case Height -> AbundanceMeasure.NORMALIZED_HEIGHT;
-      case Area -> AbundanceMeasure.NORMALIZED_AREA;
-      default -> original; // already a normalized measure
+      case Height, NORMALIZED_HEIGHT -> AbundanceMeasure.NORMALIZED_HEIGHT;
+      case Area, NORMALIZED_AREA -> AbundanceMeasure.NORMALIZED_AREA;
     };
     cloned.setParameter(IntensityNormalizerParameters.featureMeasurementType, normalized);
     return cloned;

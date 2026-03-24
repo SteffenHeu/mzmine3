@@ -65,7 +65,7 @@ final class NormIntensityTestUtils {
         new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), "norm", null,
         NormalizationType.NoNormalization, null,
         NormalizationType.ByFeatureIntensity, createFeatureIntensityParameters(
-            FeatureIntensityNormalizationMode.MEDIAN), null, abundanceMeasure, OriginalFeatureListOption.KEEP, List.of());
+            FeatureIntensityNormalizationMode.MEDIAN), null, abundanceMeasure, OriginalFeatureListOption.KEEP, null);
   }
 
   static @NotNull FeatureIntensityNormalizationParameters createFeatureIntensityParameters(

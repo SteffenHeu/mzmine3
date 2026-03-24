@@ -24,7 +24,10 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
+import static java.util.Objects.requireNonNullElse;
+
 import io.github.mzmine.javafx.components.factories.FxLabels;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.IntensityNormalizationSummaryStep.Type;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.UserParameter;
 import java.util.ArrayList;
@@ -35,17 +38,22 @@ import java.util.logging.Logger;
 import javafx.scene.control.Label;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class NormalizationFunctionsParameter implements
-    UserParameter<List<NormalizationFunction>, Label> {
+    UserParameter<IntensityNormalizationSummary, Label> {
 
   private static final Logger logger = Logger.getLogger(
       NormalizationFunctionsParameter.class.getName());
 
+  public static final String XML_STEP_ELEMENT = "normalization_step";
+
+
   @NotNull
-  private final List<NormalizationFunction> normalizationFunctions = new ArrayList<>();
+  private IntensityNormalizationSummary summary = new IntensityNormalizationSummary(List.of());
 
   @Override
   public @NotNull String getName() {
@@ -54,7 +62,7 @@ public class NormalizationFunctionsParameter implements
 
   @Override
   public @NotNull String getDescription() {
-    return "Stores per-file normalization functions used to normalize this feature list.";
+    return "Stores per-file normalization functions used to normalize this feature list. Summary contains multiple steps, applied in sequence.";
   }
 
   @Override
@@ -69,28 +77,28 @@ public class NormalizationFunctionsParameter implements
 
   @Override
   public void setValueToComponent(final @NotNull Label component,
-      final @Nullable List<NormalizationFunction> newValue) {
+      final @Nullable IntensityNormalizationSummary newValue) {
     // no UI component editing for hidden parameter
   }
 
   @Override
-  public @NotNull UserParameter<List<NormalizationFunction>, Label> cloneParameter() {
+  public @NotNull UserParameter<IntensityNormalizationSummary, Label> cloneParameter() {
     final NormalizationFunctionsParameter clonedParameter = new NormalizationFunctionsParameter();
-    clonedParameter.setValue(List.copyOf(normalizationFunctions));
+    clonedParameter.setValue(summary.copy());
     return clonedParameter;
   }
 
+  /**
+   * @return defensive copy of summary
+   */
   @Override
-  public @NotNull List<NormalizationFunction> getValue() {
-    return List.copyOf(normalizationFunctions);
+  public @NotNull IntensityNormalizationSummary getValue() {
+    return summary.copy();
   }
 
   @Override
-  public void setValue(final @Nullable List<NormalizationFunction> newValue) {
-    normalizationFunctions.clear();
-    if (newValue != null) {
-      normalizationFunctions.addAll(newValue);
-    }
+  public void setValue(final @Nullable IntensityNormalizationSummary newValue) {
+    summary = requireNonNullElse(newValue, IntensityNormalizationSummary.EMPTY);
   }
 
   @Override
@@ -104,41 +112,58 @@ public class NormalizationFunctionsParameter implements
       return false;
     }
 
-    if (normalizationFunctions.size() != other.normalizationFunctions.size()) {
-      return false;
-    }
-
-    for (int i = 0; i < normalizationFunctions.size(); i++) {
-      if (!normalizationFunctions.get(i).equals(other.normalizationFunctions.get(i))) {
-        return false;
-      }
-    }
-    return true;
+    return summary.equals(other.summary);
   }
 
   @Override
   public void loadValueFromXML(final @NotNull Element xmlElement) {
-    normalizationFunctions.clear();
+    ArrayList<IntensityNormalizationSummaryStep> steps = new ArrayList<>(5);
 
-    final NodeList functionElements = xmlElement.getElementsByTagName(
-        NormalizationFunction.XML_FUNCTION_ELEMENT);
-    for (int i = 0; i < functionElements.getLength(); i++) {
-      final org.w3c.dom.Node node = functionElements.item(i);
-      if (!(node instanceof Element functionElement) || node.getParentNode() != xmlElement) {
+    final NodeList stepElements = xmlElement.getElementsByTagName(XML_STEP_ELEMENT);
+    for (int s = 0; s < stepElements.getLength(); s++) {
+      final Node snode = stepElements.item(s);
+      if (!(snode instanceof Element step) || snode.getParentNode() != xmlElement) {
         continue;
       }
-      try {
-        normalizationFunctions.add(NormalizationFunction.loadFromXML(functionElement));
-      } catch (RuntimeException e) {
-        logger.log(Level.WARNING, "Error while loading normalization function", e);
+
+      final Type type = IntensityNormalizationSummaryStep.Type.parse(step.getAttribute("type"));
+
+      ArrayList<NormalizationFunction> functions = new ArrayList<>();
+
+      final NodeList functionElements = xmlElement.getElementsByTagName(
+          NormalizationFunction.XML_FUNCTION_ELEMENT);
+      for (int i = 0; i < functionElements.getLength(); i++) {
+        final Node node = functionElements.item(i);
+        if (!(node instanceof Element functionElement) || node.getParentNode() != step) {
+          continue;
+        }
+        try {
+          functions.add(NormalizationFunction.loadFromXML(functionElement));
+        } catch (RuntimeException e) {
+          logger.log(Level.WARNING, "Error while loading normalization function", e);
+          // do not set a summary if loading of a function fails. This will result in wrong results
+          // normalization has to be applied a new
+          return;
+        }
+
+        steps.add(new IntensityNormalizationSummaryStep(type, functions));
       }
     }
+    // finally loaded summary
+    summary = new IntensityNormalizationSummary(steps);
   }
 
   @Override
   public void saveValueToXML(final @NotNull Element xmlElement) {
-    for (final NormalizationFunction normalizationFunction : normalizationFunctions) {
-      NormalizationFunction.appendFunctionElement(xmlElement, normalizationFunction);
+    final Document doc = xmlElement.getOwnerDocument();
+    for (IntensityNormalizationSummaryStep step : summary.steps()) {
+      Element stepElement = doc.createElement(XML_STEP_ELEMENT);
+      stepElement.setAttribute("type", step.type().getUniqueID());
+      xmlElement.appendChild(stepElement);
+
+      for (final NormalizationFunction normalizationFunction : step.functions()) {
+        NormalizationFunction.appendFunctionElement(stepElement, normalizationFunction);
+      }
     }
   }
 }

@@ -410,11 +410,14 @@ public class FeatureDataUtils {
       calculateQualityParameters(feature);
     }
 
-    // auto-apply normalization if present
-    final NormalizationFunction normalizer = IntensityNormalizerModule.getNormalizationFunctionOfLatestCallForFile(
-        feature.getFeatureList(), feature.getRawDataFile());
-    if (normalizer != null) {
-      normalizeAbundances(feature, normalizer);
+    // auto-apply normalization if present, apply all steps in order and accumulate normalization
+    // need to set to null before to start fresh with raw height and area
+    if (feature.getRawDataFile() != null) {
+      feature.set(NormalizedHeightType.class, null);
+      feature.set(NormalizedAreaType.class, null);
+      IntensityNormalizerModule.streamNormalizationFunctionsOfLatestCallForFile(
+              feature.getFeatureList(), feature.getRawDataFile())
+          .forEach(normalizer -> accumulateNormalization(feature, normalizer));
     }
   }
 

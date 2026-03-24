@@ -77,4 +77,11 @@ public enum NormalizationType implements ModuleOptionsEnum<NormalizationTypeModu
   public String toString() {
     return name;
   }
+
+  /**
+   * @return Active if not NoNormalization
+   */
+  public boolean isActive() {
+    return this != NoNormalization;
+  }
 }

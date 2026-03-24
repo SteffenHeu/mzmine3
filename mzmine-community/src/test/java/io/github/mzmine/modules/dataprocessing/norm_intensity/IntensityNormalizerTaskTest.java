@@ -44,7 +44,6 @@ import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class IntensityNormalizerTaskTest {
@@ -64,7 +63,7 @@ class IntensityNormalizerTaskTest {
         NormalizationType.NoNormalization, null,
         NormalizationType.ByFeatureIntensity, createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.AVERAGE), null, measure,
-        handleOriginal, List.of());
+        handleOriginal, null);
   }
 
   /**
