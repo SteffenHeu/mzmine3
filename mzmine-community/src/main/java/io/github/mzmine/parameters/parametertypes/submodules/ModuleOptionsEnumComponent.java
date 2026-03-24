@@ -112,6 +112,12 @@ public class ModuleOptionsEnumComponent<EnumType extends Enum<EnumType> & Module
       paramHolder.setVisible(visiblePane);
       paramHolder.setManaged(visiblePane);
 
+      // estimate new height
+      var params = visiblePane && !hidden.get() ? paramPane.getParametersAndComponents().size() : 0;
+      setEstimatedHeight(params);
+
+      setEstimatedDefaultWidth(params == 0);
+
       var parent = getParent();
       if (parent != null) {
         parent.layout();

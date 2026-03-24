@@ -29,6 +29,7 @@ import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
 import io.github.mzmine.parameters.parametertypes.ComboComponent;
 import io.github.mzmine.parameters.parametertypes.metadata.MetadataGroupingComponent;
+import javafx.geometry.Insets;
 import javafx.scene.layout.HBox;
 import org.jetbrains.annotations.NotNull;
 
@@ -40,6 +41,7 @@ public class MetadataNormalizationConfigComponent extends HBox {
   public MetadataNormalizationConfigComponent(ComboComponent<Mode> modeCombo,
       MetadataGroupingComponent metadataCol) {
     super(FxLayout.DEFAULT_SPACE, modeCombo, metadataCol);
+    FxLayout.applyDefaults(this, Insets.EMPTY);
     this.modeCombo = modeCombo;
     this.metadataCol = metadataCol;
   }
