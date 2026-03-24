@@ -33,6 +33,7 @@ import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTabl
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.DoubleMetadataColumn;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.util.MathUtils;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -64,9 +65,10 @@ public class MetadataColumnNormalizationTypeModule implements NormalizationTypeM
       @NotNull final ModularFeatureList featureList, @NotNull final MetadataTable metadata,
       @NotNull final ParameterSet mainParameters,
       @NotNull final ParameterSet moduleSpecificParameters) {
-    final String columnName = moduleSpecificParameters.getValue(
+    final MetadataNormalizationConfig metadataConfig = moduleSpecificParameters.getValue(
         MetadataColumnNormalizationTypeParameters.metadataColumn);
-    if (columnName == null || columnName.isBlank()) {
+    final String columnName = metadataConfig.metadataColumn();
+    if (columnName.isBlank()) {
       throw new IllegalStateException("No metadata column selected for normalization.");
     }
 
@@ -89,18 +91,27 @@ public class MetadataColumnNormalizationTypeModule implements NormalizationTypeM
       fileToMetadataValue.put(rawDataFile, metadataValue);
     }
 
-    final double maxMetadataValue = fileToMetadataValue.values().stream().max(Double::compare)
-        .orElseThrow(() -> new IllegalStateException(
-            "No valid metadata values available in column: " + columnName));
+    if (fileToMetadataValue.isEmpty()) {
+      throw new IllegalStateException(
+          "No valid metadata values available in column: " + columnName);
+    }
+
+    // normalize intensities to the median of the factors to have a similar level of intensities
+    // before and after normalziation
+    final double median = MathUtils.calcMedian(
+        fileToMetadataValue.values().stream().mapToDouble(Double::doubleValue).toArray());
 
     final Map<@NotNull RawDataFile, @NotNull NormalizationFunction> functions = new HashMap<>(
         referenceFiles.size());
     for (final Entry<@NotNull RawDataFile, @NotNull Double> entry : fileToMetadataValue.entrySet()) {
       final RawDataFile file = entry.getKey();
+      // correct sample by factor/median to keep general intensity scales
+      // could also think about using the factor as is
       final double factor =
-          Double.compare(entry.getValue(), 0) == 0 ? 1 : maxMetadataValue / entry.getValue();
+          Double.compare(entry.getValue(), 0) == 0 ? 1 : entry.getValue()/median;
       final LocalDateTime runDate = MetadataTableUtils.getRunDate(metadata, file);
-      functions.put(file, new FactorNormalizationFunction(file, runDate, factor));
+      // divide or multiple by factor
+      functions.put(file, new FactorNormalizationFunction(file, runDate, metadataConfig.mode().isDivide()? 1d/factor : factor));
     }
 
     return functions;

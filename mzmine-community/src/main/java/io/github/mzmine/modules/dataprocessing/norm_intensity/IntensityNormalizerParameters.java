@@ -27,7 +27,6 @@ package io.github.mzmine.modules.dataprocessing.norm_intensity;
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
-import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataColumnParameters.AvailableTypes;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
@@ -61,12 +60,14 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
   // ── Pre-normalization step 1: metadata-based (dilution factor, sample weight, injection volume)
   /**
    * Applied first, before IS and QC-based corrections. Each sample is divided by its metadata value
-   * (e.g. dilution factor, injection volume, sample weight).
+   * (e.g. dilution factor, injection volume, sample weight). either divide or multiply
    */
-  public static final OptionalParameter<MetadataGroupingParameter> metadataNormFactorCol = new OptionalParameter<>(
-      new MetadataGroupingParameter(NormalizationType.MetadataColumn.toString(), """
+  public static final OptionalParameter<MetadataNormalizationConfigParameter> metadataNormFactorCol = new OptionalParameter<>(
+      new MetadataNormalizationConfigParameter(NormalizationType.MetadataColumn.toString(), """
           Select numeric metadata values used to normalize each raw file. Each data file must have a value in that column.
-          Use 0 to disable normalization for that file.""", AvailableTypes.NUMBER), false);
+          Use 0 to disable normalization for that file.
+          Choose to divide or multiply the sample intensities, e.g., for divide by weight or multiply by dilution factor.""",
+          MetadataNormalizationConfig.getDefault()), false);
 
   // ── Pre-normalization step 2: internal standard compounds
   /**
@@ -122,7 +123,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
 
   public static @NotNull IntensityNormalizerParameters create(
       final @NotNull FeatureListsSelection selectedFeatureLists,
-      final @NotNull String selectedSuffix, final @Nullable String selectedPreNormMetadata,
+      final @NotNull String selectedSuffix, final @Nullable MetadataNormalizationConfig selectedMetadataNorm,
       final @NotNull NormalizationType selectedInternalNorm,
       final @Nullable ParameterSet selectedInternalNormParam,
       final @NotNull NormalizationType selectedNormalizationType,
@@ -135,7 +136,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
     parameters.setParameter(IntensityNormalizerParameters.featureLists, selectedFeatureLists);
     parameters.setParameter(IntensityNormalizerParameters.suffix, selectedSuffix);
     parameters.setParameter(IntensityNormalizerParameters.metadataNormFactorCol,
-        selectedPreNormMetadata != null, selectedPreNormMetadata);
+        selectedMetadataNorm != null, selectedMetadataNorm);
 
     // internal standards
     final ModuleOptionsEnumComboParameter<NormalizationType> internalNormParent = parameters.getParameter(

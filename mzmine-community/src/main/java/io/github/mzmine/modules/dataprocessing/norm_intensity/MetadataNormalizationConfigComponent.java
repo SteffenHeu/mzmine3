@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -24,26 +25,31 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
-import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.javafx.components.util.FxLayout;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
+import io.github.mzmine.parameters.parametertypes.ComboComponent;
+import io.github.mzmine.parameters.parametertypes.metadata.MetadataGroupingComponent;
+import javafx.scene.layout.HBox;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class MetadataColumnNormalizationTypeParameters extends SimpleParameterSet {
+public class MetadataNormalizationConfigComponent extends HBox {
 
-  public static final MetadataNormalizationConfigParameter metadataColumn = new MetadataNormalizationConfigParameter(
-      IntensityNormalizerParameters.metadataNormFactorCol.getName(), IntensityNormalizerParameters.metadataNormFactorCol.getDescription(),
-      MetadataNormalizationConfig.getDefault());
+  private final ComboComponent<Mode> modeCombo;
+  private final MetadataGroupingComponent metadataCol;
 
-  public MetadataColumnNormalizationTypeParameters() {
-    super(metadataColumn);
+  public MetadataNormalizationConfigComponent(ComboComponent<Mode> modeCombo,
+      MetadataGroupingComponent metadataCol) {
+    super(FxLayout.DEFAULT_SPACE, modeCombo, metadataCol);
+    this.modeCombo = modeCombo;
+    this.metadataCol = metadataCol;
   }
 
-  public static @NotNull MetadataColumnNormalizationTypeParameters create(
-      final @Nullable MetadataNormalizationConfig selectedMetadataColumn) {
-    final MetadataColumnNormalizationTypeParameters parameters = (MetadataColumnNormalizationTypeParameters) new MetadataColumnNormalizationTypeParameters().cloneParameterSet();
-    parameters.setParameter(MetadataColumnNormalizationTypeParameters.metadataColumn,
-        selectedMetadataColumn);
-    return parameters;
+  public MetadataNormalizationConfig getValue() {
+    return new MetadataNormalizationConfig(metadataCol.getValue(), modeCombo.getValue());
   }
 
+  public void setValue(@NotNull MetadataNormalizationConfig newValue) {
+    modeCombo.setValue(newValue.mode());
+    metadataCol.setValue(newValue.metadataColumn());
+  }
 }

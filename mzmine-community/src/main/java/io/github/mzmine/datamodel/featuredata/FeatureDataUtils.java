@@ -531,4 +531,14 @@ public class FeatureDataUtils {
     feature.set(NormalizedAreaType.class, (float) (baseArea * factor));
     feature.set(NormalizedHeightType.class, (float) (baseHeight * factor));
   }
+
+  /**
+   * Reset all {@link NormalizedAreaType} and {@link NormalizedHeightType}
+   */
+  public static void clearIntensityNormalization(FeatureList flist) {
+    flist.streamFeatures().forEach(feature -> {
+      feature.set(NormalizedAreaType.class, null);
+      feature.set(NormalizedHeightType.class, null);
+    });
+  }
 }

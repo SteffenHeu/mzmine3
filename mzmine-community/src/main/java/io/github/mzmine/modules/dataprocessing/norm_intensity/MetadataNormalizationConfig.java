@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -24,26 +25,37 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
-import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class MetadataColumnNormalizationTypeParameters extends SimpleParameterSet {
+/**
+ * Either multiply or divide value by metadata value. Weight is divided dilution factor is
+ * multiplied
+ */
+public record MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNull Mode mode) {
 
-  public static final MetadataNormalizationConfigParameter metadataColumn = new MetadataNormalizationConfigParameter(
-      IntensityNormalizerParameters.metadataNormFactorCol.getName(), IntensityNormalizerParameters.metadataNormFactorCol.getDescription(),
-      MetadataNormalizationConfig.getDefault());
-
-  public MetadataColumnNormalizationTypeParameters() {
-    super(metadataColumn);
+  public MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNull Mode mode) {
+    this.metadataColumn = metadataColumn.strip();
+    this.mode = mode;
   }
 
-  public static @NotNull MetadataColumnNormalizationTypeParameters create(
-      final @Nullable MetadataNormalizationConfig selectedMetadataColumn) {
-    final MetadataColumnNormalizationTypeParameters parameters = (MetadataColumnNormalizationTypeParameters) new MetadataColumnNormalizationTypeParameters().cloneParameterSet();
-    parameters.setParameter(MetadataColumnNormalizationTypeParameters.metadataColumn,
-        selectedMetadataColumn);
-    return parameters;
+  public static @NotNull MetadataNormalizationConfig getDefault() {
+    return new MetadataNormalizationConfig("", Mode.multiply);
   }
 
+  public enum Mode implements UniqueIdSupplier {
+    multiply, divide;
+
+    @Override
+    public @NotNull String getUniqueID() {
+      return switch (this) {
+        case multiply -> "multiply";
+        case divide -> "divide";
+      };
+    }
+
+    public boolean isDivide() {
+      return this == divide;
+    }
+  }
 }
