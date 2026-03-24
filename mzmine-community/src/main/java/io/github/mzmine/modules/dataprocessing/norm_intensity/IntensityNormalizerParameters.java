@@ -55,9 +55,8 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
   public static final AbundanceMeasureParameter featureMeasurementType = new AbundanceMeasureParameter(
       AbundanceMeasure.rawValues(), AbundanceMeasure.Height);
 
-  // TODO enable process in place
   public static final OriginalFeatureListHandlingParameter handleOriginal = new OriginalFeatureListHandlingParameter(
-      false, OriginalFeatureListOption.REMOVE);
+      true, OriginalFeatureListOption.PROCESS_IN_PLACE);
 
   // ── Pre-normalization step 1: metadata-based (dilution factor, sample weight, injection volume)
   /**

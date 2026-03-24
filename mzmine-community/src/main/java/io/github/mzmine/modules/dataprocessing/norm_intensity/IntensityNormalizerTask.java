@@ -76,14 +76,15 @@ class IntensityNormalizerTask extends AbstractTask {
   private final ParameterSet mainParameters;
 
   // Pre-normalization: metadata (dilution factor, sample weight, injection volume)
-  private final boolean preNormMetadataEnabled;
-  private final String preNormMetadataColumn;
+  private final boolean byMetadataEnabled;
+  private final String byMetadataColumn;
 
   // Pre-normalization: internal standards
-  private final boolean preNormISEnabled;
-  private final ParameterSet preNormISParams;
+  private final boolean internalStandEnabled;
+  private final ParameterSet internalStandParams;
 
   // Batch-aware main normalization
+  private final @Nullable String batchIdColumn;
   private final boolean batchIdEnabled;
 
   public IntensityNormalizerTask(MZmineProject project, FeatureList featureList,
@@ -110,20 +111,19 @@ class IntensityNormalizerTask extends AbstractTask {
     // Pre-normalization: metadata (optional)
     final var preMetaParam = parameters.getParameter(
         IntensityNormalizerParameters.metadataNormFactorCol);
-    preNormMetadataEnabled = preMetaParam.getValue();
-    preNormMetadataColumn =
-        preNormMetadataEnabled ? preMetaParam.getEmbeddedParameter().getValue() : null;
+    byMetadataEnabled = preMetaParam.getValue();
+    byMetadataColumn =
+        byMetadataEnabled ? preMetaParam.getEmbeddedParameter().getValue() : null;
 
     // Pre-normalization: internal standards (optional)
-    final var preISParam = parameters.getParameter(
+    final var internalParam = parameters.getParameter(
         IntensityNormalizerParameters.internalStandardization). getValueWithParameters();
-    preNormISEnabled = preISParam.value() != NormalizationType.NoNormalization;
-    preNormISParams = preNormISEnabled ? preISParam.parameters() : null;
+    internalStandEnabled = internalParam.value() != NormalizationType.NoNormalization;
+    internalStandParams = internalStandEnabled ? internalParam.parameters() : null;
 
     // Batch-aware main normalization
-    final var batchParam = parameters.getParameter(IntensityNormalizerParameters.batchIdColumn);
-    batchIdEnabled = batchParam.getValue();
-
+    batchIdColumn = parameters.getOptionalValue(IntensityNormalizerParameters.batchIdColumn).map(String::strip).filter(String::isBlank).orElse(null);
+    batchIdEnabled = batchIdColumn != null;
   }
 
   public double getFinishedPercentage() {
@@ -140,9 +140,8 @@ class IntensityNormalizerTask extends AbstractTask {
     logger.info("Running Intensity normalizer");
 
     // Create new feature list and copy all rows up front.
-    normalizedFeatureList = new ModularFeatureList(originalFeatureList + " " + suffix,
-        getMemoryMapStorage(), originalFeatureList.getRawDataFiles());
-    FeatureListUtils.transferMetadata(originalFeatureList, normalizedFeatureList, true);
+    normalizedFeatureList = handleOriginal.isProcessInPlace() ? originalFeatureList
+        : FeatureListUtils.createCopy(originalFeatureList, suffix, storage, true);
 
     final NormalizedAreaType normAreaType = DataTypes.get(NormalizedAreaType.class);
     final NormalizedHeightType normHeightType = DataTypes.get(NormalizedHeightType.class);
@@ -161,10 +160,10 @@ class IntensityNormalizerTask extends AbstractTask {
     final MetadataTable metadata = ProjectService.getMetadata();
 
     // ── Pass 1: pre-normalization by metadata column (dilution factor, sample weight, …) ──
-    if (preNormMetadataEnabled) {
+    if (byMetadataEnabled) {
       final MetadataColumnNormalizationTypeModule metadataModule = new MetadataColumnNormalizationTypeModule();
       final MetadataColumnNormalizationTypeParameters metadataModuleParams = MetadataColumnNormalizationTypeParameters.create(
-          preNormMetadataColumn);
+          byMetadataColumn);
       // MetadataColumn normalization covers all files (no interpolation needed).
       final List<RawDataFile> allFiles = normalizedFeatureList.getRawDataFiles();
       final Map<RawDataFile, NormalizationFunction> functions;
@@ -182,14 +181,14 @@ class IntensityNormalizerTask extends AbstractTask {
     }
 
     // ── Pass 2: pre-normalization by internal standard compounds ──
-    if (preNormISEnabled) {
+    if (internalStandEnabled) {
       final StandardCompoundNormalizationTypeModule isModule = new StandardCompoundNormalizationTypeModule();
       // Use normalized abundances as base for IS metric computation if pass 1 already ran.
-      final ParameterSet effectiveMain = preNormMetadataEnabled ? withNormalizedAbundanceMeasure(
+      final ParameterSet effectiveMain = byMetadataEnabled ? withNormalizedAbundanceMeasure(
           mainParameters) : mainParameters;
       final Map<RawDataFile, NormalizationFunction> functions;
       try {
-        functions = buildAllFileFunctions(isModule, preNormISParams, normalizedFeatureList,
+        functions = buildAllFileFunctions(isModule, internalStandParams, normalizedFeatureList,
             effectiveMain, metadata);
       } catch (IllegalStateException e) {
         error("Pre-normalization internal standards: " + e.getMessage());
@@ -203,7 +202,7 @@ class IntensityNormalizerTask extends AbstractTask {
 
     // ── Pass 3: main normalization (QC drift correction, optionally batch-aware) ──
     {
-      final boolean priorPassRan = preNormMetadataEnabled || preNormISEnabled;
+      final boolean priorPassRan = byMetadataEnabled || internalStandEnabled;
       final ParameterSet effectiveMain = priorPassRan ? withNormalizedAbundanceMeasure(
           mainParameters) : mainParameters;
       final Map<RawDataFile, NormalizationFunction> mainFunctions;
@@ -238,9 +237,9 @@ class IntensityNormalizerTask extends AbstractTask {
       normalizedFeatureList.addDescriptionOfAppliedTask(
           new SimpleFeatureListAppliedMethod(
               "Intensity normalization by " + normalizationType
-                  + (batchIdEnabled ? " (batch-aware)" : "")
-                  + (preNormMetadataEnabled ? ", pre: metadata" : "")
-                  + (preNormISEnabled ? ", pre: IS" : ""),
+                  + (batchIdEnabled ? " (batch-aware; column %s)".formatted(batchIdColumn) : "")
+                  + (byMetadataEnabled ? ", pre: metadata (%s)".formatted(byMetadataColumn) : "")
+                  + (internalStandEnabled ? ", pre: IS" : ""),
               IntensityNormalizerModule.class, appliedMethodParameters, getModuleCallDate()));
     }
 
