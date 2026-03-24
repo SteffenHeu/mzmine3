@@ -64,6 +64,10 @@ public class FeatureIntensityNormalizationModule extends
         .filter(Objects::nonNull).mapToDouble(abundanceMeasure::getOrNaN)
         .filter(d -> !Double.isNaN(d)).toArray();
 
+    if(abundances.length == 0){
+      throw new IllegalStateException("No feature abundances found for file %s in feature list %s.".formatted(file.getName(), featureList.getName()));
+    }
+
     final double result = switch (mode) {
       case MEDIAN -> MathUtils.calcMedian(abundances);
       case AVERAGE ->  MathUtils.calcAvg(abundances);
@@ -71,7 +75,7 @@ public class FeatureIntensityNormalizationModule extends
       case MAX -> ArrayUtils.max(abundances).orElse(0d);
     };
 
-    if (Double.compare(result, 0d) == 0) {
+    if (!Double.isFinite(result) || Double.compare(result, 0d) == 0) {
       throw new IllegalStateException(
           "No features found or %s of feature intensities is 0 for file: %s".formatted(
               mode, file.getName()));

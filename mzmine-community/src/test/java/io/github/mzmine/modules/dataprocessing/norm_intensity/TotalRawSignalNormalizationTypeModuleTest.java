@@ -60,6 +60,8 @@ class TotalRawSignalNormalizationTypeModuleTest {
     addScan(fileB, 1, 1, 1f, new double[]{100d, 101d}, new double[]{5d, 10d});
 
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, fileA, fileB);
+    featureList.setSelectedScans(fileA, fileA.getScanNumbers(1));
+    featureList.setSelectedScans(fileB, fileB.getScans());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
         List.of(fileA, fileB), featureList, new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createParameters());
@@ -78,6 +80,22 @@ class TotalRawSignalNormalizationTypeModuleTest {
   void createReferenceFunctionsThrowsIfNoMs1TicFound() {
     final TotalRawSignalNormalizationTypeModule module = new TotalRawSignalNormalizationTypeModule();
     final RawDataFileImpl file = createRawFile("no_tic", LocalDateTime.of(2026, 1, 1, 10, 0));
+    // only MS2 scan that is not used
+    addScan(file, 1, 2, 1f, new double[]{100d}, new double[]{100d});
+
+    final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
+    featureList.setSelectedScans(file, file.getScanNumbers(1));
+
+    final IllegalStateException exception = assertThrows(IllegalStateException.class,
+        () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
+            createMainParameters(AbundanceMeasure.Height), createParameters()));
+
+    assertEquals("No TIC found for file: no_tic", exception.getMessage());
+  }
+  @Test
+  void createReferenceFunctionsThrowsNoScansSelected() {
+    final TotalRawSignalNormalizationTypeModule module = new TotalRawSignalNormalizationTypeModule();
+    final RawDataFileImpl file = createRawFile("no_tic", LocalDateTime.of(2026, 1, 1, 10, 0));
     addScan(file, 1, 2, 1f, new double[]{100d}, new double[]{100d});
 
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
@@ -86,6 +104,6 @@ class TotalRawSignalNormalizationTypeModuleTest {
         () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createParameters()));
 
-    assertEquals("No TIC found for file: no_tic", exception.getMessage());
+    assertEquals("No scans selected for datafile: no_tic", exception.getMessage());
   }
 }

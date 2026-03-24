@@ -24,14 +24,21 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
+import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
+import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataColumnParameters.AvailableTypes;
+import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.project.ProjectService;
+import java.util.Collection;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MetadataColumnNormalizationTypeParameters extends SimpleParameterSet {
 
   public static final MetadataNormalizationConfigParameter metadataColumn = new MetadataNormalizationConfigParameter(
-      IntensityNormalizerParameters.metadataNormFactorCol.getName(), IntensityNormalizerParameters.metadataNormFactorCol.getDescription(),
+      IntensityNormalizerParameters.metadataNormFactorCol.getName(),
+      IntensityNormalizerParameters.metadataNormFactorCol.getDescription(),
       MetadataNormalizationConfig.getDefault());
 
   public MetadataColumnNormalizationTypeParameters() {
@@ -46,4 +53,33 @@ public class MetadataColumnNormalizationTypeParameters extends SimpleParameterSe
     return parameters;
   }
 
+  @NotNull
+  public static MetadataColumnNormalizationTypeParameters create(@NotNull String column,
+      @NotNull Mode mode) {
+    return create(new MetadataNormalizationConfig(column, mode));
+  }
+
+  @Override
+  public boolean checkParameterValues(Collection<String> errorMessages,
+      boolean skipRawDataAndFeatureListParameters) {
+    final boolean superCheck = super.checkParameterValues(errorMessages,
+        skipRawDataAndFeatureListParameters);
+
+    if (skipRawDataAndFeatureListParameters) {
+      return superCheck;
+    }
+
+    final String columnName = getValue(metadataColumn).metadataColumn();
+    final MetadataColumn<?> column = ProjectService.getMetadata().getColumnByName(columnName);
+    if (column == null) {
+      errorMessages.add("Metadata column %s does not exist. (columns = %s)".formatted(columnName,
+          ProjectService.getMetadata().getColumns().stream().map(MetadataColumn::getTitle)
+              .collect(Collectors.joining(", "))));
+    }
+    if (column != null && column.getType() != AvailableTypes.NUMBER) {
+      errorMessages.add("Metadata column does  must be numeric.");
+    }
+
+    return superCheck && errorMessages.isEmpty();
+  }
 }

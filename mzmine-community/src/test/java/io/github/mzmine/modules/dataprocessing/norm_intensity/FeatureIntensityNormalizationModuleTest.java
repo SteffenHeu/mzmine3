@@ -85,7 +85,7 @@ class FeatureIntensityNormalizationModuleTest {
             createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
                 FeatureIntensityNormalizationMode.MEDIAN)));
 
-    assertEquals("No features found or median of feature intensities is 0 for file: empty_file",
+    assertEquals("No feature abundances found for file empty_file in feature list flist.",
         exception.getMessage());
   }
 
@@ -102,7 +102,7 @@ class FeatureIntensityNormalizationModuleTest {
             createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
                 FeatureIntensityNormalizationMode.MEDIAN)));
 
-    assertEquals("No features found or median of feature intensities is 0 for file: zero_file",
+    assertEquals("No features found or Median (default) of feature intensities is 0 for file: zero_file",
         exception.getMessage());
   }
 

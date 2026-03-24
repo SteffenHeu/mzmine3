@@ -36,6 +36,7 @@ import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.MemoryMapStorage;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.NotNull;
 
@@ -103,7 +104,7 @@ public class IntensityNormalizerModule implements MZmineProcessingModule {
     IntensityNormalizationSummary summary = getNormalizationFunctionsOfLatestCall(featureList);
     return summary.steps().stream().map(step -> step.functions().stream()
         .filter(func -> func.rawDataFilePlaceholder().matches(rawDataFile)).findFirst()
-        .orElse(null));
+        .orElse(null)).filter(Objects::nonNull);
   }
 
 }

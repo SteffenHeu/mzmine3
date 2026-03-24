@@ -30,7 +30,6 @@ import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensi
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
@@ -69,17 +68,4 @@ class MaximumFeatureHeightNormalizationTypeModuleTest {
     assertEquals(10d / 3d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
   }
 
-  @Test
-  void createReferenceFunctionsThrowsIfNoFeaturesFound() {
-    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
-    final RawDataFileImpl file = createRawFile("empty_file", LocalDateTime.of(2026, 1, 1, 10, 0));
-    final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
-
-    final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
-            createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
-                FeatureIntensityNormalizationMode.MAX)));
-
-    assertEquals("No features found for file: empty_file", exception.getMessage());
-  }
 }

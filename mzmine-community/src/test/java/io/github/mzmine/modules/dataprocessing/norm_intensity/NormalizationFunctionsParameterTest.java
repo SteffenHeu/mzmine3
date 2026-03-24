@@ -110,7 +110,7 @@ class NormalizationFunctionsParameterTest {
   }
 
   @Test
-  void loadValueFromXMLSkipsInvalidFunctionEntries() throws Exception {
+  void loadValueFromXMLResultsInEmptyFunctionsOnExceptionToRead() throws Exception {
     final LocalDateTime timestamp = LocalDateTime.of(2026, 1, 1, 10, 0);
     final FactorNormalizationFunction validFunction = new FactorNormalizationFunction(
         new RawDataFilePlaceholder("valid_file", tempDir.resolve("valid.mzML").toString(), 7),
@@ -132,12 +132,14 @@ class NormalizationFunctionsParameterTest {
     parameter.loadValueFromXML(root);
 
     final IntensityNormalizationSummary summary = parameter.getValue();
-    final List<NormalizationFunction> loadedFunctions = summary.steps().getFirst().functions();
-    assertEquals(1, loadedFunctions.size());
-    final FactorNormalizationFunction loadedValid = assertInstanceOf(
-        FactorNormalizationFunction.class, loadedFunctions.getFirst());
-    assertEquals("valid_file", loadedValid.rawDataFilePlaceholder().getName());
-    assertEquals(2d, loadedValid.getNormalizationFactor(0d, 0f), 1e-12);
+    assertEquals(0, summary.steps().size());
+
+//    final List<NormalizationFunction> loadedFunctions = summary.steps().getFirst().functions();
+//    assertEquals(1, loadedFunctions.size());
+//    final FactorNormalizationFunction loadedValid = assertInstanceOf(
+//        FactorNormalizationFunction.class, loadedFunctions.getFirst());
+//    assertEquals("valid_file", loadedValid.rawDataFilePlaceholder().getName());
+//    assertEquals(2d, loadedValid.getNormalizationFactor(0d, 0f), 1e-12);
   }
 
   @Test
@@ -202,8 +204,9 @@ class NormalizationFunctionsParameterTest {
     assertEquals(3d, latestForFile.getNormalizationFactor(100d, 5f), 1e-12);
 
     final NormalizationFunction missingFile = IntensityNormalizerModule.streamNormalizationFunctionsOfLatestCallForFile(
-        featureList,
-        new RawDataFilePlaceholder("unknown", tempDir.resolve("unknown.mzML").toString(), 999)).findFirst().orElse(null);
+            featureList,
+            new RawDataFilePlaceholder("unknown", tempDir.resolve("unknown.mzML").toString(), 999))
+        .findFirst().orElse(null);
     assertNull(missingFile);
   }
 

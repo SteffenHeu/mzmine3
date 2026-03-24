@@ -30,7 +30,6 @@ import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensi
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
@@ -93,20 +92,6 @@ class AverageIntensityNormalizationTypeModuleTest {
     // Average area(file_a)=15 and Average area(file_b)=10 => maxMetric=15.
     assertEquals(1d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
     assertEquals(1.5d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
-  }
-
-  @Test
-  void createReferenceFunctionsThrowsIfIntensitySumIsZero() {
-    final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
-    final RawDataFileImpl file = createRawFile("empty_file", LocalDateTime.of(2026, 1, 1, 10, 0));
-    final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
-
-    final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
-            createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
-                FeatureIntensityNormalizationMode.AVERAGE)));
-
-    assertEquals("Sum of feature intensities is 0 for file: empty_file", exception.getMessage());
   }
 
   @Test

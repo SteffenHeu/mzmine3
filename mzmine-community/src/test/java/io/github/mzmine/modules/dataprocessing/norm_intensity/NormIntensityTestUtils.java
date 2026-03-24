@@ -34,6 +34,7 @@ import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.impl.SimpleScan;
+import io.github.mzmine.datamodel.impl.masslist.ScanPointerMassList;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter.OriginalFeatureListOption;
@@ -136,6 +137,7 @@ final class NormIntensityTestUtils {
     final SimpleScan scan = new SimpleScan(file, scanNumber, msLevel, rt, null, mzValues,
         intensityValues, MassSpectrumType.CENTROIDED, PolarityType.POSITIVE, "",
         Range.closed(0d, 2000d));
+    scan.addMassList(new ScanPointerMassList(scan));
     file.addScan(scan);
   }
 }
