@@ -24,6 +24,7 @@
 
 package io.github.mzmine.util.javafx.groupabletreeview;
 
+import java.util.Comparator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,5 +50,10 @@ public final class NoGroupingStrategy<T> implements GroupingStrategy<T> {
     // decision: returns true so the user can manually move/group items after selecting "No grouping"
     // without being snapped back to an auto-derived layout.
     return true;
+  }
+
+  @Override
+  public @Nullable Comparator<T> itemComparator() {
+    return null;
   }
 }

@@ -24,6 +24,7 @@
 
 package io.github.mzmine.util.javafx.groupabletreeview;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import org.jetbrains.annotations.NotNull;
@@ -81,5 +82,10 @@ public final class CustomGroupingStrategy<T> implements GroupingStrategy<T> {
   @NotNull
   public Map<T, String> getAssignments() {
     return Map.copyOf(assignments);
+  }
+
+  @Override
+  public @Nullable Comparator<T> itemComparator() {
+    return null;
   }
 }

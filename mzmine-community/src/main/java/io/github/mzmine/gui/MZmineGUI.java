@@ -312,28 +312,27 @@ public class MZmineGUI extends Application implements MZmineDesktop, JavaFxDeskt
     featureListsList.setActiveStrategy(featureListsList.getAvailableStrategies().getFirst());
   }
 
-  public static void sortRawDataFilesAlphabetically(final List<RawDataFile> raws) {
+  public static void sortRawDataFiles(List<RawDataFile> sortedOrder) {
     if (mainWindowController == null) {
       return;
     }
-    FxThread.runLater(() -> mainWindowController.getRawDataList().sortItemObjects(raws));
+    FxThread.runLater(() -> mainWindowController.getRawDataList().sortItemObjects(sortedOrder));
   }
 
   @NotNull
   public static List<RawDataFile> getSelectedRawDataFiles() {
-    return ImmutableList.copyOf(mainWindowController.getRawDataList().getSelectedItems());
+    return ImmutableList.copyOf(mainWindowController.getRawDataList().getSelectedValues());
   }
 
   @NotNull
   public static List<FeatureList> getSelectedFeatureLists() {
-    return ImmutableList.copyOf(
-        mainWindowController.getFeatureListsList().getSelectedItems().stream().distinct().toList());
+    return ImmutableList.copyOf(mainWindowController.getFeatureListsList().getSelectedValues());
   }
 
   @NotNull
   public static List<SpectralLibrary> getSelectedSpectralLibraryList() {
     final var spectralLibraryView = mainWindowController.getSpectralLibraryList();
-    return FXCollections.unmodifiableObservableList(
+    return ImmutableList.copyOf(
         spectralLibraryView.getSelectionModel().getSelectedItems());
   }
 

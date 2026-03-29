@@ -106,8 +106,8 @@ public class GroupableTreeView<T> extends BorderPane {
     setTop(FxLayout.newHBox(Pos.CENTER_LEFT, FxLabels.newLabel("Group by"), strategyComboBox));
     setCenter(treeView);
 
-    treeView.getSelectionModel().getSelectedItems()
-        .addListener((javafx.collections.ListChangeListener<TreeItem<T>>) _ -> updateSelectedValues());
+    treeView.getSelectionModel().getSelectedItems().addListener(
+        (javafx.collections.ListChangeListener<TreeItem<T>>) _ -> updateSelectedValues());
   }
 
   // -- Selected values property --
@@ -203,7 +203,8 @@ public class GroupableTreeView<T> extends BorderPane {
 
     // keep existing custom strategy in the list
     if (current instanceof CustomGroupingStrategy<T>) {
-      fresh.removeIf(GroupingStrategy::isCustom);
+      // assumption: only remove CustomGroupingStrategy instances, not NoGroupingStrategy which also returns isCustom()=true
+      fresh.removeIf(s -> s instanceof CustomGroupingStrategy);
       fresh.add(current);
     }
 
@@ -253,17 +254,16 @@ public class GroupableTreeView<T> extends BorderPane {
   // -- Grouping --
 
   /**
-   * Rebuilds the tree structure from allItems using the active strategy. Builds the new tree
-   * offline to avoid concurrent modification, then sets all children at once on the FX thread.
+   * Rebuilds the tree structure from allItems using the active strategy. Sorts allItems first, then
+   * builds the tree, then sorts group nodes. Applies the result on the FX thread.
    */
   public void regroup() {
     final GroupingStrategy<T> strategy = activeStrategy.get();
-    final List<TreeItem<T>> newChildren = buildTreeChildren(strategy);
+    final List<TreeItem<T>> newChildren = buildSortedChildren(
+        strategy != null ? strategy.itemComparator() : null,
+        strategy != null ? strategy.groupComparator() : null);
     // apply on the FX thread to avoid ConcurrentModificationException from task threads
-    FxThread.runLater(() -> {
-      rootItem.getChildren().setAll(newChildren);
-      applyStrategySort(strategy);
-    });
+    FxThread.runLater(() -> rootItem.getChildren().setAll(newChildren));
   }
 
   /**
@@ -272,22 +272,59 @@ public class GroupableTreeView<T> extends BorderPane {
    */
   private void regroupNow() {
     final GroupingStrategy<T> strategy = activeStrategy.get();
-    final List<TreeItem<T>> newChildren = buildTreeChildren(strategy);
+    final List<TreeItem<T>> newChildren = buildSortedChildren(
+        strategy != null ? strategy.itemComparator() : null,
+        strategy != null ? strategy.groupComparator() : null);
     rootItem.getChildren().setAll(newChildren);
-    applyStrategySort(strategy);
   }
 
   /**
-   * Applies sorting defined by the strategy's item and group comparators.
+   * Core sort+build method used by all entry points. Sorts allItems by itemComparator (if
+   * non-null), builds tree children from the sorted list, then sorts group nodes at the root level
+   * by groupComparator. Items within groups do not need a separate sort because buildTreeChildren
+   * inserts them in allItems order, which is already sorted after step 1.
    */
-  private void applyStrategySort(@Nullable final GroupingStrategy<T> strategy) {
-    if (strategy == null) {
-      return;
+  private @NotNull List<TreeItem<T>> buildSortedChildren(
+      @Nullable final Comparator<T> itemComparator,
+      @Nullable final Comparator<GroupTreeItem<T>> groupComparator) {
+    // sort allItems first so buildTreeChildren produces groups in the right item order
+    if (itemComparator != null) {
+      allItems.sort(itemComparator);
     }
-    final Comparator<T> comparator = strategy.itemComparator();
-    if (comparator != null) {
-      sortItems(comparator);
-    }
+    final List<TreeItem<T>> children = buildTreeChildren(activeStrategy.get());
+    sortRootNodes(children, itemComparator, groupComparator);
+    return children;
+  }
+
+  /**
+   * Sorts the root-level node list: groups (sorted by groupComparator) before leaf items. Leaf
+   * items retain their relative allItems order unless itemComparator is provided. Items inside
+   * groups are already in the correct order (inserted from sorted allItems).
+   */
+  private void sortRootNodes(@NotNull final List<TreeItem<T>> children,
+      @Nullable final Comparator<T> itemComparator,
+      @Nullable final Comparator<GroupTreeItem<T>> groupComparator) {
+    final Comparator<GroupTreeItem<T>> effectiveGroupCmp =
+        groupComparator != null ? groupComparator
+            : Comparator.comparing(GroupTreeItem::getGroupName, String.CASE_INSENSITIVE_ORDER);
+
+    children.sort((a, b) -> {
+      if (a instanceof GroupTreeItem<T> ga && b instanceof GroupTreeItem<T> gb) {
+        return effectiveGroupCmp.compare(ga, gb);
+      }
+      // groups sort before leaf items
+      if (a instanceof GroupTreeItem) {
+        return -1;
+      }
+      if (b instanceof GroupTreeItem) {
+        return 1;
+      }
+      // leaf items: sort by itemComparator or preserve allItems insertion order
+      if (itemComparator != null) {
+        return itemComparator.compare(a.getValue(), b.getValue());
+      }
+      return 0;
+    });
   }
 
   private @NotNull List<TreeItem<T>> buildTreeChildren(
@@ -439,41 +476,14 @@ public class GroupableTreeView<T> extends BorderPane {
   // -- Sorting --
 
   /**
-   * Sorts the tree hierarchically: groups are sorted by the active strategy's
-   * {@link GroupingStrategy#groupComparator()}, items within each group (and top-level items) are
-   * sorted by the provided comparator.
+   * Sorts allItems by the given comparator, rebuilds the tree, and applies group sorting. Groups
+   * are sorted by the active strategy's {@link GroupingStrategy#groupComparator()}.
    */
-  public void sortItems(@NotNull final Comparator<T> comparator) {
+  public void sortItems(@NotNull final Comparator<T> itemComparator) {
     final GroupingStrategy<T> strategy = activeStrategy.get();
-    final Comparator<GroupTreeItem<T>> groupCmp = strategy != null ? strategy.groupComparator()
-        : Comparator.comparing(GroupTreeItem::getGroupName, String.CASE_INSENSITIVE_ORDER);
-
-    final Comparator<TreeItem<T>> treeComparator = (a, b) -> {
-      // groups sort by strategy-defined comparator
-      if (a instanceof GroupTreeItem<T> ga && b instanceof GroupTreeItem<T> gb) {
-        return groupCmp.compare(ga, gb);
-      }
-      // groups before leaf items
-      if (a instanceof GroupTreeItem) {
-        return -1;
-      }
-      if (b instanceof GroupTreeItem) {
-        return 1;
-      }
-      // leaf items sort by comparator
-      return comparator.compare(a.getValue(), b.getValue());
-    };
-
-    FXCollections.sort(rootItem.getChildren(), treeComparator);
-
-    // sort children within each group
-    final Comparator<TreeItem<T>> leafComparator = (a, b) -> comparator.compare(a.getValue(),
-        b.getValue());
-    for (final TreeItem<T> child : rootItem.getChildren()) {
-      if (child instanceof GroupTreeItem) {
-        FXCollections.sort(child.getChildren(), leafComparator);
-      }
-    }
+    final List<TreeItem<T>> newChildren = buildSortedChildren(itemComparator,
+        strategy != null ? strategy.groupComparator() : null);
+    FxThread.runLater(() -> rootItem.getChildren().setAll(newChildren));
   }
 
   /**
@@ -639,8 +649,8 @@ public class GroupableTreeView<T> extends BorderPane {
   }
 
   /**
-   * Opens a rename dialog for a leaf item and notifies {@link #renameConsumer}.
-   * For group items use {@link #editGroup(GroupTreeItem)} instead.
+   * Opens a rename dialog for a leaf item and notifies {@link #renameConsumer}. For group items use
+   * {@link #editGroup(GroupTreeItem)} instead.
    */
   public void edit(@NotNull final T value) {
     final TreeItem<T> item = findTreeItem(value);

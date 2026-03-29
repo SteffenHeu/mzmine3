@@ -25,6 +25,7 @@
 package io.github.mzmine.util.javafx.groupabletreeview;
 
 import java.util.Comparator;
+import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,12 +66,12 @@ public sealed interface GroupingStrategy<T> permits NoGroupingStrategy, CustomGr
   }
 
   /**
-   * Returns a comparator for sorting leaf items within groups and at the top level. Default returns
-   * null (no sorting).
+   * Returns a comparator for sorting leaf items within groups and at the top level.
    *
-   * @return a comparator for items, or null if no item sorting should be applied
+   * @return a comparator for items
    */
   default @Nullable Comparator<T> itemComparator() {
-    return null;
+    return Comparator.comparing(Function.identity(), Comparator.nullsLast(
+        Comparator.comparing(Object::toString, String.CASE_INSENSITIVE_ORDER)));
   }
 }
