@@ -282,9 +282,12 @@ public class MZmineGUI extends Application implements MZmineDesktop, JavaFxDeskt
 
   private static void setupRawDataStrategies(
       @NotNull final GroupableTreeView<RawDataFile> rawDataList) {
-    rawDataList.getAvailableStrategies().setAll(createRawDataStrategies());
+    List<@NotNull GroupingStrategy<RawDataFile>> strategies = createRawDataStrategies();
+    rawDataList.getAvailableStrategies().setAll(strategies);
     // default: no grouping
-    rawDataList.setActiveStrategy(rawDataList.getAvailableStrategies().getFirst());
+    rawDataList.setActiveStrategy(strategies.stream()
+        .filter(strategy -> strategy.displayName().contains(MetadataColumn.SAMPLE_TYPE_HEADER))
+        .findFirst().orElse(strategies.getFirst()));
   }
 
   private static @NotNull List<@NotNull GroupingStrategy<FeatureList>> createFeatureListStrategies() {
@@ -332,8 +335,7 @@ public class MZmineGUI extends Application implements MZmineDesktop, JavaFxDeskt
   @NotNull
   public static List<SpectralLibrary> getSelectedSpectralLibraryList() {
     final var spectralLibraryView = mainWindowController.getSpectralLibraryList();
-    return ImmutableList.copyOf(
-        spectralLibraryView.getSelectionModel().getSelectedItems());
+    return ImmutableList.copyOf(spectralLibraryView.getSelectionModel().getSelectedItems());
   }
 
   public static void showAboutWindow() {
