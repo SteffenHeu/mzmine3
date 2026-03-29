@@ -470,7 +470,7 @@ public class GroupableTreeView<T> extends BorderPane {
 
   private boolean isCustomStrategy() {
     final GroupingStrategy<T> strategy = activeStrategy.get();
-    return strategy == null || strategy.isCustom();
+    return strategy == null || strategy instanceof CustomGroupingStrategy;
   }
 
   // -- Sorting --
