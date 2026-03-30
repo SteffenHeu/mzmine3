@@ -38,7 +38,8 @@ public final class FeatureListByRawDataFileStrategy implements GroupingStrategy<
 
   @Override
   public @NotNull String displayName() {
-    return "By raw data file";
+    // label says Group by
+    return "Raw data file";
   }
 
   @Override
