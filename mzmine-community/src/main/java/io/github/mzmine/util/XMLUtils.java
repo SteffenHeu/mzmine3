@@ -31,8 +31,12 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.Objects;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
@@ -45,12 +49,73 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXNotRecognizedException;
+import org.xml.sax.SAXNotSupportedException;
 import org.xml.sax.SAXException;
 
 /**
  * XML processing utilities
  */
 public class XMLUtils {
+
+  private static final String FEATURE_DISALLOW_DOCTYPE_DECL =
+      "http://apache.org/xml/features/disallow-doctype-decl";
+  private static final String FEATURE_EXTERNAL_GENERAL_ENTITIES =
+      "http://xml.org/sax/features/external-general-entities";
+  private static final String FEATURE_EXTERNAL_PARAMETER_ENTITIES =
+      "http://xml.org/sax/features/external-parameter-entities";
+  private static final String FEATURE_LOAD_EXTERNAL_DTD =
+      "http://apache.org/xml/features/nonvalidating/load-external-dtd";
+
+  private XMLUtils() {
+  }
+
+  public static @NotNull DocumentBuilderFactory newSecureDocumentBuilderFactory()
+      throws ParserConfigurationException {
+    final DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+    factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+    factory.setFeature(FEATURE_DISALLOW_DOCTYPE_DECL, true);
+    factory.setFeature(FEATURE_EXTERNAL_GENERAL_ENTITIES, false);
+    factory.setFeature(FEATURE_EXTERNAL_PARAMETER_ENTITIES, false);
+    factory.setFeature(FEATURE_LOAD_EXTERNAL_DTD, false);
+    factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+    factory.setXIncludeAware(false);
+    factory.setExpandEntityReferences(false);
+    return factory;
+  }
+
+  public static @NotNull DocumentBuilder newDocumentBuilder() throws ParserConfigurationException {
+    return newSecureDocumentBuilderFactory().newDocumentBuilder();
+  }
+
+  public static @NotNull Document newDocument() throws ParserConfigurationException {
+    return newDocumentBuilder().newDocument();
+  }
+
+  public static @NotNull SAXParserFactory newSecureSAXParserFactory()
+      throws ParserConfigurationException {
+    final SAXParserFactory factory = SAXParserFactory.newInstance();
+    try {
+      factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+      factory.setFeature(FEATURE_DISALLOW_DOCTYPE_DECL, true);
+      factory.setFeature(FEATURE_EXTERNAL_GENERAL_ENTITIES, false);
+      factory.setFeature(FEATURE_EXTERNAL_PARAMETER_ENTITIES, false);
+      factory.setFeature(FEATURE_LOAD_EXTERNAL_DTD, false);
+    } catch (SAXNotRecognizedException | SAXNotSupportedException exception) {
+      final ParserConfigurationException parserConfigurationException =
+          new ParserConfigurationException("Failed to configure secure SAX parser factory.");
+      parserConfigurationException.initCause(exception);
+      throw parserConfigurationException;
+    }
+    factory.setXIncludeAware(false);
+    return factory;
+  }
+
+  public static @NotNull SAXParser newSAXParser()
+      throws ParserConfigurationException, SAXException {
+    return newSecureSAXParserFactory().newSAXParser();
+  }
 
   /**
    * Parse XML file. Use {@link Document#getDocumentElement()}
@@ -61,9 +126,9 @@ public class XMLUtils {
    * @throws IOException
    * @throws SAXException
    */
-  public static Document load(final File file)
+  public static @NotNull Document load(@NotNull final File file)
       throws ParserConfigurationException, IOException, SAXException {
-    return DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file);
+    return newDocumentBuilder().parse(file);
   }
 
   /**
@@ -75,11 +140,9 @@ public class XMLUtils {
    * @throws IOException
    * @throws SAXException
    */
-  public static Document load(final String xmlStr)
+  public static @NotNull Document load(@NotNull final String xmlStr)
       throws ParserConfigurationException, IOException, SAXException {
-
-    return DocumentBuilderFactory.newInstance().newDocumentBuilder()
-        .parse(new InputSource(new StringReader(xmlStr)));
+    return newDocumentBuilder().parse(new InputSource(new StringReader(xmlStr)));
   }
 
   /**
@@ -90,7 +153,7 @@ public class XMLUtils {
    * @throws TransformerException
    * @throws IOException
    */
-  public static void saveToFile(final File file, final Document document)
+  public static void saveToFile(@NotNull final File file, @NotNull final Document document)
       throws TransformerException, IOException {
     // Create transformer.
     final Transformer transformer = TransformerFactory.newInstance().newTransformer();
@@ -112,7 +175,8 @@ public class XMLUtils {
    * @return String representation of the document
    * @throws TransformerException if transformation fails
    */
-  public static String saveToString(final Document document) throws TransformerException {
+  public static @NotNull String saveToString(@NotNull final Document document)
+      throws TransformerException {
     // Create transformer
     final Transformer transformer = TransformerFactory.newInstance().newTransformer();
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
@@ -123,7 +187,7 @@ public class XMLUtils {
 //    transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
 
     // Transform to string
-    StringWriter writer = new StringWriter();
+    final StringWriter writer = new StringWriter();
     transformer.transform(new DOMSource(document), new StreamResult(writer));
     return writer.toString();
   }
