@@ -29,6 +29,7 @@ import io.github.mzmine.modules.dataprocessing.filter_scan_merge_select.SpectraM
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParameter;
+import org.jetbrains.annotations.Nullable;
 
 public class LipidAnnotationMSMSParameters extends SimpleParameterSet {
 
@@ -50,5 +51,13 @@ public class LipidAnnotationMSMSParameters extends SimpleParameterSet {
   @Override
   public int getVersion() {
     return 3;
+  }
+
+  @Override
+  public @Nullable String getVersionMessage(int version) {
+    return switch (version) {
+      case 3 -> "Removed minimum explained intensity of MS2 fragments.";
+      default -> null;
+    };
   }
 }

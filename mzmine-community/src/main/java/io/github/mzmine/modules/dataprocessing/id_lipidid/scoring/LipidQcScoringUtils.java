@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -30,7 +31,6 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRuleRating;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
@@ -294,8 +294,8 @@ public final class LipidQcScoringUtils {
     if (row.getAverageRT() == null) {
       return createUnavailableElutionMetrics("Missing RT context");
     }
-    final int selectedCarbons = extractTrendCarbons(match.getLipidAnnotation());
-    final int selectedDbe = extractTrendDbe(match.getLipidAnnotation());
+    final int selectedCarbons = match.getLipidAnnotation().getChainsCarbonCount();
+    final int selectedDbe = match.getLipidAnnotation().getChainsDoubleBondCount();
     if (selectedCarbons < 0 || selectedDbe < 0) {
       return createUnavailableElutionMetrics("Missing lipid chain information");
     }
@@ -340,8 +340,8 @@ public final class LipidQcScoringUtils {
       if (!rowMatch.getLipidAnnotation().getLipidClass().equals(selectedClass)) {
         continue;
       }
-      final int rowCarbons = extractTrendCarbons(rowMatch.getLipidAnnotation());
-      final int rowDbe = extractTrendDbe(rowMatch.getLipidAnnotation());
+      final int rowCarbons = rowMatch.getLipidAnnotation().getChainsCarbonCount();
+      final int rowDbe = rowMatch.getLipidAnnotation().getChainsDoubleBondCount();
       if (rowCarbons < 0 || rowDbe < 0) {
         continue;
       }
@@ -510,14 +510,6 @@ public final class LipidQcScoringUtils {
     final double slope = (n * sumXY - sumX * sumY) / denom;
     final double intercept = (sumY - slope * sumX) / n;
     return intercept + slope * predictorValue;
-  }
-
-  private static int extractTrendDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getChainsDoubleBondCount();
-  }
-
-  private static int extractTrendCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getChainsCarbonCount();
   }
 
   /**

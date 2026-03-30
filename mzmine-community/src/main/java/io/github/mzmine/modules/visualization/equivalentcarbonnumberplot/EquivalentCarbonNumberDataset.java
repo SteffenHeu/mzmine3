@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -29,7 +30,6 @@ import static java.util.Objects.requireNonNullElse;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.main.MZmineCore;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.taskcontrol.Task;
@@ -106,12 +106,12 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
           continue;
         }
 
-        final int dbe = extractDbe(featureMatchedLipid.getLipidAnnotation());
+        final int dbe = featureMatchedLipid.getLipidAnnotation().getChainsDoubleBondCount();
         if (dbe != selectedDBENumber) {
           continue;
         }
 
-        final int carbons = extractCarbons(featureMatchedLipid.getLipidAnnotation());
+        final int carbons = featureMatchedLipid.getLipidAnnotation().getChainsCarbonCount();
         if (carbons < 0 || !addedCarbonsForRow.add(carbons)) {
           continue;
         }
@@ -170,7 +170,7 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
   @Override
   public String getTaskDescription() {
     return "Computing ECN model for " + selectedLipidClass.getAbbr() + " with " + selectedDBENumber
-           + " DBEs";
+        + " DBEs";
   }
 
   @Override
@@ -239,13 +239,5 @@ public class EquivalentCarbonNumberDataset extends AbstractXYDataset implements 
       logger.log(Level.SEVERE, message, exceptionToLog);
     }
     setStatus(TaskStatus.ERROR);
-  }
-
-  private static int extractDbe(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getChainsDoubleBondCount();
-  }
-
-  private static int extractCarbons(final @NotNull ILipidAnnotation lipidAnnotation) {
-    return lipidAnnotation.getChainsCarbonCount();
   }
 }

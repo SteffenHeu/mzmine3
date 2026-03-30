@@ -26,17 +26,9 @@
 package io.github.mzmine.datamodel.features.types.numbers.scores;
 
 
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.features.ModularFeatureListRow;
-import io.github.mzmine.datamodel.features.types.DataType;
-import io.github.mzmine.datamodel.features.types.modifiers.SubColumnsFactory;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.ScoreType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import java.util.List;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.scene.control.TreeTableColumn;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Feature data type that displays the overall lipid annotation quality score stored in
@@ -56,41 +48,7 @@ public class LipidOverallQualityScoreType extends ScoreType {
   }
 
   @Override
-  public @Nullable TreeTableColumn<ModularFeatureListRow, Object> createColumn(
-      final @Nullable RawDataFile raw, final @Nullable SubColumnsFactory parentType,
-      final int subColumnIndex) {
-    final TreeTableColumn<ModularFeatureListRow, Object> column = DataType.createStandardColumn(
-        this, raw, parentType, subColumnIndex);
-    column.setCellValueFactory(cdf -> {
-      final ModularFeatureListRow row = cdf.getValue().getValue();
-      final MatchedLipid match = resolvePrimaryMatch(row, parentType);
-      if (match == null) {
-        return null;
-      }
-      final Float score = match.getOverallQualityScore();
-      return score == null ? null : new ReadOnlyObjectWrapper<>(score);
-    });
-    return column;
-  }
-
-  @Override
   public double getPrefColumnWidth() {
     return 120d;
-  }
-
-  private static @Nullable MatchedLipid resolvePrimaryMatch(final @NotNull ModularFeatureListRow row,
-      final @Nullable SubColumnsFactory parentType) {
-    if (parentType instanceof DataType<?> parentDataType) {
-      final Object value = row.get(parentDataType);
-      if (value instanceof List<?> matches && !matches.isEmpty()) {
-        final Object first = matches.getFirst();
-        if (first instanceof MatchedLipid match) {
-          return match;
-        }
-      }
-    }
-
-    final List<MatchedLipid> lipidMatches = row.getLipidMatches();
-    return lipidMatches.isEmpty() ? null : lipidMatches.getFirst();
   }
 }
