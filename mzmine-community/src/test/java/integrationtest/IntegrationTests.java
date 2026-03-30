@@ -286,7 +286,8 @@ public class IntegrationTests {
     sequence.add(AnnotationWizardParameterFactory.Annotation.create());
     sequence.add(new WorkflowDDA().create());
 
-    final ParameterSet param = OptimizerParameters.create(true, true, true, true, true, true, 100);
+    final ParameterSet param = OptimizerParameters.create(false, true, false, false, false, true,
+        100);
 
     final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(sequence, stats, param);
 

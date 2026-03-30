@@ -55,7 +55,6 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.Workfl
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchOptimizationMainTask;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerModule;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSweepMainTask;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.dialogs.ParameterSetupPane;
@@ -414,12 +413,10 @@ public class BatchWizardTab extends SimpleTab {
     Button load = FxButtons.createLoadButton("Load presets", this::chooseAndLoadLocalSequence);
     Button optimize = FxButtons.createButton("Optimize sequence", FxIcons.GRAPH_UP, null,
         this::runOptimizer);
-    Button sweep = FxButtons.createButton("Sweep parameters", FxIcons.GRAPH_UP, null,
-        this::runSweep);
 
     instrumentComboBoxPane.getChildren()
         .addAll(createSpacer(), new Label("="), createSpacer(), createBatch, save, load,
-            localPresetsButton, optimize, sweep);
+            localPresetsButton, optimize);
 
     schemaPane = new HBox(0);
     schemaPane.setAlignment(Pos.CENTER);
@@ -480,35 +477,6 @@ public class BatchWizardTab extends SimpleTab {
         MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, metadataFile, this,
         optimizerParam);
     TaskService.getController().addTask(optimizer);
-  }
-
-  private void runSweep() {
-    updateAllParametersFromUi();
-    final WizardStepParameters importParam = sequenceSteps.get(DATA_IMPORT).get();
-    final @NotNull File[] allFiles = importParam.getParameter(DataImportWizardParameters.fileNames)
-        .getValue();
-    File[] qcFiles = Arrays.stream(allFiles)
-        .filter(f -> SampleType.ofString(f.getName()) == SampleType.QC).limit(10)
-        .toArray(File[]::new);
-
-    if (qcFiles.length == 0) {
-      qcFiles = CollectionUtils.selectRandomElements(List.of(allFiles), 10).toArray(File[]::new);
-    }
-
-    final var metadataFile = importParam.getOptionalValue(DataImportWizardParameters.metadataFile)
-        .orElse(null);
-
-    final OptimizerParameters optimizerParam = (OptimizerParameters) ConfigService.getConfiguration()
-        .getModuleParameters(OptimizerModule.class);
-    final ExitCode exitCode = optimizerParam.showSetupDialog(true);
-    if (exitCode != ExitCode.OK) {
-      return;
-    }
-
-    final ParameterSweepMainTask task = new ParameterSweepMainTask(
-        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, metadataFile, this,
-        optimizerParam);
-    TaskService.getController().addTask(task);
   }
 
   /**

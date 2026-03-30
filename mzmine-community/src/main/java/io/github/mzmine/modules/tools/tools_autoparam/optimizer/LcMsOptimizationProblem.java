@@ -128,7 +128,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
     maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
     maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
-    maximizeSlawIntegrationScore = param.getValue(OptimizerParameters.slawIntegrationScore);
+    maximizeSlawIntegrationScore = param.getValue(OptimizerParameters.integrationScore);
     maximizeHarmonicSlawIsotopes = param.getValue(OptimizerParameters.harmonicSlawIsotopes);
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
 
@@ -353,6 +353,9 @@ public class LcMsOptimizationProblem extends AbstractProblem {
    */
   public static final String ATTR_HARMONIC_ISO = "_harmonic_iso";
 
+  /**
+   * isotope score derived from slaw
+   */
   private static void calculateAndWriteFeaturesWithIsotopes(int index, Solution solution,
       FeatureList newest) {
 //    final long featuresWithIsotopes = newest.streamFeatures()
@@ -410,7 +413,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     var minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
     var maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
     var maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
-    var slawIntegrationScore = param.getValue(OptimizerParameters.slawIntegrationScore);
+    var slawIntegrationScore = param.getValue(OptimizerParameters.integrationScore);
     var harmonicSlawIsotopes = param.getValue(OptimizerParameters.harmonicSlawIsotopes);
     final int numObjectives = (int) Stream.of(maximizeCv20, maximizeFeaturesWithIsos,
             minimizeDoublePeaks, maximizeFillRatio, maximizeCv20WithIsos, slawIntegrationScore,

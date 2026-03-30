@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -74,18 +75,17 @@ public class OptimizerParameters extends SimpleParameterSet {
       Calculates how "full" the feature table is.
       Multiplies the number of rows by the number of samples to calculate the theoretical maximum.
       Then checks how many features were actually detected and divides it by the maximum.
-      """, true);
+      """, false);
 
   public static final BooleanParameter maximizeCv20WithIsos = new BooleanParameter(
       "Maximize rows with isotopes and RSD < 20",
       "Attempts to maximize the number of rows that have an area RSD of < 20%", false);
 
-  public static final BooleanParameter slawIntegrationScore = new BooleanParameter(
-      "Slaw integration score",
+  public static final BooleanParameter integrationScore = new BooleanParameter("Integration score",
       "Attempts to maximize the number of rows that have an area RSD of < 20%", true);
 
   public static final BooleanParameter harmonicSlawIsotopes = new BooleanParameter(
-      "Harmonic slaw-isotopes score",
+      "Combined integration & isotope score",
       "Harmonic mean of the slaw integration score and the features-with-isotopes score. "
           + "Rewards solutions that perform well on both components simultaneously.", true);
 
@@ -121,7 +121,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public OptimizerParameters() {
     super(maximizeCv20, maximizeFeaturesWithIsotopes, maximizeCv20WithIsos, minimizeDoublePeaks,
-        maximizeRowFillRatio, slawIntegrationScore, harmonicSlawIsotopes,
+        maximizeRowFillRatio, integrationScore, harmonicSlawIsotopes,
         maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers,
         iterations, samplesPerParam, paramToOptimize);
   }
@@ -148,7 +148,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public static ParameterSet create(boolean maxCv20, boolean maxFeaturesWithIsotopes,
       boolean minDoublePeaks, boolean maxNumberOfBenchmarkFeatures, boolean maxFillRatio,
-      boolean maximizeCv20WithIsosRatio, int numIterations) {
+      boolean integrationScore, int numIterations) {
     final ParameterSet param = new OptimizerParameters().cloneParameterSet();
 
     param.setParameter(maximizeCv20, maxCv20);
@@ -156,7 +156,7 @@ public class OptimizerParameters extends SimpleParameterSet {
     param.setParameter(minimizeDoublePeaks, minDoublePeaks);
     param.setParameter(maximizeNumberOfBenchmarkFeatures, maxNumberOfBenchmarkFeatures);
     param.setParameter(maximizeRowFillRatio, maxFillRatio);
-    param.setParameter(OptimizerParameters.slawIntegrationScore, maximizeCv20WithIsosRatio);
+    param.setParameter(OptimizerParameters.integrationScore, integrationScore);
     param.setParameter(benchmarkFeatureTypes, false);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
