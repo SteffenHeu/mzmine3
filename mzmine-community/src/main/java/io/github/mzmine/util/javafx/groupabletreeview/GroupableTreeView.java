@@ -241,6 +241,11 @@ public class GroupableTreeView<T> extends BorderPane {
     regroup();
   }
 
+  public void setItems(@NotNull final Collection<T> items) {
+    allItems.setAll(items);
+    regroup();
+  }
+
   public void removeItemByValue(@NotNull final T value) {
     allItems.remove(value);
     regroup();
