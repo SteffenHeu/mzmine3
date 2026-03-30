@@ -55,7 +55,7 @@ class AverageIntensityNormalizationTypeModuleTest {
     addRow(featureList, 2, fileA, 4f, 4f, fileB, 1f, 1f);
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false),
+        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.AVERAGE));
 
@@ -80,7 +80,7 @@ class AverageIntensityNormalizationTypeModuleTest {
     addRow(featureList, 2, fileA, 1f, 10f, fileB, 1f, 10f);
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false),
+        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Area), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.AVERAGE));
 

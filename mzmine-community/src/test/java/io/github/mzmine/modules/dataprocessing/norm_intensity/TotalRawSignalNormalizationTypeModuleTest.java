@@ -63,8 +63,9 @@ class TotalRawSignalNormalizationTypeModuleTest {
     featureList.setSelectedScans(fileA, fileA.getScanNumbers(1));
     featureList.setSelectedScans(fileB, fileB.getScans());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createParameters());
+        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null),
+        new MetadataTable(false), createMainParameters(AbundanceMeasure.Height),
+        createParameters());
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));
@@ -87,11 +88,13 @@ class TotalRawSignalNormalizationTypeModuleTest {
     featureList.setSelectedScans(file, file.getScanNumbers(1));
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(file), featureList,
+            new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createParameters()));
 
     assertEquals("No TIC found for file: no_tic", exception.getMessage());
   }
+
   @Test
   void createReferenceFunctionsThrowsNoScansSelected() {
     final TotalRawSignalNormalizationTypeModule module = new TotalRawSignalNormalizationTypeModule();
@@ -101,7 +104,8 @@ class TotalRawSignalNormalizationTypeModuleTest {
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(file), featureList,
+            new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createParameters()));
 
     assertEquals("No scans selected for datafile: no_tic", exception.getMessage());

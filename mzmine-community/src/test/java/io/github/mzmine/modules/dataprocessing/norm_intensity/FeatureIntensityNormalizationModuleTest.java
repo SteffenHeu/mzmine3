@@ -58,7 +58,7 @@ class FeatureIntensityNormalizationModuleTest {
     addRow(featureList, 4, fileA, 100f, fileB, 1f);
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false),
+        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.MEDIAN));
 
@@ -81,7 +81,7 @@ class FeatureIntensityNormalizationModuleTest {
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(file), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
                 FeatureIntensityNormalizationMode.MEDIAN)));
 
@@ -98,7 +98,7 @@ class FeatureIntensityNormalizationModuleTest {
     addRow(featureList, 2, file, 0f, null, null);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(file), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
                 FeatureIntensityNormalizationMode.MEDIAN)));
 
@@ -118,7 +118,7 @@ class FeatureIntensityNormalizationModuleTest {
     addRow(featureList, 2, fileA, 1f, 4f, fileB, 1f, 1f);
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false),
+        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Area), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.MEDIAN));
 
@@ -143,7 +143,7 @@ class FeatureIntensityNormalizationModuleTest {
     addRow(featureList, 2, fileA, 2f, fileB, 1f);
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false),
+        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.MEDIAN));
 
