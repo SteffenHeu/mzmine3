@@ -42,11 +42,11 @@ import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingPar
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelectionType;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
+import io.github.mzmine.util.XMLUtils;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
-import javax.xml.parsers.DocumentBuilderFactory;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -116,8 +116,7 @@ class NormalizationFunctionsParameterTest {
         new RawDataFilePlaceholder("valid_file", tempDir.resolve("valid.mzML").toString(), 7),
         timestamp, 2d);
 
-    final Document document = DocumentBuilderFactory.newInstance().newDocumentBuilder()
-        .newDocument();
+    final Document document = XMLUtils.newDocument();
     final Element root = document.createElement("normalizationFunctions");
     document.appendChild(root);
 
