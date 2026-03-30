@@ -40,7 +40,7 @@ public final class FeatureListByProcessingStepStrategy implements GroupingStrate
 
   @Override
   public @NotNull String displayName() {
-    return "By latest processing step";
+    return "Latest processing step";
   }
 
   @Override

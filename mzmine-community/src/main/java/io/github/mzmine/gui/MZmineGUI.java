@@ -238,12 +238,12 @@ public class MZmineGUI implements MZmineDesktop, JavaFxDesktop {
       ProjectService.getProjectManager().setCurrentProject(project);
       if (mainWindowController != null) {
         GroupableTreeView<RawDataFile> rawDataList = mainWindowController.getRawDataList();
-        rawDataList.addItems(project.getCurrentRawDataFiles());
+        rawDataList.setItems(project.getCurrentRawDataFiles());
         rawDataList.setStrategyProvider(MZmineGUI::createRawDataStrategies);
         setupRawDataStrategies(rawDataList);
 
         GroupableTreeView<FeatureList> featureListsList = mainWindowController.getFeatureListsList();
-        featureListsList.addItems(project.getCurrentFeatureLists());
+        featureListsList.setItems(project.getCurrentFeatureLists());
         featureListsList.setStrategyProvider(MZmineGUI::createFeatureListStrategies);
         setupFeatureListStrategies(featureListsList);
 
