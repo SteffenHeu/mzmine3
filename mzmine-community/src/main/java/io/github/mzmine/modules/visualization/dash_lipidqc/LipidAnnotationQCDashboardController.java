@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -27,6 +28,7 @@ package io.github.mzmine.modules.visualization.dash_lipidqc;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickOutlierPopupController;
 import io.github.mzmine.modules.visualization.dash_lipidqc.quality.AnnotationQualityController;
 import io.github.mzmine.util.FeatureTableFXUtil;
 import javafx.scene.layout.Region;
@@ -42,6 +44,7 @@ public class LipidAnnotationQCDashboardController extends
     FxController<LipidAnnotationQCDashboardModel> {
 
   private final AnnotationQualityController qualityController = new AnnotationQualityController();
+  private final KendrickOutlierPopupController outlierPopupController = new KendrickOutlierPopupController();
 
   public LipidAnnotationQCDashboardController() {
     super(new LipidAnnotationQCDashboardModel());
@@ -67,7 +70,7 @@ public class LipidAnnotationQCDashboardController extends
   @Override
   protected @NotNull FxViewBuilder<LipidAnnotationQCDashboardModel> getViewBuilder() {
     final Region qualityView = qualityController.buildView();
-    return new LipidAnnotationQCDashboardViewBuilder(model, qualityView,
+    return new LipidAnnotationQCDashboardViewBuilder(model, qualityView, outlierPopupController,
         qualityController::setKendrickReviewMode, qualityController::setOnAnnotationsChanged,
         qualityController::requestUpdate);
   }
@@ -81,5 +84,6 @@ public class LipidAnnotationQCDashboardController extends
 
   public void dispose() {
     model.getPaneGroup().disposeListeners();
+    outlierPopupController.closeStage();
   }
 }

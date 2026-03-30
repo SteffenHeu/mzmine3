@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -49,6 +50,8 @@ import java.awt.Color;
 import java.awt.Paint;
 import java.awt.geom.Ellipse2D;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -106,6 +109,7 @@ public class KendrickPane extends DashboardComputationPane {
   private @Nullable KendrickFalseNegativeDetector falseNegativeDetector;
   private @NotNull KendrickReviewMode reviewMode = KendrickReviewMode.NONE;
   private @Nullable Consumer<KendrickReviewMode> onReviewModeChanged;
+  private @Nullable Consumer<List<FeatureListRow>> onOutlierRowsChanged;
   private long filterRequestId;
 
   public KendrickPane(final @NotNull LipidAnnotationQCDashboardModel model,
@@ -142,6 +146,11 @@ public class KendrickPane extends DashboardComputationPane {
     if (onReviewModeChanged != null) {
       onReviewModeChanged.accept(reviewMode);
     }
+  }
+
+  public void setOnOutlierRowsChanged(
+      final @Nullable Consumer<List<FeatureListRow>> onOutlierRowsChanged) {
+    this.onOutlierRowsChanged = onOutlierRowsChanged;
   }
 
   public @NotNull KendrickReviewMode getReviewMode() {
@@ -235,6 +244,7 @@ public class KendrickPane extends DashboardComputationPane {
     }
 
     updateOutlierOverlay(result.outlierDataset(), result.reviewMode());
+    notifyOutlierRowsChanged(result.outlierDataset());
     updateSelectionOverlay();
     if (plot.getDomainAxis() instanceof NumberAxis domainAxis && domainAxisState != null) {
       restoreAxisState(domainAxis, domainAxisState);
@@ -567,6 +577,22 @@ public class KendrickPane extends DashboardComputationPane {
     }
     plot.setDataset(TREND_OVERLAY_DATASET_INDEX, trendDataset);
     plot.setRenderer(TREND_OVERLAY_DATASET_INDEX, trendRenderer);
+  }
+
+  private void notifyOutlierRowsChanged(final @Nullable KendrickSubsetDataset outlierDataset) {
+    if (onOutlierRowsChanged == null) {
+      return;
+    }
+    final List<FeatureListRow> rows = new ArrayList<>();
+    if (outlierDataset != null) {
+      for (int i = 0; i < outlierDataset.getItemCount(0); i++) {
+        final FeatureListRow row = outlierDataset.getItemObject(i);
+        if (row != null) {
+          rows.add(row);
+        }
+      }
+    }
+    onOutlierRowsChanged.accept(rows);
   }
 
   private void updateOutlierOverlay(final @Nullable KendrickSubsetDataset outlierDataset,

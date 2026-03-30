@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -36,8 +37,10 @@ import io.github.mzmine.datamodel.features.types.fx.ColumnType;
 import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.components.factories.FxSplitPanes;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
+import io.github.mzmine.javafx.properties.PropertyUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.isotope.IsotopePane;
+import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickOutlierPopupController;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickPane;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickReviewMode;
 import io.github.mzmine.modules.visualization.dash_lipidqc.matched.MatchedSignalsPane;
@@ -45,6 +48,7 @@ import io.github.mzmine.modules.visualization.dash_lipidqc.retention.EquivalentC
 import io.github.mzmine.modules.visualization.dash_lipidqc.summary.LipidSummaryPane;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import io.github.mzmine.util.FeatureTableFXUtil;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -71,17 +75,20 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     FxViewBuilder<LipidAnnotationQCDashboardModel> {
 
   private final Region qualityView;
+  private final KendrickOutlierPopupController outlierPopupController;
   private final Consumer<KendrickReviewMode> setKendrickReviewMode;
   private final Consumer<Runnable> setOnAnnotationsChanged;
   private final Runnable requestQualityUpdate;
 
   protected LipidAnnotationQCDashboardViewBuilder(
       final @NotNull LipidAnnotationQCDashboardModel model, final @NotNull Region qualityView,
+      final @NotNull KendrickOutlierPopupController outlierPopupController,
       final @NotNull Consumer<KendrickReviewMode> setKendrickReviewMode,
       final @NotNull Consumer<Runnable> setOnAnnotationsChanged,
       final @NotNull Runnable requestQualityUpdate) {
     super(model);
     this.qualityView = qualityView;
+    this.outlierPopupController = outlierPopupController;
     this.setKendrickReviewMode = setKendrickReviewMode;
     this.setOnAnnotationsChanged = setOnAnnotationsChanged;
     this.requestQualityUpdate = requestQualityUpdate;
@@ -93,7 +100,24 @@ public class LipidAnnotationQCDashboardViewBuilder extends
     final IsotopePane isotopePane = new IsotopePane();
     final EquivalentCarbonNumberPane ecnPane = new EquivalentCarbonNumberPane(model);
     final KendrickPane kendrickPane = new KendrickPane(model, filterState);
-    kendrickPane.setOnReviewModeChanged(setKendrickReviewMode);
+    kendrickPane.setOnOutlierRowsChanged(outlierPopupController::setOutlierRows);
+    kendrickPane.setOnReviewModeChanged(mode -> {
+      setKendrickReviewMode.accept(mode);
+      outlierPopupController.setReviewMode(mode);
+      if (mode != KendrickReviewMode.NONE) {
+        outlierPopupController.showStage();
+      } else {
+        outlierPopupController.hideStage();
+        outlierPopupController.setOutlierRows(List.of());
+      }
+    });
+    PropertyUtils.firstElementProperty(outlierPopupController.selectedRowsProperty())
+        .subscribe(row -> {
+          if (row != null) {
+            model.setRow(row);
+            FeatureTableFXUtil.selectAndScrollTo(row, model.getFeatureTableFx());
+          }
+        });
     final MatchedSignalsPane matchedSignalsPane = new MatchedSignalsPane();
     final ComboBox<LipidAnnotationLevel> preferredLevelCombo = new ComboBox<>(
         FXCollections.observableArrayList(LipidAnnotationLevel.values()));
