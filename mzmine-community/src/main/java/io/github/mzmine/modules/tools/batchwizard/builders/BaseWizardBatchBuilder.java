@@ -166,6 +166,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizar
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDiaWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.custom_parameters.WizardMassDetectorNoiseLevels;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.custom_parameters.WizardMsPolarity;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.fraggraphdashboard.fraggraph.FragmentUtils;
 import io.github.mzmine.modules.tools.isotopepatternscore.IsotopePatternScoreParameters;
@@ -1427,9 +1428,11 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
         new FeatureListsSelection(FeatureListsSelectionType.BATCH_LAST_FEATURELISTS));
     param.setParameter(LipidAnnotationParameters.lipidClasses,
         LipidClassesProvider.getListOfAllLipidClasses().toArray());
-    final var chainParams = new LipidAnnotationChainParameters();
+
+    final LipidAnnotationChainParameters chainParams = LipidAnnotationChainParameters.createDefault();
     chainParams.setParameter(LipidAnnotationChainParameters.minChainLength, 4);
     param.setParameter(LipidAnnotationParameters.lipidChainParameters, chainParams);
+
     final var instrumentPreset = (MassSpectrometerWizardParameterFactory) steps.get(WizardPart.MS)
         .get().getFactory();
     final MZTolerance lipidMzTolerance = switch (instrumentPreset) {
@@ -1437,8 +1440,19 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
       case Orbitrap, Orbitrap_Astral, FTICR, LOW_RES -> mzTolInterSample;
     };
     param.setParameter(LipidAnnotationParameters.mzTolerance, lipidMzTolerance);
-    param.setParameter(LipidAnnotationParameters.lipidAnalysisType,
-        isImaging ? LipidAnalysisType.IMAGING : LipidAnalysisType.LC_REVERSED_PHASE);
+
+    final LipidAnalysisType analysisType = switch (steps.get(WizardPart.ION_INTERFACE)
+        .orElse(IonInterfaceWizardParameterFactory.UHPLC.create()).getFactory()) {
+      case IonInterfaceWizardParameterFactory.HPLC, IonInterfaceWizardParameterFactory.UHPLC ->
+          LipidAnalysisType.LC_REVERSED_PHASE;
+      case IonInterfaceWizardParameterFactory.HILIC -> LipidAnalysisType.LC_HILIC;
+      case IonInterfaceWizardParameterFactory.DESI, IonInterfaceWizardParameterFactory.MALDI ->
+          LipidAnalysisType.IMAGING;
+      case IonInterfaceWizardParameterFactory.DIRECT_INFUSION,
+           IonInterfaceWizardParameterFactory.FLOW_INJECT -> LipidAnalysisType.DIRECT_INFUSION;
+      default -> LipidAnalysisType.DIRECT_INFUSION;
+    };
+    param.setParameter(LipidAnnotationParameters.lipidAnalysisType, analysisType);
     param.setParameter(LipidAnnotationParameters.searchForMSMSFragments, !isImaging);
     param.setParameter(LipidAnnotationParameters.minimumOverallQualityScore, 0.6);
     param.setParameter(LipidAnnotationParameters.customLipidClasses, false);

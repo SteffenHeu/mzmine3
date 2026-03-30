@@ -52,7 +52,7 @@ public final class AnnotationWizardParameters extends WizardStepParameters {
   public static final BooleanParameter lipidAnnotation = new BooleanParameter("Annotate lipids", """
       Lipid annotation can be applied on MS1 only data (including imaging),
       or in combination with MS2 information from either DDA or DIA experiments.
-      """, false);
+      """, true);
 
   public static final OptionalParameter<DoubleParameter> formulaPrediction = new OptionalParameter<>(
       new DoubleParameter("Formula prediction (for m/z < X)", """
