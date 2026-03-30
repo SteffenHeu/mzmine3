@@ -67,10 +67,10 @@ class MetadataColumnNormalizationTypeModuleTest {
       final MetadataColumnNormalizationTypeParameters moduleParameters = MetadataColumnNormalizationTypeParameters.create(
           concentrationColumn.getTitle(), Mode.divide);
 
-      final List<RawDataFile> referenceFiles = module.getReferenceSamples(featureList,
+      final List<RawDataFile> referenceFiles = module.getReferenceSamples(featureList, new SamplesBatch(featureList.getRawDataFiles(), null),
           moduleParameters);
       final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-          referenceFiles, featureList, metadata, createMainParameters(AbundanceMeasure.Height),
+          referenceFiles, featureList, samplesBatch, metadata, createMainParameters(AbundanceMeasure.Height),
           moduleParameters);
 
       final FactorNormalizationFunction functionA = assertInstanceOf(
@@ -91,10 +91,10 @@ class MetadataColumnNormalizationTypeModuleTest {
       final MetadataColumnNormalizationTypeParameters moduleParameters = MetadataColumnNormalizationTypeParameters.create(
           concentrationColumn.getTitle(), Mode.multiply);
 
-      final List<RawDataFile> referenceFiles = module.getReferenceSamples(featureList,
+      final List<RawDataFile> referenceFiles = module.getReferenceSamples(featureList, new SamplesBatch(featureList.getRawDataFiles(), null),
           moduleParameters);
       final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-          referenceFiles, featureList, metadata, createMainParameters(AbundanceMeasure.Height),
+          referenceFiles, featureList, samplesBatch, metadata, createMainParameters(AbundanceMeasure.Height),
           moduleParameters);
 
       final FactorNormalizationFunction functionA = assertInstanceOf(
@@ -127,7 +127,7 @@ class MetadataColumnNormalizationTypeModuleTest {
         concentrationColumn.getTitle());
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, metadata, createMainParameters(AbundanceMeasure.Height),
+        List.of(fileA, fileB), featureList, samplesBatch, metadata, createMainParameters(AbundanceMeasure.Height),
         moduleParameters);
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
@@ -148,7 +148,7 @@ class MetadataColumnNormalizationTypeModuleTest {
     final MetadataColumnNormalizationTypeParameters moduleParameters = createModuleParameters("");
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertEquals("No metadata column selected for normalization.", exception.getMessage());
@@ -169,7 +169,8 @@ class MetadataColumnNormalizationTypeModuleTest {
         concentrationColumn.getTitle());
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, metadata,
+        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, samplesBatch,
+            metadata,
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertEquals("Invalid metadata value in column 'concentration' for file 'file_b': null",
@@ -190,7 +191,7 @@ class MetadataColumnNormalizationTypeModuleTest {
         stringColumn.getTitle());
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, metadata,
+        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, metadata,
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertEquals("Selected metadata column is missing or not numeric: sample_group",
@@ -213,7 +214,8 @@ class MetadataColumnNormalizationTypeModuleTest {
         concentrationColumn.getTitle());
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, metadata,
+        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, samplesBatch,
+            metadata,
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertEquals("Invalid metadata value in column 'concentration' for file 'file_b': -1.0",
@@ -236,7 +238,8 @@ class MetadataColumnNormalizationTypeModuleTest {
         concentrationColumn.getTitle());
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, metadata,
+        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, samplesBatch,
+            metadata,
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertEquals("Invalid metadata value in column 'concentration' for file 'file_b': NaN",
@@ -259,7 +262,8 @@ class MetadataColumnNormalizationTypeModuleTest {
         concentrationColumn.getTitle());
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, metadata,
+        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, samplesBatch,
+            metadata,
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertEquals("Invalid metadata value in column 'concentration' for file 'file_b': Infinity",

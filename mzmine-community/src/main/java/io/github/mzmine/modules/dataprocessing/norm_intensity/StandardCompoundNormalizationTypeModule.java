@@ -56,16 +56,16 @@ public class StandardCompoundNormalizationTypeModule implements NormalizationTyp
 
   @NotNull
   public List<RawDataFile> getReferenceSamples(@NotNull final FeatureList flist,
-      @NotNull final ParameterSet normalizationModuleParameters) {
+      @NotNull SamplesBatch samplesBatch, @NotNull final ParameterSet normalizationModuleParameters) {
     final var sampleTypeFilter = new SampleTypeFilter(normalizationModuleParameters.getParameter(
         StandardCompoundNormalizationTypeParameters.sampleTypes).getValue());
-    return sampleTypeFilter.filterFiles(flist.getRawDataFiles());
+    return sampleTypeFilter.filterFiles(samplesBatch.getRaws());
   }
 
   @Override
   public @NotNull Map<@NotNull RawDataFile, @NotNull NormalizationFunction> createReferenceFunctions(
       @NotNull final List<@NotNull RawDataFile> referenceFiles,
-      @NotNull final ModularFeatureList featureList, @NotNull final MetadataTable metadata,
+      @NotNull final ModularFeatureList featureList, @NotNull SamplesBatch samplesBatch, @NotNull final MetadataTable metadata,
       @NotNull final ParameterSet mainParameters,
       @NotNull final ParameterSet moduleSpecificParameters) {
     final FeatureListRow[] standardRows = moduleSpecificParameters.getParameter(

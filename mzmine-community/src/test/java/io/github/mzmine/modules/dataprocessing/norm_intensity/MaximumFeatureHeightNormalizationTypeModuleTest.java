@@ -54,7 +54,7 @@ class MaximumFeatureHeightNormalizationTypeModuleTest {
     addRow(featureList, 2, fileA, 10f, 10f, fileB, 3f, 3f);
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, new MetadataTable(false),
+        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.MAX));
 

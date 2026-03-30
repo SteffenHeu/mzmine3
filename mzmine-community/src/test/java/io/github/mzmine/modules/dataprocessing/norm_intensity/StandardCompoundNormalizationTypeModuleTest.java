@@ -59,7 +59,7 @@ class StandardCompoundNormalizationTypeModuleTest {
         StandardUsageType.Nearest, true);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertEquals("No internal standard features selected.", exception.getMessage());
@@ -78,8 +78,7 @@ class StandardCompoundNormalizationTypeModuleTest {
         StandardUsageType.Nearest, true, standardRow);
 
     final RuntimeException exception = assertThrows(RuntimeException.class,
-        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList,
-            new MetadataTable(false), createMainParameters(AbundanceMeasure.Height),
+        () -> module.createReferenceFunctions(List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false), createMainParameters(AbundanceMeasure.Height),
             moduleParameters));
 
     assertTrue(exception.getMessage().contains("was not detected in file file_b"));
@@ -97,7 +96,7 @@ class StandardCompoundNormalizationTypeModuleTest {
         StandardUsageType.Weighted, false, standardRow);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(fileA), featureList, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(fileA), featureList, samplesBatch, new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertEquals("No intensity normalization standards found for file: file_a",
@@ -116,7 +115,7 @@ class StandardCompoundNormalizationTypeModuleTest {
         StandardUsageType.Nearest, true, standardRow);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(fileA), featureList, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(fileA), featureList, samplesBatch, new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), moduleParameters));
 
     assertTrue(exception.getMessage().contains("Invalid standard abundance found for row"));
@@ -135,7 +134,7 @@ class StandardCompoundNormalizationTypeModuleTest {
         StandardUsageType.Nearest, true, standardRow);
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, new MetadataTable(false),
+        List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), moduleParameters);
 
     final StandardCompoundNormalizationFunction functionA = assertInstanceOf(
@@ -168,7 +167,7 @@ class StandardCompoundNormalizationTypeModuleTest {
         StandardUsageType.Nearest, false, standardRow1, standardRow2);
 
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA), featureList, new MetadataTable(false),
+        List.of(fileA), featureList, samplesBatch, new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), moduleParameters);
 
     final StandardCompoundNormalizationFunction functionA = assertInstanceOf(

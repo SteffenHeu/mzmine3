@@ -25,26 +25,53 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
-import java.util.ArrayList;
+import io.github.mzmine.datamodel.RawDataFile;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-/**
- * @param steps the list of normalization steps
- */
-public record IntensityNormalizationSummary(@NotNull List<IntensityNormalizationSummaryStep> steps, @NotNull
-                                            List<String> messages) {
+public final class SamplesBatch {
 
-  public static final @NotNull IntensityNormalizationSummary EMPTY = new IntensityNormalizationSummary(
-      List.of(), List.of());
+  private final List<RawDataFile> raws;
+  private final @Nullable Object groupMetadataValue;
+  private double medianNormMetric = Double.NaN;
+
+  SamplesBatch(List<RawDataFile> raws, @Nullable Object groupMetadataValue) {
+    this.raws = raws;
+    this.groupMetadataValue = groupMetadataValue;
+  }
+
+  public List<RawDataFile> getRaws() {
+    return raws;
+  }
+
+  public @Nullable Object getGroupMetadataValue() {
+    return groupMetadataValue;
+  }
 
   @NotNull
-  public IntensityNormalizationSummary copy() {
-    return new IntensityNormalizationSummary(
-        steps.stream().map(IntensityNormalizationSummaryStep::copy).toList(), List.copyOf(messages));
+  public String getGroupMetadataValueStr() {
+    return groupMetadataValue == null ? "UNNAMED BATCH" : groupMetadataValue.toString();
   }
 
-  public IntensityNormalizationSummary(@NotNull List<IntensityNormalizationSummaryStep> steps) {
-    this(steps, new ArrayList<>());
+  /**
+   * The median intensity of all reference samples in this batch. This is set by the sample intra
+   * batch correction step.
+   */
+  public void setMedianReferenceNormMetric(double medianNormMetric) {
+    this.medianNormMetric = medianNormMetric;
   }
+
+  /**
+   *
+   * @return Double.NaN if invalid or unset. positive otherwise
+   */
+  public double getMedianReferenceNormMetric() {
+    return medianNormMetric;
+  }
+
+  public int size() {
+    return raws.size();
+  }
+
 }

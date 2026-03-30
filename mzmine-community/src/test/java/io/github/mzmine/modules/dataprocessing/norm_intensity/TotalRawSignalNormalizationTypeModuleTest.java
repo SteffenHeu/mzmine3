@@ -63,7 +63,7 @@ class TotalRawSignalNormalizationTypeModuleTest {
     featureList.setSelectedScans(fileA, fileA.getScanNumbers(1));
     featureList.setSelectedScans(fileB, fileB.getScans());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, new MetadataTable(false),
+        List.of(fileA, fileB), featureList, samplesBatch, new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createParameters());
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
@@ -87,7 +87,7 @@ class TotalRawSignalNormalizationTypeModuleTest {
     featureList.setSelectedScans(file, file.getScanNumbers(1));
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createParameters()));
 
     assertEquals("No TIC found for file: no_tic", exception.getMessage());
@@ -101,7 +101,7 @@ class TotalRawSignalNormalizationTypeModuleTest {
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
 
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, new MetadataTable(false),
+        () -> module.createReferenceFunctions(List.of(file), featureList, samplesBatch, new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createParameters()));
 
     assertEquals("No scans selected for datafile: no_tic", exception.getMessage());

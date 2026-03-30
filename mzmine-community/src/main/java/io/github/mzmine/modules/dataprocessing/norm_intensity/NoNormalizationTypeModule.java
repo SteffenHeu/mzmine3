@@ -46,7 +46,7 @@ public class NoNormalizationTypeModule implements NormalizationTypeModule {
   @Override
   public @NotNull Map<@NotNull RawDataFile, @NotNull NormalizationFunction> createReferenceFunctions(
       @NotNull List<@NotNull RawDataFile> referenceFiles, @NotNull ModularFeatureList featureList,
-      @NotNull MetadataTable metadata, @NotNull ParameterSet mainParameters,
+      @NotNull SamplesBatch samplesBatch, @NotNull MetadataTable metadata, @NotNull ParameterSet mainParameters,
       @NotNull ParameterSet moduleSpecificParameters) {
     final HashMap<RawDataFile, NormalizationFunction> functions = HashMap.newHashMap(
         referenceFiles.size());
@@ -71,8 +71,8 @@ public class NoNormalizationTypeModule implements NormalizationTypeModule {
 
   @Override
   public @NotNull List<RawDataFile> getReferenceSamples(@NotNull final FeatureList flist,
-      @NotNull final ParameterSet normalizationModuleParameters) {
-    return List.copyOf(flist.getRawDataFiles());
+      @NotNull SamplesBatch samplesBatch, @NotNull final ParameterSet normalizationModuleParameters) {
+    return List.copyOf(samplesBatch.getRaws());
   }
 
   @Override

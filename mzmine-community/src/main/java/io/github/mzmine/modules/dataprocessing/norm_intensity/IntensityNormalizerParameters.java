@@ -115,7 +115,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
 
   public IntensityNormalizerParameters() {
     super(new Parameter[]{featureLists, suffix, handleOriginal, featureMeasurementType,
-            metadataNormFactorCol, internalStandardization, normalizationType, batchIdColumn,
+            batchIdColumn, metadataNormFactorCol, internalStandardization, normalizationType,
             hiddenNormalizationSummary},
         "https://mzmine.github.io/mzmine_documentation/module_docs/norm_intensity/norm_intensity.html");
   }

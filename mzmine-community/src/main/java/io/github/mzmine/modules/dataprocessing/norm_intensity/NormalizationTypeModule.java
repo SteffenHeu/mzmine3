@@ -42,7 +42,7 @@ public interface NormalizationTypeModule extends MZmineModule {
 
   @NotNull Map<@NotNull RawDataFile, @NotNull NormalizationFunction> createReferenceFunctions(
       @NotNull List<@NotNull RawDataFile> referenceFiles, @NotNull ModularFeatureList featureList,
-      @NotNull MetadataTable metadata, @NotNull ParameterSet mainParameters,
+      @NotNull SamplesBatch samplesBatch, @NotNull MetadataTable metadata, @NotNull ParameterSet mainParameters,
       @NotNull ParameterSet moduleSpecificParameters);
 
   @NotNull NormalizationFunction createInterpolatedFunction(@NotNull RawDataFile fileToInterpolate,
@@ -52,5 +52,5 @@ public interface NormalizationTypeModule extends MZmineModule {
       @NotNull ParameterSet parameters, @NotNull ParameterSet normalizerParameters);
 
   @NotNull List<RawDataFile> getReferenceSamples(@NotNull final FeatureList flist,
-      @NotNull final ParameterSet normalizationModuleParameters);
+      @NotNull SamplesBatch samplesBatch, @NotNull final ParameterSet normalizationModuleParameters);
 }
