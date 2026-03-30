@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -23,22 +22,34 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.dataprocessing.norm_linear;
+package io.github.mzmine.util.javafx.groupabletreeview;
 
-public enum NormalizationType {
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.scene.control.TreeItem;
+import org.jetbrains.annotations.NotNull;
 
-  AverageIntensity("Average intensity"), AverageSquaredIntensity(
-      "Average squared intensity"), MaximumFeatureHeight(
-          "Maximum peak intensity"), TotalRawSignal("Total raw signal");
+/**
+ * A {@link TreeItem} that represents a group node in a {@link GroupableTreeView}. The value is
+ * always null; the group is identified by its name.
+ *
+ * @param <T> the type of items in the tree
+ */
+public final class GroupTreeItem<T> extends TreeItem<T> {
 
-  private final String name;
+  private final StringProperty groupNameProperty;
 
-  NormalizationType(String name) {
-    this.name = name;
+  public GroupTreeItem(@NotNull final String groupName) {
+    super(null);
+    this.groupNameProperty = new SimpleStringProperty(groupName);
+    setExpanded(true);
   }
 
-  public String toString() {
-    return this.name;
+  public @NotNull String getGroupName() {
+    return groupNameProperty.get();
   }
 
+  public @NotNull StringProperty groupNameProperty() {
+    return groupNameProperty;
+  }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -23,45 +22,19 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.util.javafx.groupablelistview;
+package io.github.mzmine.datamodel.features.types.numbers;
 
-/**
- * Class designed to be used as a value item of {@link GroupableListView}.
- *
- * @param <T> type of the value
- */
-public class ValueEntity<T> implements GroupableListViewEntity {
+import org.jetbrains.annotations.NotNull;
 
-  private T value;
-  private GroupEntity group;
+public class NormalizedAreaType extends AreaType {
 
-  public ValueEntity(T value) {
-    this.value = value;
-  }
-
-  public T getValue() {
-    return value;
-  }
-
-  public void setValue(T value) {
-    this.value = value;
-  }
-
-  public void setGroup(GroupEntity group) {
-    this.group = group;
-  }
-
-  public GroupEntity getGroup() {
-    return group;
-  }
-
-  public boolean isGrouped() {
-    return getGroup() != null;
+  @Override
+  public @NotNull String getUniqueID() {
+    return "area_norm";
   }
 
   @Override
-  public String toString() {
-    return value.toString();
+  public @NotNull String getHeaderString() {
+    return "Norm. area";
   }
-
 }

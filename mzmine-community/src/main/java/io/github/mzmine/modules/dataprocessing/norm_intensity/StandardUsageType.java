@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -23,11 +22,21 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.util.javafx.groupablelistview;
+package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
-/**
- * Interface designed to be used as an item of {@link GroupableListView}.
- */
-public interface GroupableListViewEntity {
+public enum StandardUsageType {
 
+  Nearest("Nearest standard"), Weighted("Weighted contribution of all standards");
+
+  private final String name;
+
+  StandardUsageType(final String name) {
+    this.name = name;
+  }
+
+  @Override
+  public String toString() {
+    return name;
+  }
 }
+

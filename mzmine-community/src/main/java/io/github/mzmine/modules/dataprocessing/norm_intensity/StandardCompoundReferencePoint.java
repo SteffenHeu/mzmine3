@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -23,43 +22,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.util.javafx.groupablelistview;
+package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 /**
- * Class designed to be used as a group item of {@link GroupableListView}.
+ * A standard reference point for one file-specific normalization function.
  */
-public class GroupEntity implements GroupableListViewEntity {
-
-  private String groupName;
-  private boolean isExpanded = true;
-
-  public GroupEntity(String groupName) {
-    this.groupName = groupName;
-  }
-
-  public String getGroupName() {
-    return groupName;
-  }
-
-  public void setGroupName(String groupName) {
-    this.groupName = groupName;
-  }
-
-  public void invertState() {
-    isExpanded = !isExpanded;
-  }
-
-  public boolean isExpanded() {
-    return isExpanded;
-  }
-
-  public boolean isHidden() {
-    return !isExpanded;
-  }
-
-  @Override
-  public String toString() {
-    return groupName;
-  }
+public record StandardCompoundReferencePoint(double mz, float rt, double abundance) {
 
 }
+
