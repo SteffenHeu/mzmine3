@@ -410,14 +410,13 @@ public class FeatureDataUtils {
       calculateQualityParameters(feature);
     }
 
-    // auto-apply normalization if present, apply all steps in order and accumulate normalization
-    // need to set to null before to start fresh with raw height and area
+    // auto-apply normalization if present
     if (feature.getRawDataFile() != null) {
-      feature.set(NormalizedHeightType.class, null);
-      feature.set(NormalizedAreaType.class, null);
+      // normalize or reset normalized intensities
       IntensityNormalizerModule.getNormalizationFunctionsOfLatestCallForFile(
               feature.getFeatureList(), feature.getRawDataFile())
-          .ifPresent(normalizer -> normalizeAbundances(feature, normalizer));
+          .ifPresentOrElse(normalizer -> normalizeAbundances(feature, normalizer),
+              () -> clearIntensityNormalization(feature));
     }
   }
 
@@ -514,9 +513,11 @@ public class FeatureDataUtils {
    * Reset all {@link NormalizedAreaType} and {@link NormalizedHeightType}
    */
   public static void clearIntensityNormalization(FeatureList flist) {
-    flist.streamFeatures().forEach(feature -> {
-      feature.set(NormalizedAreaType.class, null);
-      feature.set(NormalizedHeightType.class, null);
-    });
+    flist.streamFeatures().forEach(FeatureDataUtils::clearIntensityNormalization);
+  }
+
+  private static void clearIntensityNormalization(ModularFeature feature) {
+    feature.set(NormalizedAreaType.class, null);
+    feature.set(NormalizedHeightType.class, null);
   }
 }

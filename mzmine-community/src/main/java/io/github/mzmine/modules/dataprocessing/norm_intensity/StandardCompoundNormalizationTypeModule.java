@@ -41,6 +41,9 @@ import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Internal standards normalization
+ */
 public class StandardCompoundNormalizationTypeModule extends NormalizationTypeWithReferencesModule {
 
   @Override

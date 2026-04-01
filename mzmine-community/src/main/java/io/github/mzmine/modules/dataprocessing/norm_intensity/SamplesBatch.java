@@ -30,6 +30,9 @@ import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * A SamplesBatch like a list of RawDataFiles all run as a single batch.
+ */
 public final class SamplesBatch {
 
   private final List<RawDataFile> raws;

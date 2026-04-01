@@ -75,6 +75,7 @@ class IntensityNormalizerTask extends AbstractTask {
   private final String suffix;
 
   private final boolean intraBatchCorrectionEnabled;
+  private final boolean interBatchCorrectionEnabled;
   private final NormalizationType normalizationType;
   private final NormalizationTypeModule normalizationTypeModule;
   private final ParameterSet normalizationTypeModuleParameters;
@@ -94,6 +95,8 @@ class IntensityNormalizerTask extends AbstractTask {
   private final boolean batchIdEnabled;
 
   private int totalNormalizationSteps;
+  // can only apply once at end
+  private boolean hasFinishedApplyFunctions = false;
 
   public IntensityNormalizerTask(MZmineProject project, FeatureList featureList,
       ParameterSet parameters, @Nullable MemoryMapStorage storage,
@@ -135,8 +138,12 @@ class IntensityNormalizerTask extends AbstractTask {
         .map(String::strip).filter(StringUtils::hasValue).orElse(null);
     batchIdEnabled = batchIdColumn != null;
 
-    totalNormalizationSteps = ObjectUtils.countTrue(byMetadataEnabled, internalStandardEnabled,
-        intraBatchCorrectionEnabled);
+    // currently intra batch activates inter batch
+    this.interBatchCorrectionEnabled = intraBatchCorrectionEnabled;
+
+    // 1+ for applying the functions at the end
+    totalNormalizationSteps = 1+ObjectUtils.countTrue(byMetadataEnabled, internalStandardEnabled,
+        intraBatchCorrectionEnabled, interBatchCorrectionEnabled);
   }
 
   public double getFinishedPercentage() {
@@ -174,6 +181,7 @@ class IntensityNormalizerTask extends AbstractTask {
 
     // only if intra batch correction is enabled then also apply inter batch correction
     if (intraBatchCorrectionEnabled && sampleBatches.size() > 1) {
+      totalNormalizationSteps++;
       // inter batch normalization by median intensities in reference samples
       normalizeSamplesInterBatches(sampleBatches, summary);
     }
@@ -243,6 +251,7 @@ class IntensityNormalizerTask extends AbstractTask {
 
         // add and merge function into summary
         summary.addMergeFunction(raw, fileFunction);
+        processedFiles++;
       }
     }
   }
@@ -268,6 +277,7 @@ class IntensityNormalizerTask extends AbstractTask {
         final NormalizationTypeModule isNormalizer = internalStandardNormalizer.getModuleInstance();
         isNormalizer.createAllNormalizationFunctionsToSummary(summary, normalizedFeatureList,
             samplesBatch, metadata, mainParameters, internalStandardParams);
+        processedFiles += samplesBatch.size();
       } catch (IllegalStateException e) {
         error("Pre-normalization internal standards: " + e.getMessage());
         return;
@@ -280,6 +290,7 @@ class IntensityNormalizerTask extends AbstractTask {
         normalizationTypeModule.createAllNormalizationFunctionsToSummary(summary,
             normalizedFeatureList, samplesBatch, metadata, mainParameters,
             normalizationTypeModuleParameters);
+        processedFiles += samplesBatch.size();
       } catch (IllegalStateException e) {
         error("Error during %s step by %s: ".formatted(
             IntensityNormalizerParameters.normalizationType.getName(),
@@ -298,6 +309,8 @@ class IntensityNormalizerTask extends AbstractTask {
     try {
       metadataModule.createAllNormalizationFunctionsToSummary(summary, normalizedFeatureList,
           samplesBatch, metadata, mainParameters, metadataModuleParams);
+
+      processedFiles += samplesBatch.size();
     } catch (IllegalStateException e) {
       error("Error during pre-normalization by metadata column (" + byMetadataColumn + "): "
           + e.getMessage());
@@ -345,6 +358,12 @@ class IntensityNormalizerTask extends AbstractTask {
    */
   private void applyFunctionsToFeatures(@NotNull final ModularFeatureList featureList,
       @NotNull final Map<RawDataFile, NormalizationFunction> fileToFunction) {
+
+    if (hasFinishedApplyFunctions) {
+      throw new IllegalStateException(
+          "Cannot apply functions twice. Should only normalize once.");
+    }
+    hasFinishedApplyFunctions = true;
 
     for (Entry<RawDataFile, NormalizationFunction> entry : fileToFunction.entrySet()) {
       final NormalizationFunction fn = entry.getValue();
