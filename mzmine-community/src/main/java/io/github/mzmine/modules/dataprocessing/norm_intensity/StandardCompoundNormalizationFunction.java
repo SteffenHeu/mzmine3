@@ -25,6 +25,7 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
 import io.github.mzmine.util.XMLUtils;
 import java.time.LocalDateTime;
@@ -194,6 +195,11 @@ public record StandardCompoundNormalizationFunction(
 
     return new StandardCompoundNormalizationFunction(rawDataFilePlaceholder, acquisitionTimestamp,
         standardUsageType, mzVsRtBalance, referencePoints);
+  }
+
+  @Override
+  public @NotNull NormalizationFunction withRawFile(@NotNull RawDataFile file) {
+    return new StandardCompoundNormalizationFunction(file, MetadataTableUtils.getRunDate(file), usageType, mzVsRtBalance, referencePoints);
   }
 
   @Override

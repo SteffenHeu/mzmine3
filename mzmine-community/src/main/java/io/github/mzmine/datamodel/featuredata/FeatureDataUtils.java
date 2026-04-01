@@ -415,9 +415,9 @@ public class FeatureDataUtils {
     if (feature.getRawDataFile() != null) {
       feature.set(NormalizedHeightType.class, null);
       feature.set(NormalizedAreaType.class, null);
-      IntensityNormalizerModule.streamNormalizationFunctionsOfLatestCallForFile(
+      IntensityNormalizerModule.getNormalizationFunctionsOfLatestCallForFile(
               feature.getFeatureList(), feature.getRawDataFile())
-          .forEach(normalizer -> accumulateNormalization(feature, normalizer));
+          .ifPresent(normalizer -> normalizeAbundances(feature, normalizer));
     }
   }
 
@@ -508,31 +508,6 @@ public class FeatureDataUtils {
     final double factor = normalizer.getNormalizationFactor(feature.getMZ(), feature.getRT());
     feature.set(NormalizedAreaType.class, (float) (feature.getArea() * factor));
     feature.set(NormalizedHeightType.class, (float) (feature.getHeight() * factor));
-  }
-
-  /**
-   * Accumulates an additional normalization factor on top of any previously applied normalization.
-   * <p>
-   * If {@code NormalizedHeight}/{@code NormalizedArea} already exist on the feature (from a prior
-   * normalization pass), they are used as the base values. Otherwise falls back to the raw
-   * {@code Height}/{@code Area}. This allows sequential multi-pass normalization pipelines where
-   * each pass builds on the previous one.
-   *
-   * @param feature    the feature to update
-   * @param normalizer the normalization function for this pass; no-op if null
-   */
-  public static void accumulateNormalization(@NotNull ModularFeature feature,
-      @Nullable final NormalizationFunction normalizer) {
-    if (normalizer == null) {
-      return;
-    }
-    final double factor = normalizer.getNormalizationFactor(feature.getMZ(), feature.getRT());
-    final Float prevNormArea = feature.get(NormalizedAreaType.class);
-    final Float prevNormHeight = feature.get(NormalizedHeightType.class);
-    final float baseArea = prevNormArea != null ? prevNormArea : feature.getArea();
-    final float baseHeight = prevNormHeight != null ? prevNormHeight : feature.getHeight();
-    feature.set(NormalizedAreaType.class, (float) (baseArea * factor));
-    feature.set(NormalizedHeightType.class, (float) (baseHeight * factor));
   }
 
   /**

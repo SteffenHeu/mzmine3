@@ -57,7 +57,10 @@ class FeatureIntensityNormalizationModuleTest {
     addRow(featureList, 3, fileA, 3f, fileB, 1f);
     addRow(featureList, 4, fileA, 100f, fileB, 1f);
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
+        summary,
         List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.MEDIAN));
@@ -67,9 +70,9 @@ class FeatureIntensityNormalizationModuleTest {
     final FactorNormalizationFunction functionB = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileB));
 
-    // Median(file_a)=2.5 and Median(file_b)=1.0 => maxMetric=2.5.
-    assertEquals(1d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-    assertEquals(2.5d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+    // Median(file_a)=2.5 and Median(file_b)=1.0 => median=3.5/2
+    assertEquals(3.5/2d/2.5, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+    assertEquals(3.5/2d/1d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
     assertEquals(fileA.getStartTimeStamp(), functionA.acquisitionTimestamp());
     assertEquals(fileB.getStartTimeStamp(), functionB.acquisitionTimestamp());
   }
@@ -80,8 +83,11 @@ class FeatureIntensityNormalizationModuleTest {
     final RawDataFileImpl file = createRawFile("empty_file", LocalDateTime.of(2026, 1, 1, 10, 0));
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
+        () -> module.createReferenceFunctions(summary,
+            List.of(file), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
                 FeatureIntensityNormalizationMode.MEDIAN)));
 
@@ -97,8 +103,11 @@ class FeatureIntensityNormalizationModuleTest {
     addRow(featureList, 1, file, 0f, null, null);
     addRow(featureList, 2, file, 0f, null, null);
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
+        () -> module.createReferenceFunctions(summary,
+            List.of(file), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
                 FeatureIntensityNormalizationMode.MEDIAN)));
 
@@ -117,7 +126,10 @@ class FeatureIntensityNormalizationModuleTest {
     addRow(featureList, 1, fileA, 1f, 2f, fileB, 1f, 1f);
     addRow(featureList, 2, fileA, 1f, 4f, fileB, 1f, 1f);
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
+        summary,
         List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Area), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.MEDIAN));
@@ -127,9 +139,9 @@ class FeatureIntensityNormalizationModuleTest {
     final FactorNormalizationFunction functionB = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileB));
 
-    // Median area(file_a)=3.0 and Median area(file_b)=1.0 => maxMetric=3.0.
-    assertEquals(1d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-    assertEquals(3d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+    // Median area(file_a)=3.0 and Median area(file_b)=1.0 => median=2.0.
+    assertEquals(2/3d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+    assertEquals(2d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
   }
 
   @Test
@@ -139,10 +151,13 @@ class FeatureIntensityNormalizationModuleTest {
     final RawDataFileImpl fileB = createRawFile("file_b", null);
 
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, fileA, fileB);
-    addRow(featureList, 1, fileA, 1f, fileB, 1f);
-    addRow(featureList, 2, fileA, 2f, fileB, 1f);
+    addRow(featureList, 1, fileA, 1f, fileB, 8f);
+    addRow(featureList, 2, fileA, 3f, fileB, 8f);
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
+        summary,
         List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.MEDIAN));
@@ -154,7 +169,8 @@ class FeatureIntensityNormalizationModuleTest {
 
     assertNull(functionA.acquisitionTimestamp());
     assertNull(functionB.acquisitionTimestamp());
-    assertEquals(1d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-    assertEquals(1.5d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+    // median a=2 median b=8 total median is 5
+    assertEquals(5d/2d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+    assertEquals(5d/8d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
   }
 }

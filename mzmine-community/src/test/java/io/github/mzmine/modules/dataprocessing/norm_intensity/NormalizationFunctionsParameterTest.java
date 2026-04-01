@@ -35,7 +35,6 @@ import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
-import io.github.mzmine.modules.dataprocessing.norm_intensity.IntensityNormalizationSummaryStep.Type;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter.OriginalFeatureListOption;
@@ -82,8 +81,8 @@ class NormalizationFunctionsParameterTest {
     final NormalizationFunctionsParameter loadedParameter = new NormalizationFunctionsParameter();
     ParameterUtils.loadParameterFromString(loadedParameter, xml);
 
-    final IntensityNormalizationSummary summary = loadedParameter.getValue();
-    final List<NormalizationFunction> loadedFunctions = summary.steps().getFirst().functions();
+    final IntensityNormalizationSimpleSummary summary = loadedParameter.getValue();
+    final List<NormalizationFunction> loadedFunctions = summary.functions();
     assertEquals(3, loadedFunctions.size());
 
     final FactorNormalizationFunction loadedFactor = assertInstanceOf(
@@ -130,10 +129,10 @@ class NormalizationFunctionsParameterTest {
     final NormalizationFunctionsParameter parameter = new NormalizationFunctionsParameter();
     parameter.loadValueFromXML(root);
 
-    final IntensityNormalizationSummary summary = parameter.getValue();
-    assertEquals(0, summary.steps().size());
+    final IntensityNormalizationSimpleSummary summary = parameter.getValue();
+    assertEquals(0, summary.size());
 
-//    final List<NormalizationFunction> loadedFunctions = summary.steps().getFirst().functions();
+//    final List<NormalizationFunction> loadedFunctions = summary.functions();
 //    assertEquals(1, loadedFunctions.size());
 //    final FactorNormalizationFunction loadedValid = assertInstanceOf(
 //        FactorNormalizationFunction.class, loadedFunctions.getFirst());
@@ -155,11 +154,11 @@ class NormalizationFunctionsParameterTest {
         AbundanceMeasure.Area, OriginalFeatureListOption.REMOVE, List.of());
     ParameterUtils.loadValuesFromXMLString(loaded, xml);
 
-    final IntensityNormalizationSummary summary = loaded.getValue(
+    final IntensityNormalizationSimpleSummary summary = loaded.getValue(
         IntensityNormalizerParameters.hiddenNormalizationSummary);
     assertNotNull(summary);
-    assertEquals(1, summary.steps().size());
-    var loadedFunctions = summary.steps().getFirst().functions();
+    assertEquals(1, summary.size());
+    var loadedFunctions = summary.functions();
     assertEquals(1, loadedFunctions.size());
     final FactorNormalizationFunction loadedFactor = assertInstanceOf(
         FactorNormalizationFunction.class, loadedFunctions.getFirst());
@@ -189,23 +188,23 @@ class NormalizationFunctionsParameterTest {
         new SimpleFeatureListAppliedMethod(IntensityNormalizerModule.class, latestParameters,
             Instant.parse("2026-01-01T11:30:00Z")));
 
-    final IntensityNormalizationSummary summary = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCall(
+    final IntensityNormalizationSimpleSummary summary = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCall(
         featureList);
     assertNotNull(summary);
-    assertEquals(1, summary.steps().size());
-    final List<NormalizationFunction> latestFunctions = summary.steps().getFirst().functions();
+    assertEquals(1, summary.size());
+    final List<NormalizationFunction> latestFunctions = summary.functions();
     assertEquals(1, latestFunctions.size());
     assertEquals(3d, latestFunctions.getFirst().getNormalizationFactor(100d, 5f), 1e-12);
 
-    final NormalizationFunction latestForFile = IntensityNormalizerModule.streamNormalizationFunctionsOfLatestCallForFile(
-        featureList, rawDataFile).findFirst().get();
+    final NormalizationFunction latestForFile = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCallForFile(
+        featureList, rawDataFile).get();
     assertNotNull(latestForFile);
     assertEquals(3d, latestForFile.getNormalizationFactor(100d, 5f), 1e-12);
 
-    final NormalizationFunction missingFile = IntensityNormalizerModule.streamNormalizationFunctionsOfLatestCallForFile(
+    final NormalizationFunction missingFile = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCallForFile(
             featureList,
             new RawDataFilePlaceholder("unknown", tempDir.resolve("unknown.mzML").toString(), 999))
-        .findFirst().orElse(null);
+        .orElse(null);
     assertNull(missingFile);
   }
 
@@ -214,10 +213,10 @@ class NormalizationFunctionsParameterTest {
     final RawDataFile rawDataFile = RawDataFile.createDummyFile();
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, rawDataFile);
 
-    final IntensityNormalizationSummary functions = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCall(
+    final IntensityNormalizationSimpleSummary functions = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCall(
         featureList);
 
-    assertTrue(functions.steps().isEmpty());
+    assertTrue(functions.isEmpty());
   }
 
   @Test
@@ -235,32 +234,30 @@ class NormalizationFunctionsParameterTest {
     ParameterUtils.loadParameterFromString(loaded, xml);
 
     final StandardCompoundNormalizationFunction loadedFunction = assertInstanceOf(
-        StandardCompoundNormalizationFunction.class,
-        loaded.getValue().steps().getFirst().functions().getFirst());
+        StandardCompoundNormalizationFunction.class, loaded.getValue().functions().getFirst());
     assertEquals(StandardUsageType.Weighted, loadedFunction.usageType());
   }
 
-  private static @NotNull IntensityNormalizationSummary createSummary(
+  private static @NotNull IntensityNormalizationSimpleSummary createSummary(
       NormalizationFunction... functions) {
     return createSummary(List.of(functions));
   }
 
-  private static @NotNull IntensityNormalizationSummary createSummary(
+  private static @NotNull IntensityNormalizationSimpleSummary createSummary(
       List<NormalizationFunction> functions) {
-    return new IntensityNormalizationSummary(
-        List.of(new IntensityNormalizationSummaryStep(Type.SAMPLE_INTERNAL, functions)));
+    return new IntensityNormalizationSimpleSummary(functions);
   }
 
   @Test
   void saveLoadRoundtripWithEmptyList() {
     final NormalizationFunctionsParameter parameter = new NormalizationFunctionsParameter();
-    parameter.setValue(IntensityNormalizationSummary.EMPTY);
+    parameter.setValue(IntensityNormalizationSimpleSummary.EMPTY);
 
     final String xml = ParameterUtils.saveParameterToXMLString(parameter);
     final NormalizationFunctionsParameter loaded = new NormalizationFunctionsParameter();
     ParameterUtils.loadParameterFromString(loaded, xml);
 
-    assertTrue(loaded.getValue().steps().isEmpty());
+    assertTrue(loaded.getValue().isEmpty());
   }
 
   @Test
@@ -280,8 +277,8 @@ class NormalizationFunctionsParameterTest {
     final NormalizationFunctionsParameter loadedParameter = new NormalizationFunctionsParameter();
     ParameterUtils.loadParameterFromString(loadedParameter, xml);
 
-    final IntensityNormalizationSummary summary = loadedParameter.getValue();
-    final List<NormalizationFunction> loadedFunctions = summary.steps().getFirst().functions();
+    final IntensityNormalizationSimpleSummary summary = loadedParameter.getValue();
+    final List<NormalizationFunction> loadedFunctions = summary.functions();
     assertEquals(2, loadedFunctions.size());
 
     final FactorNormalizationFunction loadedFactor = assertInstanceOf(

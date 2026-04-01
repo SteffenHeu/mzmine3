@@ -41,6 +41,10 @@ public final class SamplesBatch {
     this.groupMetadataValue = groupMetadataValue;
   }
 
+  public SamplesBatch(List<RawDataFile> raws) {
+    this(raws, null);
+  }
+
   public List<RawDataFile> getRaws() {
     return raws;
   }

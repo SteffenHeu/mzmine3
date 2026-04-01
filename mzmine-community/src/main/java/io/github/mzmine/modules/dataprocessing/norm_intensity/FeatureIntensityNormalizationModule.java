@@ -33,9 +33,9 @@ import io.github.mzmine.util.ArrayUtils;
 import io.github.mzmine.util.MathUtils;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public class FeatureIntensityNormalizationModule extends
-    AbstractFactorNormalizationTypeModule {
+public class FeatureIntensityNormalizationModule extends AbstractFactorNormalizationTypeModule {
 
   @Override
   public @NotNull String getName() {
@@ -48,7 +48,8 @@ public class FeatureIntensityNormalizationModule extends
   }
 
   @Override
-  protected double getNormalizationMetricForFile(@NotNull final RawDataFile file,
+  protected double getNormalizationMetricForFile(
+      @NotNull IntensityNormalizationSearchableSummary summary, @NotNull final RawDataFile file,
       @NotNull final ModularFeatureList featureList,
       @NotNull final ParameterSet linearNormalizerParameters,
       @NotNull final ParameterSet moduleSpecificParameters) {
@@ -60,25 +61,31 @@ public class FeatureIntensityNormalizationModule extends
     final FeatureIntensityNormalizationMode mode = moduleSpecificParameters.getValue(
         FeatureIntensityNormalizationParameters.mode);
 
+    // need to apply any previous normalization function if it is available
+    // to apply the next normalization on top of the existing
+    final @Nullable NormalizationFunction existingNormFunction = summary.functions().get(file);
     final double[] abundances = featureList.stream().map(r -> (ModularFeature) r.getFeature(file))
-        .filter(Objects::nonNull).mapToDouble(abundanceMeasure::getOrNaN)
+        .filter(Objects::nonNull)
+        .mapToDouble(feature -> abundanceMeasure.getOrNaN(feature, existingNormFunction))
         .filter(d -> !Double.isNaN(d)).toArray();
 
-    if(abundances.length == 0){
-      throw new IllegalStateException("No feature abundances found for file %s in feature list %s.".formatted(file.getName(), featureList.getName()));
+    if (abundances.length == 0) {
+      throw new IllegalStateException(
+          "No feature abundances found for file %s in feature list %s.".formatted(file.getName(),
+              featureList.getName()));
     }
 
     final double result = switch (mode) {
       case MEDIAN -> MathUtils.calcMedian(abundances);
-      case AVERAGE ->  MathUtils.calcAvg(abundances);
+      case AVERAGE -> MathUtils.calcAvg(abundances);
       case TIC -> ArrayUtils.sum(abundances);
       case MAX -> ArrayUtils.max(abundances).orElse(0d);
     };
 
     if (!Double.isFinite(result) || Double.compare(result, 0d) == 0) {
       throw new IllegalStateException(
-          "No features found or %s of feature intensities is 0 for file: %s".formatted(
-              mode, file.getName()));
+          "No features found or %s of feature intensities is 0 for file: %s".formatted(mode,
+              file.getName()));
     }
 
     return result;

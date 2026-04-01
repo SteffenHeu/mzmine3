@@ -29,6 +29,8 @@ import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
 import io.github.mzmine.util.XMLUtils;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Document;
@@ -38,12 +40,63 @@ import org.w3c.dom.Element;
  * Function that returns a normalization factor for specific feature coordinates.
  */
 public sealed interface NormalizationFunction extends UniqueIdSupplier permits
-    FactorNormalizationFunction, StandardCompoundNormalizationFunction,
-    InterpolatedNormalizationFunction {
+    CompositeListNormalizationFunction, FactorNormalizationFunction,
+    InterpolatedNormalizationFunction, StandardCompoundNormalizationFunction {
 
   String XML_FUNCTION_ELEMENT = "normalizationFunction";
   String XML_FUNCTION_TYPE_ATTR = "type";
   String XML_ACQUISITION_TIMESTAMP_ATTR = "acquisitionTimestamp";
+
+  /**
+   * Merges the old and new function. If both are constant factors then the factors are merged into
+   * a single function. If the functions are more complex like feature specific functions, then a
+   * {@link CompositeListNormalizationFunction} is returned.
+   *
+   * @param old      old function
+   * @param function new function
+   * @return a new function instance either merged or composite
+   */
+  @NotNull
+  static NormalizationFunction merge(@NotNull NormalizationFunction old,
+      @NotNull NormalizationFunction function) {
+    if (old instanceof FactorNormalizationFunction(
+        var rawFile, var acquisitionTimestamp, double factor
+    ) && function instanceof FactorNormalizationFunction newFactor) {
+      return new FactorNormalizationFunction(rawFile, acquisitionTimestamp,
+          factor * newFactor.factor());
+    }
+
+    final List<NormalizationFunction> subfunctions = new ArrayList<>();
+    if (old instanceof CompositeListNormalizationFunction(var functions)) {
+      subfunctions.addAll(functions);
+    } else {
+      subfunctions.add(old);
+    }
+
+    if (function instanceof CompositeListNormalizationFunction(var functions)) {
+      subfunctions.addAll(functions);
+    } else {
+      subfunctions.add(function);
+    }
+
+    return new CompositeListNormalizationFunction(List.copyOf(subfunctions));
+  }
+
+  /**
+   * @return true if this function is feature specific meaning that RT and or m/z affect
+   * normalization factor. Otherwise, any call to {@link #getNormalizationFactor(Double, Float)}
+   */
+  default boolean isFeatureSpecific() {
+    return !isConstantFactor();
+  }
+
+  /**
+   * @return opposite of {@link #isFeatureSpecific()}. true if this is a constant factor and not
+   * feature specific
+   */
+  default boolean isConstantFactor() {
+    return this instanceof FactorNormalizationFunction;
+  }
 
   @NotNull RawDataFilePlaceholder rawDataFilePlaceholder();
 
@@ -101,7 +154,8 @@ public sealed interface NormalizationFunction extends UniqueIdSupplier permits
       return null;
     }
 
-    final String acquisitionTimestamp = functionElement.getAttribute(XML_ACQUISITION_TIMESTAMP_ATTR);
+    final String acquisitionTimestamp = functionElement.getAttribute(
+        XML_ACQUISITION_TIMESTAMP_ATTR);
     if (acquisitionTimestamp.isBlank()) {
       return null;
     }
@@ -109,4 +163,8 @@ public sealed interface NormalizationFunction extends UniqueIdSupplier permits
     return LocalDateTime.parse(acquisitionTimestamp);
   }
 
+  /**
+   * @return Create a copy of the function that points to the new file
+   */
+  @NotNull NormalizationFunction withRawFile(@NotNull RawDataFile file);
 }

@@ -25,6 +25,7 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
 import io.github.mzmine.util.XMLUtils;
 import java.time.LocalDateTime;
@@ -52,6 +53,10 @@ public record FactorNormalizationFunction(@NotNull RawDataFilePlaceholder rawDat
     this.rawDataFilePlaceholder = rawDataFilePlaceholder;
     this.acquisitionTimestamp = acquisitionTimestamp;
     this.factor = factor;
+  }
+
+  public FactorNormalizationFunction(@NotNull RawDataFile file, double factor) {
+    this(file, MetadataTableUtils.getRunDate(file), factor);
   }
 
   @Override
@@ -91,6 +96,11 @@ public record FactorNormalizationFunction(@NotNull RawDataFilePlaceholder rawDat
     final double factor = Double.parseDouble(
         XMLUtils.requireAttribute(functionElement, XML_FACTOR_ATTR));
     return new FactorNormalizationFunction(rawDataFilePlaceholder, acquisitionTimestamp, factor);
+  }
+
+  @Override
+  public @NotNull NormalizationFunction withRawFile(@NotNull RawDataFile file) {
+    return new FactorNormalizationFunction(file, factor);
   }
 
 }

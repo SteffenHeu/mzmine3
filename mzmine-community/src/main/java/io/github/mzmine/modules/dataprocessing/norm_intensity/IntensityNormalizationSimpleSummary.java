@@ -25,26 +25,37 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
+import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
 import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * @param steps the list of normalization steps
+ * This is a storable version that uses weak references in {@link RawDataFilePlaceholder}. The
+ * searchable version is used during normalization building
+ * {@link IntensityNormalizationSearchableSummary}
  */
-public record IntensityNormalizationSummary(@NotNull List<IntensityNormalizationSummaryStep> steps, @NotNull
-                                            List<String> messages) {
+public record IntensityNormalizationSimpleSummary(@NotNull List<NormalizationFunction> functions,
+                                                  @NotNull List<String> messages) {
 
-  public static final @NotNull IntensityNormalizationSummary EMPTY = new IntensityNormalizationSummary(
+  public static final @NotNull IntensityNormalizationSimpleSummary EMPTY = new IntensityNormalizationSimpleSummary(
       List.of(), List.of());
 
   @NotNull
-  public IntensityNormalizationSummary copy() {
-    return new IntensityNormalizationSummary(
-        steps.stream().map(IntensityNormalizationSummaryStep::copy).toList(), List.copyOf(messages));
+  public IntensityNormalizationSimpleSummary copy() {
+    return new IntensityNormalizationSimpleSummary(List.copyOf(functions), List.copyOf(messages));
   }
 
-  public IntensityNormalizationSummary(@NotNull List<IntensityNormalizationSummaryStep> steps) {
-    this(steps, new ArrayList<>());
+  public IntensityNormalizationSimpleSummary(
+      @NotNull List<NormalizationFunction> functions) {
+    this(functions, new ArrayList<>());
+  }
+
+  public int size() {
+    return functions.size();
+  }
+
+  public boolean isEmpty() {
+    return functions.isEmpty();
   }
 }

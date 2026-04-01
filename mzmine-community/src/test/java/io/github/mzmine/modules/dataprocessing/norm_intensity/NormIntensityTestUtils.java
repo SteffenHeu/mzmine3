@@ -73,6 +73,10 @@ final class NormIntensityTestUtils {
       FeatureIntensityNormalizationMode mode) {
     return FeatureIntensityNormalizationParameters.create(List.of(SampleType.QC), mode);
   }
+  static @NotNull FeatureIntensityNormalizationParameters createFeatureIntensityParametersAllSamples(
+      FeatureIntensityNormalizationMode mode) {
+    return FeatureIntensityNormalizationParameters.create(List.of(SampleType.values()), mode);
+  }
 
   static @NotNull List<FeatureSelection> toFeatureSelections(
       final @NotNull ModularFeatureListRow... rows) {

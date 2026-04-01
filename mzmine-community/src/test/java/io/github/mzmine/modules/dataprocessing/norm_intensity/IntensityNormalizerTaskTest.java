@@ -60,9 +60,8 @@ class IntensityNormalizerTaskTest {
       OriginalFeatureListOption handleOriginal) {
     return IntensityNormalizerParameters.create(
         new FeatureListsSelection(FeatureListsSelectionType.ALL_FEATURELISTS), "norm", null,
-        NormalizationType.NoNormalization, null,
-        NormalizationType.ByFeatureIntensity, createFeatureIntensityParameters(
-            FeatureIntensityNormalizationMode.AVERAGE), null, measure,
+        NormalizationType.NoNormalization, null, NormalizationType.ByFeatureIntensity,
+        createFeatureIntensityParameters(FeatureIntensityNormalizationMode.AVERAGE), null, measure,
         handleOriginal, null);
   }
 
@@ -78,8 +77,8 @@ class IntensityNormalizerTaskTest {
     final RawDataFileImpl qc2 = createRawFile("qc_2", LocalDateTime.of(2026, 1, 1, 10, 5));
 
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, qc1, qc2);
-    addRow(featureList, 1, qc1, 2f, qc2, 1f);
-    addRow(featureList, 2, qc1, 4f, qc2, 1f);
+    addRow(featureList, 1, qc1, 2f, qc2, 8f);
+    addRow(featureList, 2, qc1, 6f, qc2, 8f);
 
     final MZmineProjectImpl project = new MZmineProjectImpl();
     project.addFeatureList(featureList);
@@ -100,13 +99,23 @@ class IntensityNormalizerTaskTest {
     final RawDataFileImpl qc1 = (RawDataFileImpl) out.getRawDataFile(0);
     final RawDataFileImpl qc2 = (RawDataFileImpl) out.getRawDataFile(1);
 
-    // factor(qc_1)=1.0: heights stay the same
-    assertEquals(2f, featureNormalizedHeight(out, 0, qc1), 1e-5f);
-    assertEquals(4f, featureNormalizedHeight(out, 1, qc1), 1e-5f);
+    // factor(qc_1)= average is 4 and across samples median is 6
+    double f = 6d / 4d;
+    assertEquals(featureHeight(out, qc1, 0) * f, featureNormalizedHeight(out, 0, qc1), 1e-5f);
+    assertEquals(featureHeight(out, qc1, 1) * f, featureNormalizedHeight(out, 1, qc1), 1e-5f);
 
-    // factor(qc_2)=3.0: heights tripled
-    assertEquals(3f, featureNormalizedHeight(out, 0, qc2), 1e-5f);
-    assertEquals(3f, featureNormalizedHeight(out, 1, qc2), 1e-5f);
+    // factor(qc_2)= average is 8 and samples median is 8
+    f = 6d / 8d;
+    assertEquals(featureHeight(out, qc2, 0) * f, featureNormalizedHeight(out, 0, qc2), 1e-5f);
+    assertEquals(featureHeight(out, qc2, 1) * f, featureNormalizedHeight(out, 1, qc2), 1e-5f);
+  }
+
+  private static Float featureHeight(ModularFeatureList out, RawDataFileImpl qc1, int row) {
+    return out.getFeature(row, qc1).getHeight();
+  }
+
+  private static Float featureArea(ModularFeatureList out, RawDataFileImpl qc1, int row) {
+    return out.getFeature(row, qc1).getArea();
   }
 
   @Test
@@ -119,10 +128,13 @@ class IntensityNormalizerTaskTest {
     final RawDataFileImpl qc1 = (RawDataFileImpl) out.getRawDataFile(0);
     final RawDataFileImpl qc2 = (RawDataFileImpl) out.getRawDataFile(1);
 
-    assertEquals(2f, featureNormalizedArea(out, 0, qc1), 1e-5f);
-    assertEquals(4f, featureNormalizedArea(out, 1, qc1), 1e-5f);
-    assertEquals(3f, featureNormalizedArea(out, 0, qc2), 1e-5f);
-    assertEquals(3f, featureNormalizedArea(out, 1, qc2), 1e-5f);
+    // factor(qc_1)= average is 4 and across samples median is 6
+    double f = 6d / 4d;
+    assertEquals(featureArea(out, qc1, 0) * f, featureNormalizedArea(out, 0, qc1), 1e-5f);
+    assertEquals(featureArea(out, qc1, 1) * f, featureNormalizedArea(out, 1, qc1), 1e-5f);
+    f = 6d / 8d;
+    assertEquals(featureArea(out, qc2, 0) * f, featureNormalizedArea(out, 0, qc2), 1e-5f);
+    assertEquals(featureArea(out, qc2, 1) * f, featureNormalizedArea(out, 1, qc2), 1e-5f);
   }
 
   @Test

@@ -25,17 +25,17 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.addRow;
-import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFeatureIntensityParameters;
+import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createFeatureIntensityParametersAllSamples;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createMainParameters;
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
-import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils.InterpolationWeights;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,19 +54,21 @@ class AverageIntensityNormalizationTypeModuleTest {
     addRow(featureList, 1, fileA, 2f, 2f, fileB, 1f, 1f);
     addRow(featureList, 2, fileA, 4f, 4f, fileB, 1f, 1f);
 
-    final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
-            FeatureIntensityNormalizationMode.AVERAGE));
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
+    module.createAllNormalizationFunctionsToSummary(summary, featureList,
+        new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
+        createMainParameters(AbundanceMeasure.Height),
+        createFeatureIntensityParametersAllSamples(FeatureIntensityNormalizationMode.AVERAGE));
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
-        FactorNormalizationFunction.class, functions.get(fileA));
+        FactorNormalizationFunction.class, summary.get(fileA));
     final FactorNormalizationFunction functionB = assertInstanceOf(
-        FactorNormalizationFunction.class, functions.get(fileB));
+        FactorNormalizationFunction.class, summary.get(fileB));
 
-    // Average(file_a)=3 and Average(file_b)=1 => maxMetric=3.
-    assertEquals(1d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-    assertEquals(3d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+    // Average(file_a)=3 and Average(file_b)=1 => median=2.
+    assertEquals(2 / 3d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+    assertEquals(2d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
   }
 
   @Test
@@ -79,43 +81,58 @@ class AverageIntensityNormalizationTypeModuleTest {
     addRow(featureList, 1, fileA, 1f, 20f, fileB, 1f, 10f);
     addRow(featureList, 2, fileA, 1f, 10f, fileB, 1f, 10f);
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
-        List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Area), createFeatureIntensityParameters(
-            FeatureIntensityNormalizationMode.AVERAGE));
+        summary, List.of(fileA, fileB), featureList,
+        new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
+        createMainParameters(AbundanceMeasure.Area),
+        createFeatureIntensityParametersAllSamples(FeatureIntensityNormalizationMode.AVERAGE));
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileA));
     final FactorNormalizationFunction functionB = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileB));
 
-    // Average area(file_a)=15 and Average area(file_b)=10 => maxMetric=15.
-    assertEquals(1d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-    assertEquals(1.5d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+    // Average area(file_a)=15 and Average area(file_b)=10 => median=12.5.
+    assertEquals(12.5 / 15d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+    assertEquals(12.5 / 10d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
   }
 
   @Test
   void createInterpolatedFunctionInterpolatesFactors() {
     final FeatureIntensityNormalizationModule module = new FeatureIntensityNormalizationModule();
     final RawDataFileImpl prevFile = createRawFile("prev", LocalDateTime.of(2026, 1, 1, 10, 0));
-    final RawDataFileImpl nextFile = createRawFile("next", LocalDateTime.of(2026, 1, 1, 10, 10));
-    final RawDataFileImpl targetFile = createRawFile("target", LocalDateTime.of(2026, 1, 1, 10, 5));
+    final RawDataFileImpl nextFile = createRawFile("next", LocalDateTime.of(2026, 1, 1, 10, 8));
+    final RawDataFileImpl targetFile = createRawFile("target", LocalDateTime.of(2026, 1, 1, 10, 6));
+    final ModularFeatureList featureList = new ModularFeatureList("flist", null, prevFile,
+        targetFile, nextFile);
 
     final FactorNormalizationFunction prevFunction = new FactorNormalizationFunction(prevFile,
         prevFile.getStartTimeStamp(), 2d);
     final FactorNormalizationFunction nextFunction = new FactorNormalizationFunction(nextFile,
         nextFile.getStartTimeStamp(), 4d);
 
-    // InterpolationWeights(nextRun, previousRun, previousWeight, nextRunWeight)
-    final InterpolationWeights weights = new InterpolationWeights(nextFile, prevFile, 0.25d, 0.75d);
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
+    summary.addMergeFunction(prevFile, prevFunction);
+    summary.addMergeFunction(nextFile, nextFunction);
 
-    final NormalizationFunction result = module.createInterpolatedFunction(targetFile, prevFunction,
-        nextFunction, weights, new MetadataTable(false),
-        createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
-            FeatureIntensityNormalizationMode.AVERAGE));
+    // apply interpolation in module
+    module.interpolateAllFunctionsToSummary(summary, featureList,
+        new SamplesBatch(featureList.getRawDataFiles()), new MetadataTable(false),
+        summary.functions(), createMainParameters(AbundanceMeasure.Height),
+        createFeatureIntensityParametersAllSamples(FeatureIntensityNormalizationMode.AVERAGE));
+
+    // will check if interpolation is needed to then interpolate functions and save them to summary
+    // should be the same as this
+//    NormalizationFunctionUtils.interpolateLinearBinary(summary,
+//        new SamplesBatch(List.of(prevFile, nextFile, targetFile)), summary.functions(),
+//        new MetadataTable(false));
 
     final FactorNormalizationFunction interpolated = assertInstanceOf(
-        FactorNormalizationFunction.class, result);
+        FactorNormalizationFunction.class, summary.get(targetFile));
+    assertNotNull(interpolated);
     // factor = nextFactor*nextRunWeight + prevFactor*previousWeight = 4*0.75 + 2*0.25 = 3.5
     assertEquals(3.5d, interpolated.getNormalizationFactor(0d, 0f), 1e-12);
   }

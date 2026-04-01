@@ -40,13 +40,9 @@ import org.jetbrains.annotations.Nullable;
 public class MetadataNormalizationConfigParameter extends
     CompositeParametersParameter<MetadataNormalizationConfig, MetadataNormalizationConfigComponent> {
 
-  private final MetadataGroupingParameter metadataCol = new MetadataGroupingParameter(
-      "metadata column", "", AvailableTypes.NUMBER);
+  private final MetadataGroupingParameter metadataCol;
 
-  private final ComboParameter<MetadataNormalizationConfig.Mode> mode = new ComboParameter<>("mode",
-      "", MetadataNormalizationConfig.Mode.values(), Mode.multiply);
-
-  private @NotNull MetadataNormalizationConfig value = MetadataNormalizationConfig.getDefault();
+  private final ComboParameter<MetadataNormalizationConfig.Mode> mode;
 
   public MetadataNormalizationConfigParameter(String name, String description) {
     this(name, description, MetadataNormalizationConfig.getDefault());
@@ -54,7 +50,12 @@ public class MetadataNormalizationConfigParameter extends
 
   public MetadataNormalizationConfigParameter(String name, String description,
       @NotNull MetadataNormalizationConfig defaultVal) {
-    super(name, description, defaultVal);
+    super(name, description);
+    mode = new ComboParameter<>("mode", "", MetadataNormalizationConfig.Mode.values(),
+        Mode.multiply);
+    metadataCol = new MetadataGroupingParameter("metadata column", "", AvailableTypes.NUMBER);
+
+    setValue(defaultVal);
   }
 
   @Override
@@ -82,17 +83,19 @@ public class MetadataNormalizationConfigParameter extends
   @Override
   @NotNull
   public MetadataNormalizationConfig getValue() {
-    return value;
+    return new MetadataNormalizationConfig(metadataCol.getValue(), mode.getValue());
   }
 
   @Override
   public void setValue(@Nullable MetadataNormalizationConfig newValue) {
-    value = requireNonNullElse(newValue, MetadataNormalizationConfig.getDefault());
+    newValue = requireNonNullElse(newValue, MetadataNormalizationConfig.getDefault());
+    mode.setValue(newValue.mode());
+    metadataCol.setValue(newValue.metadataColumn());
   }
 
   @Override
   public boolean checkValue(Collection<String> errorMessages) {
-    if (value.metadataColumn().isBlank()) {
+    if (getValue().metadataColumn().isBlank()) {
       errorMessages.add("Metadata column cannot be blank");
       return false;
     }

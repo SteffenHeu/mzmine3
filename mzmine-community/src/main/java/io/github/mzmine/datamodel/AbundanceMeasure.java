@@ -28,9 +28,12 @@ import io.github.mzmine.datamodel.features.ModularDataModel;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.numbers.AreaType;
 import io.github.mzmine.datamodel.features.types.numbers.HeightType;
+import io.github.mzmine.datamodel.features.types.numbers.MZType;
 import io.github.mzmine.datamodel.features.types.numbers.NormalizedAreaType;
 import io.github.mzmine.datamodel.features.types.numbers.NormalizedHeightType;
+import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.NormalizationFunction;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -60,6 +63,7 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
    * @param featureOrRow The feature or row
    * @return The abundance or null if the feature/row is null or no abundance is set.
    */
+  @Nullable
   public Float get(@Nullable ModularDataModel featureOrRow) {
     if (featureOrRow == null) {
       return null;
@@ -67,11 +71,36 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
     return featureOrRow.get(type);
   }
 
-  public Float getOrNaN(@Nullable ModularDataModel featureOrRow) {
+  public float getOrNaN(@Nullable ModularDataModel featureOrRow) {
     if (featureOrRow == null) {
       return Float.NaN;
     }
     return Objects.requireNonNullElse(featureOrRow.get(type), Float.NaN);
+  }
+
+  /**
+   * Applies a normalization function to the value
+   *
+   * @param featureOrRow          the model
+   * @param normalizationFunction a function
+   * @return the normalized value or raw value if function is null or NaN if feature or value is
+   * null or not a finite number
+   */
+  public float getOrNaN(@Nullable ModularDataModel featureOrRow,
+      @Nullable NormalizationFunction normalizationFunction) {
+    if (featureOrRow == null) {
+      return Float.NaN;
+    }
+    final Float value = featureOrRow.get(type);
+    if (value == null || !Double.isFinite(value)) { // handles NaN as well
+      return Float.NaN;
+    }
+    if (normalizationFunction == null) {
+      return value;
+    }
+    final Float rt = featureOrRow.get(RTType.class);
+    final Double mz = featureOrRow.get(MZType.class);
+    return (float) normalizationFunction.getNormalizationFactor(mz, rt);
   }
 
 

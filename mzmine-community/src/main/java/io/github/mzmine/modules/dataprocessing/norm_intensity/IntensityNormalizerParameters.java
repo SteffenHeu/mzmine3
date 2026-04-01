@@ -105,12 +105,12 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    * Holds the result of the normalization in a
    * {@link io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod} so it can
    * later be applied to newly added features by gap filling and manual integration. Use
-   * {@link IntensityNormalizerModule#streamNormalizationFunctionsOfLatestCallForFile(FeatureList,
+   * {@link IntensityNormalizerModule#getNormalizationFunctionsOfLatestCallForFile(FeatureList,
    * RawDataFile)} and
    * {@link IntensityNormalizerModule#getNormalizationFunctionsOfLatestCall(FeatureList)} to extract
    * these {@link NormalizationFunction}s.
    */
-  public static final HiddenParameter<IntensityNormalizationSummary> hiddenNormalizationSummary = new HiddenParameter<>(
+  public static final HiddenParameter<IntensityNormalizationSimpleSummary> hiddenNormalizationSummary = new HiddenParameter<>(
       new NormalizationFunctionsParameter());
 
   public IntensityNormalizerParameters() {
@@ -130,7 +130,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
       final @Nullable String selectedBatchIdColumn,
       final @NotNull AbundanceMeasure selectedFeatureMeasurementType,
       final @NotNull OriginalFeatureListOption selectedOriginalFeatureListHandling,
-      final @Nullable IntensityNormalizationSummary normalizationSummary) {
+      final @Nullable IntensityNormalizationSimpleSummary normalizationSummary) {
     final IntensityNormalizerParameters parameters = (IntensityNormalizerParameters) new IntensityNormalizerParameters().cloneParameterSet();
     parameters.setParameter(IntensityNormalizerParameters.featureLists, selectedFeatureLists);
     parameters.setParameter(IntensityNormalizerParameters.suffix, selectedSuffix);

@@ -25,6 +25,7 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
 import io.github.mzmine.util.XMLUtils;
 import io.github.mzmine.util.maths.Precision;
@@ -34,7 +35,11 @@ import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Element;
 
 /**
- * Interpolates two normalization functions by weighting their returned feature factors.
+ * Interpolates two normalization functions by weighting their returned feature factors. This
+ * interpolated function is mostly used for feature specific functions. Constant factor functions
+ * like {@link FactorNormalizationFunction} interpolate the factor directly and create a simple
+ * {@link FactorNormalizationFunction}.
+ *
  */
 public record InterpolatedNormalizationFunction(
     @NotNull RawDataFilePlaceholder rawDataFilePlaceholder,
@@ -120,6 +125,13 @@ public record InterpolatedNormalizationFunction(
         nextFunctionElement);
 
     return new InterpolatedNormalizationFunction(rawDataFilePlaceholder, acquisitionTimestamp,
+        previousFunction, previousWeight, nextFunction, nextWeight);
+  }
+
+  @Override
+  public @NotNull NormalizationFunction withRawFile(@NotNull RawDataFile file) {
+    // previous and next are from different files so they are not changing reference to file, only this function
+    return new InterpolatedNormalizationFunction(file, MetadataTableUtils.getRunDate(file),
         previousFunction, previousWeight, nextFunction, nextWeight);
   }
 

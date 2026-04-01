@@ -62,7 +62,11 @@ class TotalRawSignalNormalizationTypeModuleTest {
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, fileA, fileB);
     featureList.setSelectedScans(fileA, fileA.getScanNumbers(1));
     featureList.setSelectedScans(fileB, fileB.getScans());
+
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
+        summary,
         List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null),
         new MetadataTable(false), createMainParameters(AbundanceMeasure.Height),
         createParameters());
@@ -72,9 +76,9 @@ class TotalRawSignalNormalizationTypeModuleTest {
     final FactorNormalizationFunction functionB = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileB));
 
-    // TIC(file_a)=30 from MS1 scans only, TIC(file_b)=15 => maxMetric=30.
-    assertEquals(1d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-    assertEquals(2d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+    // TIC(file_a)=30 from MS1 scans only, TIC(file_b)=15 => normalized to median which is 45/2
+    assertEquals(0.75d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+    assertEquals(1.5d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
   }
 
   @Test
@@ -87,8 +91,10 @@ class TotalRawSignalNormalizationTypeModuleTest {
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
     featureList.setSelectedScans(file, file.getScanNumbers(1));
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList,
+        () -> module.createReferenceFunctions(summary, List.of(file), featureList,
             new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createParameters()));
 
@@ -103,8 +109,10 @@ class TotalRawSignalNormalizationTypeModuleTest {
 
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, file);
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final IllegalStateException exception = assertThrows(IllegalStateException.class,
-        () -> module.createReferenceFunctions(List.of(file), featureList,
+        () -> module.createReferenceFunctions(summary, List.of(file), featureList,
             new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
             createMainParameters(AbundanceMeasure.Height), createParameters()));
 

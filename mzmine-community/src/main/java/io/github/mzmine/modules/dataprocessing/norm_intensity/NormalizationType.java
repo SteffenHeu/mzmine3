@@ -29,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 
 public enum NormalizationType implements ModuleOptionsEnum<NormalizationTypeModule> {
   NoNormalization("No normalization", "no_normalization", NoNormalizationTypeModule.class), //
-  ByFeatureIntensity("By feature intensity", "feature_intensity_normalization",
+  ByFeatureIntensity("By feature abundances", "feature_intensity_normalization",
       FeatureIntensityNormalizationModule.class), //
   TotalRawSignal("Spectral TIC", "spectral_tic", TotalRawSignalNormalizationTypeModule.class), //
   MetadataColumn("Metadata column (weight, dilution, ...)", "metadata_column",

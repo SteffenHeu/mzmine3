@@ -51,9 +51,12 @@ class MaximumFeatureHeightNormalizationTypeModuleTest {
 
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, fileA, fileB);
     addRow(featureList, 1, fileA, 2f, 2f, fileB, 1f, 1f);
-    addRow(featureList, 2, fileA, 10f, 10f, fileB, 3f, 3f);
+    addRow(featureList, 2, fileA, 10f, 10f, fileB, 4f, 3f);
 
+    final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
+        featureList.getNumberOfRawDataFiles());
     final Map<RawDataFile, NormalizationFunction> functions = module.createReferenceFunctions(
+        summary,
         List.of(fileA, fileB), featureList, new SamplesBatch(featureList.getRawDataFiles(), null), new MetadataTable(false),
         createMainParameters(AbundanceMeasure.Height), createFeatureIntensityParameters(
             FeatureIntensityNormalizationMode.MAX));
@@ -63,9 +66,9 @@ class MaximumFeatureHeightNormalizationTypeModuleTest {
     final FactorNormalizationFunction functionB = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileB));
 
-    // Max(file_a)=10 and Max(file_b)=3 => maxMetric=10.
-    assertEquals(1d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-    assertEquals(10d / 3d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+    // Max(file_a)=10 and Max(file_b)=4 => median=14/2 = 7.
+    assertEquals(7d/10d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+    assertEquals(7d/4d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
   }
 
 }
