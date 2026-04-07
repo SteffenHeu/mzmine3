@@ -31,7 +31,6 @@ import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.fragmentation.ILipidFragmentFactory;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.fragmentation.LipidFragmentFactory;
@@ -55,6 +54,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidAnnotationR
 import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidFactory;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import io.github.mzmine.util.scans.FragmentScanSelection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -146,11 +146,10 @@ public class LipidAnnotationUtils {
   public static void findPossibleLipid(LipidIon lipidIon, FeatureListRow row,
       ParameterSet parameters, MZTolerance mzTolerance, MZTolerance mzToleranceMS2,
       boolean searchForMSMSFragments, double minMsMsScore, boolean keepUnconfirmedAnnotations,
-      LipidCategories lipidCategory) {
+      LipidCategories lipidCategory, final FragmentScanSelection scanMergeSelect) {
     Set<MatchedLipid> possibleRowAnnotations = new HashSet<>();
 
-    if (Objects.requireNonNull(row.getBestFeature().getRepresentativeScan()).getPolarity()
-        .equals(lipidIon.ionizationType().getPolarity())) {
+    if (Objects.equals(row.getRepresentativePolarity(), lipidIon.ionizationType().getPolarity())) {
       Range<Double> mzTolRange12C = mzTolerance.getToleranceRange(row.getAverageMZ());
 
       // MS1 check
@@ -161,7 +160,7 @@ public class LipidAnnotationUtils {
           possibleRowAnnotations.addAll(
               searchMsmsFragments(row, lipidIon.ionizationType(), lipidIon.lipidAnnotation(),
                   parameters, mzToleranceMS2, minMsMsScore, keepUnconfirmedAnnotations,
-                  lipidCategory));
+                  lipidCategory, scanMergeSelect));
         } else {
 
           // make MS1 annotation
@@ -183,11 +182,12 @@ public class LipidAnnotationUtils {
   private static Set<MatchedLipid> searchMsmsFragments(FeatureListRow row,
       IonizationType ionization, ILipidAnnotation lipid, ParameterSet parameters,
       MZTolerance mzToleranceMS2, double minMsMsScore, boolean keepUnconfirmedAnnotations,
-      LipidCategories lipidCategory) {
+      LipidCategories lipidCategory, final FragmentScanSelection scanMergeSelect) {
     Set<MatchedLipid> matchedLipids = new HashSet<>();
     LipidFragmentationRule[] rules = lipid.getLipidClass().getFragmentationRules();
-    if (!row.getAllFragmentScans().isEmpty() || keepUnconfirmedAnnotations) {
-      List<Scan> msmsScans = row.getAllFragmentScans();
+    List<Scan> msmsScans = scanMergeSelect.getAllFragmentSpectra(row);
+
+    if (!msmsScans.isEmpty() || keepUnconfirmedAnnotations) {
       for (Scan msmsScan : msmsScans) {
         Set<MatchedLipid> matchedLipidsInScan = new HashSet<>();
         if (msmsScan.getMassList() == null) {
@@ -351,17 +351,16 @@ public class LipidAnnotationUtils {
     //consider previous annotations
     List<MatchedLipid> previousLipidMatches = row.getLipidMatches();
     if (!previousLipidMatches.isEmpty()) {
-      row.set(LipidMatchListType.class, null);
       possibleRowAnnotations.addAll(previousLipidMatches);
     }
     LipidAnnotationResolver lipidAnnotationResolver = new LipidAnnotationResolver(true, true, true);
     List<MatchedLipid> finalResults = lipidAnnotationResolver.resolveFeatureListRowMatchedLipids(
         row, possibleRowAnnotations);
-    for (MatchedLipid matchedLipid : finalResults) {
-      if (matchedLipid != null) {
-        row.addLipidAnnotation(matchedLipid);
-      }
-    }
+
+    // set all annotations over the old - already merged the old annotations in
+    finalResults = finalResults.stream().filter(Objects::nonNull).toList();
+    // caching of lipid properties is triggered in row
+    row.setLipidAnnotations(finalResults);
   }
 
 }

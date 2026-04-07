@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -48,7 +48,7 @@ import org.jetbrains.annotations.NotNull;
 public abstract sealed class WizardStepParameters extends ComposedParameterSet implements
     Comparable<WizardStepParameters> permits AnnotationWizardParameters, DataImportWizardParameters,
     FilterWizardParameters, IonInterfaceWizardParameters, IonMobilityWizardParameters,
-    MassSpectrometerWizardParameters, WorkflowWizardParameters {
+    MassSpectrometerWizardParameters, WorkflowWizardParameters, CustomizationWizardParameters {
 
   private final WizardPart part;
   private final WizardParameterFactory factory;
@@ -117,7 +117,7 @@ public abstract sealed class WizardStepParameters extends ComposedParameterSet i
    */
   @NotNull
   public String getUniquePresetId() {
-    return factory.getUniqueId();
+    return factory.getUniqueID();
   }
 
   @Override

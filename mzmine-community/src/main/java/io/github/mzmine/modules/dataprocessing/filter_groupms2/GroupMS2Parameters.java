@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,12 +25,12 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_groupms2;
 
-import io.github.mzmine.main.MZmineCore;
-import io.github.mzmine.parameters.Parameter;
+import static io.github.mzmine.util.StringUtils.inQuotes;
+
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
-import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.PercentParameter;
@@ -42,33 +42,38 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParamete
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance.Unit;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class GroupMS2Parameters extends SimpleParameterSet {
 
   public static final FeatureListsParameter PEAK_LISTS = new FeatureListsParameter();
 
+  public static final double DEFAULT_MIN_REL_HEIGHT = 0.25;
   // refine grouped MS2 to only those where relative feature height is at least X %
   public static final OptionalParameter<PercentParameter> minimumRelativeFeatureHeight = new OptionalParameter<>(
       new PercentParameter("Minimum relative feature height",
           "If an MS2 was assigned to multiple features, only keep the feature assignments where feature height is at least X% of the highest feature.",
-          0.25, 0d, 1d), true);
+          DEFAULT_MIN_REL_HEIGHT, 0d, 1d), true);
 
 
+  public static final int DEFAULT_MIN_SIGNALS = 1;
   public static final OptionalParameter<IntegerParameter> minRequiredSignals = new OptionalParameter<>(
       new IntegerParameter("Minimum required signals",
           "Only assign fragmentation spectra with at least n signals in the filtered spectrum after mass detection etc.",
-          1), true);
+          DEFAULT_MIN_SIGNALS), true);
 
   public static final MZToleranceParameter mzTol = new MZToleranceParameter(
       "MS1 to MS2 precursor tolerance (m/z)",
       "Describes the tolerance between the precursor ion in a MS1 scan and the precursor "
-      + "m/z assigned to the MS2 scan.", 0.01, 10);
+          + "m/z assigned to the MS2 scan.", 0.01, 10);
 
 
+  public static final RtLimitsFilter DEFAULT_RT_FILTER = new RtLimitsFilter(
+      FeatureLimitOptions.USE_FEATURE_EDGES, new RTTolerance(0.2f, Unit.MINUTES));
   public static final RtLimitsFilterParameter rtFilter = new RtLimitsFilterParameter(
-      new RtLimitsFilter(FeatureLimitOptions.USE_FEATURE_EDGES,
-          new RTTolerance(0.2f, Unit.MINUTES)));
+      DEFAULT_RT_FILTER);
 
+  public static final boolean DEFAULT_LIMIT_IMS = false;
   // TIMS specific parameters
   public static final BooleanParameter limitMobilityByFeature = new BooleanParameter(
       "Limit by ion mobility edges", """
@@ -76,33 +81,37 @@ public class GroupMS2Parameters extends SimpleParameterSet {
       This is usually not needed. However, if isomeres/isobares elute at the same retention time
       and are close in mobility, the MS/MS window might be larger than the peak in mobility dimension
       and thus cause chimeric MS/MS spectra. This can be investigated in hte "All MS MS" window""",
-      false);
+      DEFAULT_LIMIT_IMS);
 
+  public static final boolean DEFAULT_COMBINE_TIMS = false;
   public static final BooleanParameter combineTimsMsMs = new BooleanParameter(
       "Merge MS/MS spectra (TIMS)", """
       If checked, all assigned MS/MS spectra with the same collision energy will be merged into a single MS/MS spectrum.
        These merged spectra will also be merged to a consensus spectrum across all collision energies.
-      """, false);
+      """, DEFAULT_COMBINE_TIMS);
 
-  public static final OptionalParameter<DoubleParameter> outputNoiseLevel = new OptionalParameter<>(
-      new DoubleParameter("Minimum signal intensity (absolute, TIMS)",
-          "If a TIMS feature is processed, this parameter "
-          + "can be used to filter low abundant signals in the MS/MS spectrum, since multiple "
-          + "MS/MS mobility scans need to be merged together.",
-          MZmineCore.getConfiguration().getIntensityFormat(), 250d, 0d, Double.MAX_VALUE), false);
+  public static final int DEFAULT_IMS_MIN_SIGNALS = 2;
+  public static final IntegerParameter minImsRawSignals = new IntegerParameter(
+      "Minimum detections in IMS dimension", """
+      During data-dependent IMS-resolved MS2 acquisition, e.g., PASEF, multiple spectra are acquired for each precursor during a single IMS ramp.
+      This allows filtering for reoccurring signals with the same m/z. Since electrical noise is distributed randomly,
+      this filter will remove statistical noise generated from the merged MS2, even at higher intensities,
+      but can retain actual fragment ion signals at low intensities (if they were detected more than this number).
+      Default value: 2. Typical values: 1-4, the higher, the less likely noise signals are, but also removes real ion signals if set too high.
+      To reproduce behavior of mzmine <=4.4, use 1.
+      Note: The signal occurrence is checked on a per-frame basis (before merging CEs and across CEs).""",
+      DEFAULT_IMS_MIN_SIGNALS, 1, Integer.MAX_VALUE);
 
-  public static final OptionalParameter<PercentParameter> outputNoiseLevelRelative = new OptionalParameter<>(
-      new PercentParameter("Minimum signal intensity (relative, TIMS)",
-          "If an ion mobility spectrometry (TIMS) feature is processed, this parameter "
-          + "can be used to filter low abundant peaks in the MS/MS spectrum, since multiple "
-          + "MS/MS mobility scans need to be merged together.", 0.01d), true);
+  public static final AdvancedParametersParameter<GroupMs2AdvancedParameters> advancedParameters = new AdvancedParametersParameter<>(
+      new GroupMs2AdvancedParameters(), false);
 
   public GroupMS2Parameters() {
-    super(new Parameter[]{PEAK_LISTS, mzTol, rtFilter, minimumRelativeFeatureHeight,
-            minRequiredSignals, limitMobilityByFeature,
-            // TIMS specific
-            combineTimsMsMs, outputNoiseLevel, outputNoiseLevelRelative},
-        "https://mzmine.github.io/mzmine_documentation/module_docs/featdet_ms2_scan_pairing/ms2_scan_pairing.html");
+    super(
+        "https://mzmine.github.io/mzmine_documentation/module_docs/featdet_ms2_scan_pairing/ms2_scan_pairing.html",
+        PEAK_LISTS, mzTol, rtFilter, minimumRelativeFeatureHeight, minRequiredSignals,
+        limitMobilityByFeature,
+        // TIMS specific
+        minImsRawSignals, combineTimsMsMs, advancedParameters);
   }
 
   @Override
@@ -112,6 +121,21 @@ public class GroupMS2Parameters extends SimpleParameterSet {
 
   @Override
   public int getVersion() {
-    return 2;
+    return 3;
+  }
+
+  @Override
+  public @Nullable String getVersionMessage(int version) {
+    return switch (version) {
+      case 3 -> """
+          In mzmine version >= 4.4.3, the IMS-related MS2 grouping parameters %s and %s were moved \
+          into an advanced parameter set (see drop down) and disabled by default.
+          Additionally, the parameter %s was added as a more sophisticated option to improve \
+          the quality of DDA-IMS-MS2 spectra.
+          """.formatted(inQuotes(GroupMs2AdvancedParameters.outputNoiseLevel.getName()),
+          inQuotes(GroupMs2AdvancedParameters.outputNoiseLevelRelative.getName()),
+          inQuotes(GroupMS2Parameters.minImsRawSignals.getName()));
+      default -> null;
+    };
   }
 }

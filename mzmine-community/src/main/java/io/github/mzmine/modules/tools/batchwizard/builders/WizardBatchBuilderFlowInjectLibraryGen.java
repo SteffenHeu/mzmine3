@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -51,6 +50,7 @@ public class WizardBatchBuilderFlowInjectLibraryGen extends BaseWizardBatchBuild
   private final File exportPath;
   private final LibraryBatchMetadataParameters libGenMetadata;
   private final Boolean applySpectralNetworking;
+  private final Boolean exportUnknownScansFile;
 
   public WizardBatchBuilderFlowInjectLibraryGen(final WizardSequence steps) {
     // extract default parameters that are used for all workflows
@@ -68,12 +68,14 @@ public class WizardBatchBuilderFlowInjectLibraryGen extends BaseWizardBatchBuild
     exportPath = getValue(params, WorkflowLibraryGenerationWizardParameters.exportPath);
     exportGnps = getValue(params, WorkflowLibraryGenerationWizardParameters.exportGnps);
     exportSirius = getValue(params, WorkflowLibraryGenerationWizardParameters.exportSirius);
+    exportUnknownScansFile = getValue(params,
+        WorkflowLibraryGenerationWizardParameters.exportUnknownScansFile);
     libGenMetadata = getOptionalParameters(params,
         WorkflowLibraryGenerationWizardParameters.metadata).value();
   }
 
   @Override
-  public BatchQueue createQueue() {
+  protected BatchQueue createQueueInternal() {
     final BatchQueue q = new BatchQueue();
     makeAndAddImportTask(q);
     makeAndAddMassDetectorSteps(q);
@@ -105,8 +107,13 @@ public class WizardBatchBuilderFlowInjectLibraryGen extends BaseWizardBatchBuild
     // match against own library
     makeAndAddLibrarySearchStep(q, true);
 
+    // export all unannotated scans - after alignment to merge duplicates
+    if (exportUnknownScansFile) {
+      makeAndAddExportScansStep(q, exportPath, libGenMetadata, true, "_unknown_scans");
+    }
+
     // export
-    makeAndAddDdaExportSteps(q, true, exportPath, exportGnps, exportSirius, false);
+    makeAndAddDdaExportSteps(q, true, exportPath, exportGnps, exportSirius, false, mzTolScans);
 
     // convert library to feature list
     makeAndAddLibraryToFeatureListStep(q);
@@ -115,7 +122,7 @@ public class WizardBatchBuilderFlowInjectLibraryGen extends BaseWizardBatchBuild
     if (applySpectralNetworking) {
       makeAndAddSpectralNetworkingSteps(q, true, exportPath, false);
     }
-
+    makeAndAddBatchExportStep(q, true, exportPath);
     return q;
   }
 

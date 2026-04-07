@@ -54,6 +54,8 @@ public class ComboWithInputComponent<EnumValue> extends HBox implements ValueCha
 
     embeddedComponent = embeddedParameter.createEditingComponent();
     embeddedComponent.setDisable(true);
+    embeddedComponent.visibleProperty().bind(embeddedComponent.disableProperty().not());
+    embeddedComponent.managedProperty().bind(embeddedComponent.disableProperty().not());
 
     if (embeddedComponent instanceof ValueChangeDecorator valueChangeDecorator) {
       valueChangeDecorator.addValueChangedListener(this::onValueChanged);
@@ -66,6 +68,7 @@ public class ComboWithInputComponent<EnumValue> extends HBox implements ValueCha
           onValueChanged();
         });
     comboBox.setItems(choices);
+    comboBox.setMinWidth(USE_PREF_SIZE);
     setValue(defaultValue);
 
     if (choices.contains(inputTrigger)) {

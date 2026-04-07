@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2025 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,6 +25,7 @@
 
 package io.github.mzmine.util.scans;
 
+import static io.github.mzmine.util.spectraldb.entry.DBEntryField.MERGED_SPEC_TYPE;
 import static java.util.Comparator.naturalOrder;
 import static java.util.Comparator.nullsLast;
 import static java.util.Objects.requireNonNullElse;
@@ -45,6 +46,8 @@ import io.github.mzmine.datamodel.MobilityScan;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.PrecursorIonTree;
 import io.github.mzmine.datamodel.PrecursorIonTreeNode;
+import io.github.mzmine.datamodel.PseudoSpectrum;
+import io.github.mzmine.datamodel.PseudoSpectrumType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.data_access.EfficientDataAccess;
@@ -55,6 +58,8 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.impl.MSnInfoImpl;
 import io.github.mzmine.datamodel.impl.SimpleDataPoint;
 import io.github.mzmine.datamodel.msms.DDAMsMsInfo;
+import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
+import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.datamodel.msms.PasefMsMsInfo;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.spectra.CachedMobilityScan;
 import io.github.mzmine.gui.preferences.UnitFormat;
@@ -70,6 +75,7 @@ import io.github.mzmine.util.collections.BinarySearch.DefaultTo;
 import io.github.mzmine.util.collections.IndexRange;
 import io.github.mzmine.util.exceptions.MissingMassListException;
 import io.github.mzmine.util.files.FileAndPathUtil;
+import io.github.mzmine.util.scans.merging.FloatGrouping;
 import io.github.mzmine.util.scans.sorting.ScanSortMode;
 import io.github.mzmine.util.scans.sorting.ScanSorter;
 import io.github.mzmine.util.spectraldb.entry.DBEntryField;
@@ -92,6 +98,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -118,6 +125,14 @@ public class ScanUtils {
   private static final Logger logger = Logger.getLogger(ScanUtils.class.getName());
 
   /**
+   * Erase file format
+   */
+  @Nullable
+  public static String eraseRawFileFormat(@Nullable String fileName) {
+    return fileName == null ? null : FileAndPathUtil.eraseFormat(fileName);
+  }
+
+  /**
    * Source file of scan is defined of other MassSpectra may be undefined and return null
    */
   @Nullable
@@ -128,6 +143,17 @@ public class ScanUtils {
         var lib = e.getLibrary();
         yield lib == null ? e.getLibraryName() : lib.getPath().getName();
       }
+      default -> null;
+    };
+  }
+
+  /**
+   * Source file of scan is defined of other MassSpectra may be undefined and return null
+   */
+  @Nullable
+  public static RawDataFile getDataFile(@NotNull MassSpectrum scan) {
+    return switch (scan) {
+      case Scan s -> s.getDataFile();
       default -> null;
     };
   }
@@ -225,7 +251,7 @@ public class ScanUtils {
     return buf.toString();
   }
 
-  private static Float extractCollisionEnergy(MassSpectrum spectrum) {
+  public static @Nullable Float extractCollisionEnergy(MassSpectrum spectrum) {
     return switch (spectrum) {
       case MobilityScan mob ->
           mob.getMsMsInfo() != null ? mob.getMsMsInfo().getActivationEnergy() : null;
@@ -234,8 +260,8 @@ public class ScanUtils {
       case SpectralLibraryEntry entry -> {
         final FloatArrayList list = entry.getOrElse(DBEntryField.COLLISION_ENERGY,
             FloatArrayList.of());
-        if(!list.isEmpty()) {
-          yield list.getFirst();
+        if (!list.isEmpty()) {
+          yield list.getLast(); // last is the collision energy of the last MSn scan step
         }
         yield null;
       }
@@ -265,7 +291,7 @@ public class ScanUtils {
     return ScanUtils.streamSourceScans(scan, Scan.class).map(s -> {
       if (s.getMsMsInfo() instanceof MSnInfoImpl msn) {
         List<DDAMsMsInfo> precursors = msn.getPrecursors();
-        if (precursors == null) {
+        if (precursors.isEmpty()) {
           return null;
         }
         return precursors.stream().map(DDAMsMsInfo::getActivationEnergy).filter(Objects::nonNull)
@@ -282,6 +308,7 @@ public class ScanUtils {
    * @return array of data points
    */
   @Deprecated
+  @NotNull
   public static DataPoint[] extractDataPoints(MassSpectrum spectrum) {
     int size = spectrum.getNumberOfDataPoints();
     DataPoint[] result = new DataPoint[size];
@@ -398,10 +425,15 @@ public class ScanUtils {
    * @return the total ion count of the scan within the mass range.
    */
   public static double calculateTIC(Scan scan, Range<Double> mzRange) {
+    final IndexRange indexRange = BinarySearch.indexRange(mzRange, scan.getNumberOfDataPoints(),
+        scan::getMzValue);
+    if (indexRange.isEmpty()) {
+      return 0.0d;
+    }
 
     double tic = 0.0;
-    for (final DataPoint dataPoint : selectDataPointsByMass(extractDataPoints(scan), mzRange)) {
-      tic += dataPoint.getIntensity();
+    for (int i = indexRange.min(); i < indexRange.maxExclusive(); i++) {
+      tic += scan.getIntensityValue(i);
     }
     return tic;
   }
@@ -1279,25 +1311,26 @@ public class ScanUtils {
   }
 
   /**
-   * threshold: keep data points >= noiseLevel
+   * threshold: keep data points > noiseLevel. Needs to be greater so that a fixed noise level like
+   * 0 excludes this number as well.
    *
    * @param data
    * @param noiseLevel
    * @return
    */
   public static DataPoint[] getFiltered(DataPoint[] data, double noiseLevel) {
-    return Stream.of(data).filter(dp -> dp.getIntensity() >= noiseLevel).toArray(DataPoint[]::new);
+    return Stream.of(data).filter(dp -> dp.getIntensity() > noiseLevel).toArray(DataPoint[]::new);
   }
 
   /**
-   * below threshold: keep data points < noiseLevel
+   * The filtered noise which is <= noise level. {@link #getFiltered(DataPoint[], double)}
    *
    * @param data
    * @param noiseLevel
    * @return
    */
-  public static DataPoint[] getBelowThreshold(DataPoint[] data, double noiseLevel) {
-    return Stream.of(data).filter(dp -> dp.getIntensity() < noiseLevel).toArray(DataPoint[]::new);
+  public static DataPoint[] getFilteredNoise(DataPoint[] data, double noiseLevel) {
+    return Stream.of(data).filter(dp -> dp.getIntensity() <= noiseLevel).toArray(DataPoint[]::new);
   }
 
   /**
@@ -2012,26 +2045,28 @@ public class ScanUtils {
   }
 
   /**
-   * Split scans into lists for each fragmentation energy. Usually the MSn levels are split before
+   * Split scans into lists for each sample name
+   *
+   * @param scans input list
+   * @return map of sample name to scans
+   */
+  public static Map<String, List<Scan>> splitBySample(final List<Scan> scans) {
+    return scans.stream().collect(
+        Collectors.groupingBy(scan -> requireNonNullElse(getSourceFile(scan), "UNDEFINED_SAMPLE")));
+  }
+
+  /**
+   * Split scans into lists for each fragmentation energy. Scans with undefined energy will be one
+   * group and all scans with multiple energies will be one group. Usually the MSn levels are split
+   * before
    *
    * @param scans input list
    * @return map of fragmention energy to scans
    */
-  public static Map<Float, List<Scan>> splitByFragmentationEnergy(final List<Scan> scans) {
-    return scans.stream().collect(Collectors.groupingBy(ScanUtils::getActivationEnergy));
-  }
-
-
-  /**
-   * @return the collision energy or -1 if null
-   */
-  public static float getActivationEnergy(final MassSpectrum spectrum) {
-    if (spectrum instanceof Scan scan && scan.getMsMsInfo() != null) {
-      return requireNonNullElse(scan.getMsMsInfo().getActivationEnergy(), -1f);
-    } else if (spectrum instanceof MergedMsMsSpectrum merged) {
-      return merged.getCollisionEnergy();
-    }
-    return -1f;
+  public static Map<FloatGrouping, List<Scan>> splitByFragmentationEnergy(
+      final Collection<Scan> scans) {
+    return scans.stream()
+        .collect(Collectors.groupingBy(scan -> FloatGrouping.of(extractCollisionEnergies(scan))));
   }
 
   /**
@@ -2069,7 +2104,7 @@ public class ScanUtils {
   /**
    * Only use the array when needed. Best way to iterate scan data in a single thread is
    * {@link ScanDataAccess} by {@link EfficientDataAccess}. When sorting of data is needed use
-   * {@link #extractDataPoints(Scan, boolean)} but discouraged for data storage in memory.
+   * {@link #extractDataPoints(MassSpectrum, boolean)} but discouraged for data storage in memory.
    *
    * @param scan        target scan
    * @param useMassList either use mass list or return the input scan
@@ -2085,7 +2120,7 @@ public class ScanUtils {
   /**
    * Only use the array when needed. Best way to iterate scan data in a single thread is
    * {@link ScanDataAccess} by {@link EfficientDataAccess}. When sorting of data is needed use
-   * {@link #extractDataPoints(Scan, boolean)} but discouraged for data storage in memory.
+   * {@link #extractDataPoints(MassSpectrum, boolean)} but discouraged for data storage in memory.
    *
    * @param scan        target scan
    * @param useMassList either use mass list or return the input scan
@@ -2109,7 +2144,8 @@ public class ScanUtils {
    * @throws MissingMassListException users need to run mass detection before on this scan
    */
   @Deprecated
-  public static DataPoint[] extractDataPoints(final Scan scan, final boolean useMassList)
+  @NotNull
+  public static DataPoint[] extractDataPoints(final MassSpectrum scan, final boolean useMassList)
       throws MissingMassListException {
     return extractDataPoints(getMassSpectrum(scan, useMassList));
   }
@@ -2156,6 +2192,31 @@ public class ScanUtils {
     return intensities;
   }
 
+  /**
+   * For a single spectrum (not merged) this will return a single entry list with all the precursor
+   * mz for this scan. If MS3 this may be something like [[400.1, 222.0]] for the MS2 and MS3
+   * precursor mz.
+   *
+   * @return list for each source scan of merged spectrum or a single entry for a single scan with
+   * all the MSn precursor m/z in MS level selection order 2, 3, 4, ...
+   */
+  @NotNull
+  public static List<List<Double>> getMsnPrecursorMzs(final MassSpectrum scan) {
+    return ScanUtils.streamSourceScans(scan, Scan.class).map(s -> {
+      if (s.getMsMsInfo() instanceof MSnInfoImpl msn) {
+        List<DDAMsMsInfo> precursors = msn.getPrecursors();
+        if (precursors.isEmpty()) {
+          return null;
+        }
+        return precursors.stream().map(DDAMsMsInfo::getIsolationMz).toList();
+      }
+      return null;
+    }).filter(Objects::nonNull).distinct().toList();
+  }
+
+  /**
+   * @return the precursor mz (in the case of MSn the last precursor mz)
+   */
   @Nullable
   public static Double getPrecursorMz(final MassSpectrum scan) {
     return switch (scan) {
@@ -2173,6 +2234,34 @@ public class ScanUtils {
     };
   }
 
+  /**
+   * MS level as in MS1 or MS2
+   */
+  public static Optional<Integer> getMsLevel(final MassSpectrum scan) {
+    return switch (scan) {
+      case Scan sc -> Optional.of(sc.getMSLevel());
+      case SpectralLibraryEntry sc -> sc.getMsLevel();
+      case null, default -> Optional.empty();
+    };
+  }
+
+  /**
+   * @return merging type of a merged spectrum or {@link MergingType#SINGLE_SCAN} as default
+   */
+  @NotNull
+  public static MergingType getMergingType(final MassSpectrum scan) {
+    return switch (scan) {
+      case MergedMassSpectrum sc -> sc.getMergingType();
+      case SpectralLibraryEntry sc -> {
+        yield switch (sc.getField(MERGED_SPEC_TYPE).orElse(null)) {
+          case MergingType t -> t;
+          case String s -> MergingType.parseOrElse(s, MergingType.SINGLE_SCAN);
+          case null, default -> MergingType.SINGLE_SCAN;
+        };
+      }
+      default -> MergingType.SINGLE_SCAN;
+    };
+  }
 
   /**
    * @return the scan number or -1 if none
@@ -2214,11 +2303,37 @@ public class ScanUtils {
 
   /**
    * Extracts all universal spectrum identifier USI from source scans. If spectrum is merged this
-   * will return multiple source USI otherwise just a Stream of one elemen.
+   * will return multiple source USI otherwise just a Stream of one element.
    */
   public static Stream<String> extractUSI(MassSpectrum spectrum, @Nullable String datasetID) {
     String baseUSI = "mzspec:" + (datasetID == null ? "DATASET_ID_PLACEHOLDER" : datasetID) + ":";
     return streamSourceScans(spectrum, Scan.class).map(scan -> scanToUSI(scan, baseUSI)).distinct();
+  }
+
+  /**
+   * Extracts all universal spectrum identifier USI from source scans. If spectrum is merged this
+   * will return multiple source USI otherwise just a Stream of one element.
+   * <p>
+   * This reduced USI ranges merge all USI from the same sample, so different scan numbers, into
+   * number ranges like mzspec:DATASET:SAMPLE:1-5,9 would point to all scans from 1 to 5 and 9.
+   * <p>
+   * Tool compatibility is limited but this greatly reduces the size and redundancy in USI
+   * representing scans from the same file
+   */
+  public static Stream<String> extractCompressedUSIRanges(MassSpectrum spectrum,
+      @Nullable String datasetID) {
+    Map<RawDataFile, List<Scan>> scansForFile = streamSourceScans(spectrum, Scan.class).collect(
+        Collectors.groupingBy(Scan::getDataFile));
+
+    return scansForFile.entrySet().stream().map((entry) -> {
+      var raw = entry.getKey();
+      var scans = entry.getValue();
+      // combine all scans of this sample into range strings
+      String scanNumberStr = extractIdStringForScansOfSingleFile(scans);
+
+      String fileName = requireNonNullElse(eraseRawFileFormat(raw.getFileName()), "");
+      return createUSI(datasetID, fileName, scanNumberStr);
+    });
   }
 
   /**
@@ -2237,10 +2352,28 @@ public class ScanUtils {
   @NotNull
   private static String __scanToUSI(MassSpectrum scan, String baseUSI) {
     String fileName = getSourceFile(scan);
-    fileName = fileName == null ? "" : FileAndPathUtil.eraseFormat(fileName);
     int scanNumber = extractScanNumber(scan);
     // map to USI
     return baseUSI + fileName + ":" + scanNumber;
+  }
+
+  /**
+   * Universal spectrum identifier
+   *
+   * @param datasetID  will use the provided dataset ID or "DATASET_ID_PLACEHOLDER" if null
+   * @param rawFile    used as is. Caller may wants to remove the format first
+   * @param scanNumber adds a scan number if not null otherwise this USI is raw data file level
+   */
+  public static String createUSI(@Nullable String datasetID, final @NotNull String rawFile,
+      final @Nullable String scanNumber) {
+    if (datasetID == null) {
+      datasetID = "DATASET_ID_PLACEHOLDER";
+    }
+    if (scanNumber == null) {
+      return "mzspec:%s:%s".formatted(datasetID, rawFile);
+    } else {
+      return "mzspec:%s:%s:%s".formatted(datasetID, rawFile, scanNumber);
+    }
   }
 
   public static <T extends MassSpectrum> Stream<T> streamSourceScans(final MassSpectrum scan,
@@ -2312,13 +2445,15 @@ public class ScanUtils {
         final String str = sb.toString();
         yield str.substring(0, str.length() - 1);
       }
-      case Scan s -> "%d".formatted(s.getScanNumber());
+      case Scan s -> (includeFilenameForSingleFiles ? s.getDataFile().getName() + ":" : "")
+          + s.getScanNumber();
     };
   }
 
   /**
    * @param allScans Scans of a single {@link RawDataFile}. May contain mobility scans or regular
-   *                 scans. To handle merged spectra, use {@link #extractScanIdString(Scan)}
+   *                 scans. To handle merged spectra, use
+   *                 {@link #extractScanIdString(Scan, boolean)}
    * @return Consecutive enumeration of scan numbers. for mobility scans: 6[7-14,16],7[8-18]. for
    * regular scans: 5-13,15.
    */
@@ -2351,8 +2486,7 @@ public class ScanUtils {
     var scanRanges = IndexRange.findRanges(
         allScans.stream().filter(s -> !(s instanceof MobilityScan)).map(Scan::getScanNumber)
             .toList());
-    final String scanString = scanRanges.stream().map(IndexRange::toString)
-        .collect(Collectors.joining(","));
+    final String scanString = IndexRange.asString(scanRanges);
     return scanString;
   }
 
@@ -2387,8 +2521,60 @@ public class ScanUtils {
     }
     final List<IndexRange> ranges = IndexRange.findRanges(
         mobilityScans.stream().map(MobilityScan::getMobilityScanNumber).toList());
-    return "%d[%s]".formatted(frame.getScanNumber(),
-        ranges.stream().map(IndexRange::toString).collect(Collectors.joining(",")));
+    return "%d[%s]".formatted(frame.getScanNumber(), IndexRange.asString(ranges));
+  }
+
+
+  /**
+   * @param imsCheckPrecursorMz Only applied to IMS Frames. Regular Scan data is usually already
+   *                            filtered to match the selection. Uses precursor mz to filter out
+   *                            spectra with mismatching isolation window. This is important for
+   *                            timsTOF DIA workflows where one Frame contains multiple precursor
+   *                            ions and MsMsInfos. Leave precursorMz as null to ignore this
+   *                            filter.
+   * @return A stream of all MsMsInfos in the given collection of scans. IMS frames will return all
+   * isolations if there are multiple. This stream will not contain null entries and may be empty.
+   */
+  public static Stream<MsMsInfo> streamMsMsInfos(@Nullable Collection<? extends Scan> scans,
+      final @Nullable Double imsCheckPrecursorMz) {
+    if (scans == null) {
+      return Stream.empty();
+    }
+    return scans.stream().mapMulti((s, downstream) -> {
+      if (s instanceof Frame f) {
+        // frames may contain multiple precursor isolations - check each and find the ones with matching isolation window
+        for (final IonMobilityMsMsInfo imsInfo : f.getImsMsMsInfos()) {
+          if (imsInfo != null) {
+            final Range<Double> mzWindow = imsInfo.getIsolationWindow();
+            if (imsCheckPrecursorMz != null && mzWindow != null && !mzWindow.contains(
+                imsCheckPrecursorMz)) {
+              continue;
+            }
+            downstream.accept(imsInfo);
+          }
+        }
+      } else {
+        final MsMsInfo info = s.getMsMsInfo();
+        if (info != null) {
+          // do not apply precursor mz filter
+          // Scan is usually already filtered to match the precursor ion
+          // filtering out based on the isolation window in MsMsInfo may be error prone / too strict
+          // isolation is sometimes wider than the isolation window set in MsMsInfo
+          downstream.accept(info);
+        }
+      }
+    });
+  }
+
+  /**
+   * @return true if scan is a pseudo scan from GC-EI
+   */
+  public static boolean isGcEiScan(@Nullable Scan scan) {
+    if (scan == null) {
+      return false;
+    }
+    return scan instanceof PseudoSpectrum pseudo
+        && pseudo.getPseudoSpectrumType() == PseudoSpectrumType.GC_EI;
   }
 
   /**
@@ -2417,4 +2603,6 @@ public class ScanUtils {
       return this.intMode;
     }
   }
+
+
 }

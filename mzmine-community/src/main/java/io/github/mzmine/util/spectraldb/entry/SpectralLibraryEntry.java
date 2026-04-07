@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,7 +12,6 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -25,35 +24,21 @@
 
 package io.github.mzmine.util.spectraldb.entry;
 
-import com.google.common.collect.Range;
-import io.github.mzmine.datamodel.DataPoint;
+import io.github.mzmine.datamodel.IsotopePattern;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.MassList;
-import io.github.mzmine.datamodel.MergedMassSpectrum;
-import io.github.mzmine.datamodel.MergedMassSpectrum.MergingType;
 import io.github.mzmine.datamodel.PolarityType;
-import io.github.mzmine.datamodel.Scan;
-import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.compoundannotations.CompoundDBAnnotation;
-import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
+import io.github.mzmine.datamodel.features.ModularDataModel;
+import io.github.mzmine.datamodel.features.types.DataType;
+import io.github.mzmine.datamodel.features.types.DataTypes;
+import io.github.mzmine.datamodel.features.types.annotations.MolecularStructureType;
+import io.github.mzmine.datamodel.features.types.annotations.iin.IonAdductType;
+import io.github.mzmine.datamodel.features.types.annotations.iin.IonTypeType;
 import io.github.mzmine.datamodel.identities.iontype.IonType;
-import io.github.mzmine.datamodel.impl.MSnInfoImpl;
-import io.github.mzmine.datamodel.msms.DDAMsMsInfo;
-import io.github.mzmine.datamodel.msms.MsMsInfo;
+import io.github.mzmine.datamodel.identities.iontype.IonTypeParser;
 import io.github.mzmine.datamodel.structures.MolecularStructure;
-import io.github.mzmine.util.DataPointUtils;
-import io.github.mzmine.util.FeatureUtils;
-import io.github.mzmine.util.MemoryMapStorage;
-import io.github.mzmine.util.RangeUtils;
-import io.github.mzmine.util.scans.ScanUtils;
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -71,173 +56,6 @@ public interface SpectralLibraryEntry extends MassList {
 
   Logger logger = Logger.getLogger(SpectralLibraryEntry.class.getName());
   String XML_ELEMENT_ENTRY = "spectraldatabaseentry";
-
-  static SpectralLibraryEntry create(@Nullable MemoryMapStorage storage, double precursorMZ,
-      DataPoint[] dps) {
-    double[][] data = DataPointUtils.getDataPointsAsDoubleArray(dps);
-    Map<DBEntryField, Object> fields = new HashMap<>();
-    fields.put(DBEntryField.PRECURSOR_MZ, precursorMZ);
-    fields.put(DBEntryField.NUM_PEAKS, dps.length);
-    return new SpectralDBEntry(storage, data[0], data[1], fields);
-  }
-
-  static SpectralLibraryEntry create(@Nullable MemoryMapStorage storage, double precursorMZ,
-      int charge, DataPoint[] dps) {
-    SpectralLibraryEntry entry = create(storage, precursorMZ, dps);
-    entry.putIfNotNull(DBEntryField.CHARGE, charge);
-    return entry;
-  }
-
-  static SpectralLibraryEntry create(@Nullable MemoryMapStorage storage,
-      Map<DBEntryField, Object> fields, DataPoint[] dps) {
-    double[][] data = DataPointUtils.getDataPointsAsDoubleArray(dps);
-    return new SpectralDBEntry(storage, data[0], data[1], fields);
-  }
-
-  /**
-   * Create a new spectral library entry from any {@link FeatureAnnotation} but new spectral data
-   *
-   * @param scan        only used for scan metadata - data is provided through dataPoints
-   * @param match       the annotation for additional metadata
-   * @param dataPoints  the actual data
-   * @param metadataMap add additional fields to the spectral library entry
-   * @return spectral library entry
-   */
-  static SpectralLibraryEntry create(final FeatureListRow row, @Nullable MemoryMapStorage storage,
-      final Scan scan, final FeatureAnnotation match, final DataPoint[] dataPoints,
-      final @Nullable Map<DBEntryField, Object> metadataMap) {
-
-    Double precursorMZ = Objects.requireNonNullElse(match.getPrecursorMZ(), scan.getPrecursorMz());
-    SpectralLibraryEntry entry = create(storage, precursorMZ, dataPoints);
-
-    // add additional fields early
-    if (metadataMap != null) {
-      entry.putAll(metadataMap);
-    }
-
-    // write feature ID as feature list and row ID to identify MSn trees or MS2 spectra of the same row
-    var flist = row.getFeatureList();
-    if (flist != null) {
-      entry.putIfNotNull(DBEntryField.FEATURE_ID, flist.getName() + ":" + row.getID());
-    }
-
-    // transfer match to fields
-    entry.addFeatureAnnotationFields(match);
-
-    // scan details
-    Integer charge = getCharge(match, row, scan);
-    if (charge != null) {
-      entry.putIfNotNull(DBEntryField.CHARGE, charge);
-    }
-    entry.putIfNotNull(DBEntryField.POLARITY, scan.getPolarity());
-
-    MsMsInfo msMsInfo = scan.getMsMsInfo();
-    if (msMsInfo instanceof MSnInfoImpl msnInfo) {
-      // energies are quite complex
-      // [MS2, MS3, MS4] and multiple energies in last level due to merging
-      var msnEnergies = ScanUtils.extractMSnCollisionEnergies(scan);
-      if (!msnEnergies.isEmpty()) {
-        entry.putIfNotNull(DBEntryField.MSN_COLLISION_ENERGIES, msnEnergies);
-      }
-      //
-      List<DDAMsMsInfo> precursors = msnInfo.getPrecursors();
-      entry.putIfNotNull(DBEntryField.MSN_PRECURSOR_MZS,
-          extractJsonList(precursors, DDAMsMsInfo::getIsolationMz));
-      entry.putIfNotNull(DBEntryField.MSN_FRAGMENTATION_METHODS,
-          extractJsonList(precursors, DDAMsMsInfo::getActivationMethod));
-      entry.putIfNotNull(DBEntryField.MSN_ISOLATION_WINDOWS, extractJsonList(precursors, info -> {
-        Range<Double> window = info.getIsolationWindow();
-        return window == null ? null : RangeUtils.rangeLength(window);
-      }));
-      entry.putIfNotNull(DBEntryField.MS_LEVEL, msnInfo.getMsLevel());
-    } else if (msMsInfo != null) {
-      entry.putIfNotNull(DBEntryField.FRAGMENTATION_METHOD, msMsInfo.getActivationMethod());
-      Range<Double> window = msMsInfo.getIsolationWindow();
-      if (window != null) {
-        entry.putIfNotNull(DBEntryField.ISOLATION_WINDOW, RangeUtils.rangeLength(window));
-      }
-      entry.putIfNotNull(DBEntryField.MS_LEVEL, msMsInfo.getMsLevel());
-    }
-    List<Float> energies = ScanUtils.extractCollisionEnergies(scan);
-    if (!energies.isEmpty()) {
-      FloatArrayList list = new FloatArrayList(energies);
-      entry.putIfNotNull(DBEntryField.COLLISION_ENERGY, list);
-    }
-
-    // merged scans are derived from multiple source scans - add all information here and overwrite
-    String datasetID = entry.getOrElse(DBEntryField.DATASET_ID, null);
-    entry.putIfNotNull(DBEntryField.USI, ScanUtils.extractUSI(scan, datasetID).toList());
-
-    if (scan instanceof MergedMassSpectrum merged) {
-      entry.putIfNotNull(DBEntryField.MS_LEVEL, merged.getMSLevel());
-      entry.putIfNotNull(DBEntryField.SCAN_NUMBER,
-          ScanUtils.extractScanNumbers(merged).boxed().toList());
-      entry.putIfNotNull(DBEntryField.MERGED_SPEC_TYPE, merged.getMergingType());
-    } else {
-      entry.putIfNotNull(DBEntryField.MERGED_SPEC_TYPE, MergingType.SINGLE_BEST_SCAN);
-      entry.putIfNotNull(DBEntryField.SCAN_NUMBER, scan.getScanNumber());
-    }
-
-    return entry;
-  }
-
-  /**
-   * Add metadata to spectral library entry from feature annotation.
-   *
-   * @param match
-   */
-  default void addFeatureAnnotationFields(FeatureAnnotation match) {
-    switch (match) {
-      case CompoundDBAnnotation dbmatch -> addAnnotationFields(dbmatch);
-      case SpectralLibraryEntry dbmatch -> addAnnotationFields(dbmatch);
-      case FeatureAnnotation _ -> {
-        putIfNotNull(DBEntryField.ION_TYPE, match.getAdductType());
-        putIfNotNull(DBEntryField.CCS, match.getCCS());
-        putIfNotNull(DBEntryField.NAME, match.getCompoundName());
-        putIfNotNull(DBEntryField.FORMULA, match.getFormula());
-        putIfNotNull(DBEntryField.INCHI, match.getInChI());
-        putIfNotNull(DBEntryField.INCHIKEY, match.getInChIKey());
-        putIfNotNull(DBEntryField.SMILES, match.getSmiles());
-      }
-    }
-  }
-
-  default void addAnnotationFields(CompoundDBAnnotation match) {
-    for (var dbentry : match.getReadOnlyMap().entrySet()) {
-      DBEntryField field = DBEntryField.fromDataType(dbentry.getKey());
-      if (field == DBEntryField.UNSPECIFIED) {
-        continue;
-      }
-      try {
-        putIfNotNull(field, dbentry.getValue());
-      } catch (Exception ex) {
-        logger.log(Level.WARNING,
-            "Types were not converted from DB match to DB entry " + ex.getMessage(), ex);
-      }
-    }
-  }
-
-  default void addAnnotationFields(SpectralLibraryEntry match) {
-    for (var dbentry : match.getFields().entrySet()) {
-      switch (dbentry.getKey()) {
-        case RT, NAME, FORMULA, SMILES, INCHI, INCHIKEY, EXACT_MASS, ION_TYPE, SYNONYMS, CAS,
-             PUBCHEM, PUBMED, MOLWEIGHT -> putIfNotNull(dbentry.getKey(), dbentry.getValue());
-      }
-    }
-  }
-
-  static Integer getCharge(FeatureAnnotation match, FeatureListRow row, Scan scan) {
-    IonType adduct = match.getAdductType();
-    if (adduct != null) {
-      return adduct.getCharge();
-    }
-    return FeatureUtils.extractBestSignedChargeState(row, scan);
-  }
-
-  private static List<?> extractJsonList(final List<DDAMsMsInfo> precursors,
-      Function<DDAMsMsInfo, Object> extractor) {
-    return precursors.stream().map(extractor).filter(Objects::nonNull).toList();
-  }
 
   static SpectralLibraryEntry loadFromXML(XMLStreamReader reader, MZmineProject project)
       throws XMLStreamException {
@@ -259,6 +77,74 @@ public interface SpectralLibraryEntry extends MassList {
 
   Map<DBEntryField, Object> getFields();
 
+
+  /**
+   * Value for this datatype
+   * <p>
+   * In preparation to extend {@link ModularDataModel} in the future
+   *
+   * @return value of this type or null
+   */
+  @Nullable
+  default <T> T get(Class<? extends DataType<T>> tclass) {
+    DataType<T> type = DataTypes.get(tclass);
+    return get(type);
+  }
+
+  /**
+   * Value for this datatype
+   * <p>
+   * In preparation to extend {@link ModularDataModel} in the future
+   *
+   * @return value of this type or null
+   */
+  @Nullable
+  default <T extends Object> T get(DataType<T> type) {
+    // handle special types that may have values in various object types
+    // securely handle the conversion to T
+    final T value = switch (type) {
+      // need to handle both IonTypeType and IonAdductType because spectral match still used outdated IonAdductType
+      case IonTypeType _ -> {
+        final Object v = getField(DBEntryField.ION_TYPE).orElse(null);
+        if (v == null) {
+          yield null;
+        }
+        if (v instanceof IonType ion) {
+          yield (T) ion;
+        }
+        try {
+          final IonType ion = IonTypeParser.parse(v.toString());
+          yield (T) ion;
+        } catch (Exception e) {
+          yield null;
+        }
+      }
+      case IonAdductType _ ->
+          (T) getField(DBEntryField.ION_TYPE).map(Object::toString).orElse(null);
+      case MolecularStructureType _ -> (T) getStructure();
+      default -> null;
+    };
+    if (value != null || type instanceof IonTypeType || type instanceof IonAdductType) {
+      // If parsing failed for IonTypeType we must not fall back to the raw field value (often a String).
+      return value;
+    }
+
+    // find regular fields and try to map them to T
+    final DBEntryField field = DBEntryField.fromDataType(type);
+    if (field == null || field == DBEntryField.UNSPECIFIED) {
+      return null;
+    }
+    try {
+
+      // try to cast and if it fails then return null because those values are loaded from different sources
+      // and some fields may have different types
+      return (T) getOrElse(field, null);
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+
   void saveToXML(XMLStreamWriter writer) throws XMLStreamException;
 
   default boolean setCharge(@Nullable Integer charge) {
@@ -267,7 +153,7 @@ public interface SpectralLibraryEntry extends MassList {
 
   /**
    * Sets the charge and the polarity of this entry. The polarity overrides any +/- in the charge
-   * integer.
+   * integer. Sets an integer charge
    *
    * @return {@link #putIfNotNull(DBEntryField, Object)}
    */
@@ -275,9 +161,12 @@ public interface SpectralLibraryEntry extends MassList {
     if (charge == null) {
       return false;
     }
-    return putIfNotNull(DBEntryField.CHARGE,
-        Math.abs(charge) + Objects.requireNonNullElse(polarity, PolarityType.POSITIVE)
-            .asSingleChar());
+    if (PolarityType.isDefined(polarity)) {
+      return putIfNotNull(DBEntryField.CHARGE, Math.abs(charge) * polarity.getSign());
+    } else {
+      // previously this would set charge as 1- but we actually expect charge to be integer
+      return putIfNotNull(DBEntryField.CHARGE, charge);
+    }
   }
 
   /**
@@ -321,6 +210,10 @@ public interface SpectralLibraryEntry extends MassList {
     };
   }
 
+  default Optional<String> getAsString(DBEntryField field) {
+    return getField(field).map(Object::toString);
+  }
+
   default Optional<Double> getAsDouble(DBEntryField field) {
     try {
       return getField(field).map(this::toDouble);
@@ -355,16 +248,32 @@ public interface SpectralLibraryEntry extends MassList {
     };
   }
 
-  @Nullable
-  SpectralLibrary getLibrary();
+  @Nullable SpectralLibrary getLibrary();
 
   void setLibrary(@Nullable SpectralLibrary library);
 
-  @Nullable
-  String getLibraryName();
+  @Nullable String getLibraryName();
+
+  /**
+   * @return Formula from the entered formula or from the structure if no formula provided
+   */
+  @Nullable String getFormula();
+
+  /**
+   * @return ion type
+   */
+  @Nullable IonType getAdductType();
 
   /**
    * @return the structure parsed from smiles or inchi
    */
   MolecularStructure getStructure();
+
+  /**
+   * Isotope pattern is cached and only calculated once on demand. Modules may already calculate the
+   * isotope pattern to speed up later use in tables.
+   *
+   * @return the isotope pattern of the ion formula
+   */
+  @Nullable IsotopePattern getIsotopePattern();
 }

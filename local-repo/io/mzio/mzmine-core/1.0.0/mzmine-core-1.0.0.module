@@ -10,7 +10,7 @@
   },
   "createdBy": {
     "gradle": {
-      "version": "8.10"
+      "version": "9.1.0"
     }
   },
   "variants": [
@@ -19,7 +19,7 @@
       "attributes": {
         "org.gradle.category": "library",
         "org.gradle.dependency.bundling": "external",
-        "org.gradle.jvm.version": 22,
+        "org.gradle.jvm.version": 25,
         "org.gradle.libraryelements": "jar",
         "org.gradle.usage": "java-api"
       },
@@ -27,11 +27,11 @@
         {
           "name": "mzmine-core-1.0.0.jar",
           "url": "mzmine-core-1.0.0.jar",
-          "size": 10466,
-          "sha512": "26a6e2ea8212c961a7ca8ef2b66436007d9a5df6ec2c8a148a029813e0fbeb46ec68524442ee347abfe68037b137bd014c21b520aa6e0aac14fb1ab4fa1d712e",
-          "sha256": "0c161b1a4cf854c803d52ecc42c567a6060c9d58ae52dcba427a65275910dcb6",
-          "sha1": "5394f2d8fbddc2d3c201de1a99ee90b67e95b471",
-          "md5": "1d0cb86958eaef8e63259b24e9976174"
+          "size": 13818,
+          "sha512": "f819e92debad9dc321006f42c14b3d483870abe77e78db22e0a944eae5a3558d9003348550c4f7b0677552f3e7be5a53966e7470574445049e769e2fcea55b86",
+          "sha256": "e6f82c64acb3237e0ff2d952507589eb7e65557d21651fd046b59edac64495f3",
+          "sha1": "da49fce5a7ead8c25177dd4fc834a9bbde88bf94",
+          "md5": "82be7c0025829ec3f30a26362641eb5c"
         }
       ]
     },
@@ -40,7 +40,7 @@
       "attributes": {
         "org.gradle.category": "library",
         "org.gradle.dependency.bundling": "external",
-        "org.gradle.jvm.version": 22,
+        "org.gradle.jvm.version": 25,
         "org.gradle.libraryelements": "jar",
         "org.gradle.usage": "java-runtime"
       },
@@ -50,6 +50,34 @@
           "module": "annotations",
           "version": {
             "requires": "22.0.0"
+          }
+        },
+        {
+          "group": "org.controlsfx",
+          "module": "controlsfx",
+          "version": {
+            "requires": "11.2.2"
+          }
+        },
+        {
+          "group": "org.kordamp.ikonli",
+          "module": "ikonli-javafx",
+          "version": {
+            "requires": "12.3.1"
+          }
+        },
+        {
+          "group": "org.kordamp.ikonli",
+          "module": "ikonli-bootstrapicons-pack",
+          "version": {
+            "requires": "12.3.1"
+          }
+        },
+        {
+          "group": "org.kordamp.ikonli",
+          "module": "ikonli-lineawesome-pack",
+          "version": {
+            "requires": "12.3.1"
           }
         },
         {
@@ -83,17 +111,59 @@
         {
           "group": "io.github.mzmine",
           "module": "utils"
+        },
+        {
+          "group": "org.openjfx",
+          "module": "javafx-base",
+          "version": {
+            "requires": "24.0.2"
+          }
+        },
+        {
+          "group": "org.openjfx",
+          "module": "javafx-graphics",
+          "version": {
+            "requires": "24.0.2"
+          }
+        },
+        {
+          "group": "org.openjfx",
+          "module": "javafx-controls",
+          "version": {
+            "requires": "24.0.2"
+          }
+        },
+        {
+          "group": "org.openjfx",
+          "module": "javafx-fxml",
+          "version": {
+            "requires": "24.0.2"
+          }
+        },
+        {
+          "group": "org.openjfx",
+          "module": "javafx-swing",
+          "version": {
+            "requires": "24.0.2"
+          }
+        },
+        {
+          "group": "org.openjfx",
+          "module": "javafx-web",
+          "version": {
+            "requires": "24.0.2"
+          }
         }
       ],
       "files": [
         {
           "name": "mzmine-core-1.0.0.jar",
           "url": "mzmine-core-1.0.0.jar",
-          "size": 10466,
-          "sha512": "26a6e2ea8212c961a7ca8ef2b66436007d9a5df6ec2c8a148a029813e0fbeb46ec68524442ee347abfe68037b137bd014c21b520aa6e0aac14fb1ab4fa1d712e",
-          "sha256": "0c161b1a4cf854c803d52ecc42c567a6060c9d58ae52dcba427a65275910dcb6",
-          "sha1": "5394f2d8fbddc2d3c201de1a99ee90b67e95b471",
-          "md5": "1d0cb86958eaef8e63259b24e9976174"
+          "size": 13818,
+          "sha512": "f819e92debad9dc321006f42c14b3d483870abe77e78db22e0a944eae5a3558d9003348550c4f7b0677552f3e7be5a53966e7470574445049e769e2fcea55b86",
+          "sha256": "e6f82c64acb3237e0ff2d952507589eb7e65557d21651fd046b59edac64495f3",
+          "sha1": "da49fce5a7ead8c25177dd4fc834a9bbde88bf94",
+          "md5": "82be7c0025829ec3f30a26362641eb5c"
         }
       ]
     }

@@ -45,7 +45,7 @@ public class MZType extends DoubleType implements ExpandableType {
 
   @NotNull
   @Override
-  public final String getUniqueID() {
+  public String getUniqueID() {
     // Never change the ID for compatibility during saving/loading of type
     return "mz";
   }
@@ -68,6 +68,12 @@ public class MZType extends DoubleType implements ExpandableType {
       // only happens if types are used without initializing the MZmineCore
       return DEFAULT_FORMAT;
     }
+  }
+
+  @Override
+  public double getRepresentativeLargeNumber() {
+    // use long tail depending on number format the pref width will be adjusted
+    return 9999.4444444444;
   }
 
   @Override

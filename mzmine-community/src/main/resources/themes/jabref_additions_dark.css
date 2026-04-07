@@ -23,9 +23,12 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-.text-field {
-  -fx-prompt-text-fill: derive(-fx-text-fill, -50%)
-}
+ .root {
+   -error-text-color: #e12525;
+   -warning-text-color: #e8cd1b;
+   -jr-tooltip-bg: -jr-accent-below-text;
+   -jr-tooltip-fg: -jr-white;
+ }
 
 .region-match-chart-bg, .tool-bar, .status-bar, .button-bar {
   -fx-background-color: -jr-menu-background;
@@ -49,6 +52,11 @@ Text, Text:hover {
 
 .bold-title-label {
   -fx-font-size: 14.0pt;
+  -fx-font-weight: bold;
+}
+
+.bold-semititle-label {
+  -fx-font-size: 10.0pt;
   -fx-font-weight: bold;
 }
 

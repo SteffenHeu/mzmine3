@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules;
 
+import io.github.mzmine.modules.dataprocessing.filter_scan_merge_select.SpectraMergeSelectParameter;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.PercentParameter;
@@ -32,12 +33,14 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParamete
 
 public class LipidAnnotationMSMSParameters extends SimpleParameterSet {
 
+  public static final SpectraMergeSelectParameter spectraMergeSelect = SpectraMergeSelectParameter.createLipidSearchAllSpectraDefault();
+
   public static final MZToleranceParameter mzToleranceMS2 = new MZToleranceParameter(
       "m/z tolerance MS2 level:",
       "Enter m/z tolerance for exact mass database matching on MS2 level", 0.005, 10);
 
   public static final PercentParameter minimumMsMsScore = new PercentParameter(
-      "Explained intensity [%]:", "Explained intensity [%] of all signals in MS/MS spectrum", 0.6);
+      "Explained intensity [%]:", "Explained intensity [%] of all signals in MS2 spectrum", 0.6);
 
   public static final BooleanParameter keepUnconfirmedAnnotations = new BooleanParameter(
       "Keep unconfirmed annotations",
@@ -45,7 +48,7 @@ public class LipidAnnotationMSMSParameters extends SimpleParameterSet {
       false);
 
   public LipidAnnotationMSMSParameters() {
-    super(mzToleranceMS2, minimumMsMsScore, keepUnconfirmedAnnotations);
+    super(spectraMergeSelect, mzToleranceMS2, minimumMsMsScore, keepUnconfirmedAnnotations);
   }
 
   @Override

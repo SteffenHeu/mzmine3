@@ -27,7 +27,9 @@ package io.github.mzmine.main;
 
 import io.github.mzmine.gui.preferences.MZminePreferences;
 import io.github.mzmine.gui.preferences.NumberFormats;
+import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.main.impl.MZmineConfigurationImpl;
+import io.github.mzmine.modules.visualization.molstructure.Structure2DRenderConfig;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.io.IOException;
@@ -39,6 +41,16 @@ public final class ConfigService {
 
   private static final Logger logger = Logger.getLogger(ConfigService.class.getName());
   private static final MZmineConfiguration config = new MZmineConfigurationImpl();
+
+  /**
+   * only set from cli
+   */
+  private static volatile boolean tdfPseudoProfile = false;
+
+  /**
+   * only set from cli
+   */
+  private static volatile boolean ignoreParameterWarningsInBatch = false;
 
   public static MZmineConfiguration getConfiguration() {
     return config;
@@ -59,7 +71,6 @@ public final class ConfigService {
   public static NumberFormats getGuiFormats() {
     return config.getGuiFormats();
   }
-
 
   public static SimpleColorPalette getDefaultColorPalette() {
     return config.getDefaultColorPalette();
@@ -87,4 +98,38 @@ public final class ConfigService {
       return false;
     }
   }
+
+  static void setTdfPseudoProfile(final boolean tdfPseudoProfile) {
+    ConfigService.tdfPseudoProfile = tdfPseudoProfile;
+  }
+
+  public static boolean isTdfPseudoProfile() {
+    return tdfPseudoProfile;
+  }
+
+  public static boolean isApplyVendorCentroiding() {
+    return getPreferences().getValue(MZminePreferences.applyVendorCentroiding);
+  }
+
+  public static void openTempPreferences() {
+    MZminePreferences pref = MZmineCore.getConfiguration().getPreferences();
+    FxThread.runLater(() -> pref.showSetupDialog(true, "temp"));
+  }
+
+  public static boolean isIgnoreParameterWarningsInBatch() {
+    return ignoreParameterWarningsInBatch;
+  }
+
+  public static void setIgnoreParameterWarningsInBatch(boolean ignoreParameterWarningsInBatch) {
+    ConfigService.ignoreParameterWarningsInBatch = ignoreParameterWarningsInBatch;
+  }
+
+  /**
+   * Centralizes the default structure render config. Might introduce parameters in the future to
+   * control how structures are rendered.
+   */
+  public static Structure2DRenderConfig getStructureRenderConfig() {
+    return Structure2DRenderConfig.DEFAULT_CONFIG;
+  }
+
 }

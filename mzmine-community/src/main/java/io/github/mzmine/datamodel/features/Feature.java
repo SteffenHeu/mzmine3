@@ -31,6 +31,7 @@ import io.github.mzmine.datamodel.FeatureInformation;
 import io.github.mzmine.datamodel.FeatureStatus;
 import io.github.mzmine.datamodel.IsotopePattern;
 import io.github.mzmine.datamodel.MobilityType;
+import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
@@ -69,6 +70,16 @@ public interface Feature {
    * Sets retention time of the feature
    */
   void setRT(float rt);
+
+  /**
+   * This method returns retention index of the feature if available
+   */
+  Float getRI();
+
+  /**
+   * Sets retention index of the feature
+   */
+  void setRI(float ri);
 
   /**
    * This method returns the raw height of the feature
@@ -330,14 +341,7 @@ public interface Feature {
   void setFeatureInformation(FeatureInformation featureInfo);
   // End dulab Edit
 
-  @Nullable
-  default Integer getParentChromatogramRowID() {
-    return null;
-  }
-
-  @Nullable FeatureList getFeatureList();
-
-  void setFeatureList(@NotNull FeatureList featureList);
+  @NotNull FeatureList getFeatureList();
 
   int getNumberOfDataPoints();
 
@@ -362,4 +366,33 @@ public interface Feature {
    * @param row parent row
    */
   void setRow(@Nullable FeatureListRow row);
+
+  /**
+   * @return The polarity of the scan obtained by {@link Feature#getRepresentativeScan()} or
+   * {@link Feature#getAllMS2FragmentScans()}
+   */
+  @Nullable
+  default PolarityType getRepresentativePolarity() {
+    final Scan representativeScan = getRepresentativeScan();
+    if (representativeScan != null) {
+      return representativeScan.getPolarity();
+    }
+    // some features do not have MS1 scan for example after MSn tree builder if MS1 signal mz was off
+    final List<Scan> ms2 = getAllMS2FragmentScans();
+    if (!ms2.isEmpty()) {
+      return ms2.getFirst().getPolarity();
+    }
+    return null;
+  }
+
+  default boolean hasMs2Fragmentation() {
+    return !getAllMS2FragmentScans().isEmpty();
+  }
+
+  boolean isMrm();
+
+  /**
+   * @return A string containing every data type currently present for the feature.
+   */
+  String toFullString();
 }
