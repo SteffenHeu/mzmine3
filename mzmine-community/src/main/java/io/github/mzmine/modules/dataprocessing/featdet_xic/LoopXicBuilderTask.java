@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,7 +29,6 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
 import io.github.mzmine.datamodel.FeatureStatus;
-import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
@@ -59,6 +58,7 @@ import java.util.Map.Entry;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -292,12 +292,8 @@ public class LoopXicBuilderTask extends AbstractTask {
         b.append(file.getName());
         b.append(
             " does not have a mass list. Please run \"Raw data methods\" -> \"Mass detection\"");
-        if (access instanceof IMSRawDataFile) {
-          b.append("\nIMS files require mass detection on the frame level (Scan type = \"Frames ");
-          b.append("only\" or \"All scan types\"");
-        }
         setErrorMessage(b.toString());
-        e.printStackTrace();
+        logger.log(Level.SEVERE, e.getMessage(), e);
         return allMzValues;
       }
 
