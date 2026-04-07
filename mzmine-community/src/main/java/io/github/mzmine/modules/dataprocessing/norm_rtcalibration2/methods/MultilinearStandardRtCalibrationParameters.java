@@ -34,6 +34,9 @@ import io.github.mzmine.parameters.parametertypes.ImportTypeParameter;
 import io.github.mzmine.parameters.parametertypes.PercentParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameWithExampleExportParameter;
+import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
+import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance.Unit;
+import io.github.mzmine.parameters.parametertypes.tolerances.RTToleranceParameter;
 import io.github.mzmine.util.files.ExtensionFilters;
 import io.github.mzmine.util.io.WriterOptions;
 import java.io.File;
@@ -47,6 +50,10 @@ public class MultilinearStandardRtCalibrationParameters extends SimpleParameterS
   public static final PercentParameter correctionBandwidth = new PercentParameter(
       "Interpolation bandwidth", "", 0.1d, 0.01d, 1d);
 
+  public static final RTToleranceParameter standardTolerance = new RTToleranceParameter(
+      "Standard RT tolerance", "RT tolerance to search for standards (pre correction).",
+      new RTTolerance(0.1f, Unit.MINUTES));
+
   public static final FileNameParameter standardsList = new FileNameWithExampleExportParameter(
       "Internal standards list", "A file that specifies the internal standards.",
       ExtensionFilters.CSV_TSV_IMPORT, MultilinearStandardRtCalibrationParameters::exportFile);
@@ -59,7 +66,7 @@ public class MultilinearStandardRtCalibrationParameters extends SimpleParameterS
       "Set the column headers in your quantification table.", importTypeList);
 
   public MultilinearStandardRtCalibrationParameters() {
-    super(correctionBandwidth, standardsList, importTypes);
+    super(correctionBandwidth, standardTolerance, standardsList, importTypes);
   }
 
   public static final String mzHeader = new MZType().getUniqueID();

@@ -110,17 +110,18 @@ public final class MultilinearStandardRtCorrectionModule implements RawFileRtCor
 
     final RTMeasure rtMeasure = mainParameters.getValue(RTCorrectionParameters.rtMeasure);
 
-    File standardsFile = correctionModuleParameters.getValue(
+    final File standardsFile = correctionModuleParameters.getValue(
         MultilinearStandardRtCalibrationParameters.standardsList);
-    List<ImportType<?>> types = correctionModuleParameters.getValue(
+    final List<ImportType<?>> types = correctionModuleParameters.getValue(
         MultilinearStandardRtCalibrationParameters.importTypes);
     final Character separator = CSVParsingUtils.autoDetermineSeparatorDefaultFallback(
         standardsFile);
     CompoundDbLoadResult standardsResult = CSVParsingUtils.getAnnotationsFromCsvFile(standardsFile,
         separator.toString(), types, null);
 
+    final RTTolerance rtTol = correctionModuleParameters.getValue(
+        MultilinearStandardRtCalibrationParameters.standardTolerance);
     final MZTolerance mzTol = mainParameters.getValue(RTCorrectionParameters.MZTolerance);
-    final RTTolerance rtTol = mainParameters.getValue(RTCorrectionParameters.RTTolerance);
 
     if (standardsResult.status() != TaskStatus.FINISHED) {
       throw new IllegalStateException(standardsResult.errorMessage());
@@ -155,11 +156,11 @@ public final class MultilinearStandardRtCorrectionModule implements RawFileRtCor
       internalStandards.add(new InternalRtStandard(bestStandard.standards(), annotation));
     }
 
-    List<RtStandard> rtSortedInternalStandards = internalStandards.stream()
+    final List<RtStandard> rtSortedInternalStandards = internalStandards.stream()
         .sorted(Comparator.comparingDouble(s -> s.getRt(rtMeasure))).toList();
 
     // resetting the RTs to external ones may change the monotonicity, reapply filtering
-    List<RtStandard> filtered = removeNonMonotonousStandards(rtSortedInternalStandards,
+    final List<RtStandard> filtered = removeNonMonotonousStandards(rtSortedInternalStandards,
         referenceFlists, rtMeasure);
     return filtered;
   }

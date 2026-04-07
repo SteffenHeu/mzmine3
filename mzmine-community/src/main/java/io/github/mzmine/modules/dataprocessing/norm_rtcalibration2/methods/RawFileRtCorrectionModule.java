@@ -84,6 +84,18 @@ public sealed interface RawFileRtCorrectionModule extends MZmineModule, UniqueId
   AbstractRtCorrectionFunction loadFromXML(@NotNull final Element element,
       final @NotNull RawDataFilePlaceholder file);
 
+  /**
+   * Applies prefiltering to a list of potential standards, e.g., by selecting only specific
+   * standards from a standard list.
+   *
+   * @param goodStandardsByRt Potential standards across all data files
+   * @param referenceFlists   The feature lists the standards were found in
+   * @param mainParameters    the
+   *                          {@link
+   *                          io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.RTCorrectionParameters}
+   * @param moduleParameters  The specific parameter instance of this module.
+   * @return A filtered list of eligible standards.
+   */
   @NotNull List<RtStandard> prefilterStandards(@NotNull List<RtStandard> goodStandardsByRt,
       @NotNull List<FeatureList> referenceFlists, @NotNull ParameterSet mainParameters,
       @NotNull ParameterSet moduleParameters);
