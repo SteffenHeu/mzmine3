@@ -28,7 +28,6 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SweepMetric;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.text.DecimalFormat;
@@ -47,10 +46,7 @@ import org.moeaframework.core.population.NondominatedPopulation;
 
 public record ObjectiveWrapper(String name, int index, Color color) {
 
-  /**
-   * Objective name used by {@link LcMsOptimizationProblem} for the harmonic metric.
-   */
-  private static final String HARMONIC_OBJECTIVE_NAME = "Harmonic slaw-isotopes";
+  private static final String HARMONIC_OBJECTIVE_NAME = SweepMetric.HARMONIC_SLAW_ISOTOPES.name();
 
   public static List<ObjectiveWrapper> extract(NondominatedPopulation result) {
     final Solution solution = result.get(0);
@@ -86,19 +82,19 @@ public record ObjectiveWrapper(String name, int index, Color color) {
   /**
    * Creates a column for the harmonic objective that displays scores normalised to [0, 1] across
    * the full population. The raw slaw and iso component values stored as solution attributes
-   * ({@link LcMsOptimizationProblem#ATTR_HARMONIC_SLAW} /
-   * {@link LcMsOptimizationProblem#ATTR_HARMONIC_ISO}) are min-max normalised across the population
-   * before the harmonic mean is computed.
+   * ({@link SweepMetric.HarmonicSlawIsotopes#ATTR_HARMONIC_SLAW} /
+   * {@link SweepMetric.HarmonicSlawIsotopes#ATTR_HARMONIC_ISO}) are min-max normalised across the
+   * population before the harmonic mean is computed.
    */
   public @NotNull TableColumn<Solution, Number> createNormalizedHarmonicColumn(
       @NotNull NondominatedPopulation population) {
     final List<Solution> solutions = population.asList();
 
     final double[] slawRaw = solutions.stream()
-        .mapToDouble(s -> attributeAsDouble(s, LcMsOptimizationProblem.ATTR_HARMONIC_SLAW))
+        .mapToDouble(s -> attributeAsDouble(s, SweepMetric.HarmonicSlawIsotopes.ATTR_HARMONIC_SLAW))
         .toArray();
     final double[] isoRaw = solutions.stream()
-        .mapToDouble(s -> attributeAsDouble(s, LcMsOptimizationProblem.ATTR_HARMONIC_ISO))
+        .mapToDouble(s -> attributeAsDouble(s, SweepMetric.HarmonicSlawIsotopes.ATTR_HARMONIC_ISO))
         .toArray();
     final double[] normalized = SweepMetric.HarmonicSlawIsotopes.computeNormalizedScores(slawRaw,
         isoRaw);

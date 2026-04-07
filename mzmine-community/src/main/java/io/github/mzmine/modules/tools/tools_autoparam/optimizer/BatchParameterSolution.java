@@ -43,6 +43,13 @@ public sealed interface BatchParameterSolution {
 
   Supplier<? extends Variable> variable();
 
+  /**
+   * Applies this parameter's variable to the given solution at the correct index.
+   */
+  default void applyToSolution(@NotNull Solution solution) {
+    solution.setVariable(index(), variable().get());
+  }
+
   public final record DoubleBatchParameterSolution(
       @NotNull Class<? extends MZmineProcessingModule> module, UserParameter<Double, ?> param,
       int index, ApplicationScope scope, Supplier<? extends Variable> variable) implements

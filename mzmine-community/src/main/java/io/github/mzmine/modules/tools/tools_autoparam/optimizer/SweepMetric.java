@@ -41,17 +41,21 @@ import java.util.Comparator;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.moeaframework.core.Solution;
+import org.moeaframework.core.objective.Maximize;
+import org.moeaframework.core.objective.Minimize;
+import org.moeaframework.core.objective.Objective;
 
 /**
- * A metric that can be evaluated on a {@link ParameterSweepResult}. Each implementation corresponds
- * to one of the objectives used in {@link LcMsOptimizationProblem}.
+ * A metric that can be evaluated on a {@link FeatureList}. Each implementation corresponds to one
+ * of the objectives used in {@link LcMsOptimizationProblem}.
  * <p>
  * Convenience singleton constants are provided for all parameterless metrics. The
  * {@link BenchmarkTargetCount} record carries its own target list.
  *
  * <pre>{@code
- * double score = SweepMetric.ROWS_BELOW_CV20.evaluate(result);
- * double score = new SweepMetric.BenchmarkTargetCount(targets).evaluate(result);
+ * double score = SweepMetric.ROWS_BELOW_CV20.evaluate(featureList);
+ * double score = new SweepMetric.BenchmarkTargetCount(targets).evaluate(featureList);
  * }</pre>
  */
 public sealed interface SweepMetric {
@@ -79,19 +83,32 @@ public sealed interface SweepMetric {
   boolean higherIsBetter();
 
   /**
-   * Evaluates the metric on the given sweep result.
-   *
-   * @param result the sweep result to evaluate; returns {@link Double#NaN} if
-   *               {@link ParameterSweepResult#featureList()} is {@code null}
+   * Evaluates the metric on the given feature list.
    */
-  double evaluate(@NotNull ParameterSweepResult result);
+  double evaluate(@NotNull FeatureList featureList);
+
+  /**
+   * Returns the MOEA {@link Objective} for this metric, based on {@link #name()} and
+   * {@link #higherIsBetter()}.
+   */
+  default @NotNull Objective objective() {
+    return higherIsBetter() ? new Maximize(name()) : new Minimize(name());
+  }
+
+  /**
+   * Stores additional attributes on the solution after evaluation. The default is a no-op; metrics
+   * that need to persist component scores (e.g. for display normalisation) override this.
+   */
+  default void applyAttributes(@NotNull FeatureList featureList, @NotNull Solution solution) {
+    // decision: no-op by default; only HarmonicSlawIsotopes overrides this
+  }
 
   // --- Helper ---
 
   /**
    * Builds a {@link FeaturesDataTable} from the feature list for abundance-based metrics.
    */
-  private static @Nullable FeaturesDataTable buildDataTable(FeatureList featureList) {
+  private static @Nullable FeaturesDataTable buildDataTable(@NotNull FeatureList featureList) {
     final var config = new AbundanceDataTablePreparationConfig(AbundanceMeasure.Area,
         ImputationFunctions.Zero);
     return StatisticUtils.extractAbundancesPrepareData(featureList.getRows(),
@@ -117,15 +134,11 @@ public sealed interface SweepMetric {
     }
 
     @Override
-    public double evaluate(@NotNull ParameterSweepResult result) {
-      final FeatureList fl = result.featureList();
-      if (fl == null) {
-        return Double.NaN;
-      }
-      final FeaturesDataTable dataTable = buildDataTable(fl);
+    public double evaluate(@NotNull FeatureList featureList) {
+      final FeaturesDataTable dataTable = buildDataTable(featureList);
       long matching = 0;
-      for (int i = 0; i < fl.getNumberOfRows(); i++) {
-        final double[] abundances = dataTable.getFeatureData(fl.getRow(i), false);
+      for (int i = 0; i < featureList.getNumberOfRows(); i++) {
+        final double[] abundances = dataTable.getFeatureData(featureList.getRow(i), false);
         if (MathUtils.calcRelativeStd(abundances) <= 0.2) {
           matching++;
         }
@@ -151,19 +164,14 @@ public sealed interface SweepMetric {
     }
 
     @Override
-    public double evaluate(@NotNull ParameterSweepResult result) {
-      final FeatureList fl = result.featureList();
-      if (fl == null) {
-        return Double.NaN;
-      }
-      final FeaturesDataTable dataTable = buildDataTable(fl);
+    public double evaluate(@NotNull FeatureList featureList) {
+      final FeaturesDataTable dataTable = buildDataTable(featureList);
       long matching = 0;
-      for (int i = 0; i < fl.getNumberOfRows(); i++) {
-        if (fl.getRow(i).getBestIsotopePattern() == null
-          /*|| fl.getRow(i).getNumberOfFeatures() != fl.getNumberOfRawDataFiles()*/) {
+      for (int i = 0; i < featureList.getNumberOfRows(); i++) {
+        if (featureList.getRow(i).getBestIsotopePattern() == null) {
           continue;
         }
-        final double[] abundances = dataTable.getFeatureData(fl.getRow(i), false);
+        final double[] abundances = dataTable.getFeatureData(featureList.getRow(i), false);
         if (MathUtils.calcRelativeStd(abundances) <= 0.2) {
           matching++;
         }
@@ -189,17 +197,16 @@ public sealed interface SweepMetric {
     }
 
     @Override
-    public double evaluate(@NotNull ParameterSweepResult result) {
-      final FeatureList fl = result.featureList();
+    public double evaluate(@NotNull FeatureList featureList) {
       final double noise = MathUtils.calcQuantile(
-          fl.streamFeatures(false).mapToDouble(Feature::getHeight).toArray(), 0.03);
+          featureList.streamFeatures(false).mapToDouble(Feature::getHeight).toArray(), 0.03);
 
       long score = 0;
-      for (RawDataFile file : fl.getRawDataFiles()) {
+      for (RawDataFile file : featureList.getRawDataFiles()) {
         int numPeaks = 0;
         int numWithIsos = 0;
-        for (FeatureListRow row : fl.getRows()) {
-          Feature f = row.getFeature(file);
+        for (FeatureListRow row : featureList.getRows()) {
+          final Feature f = row.getFeature(file);
           if (f == null || f.getHeight() < noise) {
             continue;
           }
@@ -232,16 +239,12 @@ public sealed interface SweepMetric {
     }
 
     @Override
-    public double evaluate(@NotNull ParameterSweepResult result) {
-      final FeatureList fl = result.featureList();
-      if (fl == null) {
-        return Double.NaN;
-      }
-      final long numFeatures = fl.streamFeatures().count();
+    public double evaluate(@NotNull FeatureList featureList) {
+      final long numFeatures = featureList.streamFeatures().count();
       if (numFeatures == 0) {
         return 0;
       }
-      final long numDoublePeaks = fl.streamFeatures(true)
+      final long numDoublePeaks = featureList.streamFeatures(true)
           .map(f -> f.get(RtQualitySummaryType.class))
           .filter(s -> s != null && s.classification() == PeakShapeClassification.DOUBLE_GAUSSIAN)
           .count();
@@ -266,16 +269,12 @@ public sealed interface SweepMetric {
     }
 
     @Override
-    public double evaluate(@NotNull ParameterSweepResult result) {
-      final FeatureList fl = result.featureList();
-      if (fl == null) {
-        return Double.NaN;
-      }
-      final int maxFeatures = fl.getNumberOfRows() * fl.getNumberOfRawDataFiles();
+    public double evaluate(@NotNull FeatureList featureList) {
+      final int maxFeatures = featureList.getNumberOfRows() * featureList.getNumberOfRawDataFiles();
       if (maxFeatures == 0) {
         return 0;
       }
-      final long numFeatures = fl.streamFeatures().count();
+      final long numFeatures = featureList.streamFeatures().count();
       return (double) numFeatures / maxFeatures;
     }
   }
@@ -299,12 +298,8 @@ public sealed interface SweepMetric {
     }
 
     @Override
-    public double evaluate(@NotNull ParameterSweepResult result) {
-      final FeatureList fl = result.featureList();
-      if (fl == null) {
-        return Double.NaN;
-      }
-      final List<FeatureListRow> rows = fl.getRowsCopy();
+    public double evaluate(@NotNull FeatureList featureList) {
+      final List<FeatureListRow> rows = featureList.getRowsCopy();
       rows.sort(Comparator.comparing(FeatureListRow::getAverageMZ));
       return targets.stream().parallel().filter(r -> r.isPresent(rows)).count();
     }
@@ -323,26 +318,22 @@ public sealed interface SweepMetric {
     }
 
     @Override
-    public double evaluate(@NotNull ParameterSweepResult result) {
-      final FeatureList fl = result.featureList();
-      if (fl == null) {
-        return Double.NaN;
-      }
-      final FeaturesDataTable dataTable = buildDataTable(fl);
+    public double evaluate(@NotNull FeatureList featureList) {
+      final FeaturesDataTable dataTable = buildDataTable(featureList);
       // dont use rsd filter here, because we just use all data files here. they may not be of a specific sample type.
       long matchingRows = 0;
-      for (int i = 0; i < fl.getNumberOfRows(); i++) {
-        if (fl.getRow(i).getNumberOfFeatures() != fl.getNumberOfRawDataFiles()) {
+      for (int i = 0; i < featureList.getNumberOfRows(); i++) {
+        if (featureList.getRow(i).getNumberOfFeatures() != featureList.getNumberOfRawDataFiles()) {
           continue;
         }
-        final double[] abundances = dataTable.getFeatureData(fl.getRow(i), false);
+        final double[] abundances = dataTable.getFeatureData(featureList.getRow(i), false);
         final double rsd = MathUtils.calcRelativeStd(abundances);
         if (rsd <= 0.2) {
           matchingRows++;
         }
       }
 
-      return (double) (matchingRows * matchingRows) / fl.getNumberOfRows();
+      return (double) (matchingRows * matchingRows) / featureList.getNumberOfRows();
     }
   }
 
@@ -355,10 +346,21 @@ public sealed interface SweepMetric {
    * parameter sweep, use {@link #computeNormalizedScores} instead, which min-max normalises each
    * component to [0, 1] across all results before combining them.
    * <p>
-   * Returns {@link Double#NaN} when the feature list is {@code null} or when either component score
-   * is NaN. Returns 0 when both components are 0.
+   * Returns 0 when both components are 0.
    */
   record HarmonicSlawIsotopes() implements SweepMetric {
+
+    /**
+     * Attribute key under which the raw slaw component is stored on the solution for display
+     * normalisation.
+     */
+    public static final String ATTR_HARMONIC_SLAW = "_harmonic_slaw";
+
+    /**
+     * Attribute key under which the raw iso component is stored on the solution for display
+     * normalisation.
+     */
+    public static final String ATTR_HARMONIC_ISO = "_harmonic_iso";
 
     @Override
     public @NotNull String name() {
@@ -375,14 +377,21 @@ public sealed interface SweepMetric {
      * sweep, prefer {@link #computeNormalizedScores} instead.
      */
     @Override
-    public double evaluate(@NotNull ParameterSweepResult result) {
-      final double slawScore = CV20_ISO_ROWS_RATIO.evaluate(result);
-      final double isoScore = FEATURES_WITH_ISOTOPES.evaluate(result);
-      if (Double.isNaN(slawScore) || Double.isNaN(isoScore)) {
-        return Double.NaN;
-      }
+    public double evaluate(@NotNull FeatureList featureList) {
+      final double slawScore = CV20_ISO_ROWS_RATIO.evaluate(featureList);
+      final double isoScore = FEATURES_WITH_ISOTOPES.evaluate(featureList);
       final double sum = slawScore + isoScore;
       return sum == 0.0 ? 0.0 : 2.0 * slawScore * isoScore / sum;
+    }
+
+    /**
+     * Stores the raw slaw and iso component scores as solution attributes so the results table can
+     * normalise them across the full population before displaying the harmonic score.
+     */
+    @Override
+    public void applyAttributes(@NotNull FeatureList featureList, @NotNull Solution solution) {
+      solution.setAttribute(ATTR_HARMONIC_SLAW, CV20_ISO_ROWS_RATIO.evaluate(featureList));
+      solution.setAttribute(ATTR_HARMONIC_ISO, FEATURES_WITH_ISOTOPES.evaluate(featureList));
     }
 
     /**

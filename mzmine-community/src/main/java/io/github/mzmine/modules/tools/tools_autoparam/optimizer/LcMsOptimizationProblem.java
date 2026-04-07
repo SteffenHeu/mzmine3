@@ -26,24 +26,17 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import com.opencsv.exceptions.CsvException;
-import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.datamodel.features.types.annotations.shapeclassification.RtQualitySummaryType;
 import io.github.mzmine.datamodel.features.types.numbers.MZType;
 import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
-import io.github.mzmine.datamodel.statistics.FeaturesDataTable;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.modules.batchmode.BatchTask;
-import io.github.mzmine.modules.dataanalysis.utils.StatisticUtils;
-import io.github.mzmine.modules.dataanalysis.utils.imputation.ImputationFunctions;
-import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakShapeClassification;
 import io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.MultiThreadPeakFinderModule;
@@ -67,20 +60,16 @@ import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.ImportType;
-import io.github.mzmine.parameters.parametertypes.statistics.AbundanceDataTablePreparationConfig;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.SimpleRunnableTask;
 import io.github.mzmine.util.CSVParsingUtils;
-import io.github.mzmine.util.MathUtils;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -88,22 +77,17 @@ import javafx.beans.property.SimpleStringProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
-import org.moeaframework.core.objective.Maximize;
-import org.moeaframework.core.objective.Minimize;
 import org.moeaframework.problem.AbstractProblem;
 
 public class LcMsOptimizationProblem extends AbstractProblem {
 
   private final int NUM_PARAM;
-  private final boolean maximizeNumBenchmark;
-  private final boolean maximizeCv20;
-  private final boolean maximizeFeaturesWithIsos;
-  private final boolean minimizeDoublePeaks;
-  private final boolean maximizeFillRatio;
   private final List<WizardParameterPrototype> paramToOptimize;
+  private final @NotNull List<SweepMetric> enabledMetrics;
 
   private final @NotNull File[] files;
   private final WizardParameterSolutionBuilder builder;
+  // assumption: kept as a separate field for getAllTargets() GUI accessor
   @Nullable
   private final List<FeatureRecord> target;
   private final WizardSequence initialSequence;
@@ -113,27 +97,18 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final int numWizardParam;
   private final int numBatchParam;
   private final @Nullable List<FeatureRecord> fileOnlyBenchmarkFeatures;
-  private final boolean maximizeCv20WithIsos;
-  private final boolean maximizeSlawIntegrationScore;
-  private final boolean maximizeHarmonicSlawIsotopes;
 
   public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param) {
 
-    fileOnlyBenchmarkFeatures = LcMsOptimizationProblem.extractFeatureRecordsFromFile(null, param);
-    target = statsToTargetList(stats);
-    maximizeNumBenchmark = param.getValue(OptimizerParameters.maximizeNumberOfBenchmarkFeatures);
-    maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
-    maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
-    minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
-    maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
-    maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
-    maximizeSlawIntegrationScore = param.getValue(OptimizerParameters.integrationScore);
-    maximizeHarmonicSlawIsotopes = param.getValue(OptimizerParameters.harmonicSlawIsotopes);
-    paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
-
+    // decision: super() must be first — use static helper for objective count before enabledMetrics field is assigned
     super(param.getValue(OptimizerParameters.paramToOptimize).size(),
         calculateNumberOfObjectives(param, stats));
+
+    fileOnlyBenchmarkFeatures = LcMsOptimizationProblem.extractFeatureRecordsFromFile(null, param);
+    target = statsToTargetList(stats);
+    paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
+    enabledMetrics = buildEnabledMetrics(param, stats);
 
     this.NUM_PARAM = paramToOptimize.size();
 
@@ -176,7 +151,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   }
 
   public static @NotNull List<FeatureRecord> extractFeatureRecordsFromFile(
-      @Nullable List<@NotNull DataFileStatistics> stats, ParameterSet param) {
+      @Nullable List<@NotNull DataFileStatistics> stats, @NotNull ParameterSet param) {
     final boolean useFeatureTypes = param.getValue(OptimizerParameters.benchmarkFeatureTypes);
     final boolean useBenchmarkFiles = param.getValue(OptimizerParameters.benchmarkFeaturesFile);
 
@@ -237,189 +212,60 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     return featureRecordsFromFile;
   }
 
-  private static void calculateAndWriteRsdResult(int index, Solution solution, FeatureList newest,
-      FeaturesDataTable dataTable) {
-
-    // dont use rsd filter here, because we just use all data files here. they may not be of a specific sample type.
-    long matchingRows = 0;
-    for (int i = 0; i < newest.getNumberOfRows(); i++) {
-      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
-      final double rsd = MathUtils.calcRelativeStd(abundances);
-      if (rsd <= 0.2) {
-        matchingRows++;
-      }
-    }
-
-    solution.setObjectiveValue(index, (double) matchingRows);
-  }
-
-  private static void calculateAndWriteRsdWithIsosResult(int index, Solution solution,
-      FeatureList newest, FeaturesDataTable dataTable) {
-
-    // dont use rsd filter here, because we just use all data files here. they may not be of a specific sample type.
-    long matchingRows = 0;
-    for (int i = 0; i < newest.getNumberOfRows(); i++) {
-      if (newest.getRow(i).getBestIsotopePattern() == null) {
-        continue;
-      }
-      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
-      final double rsd = MathUtils.calcRelativeStd(abundances);
-      if (rsd <= 0.2) {
-        matchingRows++;
-      }
-    }
-
-    solution.setObjectiveValue(index, (double) matchingRows);
-  }
-
-  private static void calculateSlawIntegrationScore(int index, Solution solution,
-      FeatureList newest, FeaturesDataTable dataTable) {
-
-    // dont use rsd filter here, because we just use all data files here. they may not be of a specific sample type.
-    long matchingRows = 0;
-    for (int i = 0; i < newest.getNumberOfRows(); i++) {
-      if (newest.getRow(i).getNumberOfFeatures() != newest.getNumberOfRawDataFiles()) {
-        continue;
-      }
-      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
-      final double rsd = MathUtils.calcRelativeStd(abundances);
-      if (rsd <= 0.2) {
-        matchingRows++;
-      }
-    }
-
-    solution.setObjectiveValue(index,
-        (double) (matchingRows * matchingRows) / newest.getNumberOfRows());
-  }
-
   /**
-   * Harmonic mean of the slaw integration score and the features-with-isotopes score. Both
-   * component scores are computed inline and combined as {@code 2*a*b / (a+b)}.
+   * Builds the list of enabled {@link SweepMetric} instances in objective-index order. The order
+   * must exactly match {@link #calculateNumberOfObjectives} so that objective indices are
+   * consistent between {@link #newSolution()} and {@link #evaluate(Solution)}.
    */
-  private static void calculateHarmonicSlawIsotopes(int index, @NotNull Solution solution,
-      @NotNull FeatureList newest, @NotNull FeaturesDataTable dataTable) {
-    // --- slaw component ---
-    long matchingRows = 0;
-    for (int i = 0; i < newest.getNumberOfRows(); i++) {
-      if (newest.getRow(i).getNumberOfFeatures() != newest.getNumberOfRawDataFiles()) {
-        continue;
-      }
-      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
-      if (MathUtils.calcRelativeStd(abundances) <= 0.2) {
-        matchingRows++;
+  private static @NotNull List<SweepMetric> buildEnabledMetrics(@NotNull ParameterSet param,
+      @Nullable List<@NotNull DataFileStatistics> stats) {
+    final List<SweepMetric> metrics = new ArrayList<>();
+    if (param.getValue(OptimizerParameters.maximizeCv20)) {
+      metrics.add(SweepMetric.ROWS_BELOW_CV20);
+    }
+    if (param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes)) {
+      metrics.add(SweepMetric.FEATURES_WITH_ISOTOPES);
+    }
+    if (param.getValue(OptimizerParameters.minimizeDoublePeaks)) {
+      metrics.add(SweepMetric.DOUBLE_PEAK_RATIO);
+    }
+    if (param.getValue(OptimizerParameters.maximizeRowFillRatio)) {
+      metrics.add(SweepMetric.FILL_RATIO);
+    }
+    if (param.getValue(OptimizerParameters.maximizeNumberOfBenchmarkFeatures) && stats != null) {
+      final List<FeatureRecord> targets = statsToTargetList(stats);
+      if (targets != null) {
+        metrics.add(new SweepMetric.BenchmarkTargetCount(targets));
       }
     }
-    final double slawScore = newest.getNumberOfRows() == 0 ? 0.0
-        : (double) (matchingRows * matchingRows) / newest.getNumberOfRows();
-
-    // --- features-with-isotopes component ---
-    final double noise = MathUtils.calcQuantile(
-        newest.streamFeatures(false).mapToDouble(Feature::getHeight).toArray(), 0.03);
-    long isoScore = 0;
-    for (RawDataFile file : newest.getRawDataFiles()) {
-      int numPeaks = 0;
-      int numWithIsos = 0;
-      for (FeatureListRow row : newest.getRows()) {
-        final Feature f = row.getFeature(file);
-        if (f == null || f.getHeight() < noise) {
-          continue;
-        }
-        numPeaks++;
-        if (f.getIsotopePattern() != null) {
-          numWithIsos++;
-        }
-      }
-      if (numPeaks > 0) {
-        isoScore += (long) numWithIsos * numWithIsos / numPeaks;
-      }
+    if (param.getValue(OptimizerParameters.maximizeCv20WithIsos)) {
+      metrics.add(SweepMetric.ROWS_WITH_ISOS_BELOW_CV20);
     }
-
-    // Store raw components as private attributes so the results table can normalise them
-    // across the full population before displaying the harmonic score.
-    solution.setAttribute(ATTR_HARMONIC_SLAW, slawScore);
-    solution.setAttribute(ATTR_HARMONIC_ISO, (double) isoScore);
-
-    // --- harmonic mean (raw, not normalised — used by the MOEA optimizer) ---
-    final double sum = slawScore + isoScore;
-    solution.setObjectiveValue(index, sum == 0.0 ? 0.0 : 2.0 * slawScore * isoScore / sum);
+    if (param.getValue(OptimizerParameters.integrationScore)) {
+      metrics.add(SweepMetric.CV20_ISO_ROWS_RATIO);
+    }
+    if (param.getValue(OptimizerParameters.harmonicSlawIsotopes)) {
+      metrics.add(SweepMetric.HARMONIC_SLAW_ISOTOPES);
+    }
+    return List.copyOf(metrics);
   }
 
-  /**
-   * Attribute key under which the raw slaw component of the harmonic objective is stored.
-   */
-  public static final String ATTR_HARMONIC_SLAW = "_harmonic_slaw";
-  /**
-   * Attribute key under which the raw iso component of the harmonic objective is stored.
-   */
-  public static final String ATTR_HARMONIC_ISO = "_harmonic_iso";
-
-  /**
-   * isotope score derived from slaw
-   */
-  private static void calculateAndWriteFeaturesWithIsotopes(int index, Solution solution,
-      FeatureList newest) {
-//    final long featuresWithIsotopes = newest.streamFeatures()
-//        .filter(f -> f.getIsotopePattern() != null).count();
-
-    final double noise = MathUtils.calcQuantile(
-        newest.streamFeatures(false).mapToDouble(Feature::getHeight).toArray(), 0.03);
-
-    long score = 0;
-    for (RawDataFile file : newest.getRawDataFiles()) {
-      int numPeaks = 0;
-      int numWithIsos = 0;
-      for (FeatureListRow row : newest.getRows()) {
-        Feature f = row.getFeature(file);
-        if (f == null || f.getHeight() < noise) {
-          continue;
-        }
-        numPeaks++;
-        if (f.getIsotopePattern() != null) {
-          numWithIsos++;
-        }
-      }
-      score += (long) numWithIsos * numWithIsos / numPeaks;
-    }
-    solution.setObjectiveValue(index, score);
-  }
-
-  /**
-   * Only set as additional metrics, not used for evaluation. see
-   * {@link #calculateAndWriteRsdResult(int, Solution, FeatureList, FeaturesDataTable)} instead.
-   */
-  private static void calculateAndSetRsds(Solution solution, FeatureList newest,
-      FeaturesDataTable dataTable) {
-
-    final double[] rsds = new double[newest.getNumberOfRows()];
-    for (int i = 0; i < newest.getNumberOfRows(); i++) {
-      final double[] abundances = dataTable.getFeatureData(newest.getRow(i), false);
-      final double rsd = MathUtils.calcRelativeStd(abundances);
-      rsds[i] = rsd;
-    }
-
-    final DoubleSummaryStatistics stats = Arrays.stream(rsds).summaryStatistics();
-    final double medianRsd = MathUtils.calcMedian(rsds);
-    solution.setAttribute("Median RSD", medianRsd);
-    solution.setAttribute("Average RSD", stats.getAverage());
-    solution.setAttribute("Max RSD", stats.getMax());
-    solution.setAttribute("Min RSD", stats.getMin());
-  }
-
-  static int calculateNumberOfObjectives(ParameterSet param, List<DataFileStatistics> stats) {
-    var maximizeNumBenchmark = param.getValue(
+  static int calculateNumberOfObjectives(@NotNull ParameterSet param,
+      @Nullable List<DataFileStatistics> stats) {
+    final boolean maximizeNumBenchmark = param.getValue(
         OptimizerParameters.maximizeNumberOfBenchmarkFeatures);
-    var maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
-    var maximizeFeaturesWithIsos = param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes);
-    var minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
-    var maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
-    var maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
-    var slawIntegrationScore = param.getValue(OptimizerParameters.integrationScore);
-    var harmonicSlawIsotopes = param.getValue(OptimizerParameters.harmonicSlawIsotopes);
-    final int numObjectives = (int) Stream.of(maximizeCv20, maximizeFeaturesWithIsos,
-            minimizeDoublePeaks, maximizeFillRatio, maximizeCv20WithIsos, slawIntegrationScore,
-            harmonicSlawIsotopes, maximizeNumBenchmark && stats != null)
+    final boolean maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
+    final boolean maximizeFeaturesWithIsos = param.getValue(
+        OptimizerParameters.maximizeFeaturesWithIsotopes);
+    final boolean minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
+    final boolean maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
+    final boolean maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
+    final boolean slawIntegrationScore = param.getValue(OptimizerParameters.integrationScore);
+    final boolean harmonicSlawIsotopes = param.getValue(OptimizerParameters.harmonicSlawIsotopes);
+    return (int) Stream.of(maximizeCv20, maximizeFeaturesWithIsos, minimizeDoublePeaks,
+            maximizeFillRatio, maximizeCv20WithIsos, slawIntegrationScore, harmonicSlawIsotopes,
+            maximizeNumBenchmark && stats != null)
         .filter(Boolean::booleanValue).count();
-    return numObjectives;
   }
 
   private List<WizardParameterSolution> createWizardParameters() {
@@ -451,7 +297,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   }
 
   @Override
-  public void evaluate(Solution solution) {
+  public void evaluate(@NotNull Solution solution) {
 
     final WizardSequence wizardSequence = createWizardSequenceFromSolution(solution);
 
@@ -468,7 +314,6 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     optimizedQueue.removeIf(step -> step.getModule() instanceof SpectralLibrarySearchModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof MainSpectralNetworkingModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof IsotopeGrouperModule);
-//    optimizedQueue.removeIf(step -> step.getModule() instanceof DuplicateFilterModule);
 
     // use the current project, so we dont import files on every iteration
     final MZmineProject project = ProjectService.getProject();
@@ -485,54 +330,17 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
     final FeatureList newest = project.getCurrentFeatureLists().stream()
         .max(Comparator.comparing(f -> f.getName().length())).get();
-    final int maxFeatures = newest.getNumberOfRows() * newest.getNumberOfRawDataFiles();
-    final long numFeatures = newest.streamFeatures().count();
-
-    final var config = new AbundanceDataTablePreparationConfig(AbundanceMeasure.Area,
-        ImputationFunctions.Zero);
-    final FeaturesDataTable dataTable = StatisticUtils.extractAbundancesPrepareData(
-        newest.getRows(), newest.getRawDataFiles(), config);
 
     int objectiveIndex = 0;
-    if (maximizeCv20) {
-      calculateAndWriteRsdResult(objectiveIndex++, solution, newest, dataTable);
-    }
-    if (maximizeFeaturesWithIsos) {
-      calculateAndWriteFeaturesWithIsotopes(objectiveIndex++, solution, newest);
-    }
-    if (minimizeDoublePeaks) {
-      final long numDoublePeaks = newest.streamFeatures(true)
-          .map(f -> f.get(RtQualitySummaryType.class)).filter(summary -> summary != null
-              && summary.classification() == PeakShapeClassification.DOUBLE_GAUSSIAN).count();
-      solution.setObjectiveValue(objectiveIndex++, (double) numDoublePeaks / numFeatures);
+    for (SweepMetric metric : enabledMetrics) {
+      solution.setObjectiveValue(objectiveIndex++, metric.evaluate(newest));
+      metric.applyAttributes(newest, solution);
     }
 
-    if (maximizeFillRatio) {
-      solution.setObjectiveValue(objectiveIndex++, (double) numFeatures / maxFeatures);
-    }
-
-    final List<FeatureListRow> rows = newest.getRowsCopy();
-    rows.sort(Comparator.comparing(FeatureListRow::getAverageMZ));
-    if (maximizeNumBenchmark && target != null) {
-      final long foundTargets = target.stream().parallel().filter(r -> r.isPresent(rows)).count();
-      solution.setObjectiveValue(objectiveIndex++, foundTargets);
-    }
-
-    if (maximizeCv20WithIsos) {
-      calculateAndWriteRsdWithIsosResult(objectiveIndex++, solution, newest, dataTable);
-    }
-
-    if (maximizeSlawIntegrationScore) {
-      calculateSlawIntegrationScore(objectiveIndex++, solution, newest, dataTable);
-    }
-
-    if (maximizeHarmonicSlawIsotopes) {
-      calculateHarmonicSlawIsotopes(objectiveIndex++, solution, newest, dataTable);
-    }
-
-//    calculateAndSetRsds(solution, newest, dataTable);
-    // for tracking only as attribute
-    if (fileOnlyBenchmarkFeatures != null) {
+    // for tracking only as attribute (not an objective)
+    if (fileOnlyBenchmarkFeatures != null && !fileOnlyBenchmarkFeatures.isEmpty()) {
+      final List<FeatureListRow> rows = newest.getRowsCopy();
+      rows.sort(Comparator.comparing(FeatureListRow::getAverageMZ));
       solution.setAttribute("Target features",
           fileOnlyBenchmarkFeatures.stream().parallel().mapToLong(r -> r.getNumMatches(rows))
               .sum());
@@ -542,7 +350,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     project.removeFeatureLists(project.getCurrentFeatureLists());
   }
 
-  public void applyBatchOverridesToSequence(Solution solution, WizardSequence sequence) {
+  public void applyBatchOverridesToSequence(@NotNull Solution solution,
+      @NotNull WizardSequence sequence) {
     final List<ParameterOverride> overrides = createBatchParameters().stream()
         .map(bp -> bp.toParameterOverride(solution)).toList();
 
@@ -554,7 +363,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     customization.setParameter(CustomizationWizardParameters.overrides, overrides);
   }
 
-  public @NotNull WizardSequence createWizardSequenceFromSolution(Solution solution) {
+  public @NotNull WizardSequence createWizardSequenceFromSolution(@NotNull Solution solution) {
 
     final WizardSequence wizardSequence = new WizardSequence();
 
@@ -585,8 +394,6 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     wizardSequence.add(workflowParam);
     wizardSequence.add(customizationParameters);
 
-//    dataParam.setParameter(DataImportWizardParameters.fileNames, files);
-
     for (WizardParameterSolution parameter : createWizardParameters()) {
       parameter.setToParameters()
           .accept(wizardSequence.get(parameter.part()).get(), solution, parameter.index());
@@ -615,38 +422,18 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final Solution solution = new Solution(getNumberOfVariables(), getNumberOfObjectives());
 
     for (WizardParameterSolution parameter : createWizardParameters()) {
-      solution.setVariable(parameter.index(), parameter.variable().get());
+      parameter.applyToSolution(solution);
     }
 
     for (BatchParameterSolution bp : createBatchParameters()) {
-      solution.setVariable(bp.index(), bp.variable().get());
+      bp.applyToSolution(solution);
     }
 
     int objectiveIndex = 0;
-    if (maximizeCv20) {
-      solution.setObjective(objectiveIndex++, new Maximize("Rows below RSD threshold"));
+    for (SweepMetric metric : enabledMetrics) {
+      solution.setObjective(objectiveIndex++, metric.objective());
     }
-    if (maximizeFeaturesWithIsos) {
-      solution.setObjective(objectiveIndex++, new Maximize("Features with isotopes"));
-    }
-    if (minimizeDoublePeaks) {
-      solution.setObjective(objectiveIndex++, new Minimize("Double peak ratio"));
-    }
-    if (maximizeFillRatio) {
-      solution.setObjective(objectiveIndex++, new Maximize("Fill ratio"));
-    }
-    if (target != null && maximizeNumBenchmark) {
-      solution.setObjective(objectiveIndex++, new Maximize("Found targets"));
-    }
-    if (maximizeCv20WithIsos) {
-      solution.setObjective(objectiveIndex++, new Maximize("Rows < CV 20 with isos"));
-    }
-    if (maximizeSlawIntegrationScore) {
-      solution.setObjective(objectiveIndex++, new Maximize("Slaw integration score"));
-    }
-    if (maximizeHarmonicSlawIsotopes) {
-      solution.setObjective(objectiveIndex++, new Maximize("Harmonic slaw-isotopes"));
-    }
+
     return solution;
   }
 

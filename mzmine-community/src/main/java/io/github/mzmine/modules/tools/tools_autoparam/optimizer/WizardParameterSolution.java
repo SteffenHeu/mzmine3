@@ -30,6 +30,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParame
 import io.github.mzmine.parameters.UserParameter;
 import java.util.function.Supplier;
 import org.apache.commons.lang3.function.TriConsumer;
+import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
@@ -53,6 +54,13 @@ public sealed interface WizardParameterSolution {
 
   default String name() {
     return variable().get().getName();
+  }
+
+  /**
+   * Applies this parameter's variable to the given solution at the correct index.
+   */
+  default void applyToSolution(@NotNull Solution solution) {
+    solution.setVariable(index(), variable().get());
   }
 
   record IntegerWizardParameterSolution(int index, WizardPart part,
