@@ -41,6 +41,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizationUtils;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
@@ -286,8 +287,8 @@ public class IntegrationTests {
     sequence.add(AnnotationWizardParameterFactory.Annotation.create());
     sequence.add(new WorkflowDDA().create());
 
-    final ParameterSet param = OptimizerParameters.create(false, true, false, false, false, true,
-        100);
+    final ParameterSet param = OptimizerParameters.create(
+        List.of(SweepMetric.IPO_ISOTOPE_SCORE, SweepMetric.SLAW_INTEGRATION_SCORE), 100);
 
     final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(sequence, stats, param);
 

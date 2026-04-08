@@ -72,7 +72,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 import javafx.beans.property.SimpleStringProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -213,59 +212,36 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   }
 
   /**
-   * Builds the list of enabled {@link SweepMetric} instances in objective-index order. The order
-   * must exactly match {@link #calculateNumberOfObjectives} so that objective indices are
-   * consistent between {@link #newSolution()} and {@link #evaluate(Solution)}.
+   * Builds the enabled {@link SweepMetric} list from the user's checklist selection.
+   * {@link SweepMetric.BenchmarkTargetCount} placeholder instances are replaced with real instances
+   * carrying the actual target features derived from file statistics.
    */
   private static @NotNull List<SweepMetric> buildEnabledMetrics(@NotNull ParameterSet param,
       @Nullable List<@NotNull DataFileStatistics> stats) {
+    final List<SweepMetric> selected = param.getValue(OptimizerParameters.metricsToOptimize);
     final List<SweepMetric> metrics = new ArrayList<>();
-    if (param.getValue(OptimizerParameters.maximizeCv20)) {
-      metrics.add(SweepMetric.ROWS_BELOW_CV20);
-    }
-    if (param.getValue(OptimizerParameters.maximizeFeaturesWithIsotopes)) {
-      metrics.add(SweepMetric.FEATURES_WITH_ISOTOPES);
-    }
-    if (param.getValue(OptimizerParameters.minimizeDoublePeaks)) {
-      metrics.add(SweepMetric.DOUBLE_PEAK_RATIO);
-    }
-    if (param.getValue(OptimizerParameters.maximizeRowFillRatio)) {
-      metrics.add(SweepMetric.FILL_RATIO);
-    }
-    if (param.getValue(OptimizerParameters.maximizeNumberOfBenchmarkFeatures) && stats != null) {
-      final List<FeatureRecord> targets = statsToTargetList(stats);
-      if (targets != null) {
-        metrics.add(new SweepMetric.BenchmarkTargetCount(targets));
+    for (final SweepMetric metric : selected) {
+      if (metric instanceof SweepMetric.BenchmarkTargetCount) {
+        // decision: only include benchmark metric when file statistics are available to derive targets
+        if (stats != null) {
+          final List<FeatureRecord> targets = statsToTargetList(stats);
+          if (targets != null) {
+            metrics.add(new SweepMetric.BenchmarkTargetCount(targets));
+          }
+        }
+      } else {
+        metrics.add(metric);
       }
-    }
-    if (param.getValue(OptimizerParameters.maximizeCv20WithIsos)) {
-      metrics.add(SweepMetric.ROWS_WITH_ISOS_BELOW_CV20);
-    }
-    if (param.getValue(OptimizerParameters.integrationScore)) {
-      metrics.add(SweepMetric.CV20_ISO_ROWS_RATIO);
-    }
-    if (param.getValue(OptimizerParameters.harmonicSlawIsotopes)) {
-      metrics.add(SweepMetric.HARMONIC_SLAW_ISOTOPES);
     }
     return List.copyOf(metrics);
   }
 
   static int calculateNumberOfObjectives(@NotNull ParameterSet param,
       @Nullable List<DataFileStatistics> stats) {
-    final boolean maximizeNumBenchmark = param.getValue(
-        OptimizerParameters.maximizeNumberOfBenchmarkFeatures);
-    final boolean maximizeCv20 = param.getValue(OptimizerParameters.maximizeCv20);
-    final boolean maximizeFeaturesWithIsos = param.getValue(
-        OptimizerParameters.maximizeFeaturesWithIsotopes);
-    final boolean minimizeDoublePeaks = param.getValue(OptimizerParameters.minimizeDoublePeaks);
-    final boolean maximizeFillRatio = param.getValue(OptimizerParameters.maximizeRowFillRatio);
-    final boolean maximizeCv20WithIsos = param.getValue(OptimizerParameters.maximizeCv20WithIsos);
-    final boolean slawIntegrationScore = param.getValue(OptimizerParameters.integrationScore);
-    final boolean harmonicSlawIsotopes = param.getValue(OptimizerParameters.harmonicSlawIsotopes);
-    return (int) Stream.of(maximizeCv20, maximizeFeaturesWithIsos, minimizeDoublePeaks,
-            maximizeFillRatio, maximizeCv20WithIsos, slawIntegrationScore, harmonicSlawIsotopes,
-            maximizeNumBenchmark && stats != null)
-        .filter(Boolean::booleanValue).count();
+    final List<SweepMetric> selected = param.getValue(OptimizerParameters.metricsToOptimize);
+    // BenchmarkTargetCount only counts as an objective when file statistics are available
+    return (int) selected.stream()
+        .filter(m -> !(m instanceof SweepMetric.BenchmarkTargetCount) || stats != null).count();
   }
 
   private List<WizardParameterSolution> createWizardParameters() {

@@ -25,15 +25,21 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import static io.github.mzmine.javafx.components.factories.FxTexts.boldText;
+import static io.github.mzmine.javafx.components.factories.FxTexts.hyperlinkText;
+import static io.github.mzmine.javafx.components.factories.FxTexts.linebreak;
+import static io.github.mzmine.javafx.components.factories.FxTexts.text;
+
 import io.github.mzmine.datamodel.features.types.numbers.MZType;
 import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
+import io.github.mzmine.javafx.components.factories.FxTextFlows;
+import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.BatchWizardParameterSolution;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.WizardBuilderParameterSolution;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
-import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.ImportTypeParameter;
@@ -45,49 +51,32 @@ import io.github.mzmine.util.files.ExtensionFilters;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import javafx.scene.layout.Region;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class OptimizerParameters extends SimpleParameterSet {
 
-  public static final BooleanParameter maximizeCv20 = new BooleanParameter(
-      "Maximize rows with RSD < 20",
-      "Attempts to maximize the number of rows that have an area RSD of < 20%", false);
+  /**
+   * All available metrics as ordered singleton instances. {@link SweepMetric.BenchmarkTargetCount}
+   * uses an empty placeholder list — at runtime the real target list is injected by
+   * {@link LcMsOptimizationProblem#buildEnabledMetrics}.
+   */
+  public static final List<SweepMetric> ALL_METRICS = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
+      SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.HARMONIC_SLAW_ISOTOPES,
+      SweepMetric.DOUBLE_PEAK_RATIO, SweepMetric.FILL_RATIO,
+      new SweepMetric.BenchmarkTargetCount(List.of()));
 
-  public static final BooleanParameter maximizeFeaturesWithIsotopes = new BooleanParameter(
-      "Maximize features with isotopes",
-      "Attempts to maximize the number of features that have an isotope pattern assigned to them.",
-      true);
+  /**
+   * Default metrics enabled at startup: features with isotopes, integration score, and the combined
+   * harmonic score.
+   */
+  private static final List<SweepMetric> DEFAULT_METRICS = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
+      SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.HARMONIC_SLAW_ISOTOPES);
 
-  public static final BooleanParameter minimizeDoublePeaks = new BooleanParameter(
-      "Minimize number of double peaks",
-      "Minimizes the number of features that are classified as being a double peak.", false);
-
-  public static final BooleanParameter maximizeNumberOfBenchmarkFeatures = new BooleanParameter(
-      "Maximize number of benchmark features", """
-      Maximizes the number of benchmark features. Benchmark features are classified as two-fold:
-      1. All data files are searched for their base peak m/z (=most intense signal in a scan).
-         A chromatogram is build for each base peak and cut at 5% relative height. The RT range is
-         then increased by 3*the FWHM of the peak. Additionally, the 13C isotopes are extracted in
-         the same RT range and used, if they have a correlation factor > 90%.
-      2. Additional benchmark features may be user defined by the file given below.""", false);
-
-  public static final BooleanParameter maximizeRowFillRatio = new BooleanParameter(
-      "Maximize fill ratio", """
-      Calculates how "full" the feature table is.
-      Multiplies the number of rows by the number of samples to calculate the theoretical maximum.
-      Then checks how many features were actually detected and divides it by the maximum.
-      """, false);
-
-  public static final BooleanParameter maximizeCv20WithIsos = new BooleanParameter(
-      "Maximize rows with isotopes and RSD < 20",
-      "Attempts to maximize the number of rows that have an area RSD of < 20%", false);
-
-  public static final BooleanParameter integrationScore = new BooleanParameter("Integration score",
-      "Attempts to maximize the number of rows that have an area RSD of < 20%", true);
-
-  public static final BooleanParameter harmonicSlawIsotopes = new BooleanParameter(
-      "Combined integration & isotope score",
-      "Harmonic mean of the slaw integration score and the features-with-isotopes score. "
-          + "Rewards solutions that perform well on both components simultaneously.", true);
+  public static final SweepMetricCheckListParameter metricsToOptimize = new SweepMetricCheckListParameter(
+      "Metrics to optimize", "Select which quality metrics should drive the optimization.",
+      ALL_METRICS, new ArrayList<>(DEFAULT_METRICS));
 
   public static final OptionalParameter<ImportTypeParameter> benchmarkFeatureTypes = new OptionalParameter<>(
       new ImportTypeParameter("Benchmark feature csv column names", "",
@@ -99,7 +88,7 @@ public class OptimizerParameters extends SimpleParameterSet {
           FileSelectionType.OPEN));
 
   public static final IntegerParameter iterations = new IntegerParameter("Iterations",
-      "Number of iterations during optimization.", 100, 100, 10_000);
+      "Number of iterations during optimization.", 100, 50, 10_000);
 
   public static final IntegerParameter samplesPerParam = new IntegerParameter(
       "Samples per parameter",
@@ -120,10 +109,8 @@ public class OptimizerParameters extends SimpleParameterSet {
       new ArrayList<>(ALL_SOLUTIONS));
 
   public OptimizerParameters() {
-    super(maximizeCv20, maximizeFeaturesWithIsotopes, maximizeCv20WithIsos, minimizeDoublePeaks,
-        maximizeRowFillRatio, integrationScore, harmonicSlawIsotopes,
-        maximizeNumberOfBenchmarkFeatures, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers,
-        iterations, samplesPerParam, paramToOptimize);
+    super(metricsToOptimize, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
+        samplesPerParam, paramToOptimize);
   }
 
   private static List<WizardParameterPrototype> createAllSolutions() {
@@ -146,29 +133,24 @@ public class OptimizerParameters extends SimpleParameterSet {
         new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildChromThreshold));
   }
 
-  public static ParameterSet create(boolean maxCv20, boolean maxFeaturesWithIsotopes,
-      boolean minDoublePeaks, boolean maxNumberOfBenchmarkFeatures, boolean maxFillRatio,
-      boolean integrationScore, int numIterations) {
+  /**
+   * Convenience factory for programmatic use (e.g. tests). Passes the given metrics as the
+   * selection and leaves benchmark file options disabled.
+   */
+  public static ParameterSet create(@NotNull List<SweepMetric> metrics, int numIterations) {
     final ParameterSet param = new OptimizerParameters().cloneParameterSet();
-
-    param.setParameter(maximizeCv20, maxCv20);
-    param.setParameter(maximizeFeaturesWithIsotopes, maxFeaturesWithIsotopes);
-    param.setParameter(minimizeDoublePeaks, minDoublePeaks);
-    param.setParameter(maximizeNumberOfBenchmarkFeatures, maxNumberOfBenchmarkFeatures);
-    param.setParameter(maximizeRowFillRatio, maxFillRatio);
-    param.setParameter(OptimizerParameters.integrationScore, integrationScore);
+    param.setParameter(metricsToOptimize, new ArrayList<>(metrics));
     param.setParameter(benchmarkFeatureTypes, false);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
     param.setParameter(samplesPerParam, 7);
     param.setParameter(paramToOptimize, new ArrayList<>(ALL_SOLUTIONS));
-
     return param;
   }
 
   @Override
-  public boolean checkParameterValues(Collection<String> errorMessages,
-      boolean skipRawDataAndFeatureListParameters) {
+  public boolean checkParameterValues(final Collection<String> errorMessages,
+      final boolean skipRawDataAndFeatureListParameters) {
     final boolean superCheck = super.checkParameterValues(errorMessages,
         skipRawDataAndFeatureListParameters);
 
@@ -182,5 +164,16 @@ public class OptimizerParameters extends SimpleParameterSet {
     }
 
     return superCheck && errorMessages.isEmpty();
+  }
+
+  @Override
+  public @Nullable Region getMessage() {
+    return FxTextFlows.newTextFlowInAccordion("Citations", text(
+            "When optimizing on these respective metrics, please respect the following citations:"),
+        linebreak(), FxTexts.boldText(SweepMetric.IPO_ISOTOPE_SCORE.name()), text(": "),
+        hyperlinkText("IPO", "https://doi.org/10.1186/s12859-015-0562-8"), linebreak(),
+        boldText(SweepMetric.SLAW_INTEGRATION_SCORE.name()), text(", "),
+        boldText(SweepMetric.HARMONIC_SLAW_ISOTOPES.name()), text(": "),
+        hyperlinkText("SLAW", "https://pubs.acs.org/doi/10.1021/acs.analchem.1c02687"));
   }
 }

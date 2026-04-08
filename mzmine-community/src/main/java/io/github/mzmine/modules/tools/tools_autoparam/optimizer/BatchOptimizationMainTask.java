@@ -47,7 +47,17 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.moeaframework.algorithm.AGEMOEAII;
 import org.moeaframework.algorithm.AbstractAlgorithm;
+import org.moeaframework.algorithm.EpsilonMOEA;
+import org.moeaframework.algorithm.GDE3;
+import org.moeaframework.algorithm.IBEA;
+import org.moeaframework.algorithm.MOEAD;
+import org.moeaframework.algorithm.NSGAII;
+import org.moeaframework.algorithm.RVEA;
+import org.moeaframework.algorithm.SMSEMOA;
+import org.moeaframework.algorithm.SPEA2;
+import org.moeaframework.algorithm.pso.OMOPSO;
 import org.moeaframework.core.PRNG;
 import org.moeaframework.core.population.NondominatedPopulation;
 
@@ -106,14 +116,31 @@ public class BatchOptimizationMainTask extends AbstractTask {
         .parallel().map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
+    // set a specific seed to make the results deterministic.
     PRNG.setSeed(42);
 
     final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(tab.getSequence(), stats,
         params);
 
     optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
-
     final int iterations = params.getValue(OptimizerParameters.iterations);
+
+    switch (optimizer) {
+      case MOEAD m -> m.setInitialPopulationSize(iterations);
+      case NSGAII n -> n.setInitialPopulationSize(iterations);
+      case AGEMOEAII a -> a.setInitialPopulationSize(iterations);
+      case GDE3 g -> g.setInitialPopulationSize(iterations);
+      case OMOPSO o -> o.setMaxIterations(iterations);
+      case RVEA r -> r.setInitialPopulationSize(iterations);
+      case SMSEMOA s -> s.setInitialPopulationSize(iterations);
+      case SPEA2 s -> s.setInitialPopulationSize(iterations);
+      case EpsilonMOEA e -> e.setInitialPopulationSize(iterations);
+      case IBEA e -> e.setInitialPopulationSize(iterations);
+      default -> {
+      }
+    }
+    ;
+
     optimizer.run(iterations);
 
     final NondominatedPopulation result = optimizer.getResult();

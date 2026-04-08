@@ -61,13 +61,11 @@ import org.moeaframework.core.objective.Objective;
 public sealed interface SweepMetric {
 
   // --- Singleton constants for parameterless metrics ---
-
-  RowsBelowCv20 ROWS_BELOW_CV20 = new RowsBelowCv20();
-  RowsWithIsosBelowCv20 ROWS_WITH_ISOS_BELOW_CV20 = new RowsWithIsosBelowCv20();
-  FeaturesWithIsotopes FEATURES_WITH_ISOTOPES = new FeaturesWithIsotopes();
   DoublePeakRatio DOUBLE_PEAK_RATIO = new DoublePeakRatio();
   FillRatio FILL_RATIO = new FillRatio();
-  SlawIntegrationScore CV20_ISO_ROWS_RATIO = new SlawIntegrationScore();
+
+  IpoIsotopeScore IPO_ISOTOPE_SCORE = new IpoIsotopeScore();
+  SlawIntegrationScore SLAW_INTEGRATION_SCORE = new SlawIntegrationScore();
   HarmonicSlawIsotopes HARMONIC_SLAW_ISOTOPES = new HarmonicSlawIsotopes();
 
   // --- Interface contract ---
@@ -184,7 +182,7 @@ public sealed interface SweepMetric {
    * Maximise: number of features that carry an isotope pattern. Mirrors
    * {@link LcMsOptimizationProblem}'s {@code maximizeFeaturesWithIsos} objective.
    */
-  record FeaturesWithIsotopes() implements SweepMetric {
+  record IpoIsotopeScore() implements SweepMetric {
 
     @Override
     public @NotNull String name() {
@@ -309,7 +307,7 @@ public sealed interface SweepMetric {
 
     @Override
     public @NotNull String name() {
-      return "Slaw integration score";
+      return "Integration score";
     }
 
     @Override
@@ -338,7 +336,7 @@ public sealed interface SweepMetric {
   }
 
   /**
-   * Maximise: harmonic mean of the {@link SlawIntegrationScore} and {@link FeaturesWithIsotopes}
+   * Maximise: harmonic mean of the {@link SlawIntegrationScore} and {@link IpoIsotopeScore}
    * scores. The harmonic mean rewards solutions that perform well on <em>both</em> components
    * simultaneously and penalises extreme imbalances between the two.
    * <p>
@@ -378,8 +376,8 @@ public sealed interface SweepMetric {
      */
     @Override
     public double evaluate(@NotNull FeatureList featureList) {
-      final double slawScore = CV20_ISO_ROWS_RATIO.evaluate(featureList);
-      final double isoScore = FEATURES_WITH_ISOTOPES.evaluate(featureList);
+      final double slawScore = SLAW_INTEGRATION_SCORE.evaluate(featureList);
+      final double isoScore = IPO_ISOTOPE_SCORE.evaluate(featureList);
       final double sum = slawScore + isoScore;
       return sum == 0.0 ? 0.0 : 2.0 * slawScore * isoScore / sum;
     }
@@ -390,8 +388,8 @@ public sealed interface SweepMetric {
      */
     @Override
     public void applyAttributes(@NotNull FeatureList featureList, @NotNull Solution solution) {
-      solution.setAttribute(ATTR_HARMONIC_SLAW, CV20_ISO_ROWS_RATIO.evaluate(featureList));
-      solution.setAttribute(ATTR_HARMONIC_ISO, FEATURES_WITH_ISOTOPES.evaluate(featureList));
+      solution.setAttribute(ATTR_HARMONIC_SLAW, SLAW_INTEGRATION_SCORE.evaluate(featureList));
+      solution.setAttribute(ATTR_HARMONIC_ISO, IPO_ISOTOPE_SCORE.evaluate(featureList));
     }
 
     /**
@@ -405,7 +403,7 @@ public sealed interface SweepMetric {
      * is 0 (all values are 0) the normalised value is treated as 1 for every result.
      *
      * @param slawScores pre-computed {@link SlawIntegrationScore} values, one per result
-     * @param isoScores  pre-computed {@link FeaturesWithIsotopes} values, one per result
+     * @param isoScores  pre-computed {@link IpoIsotopeScore} values, one per result
      * @return array of length {@code slawScores.length} with the normalised harmonic scores
      */
     public static double @NotNull [] computeNormalizedScores(double @NotNull [] slawScores,
