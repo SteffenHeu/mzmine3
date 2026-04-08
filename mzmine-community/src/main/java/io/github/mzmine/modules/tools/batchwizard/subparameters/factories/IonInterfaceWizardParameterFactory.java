@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -43,7 +43,7 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
   /**
    * Soft ionization in LC-MS
    */
-  HPLC, UHPLC, HILIC,
+  HPLC, UHPLC, HILIC, LC_WAVELET,
   /**
    * Chemical ionization uses LC workflow
    */
@@ -74,6 +74,7 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
       case GC_CI -> "GC-CI";
       case DIRECT_INFUSION -> "Direct";
       case FLOW_INJECT -> "Flow inject";
+      case LC_WAVELET -> "Wavelet";
     };
   }
 
@@ -97,6 +98,10 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
       case HILIC -> new IonInterfaceHplcWizardParameters(this, true, 15, 5, Range.closed(0.3, 30d),
           new RTTolerance(0.15f, Unit.MINUTES), new RTTolerance(3, Unit.SECONDS),
           new RTTolerance(6, Unit.SECONDS));
+      case LC_WAVELET ->
+          new IonInterfaceHplcWizardParameters(this, true, 15, 4, Range.closed(0.5, 60d),
+              new RTTolerance(0.1f, Unit.MINUTES), new RTTolerance(0.08f, Unit.MINUTES),
+              new RTTolerance(0.4f, Unit.MINUTES));
       case GC_CI -> new IonInterfaceHplcWizardParameters(this, true, 30, 6, Range.closed(0.3, 30d),
           new RTTolerance(0.05f, Unit.MINUTES), new RTTolerance(0.04f, Unit.MINUTES),
           new RTTolerance(0.1f, Unit.MINUTES));
@@ -116,7 +121,7 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
   public boolean isImaging() {
     return switch (this) {
       case MALDI, LDI, DESI, SIMS -> true;
-      case HPLC, UHPLC, HILIC, GC_CI, GC_EI, DIRECT_INFUSION, FLOW_INJECT -> false;
+      case HPLC, UHPLC, HILIC, GC_CI, GC_EI, DIRECT_INFUSION, FLOW_INJECT, LC_WAVELET -> false;
     };
   }
 
@@ -126,7 +131,7 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
   public IonIterfaceGroup group() {
     return switch (this) {
       case MALDI, LDI, DESI, SIMS -> IonIterfaceGroup.SPATIAL_IMAGING;
-      case HPLC, UHPLC, HILIC, GC_CI -> IonIterfaceGroup.CHROMATOGRAPHY_SOFT;
+      case HPLC, UHPLC, HILIC, GC_CI, LC_WAVELET -> IonIterfaceGroup.CHROMATOGRAPHY_SOFT;
       case DIRECT_INFUSION, FLOW_INJECT -> IonIterfaceGroup.DIRECT_AND_FLOW;
       case GC_EI -> IonIterfaceGroup.CHROMATOGRAPHY_HARD;
     };
@@ -139,8 +144,8 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
    */
   public IonMobilityWizardParameterFactory[] getMatchingImsPresets() {
     return switch (this) {
-      case DIRECT_INFUSION, FLOW_INJECT, HPLC, UHPLC, HILIC, GC_CI, MALDI, LDI, DESI, SIMS ->
-          IonMobilityWizardParameterFactory.values();
+      case DIRECT_INFUSION, FLOW_INJECT, HPLC, UHPLC, HILIC, GC_CI, MALDI, LDI, DESI, SIMS,
+           LC_WAVELET -> IonMobilityWizardParameterFactory.values();
       case GC_EI ->
           new IonMobilityWizardParameterFactory[]{IonMobilityWizardParameterFactory.NO_IMS};
     };

@@ -107,9 +107,13 @@ public class OptimizerParameters extends SimpleParameterSet {
    */
   private static final List<WizardParameterPrototype> ALL_SOLUTIONS = createAllSolutions();
 
+  // decision: wavelet solutions are at the end of ALL_SOLUTIONS and disabled by default
+  // because they require the optional mzio WaveletResolverModule
+  private static final int WAVELET_SOLUTION_COUNT = 5;
+
   public static final WizardParameterSolutionCheckListParameter paramToOptimize = new WizardParameterSolutionCheckListParameter(
       "Parameters to optimize", "Select which parameters should be optimized.", ALL_SOLUTIONS,
-      new ArrayList<>(ALL_SOLUTIONS));
+      new ArrayList<>(ALL_SOLUTIONS.subList(0, ALL_SOLUTIONS.size() - WAVELET_SOLUTION_COUNT)));
 
   public OptimizerParameters() {
     super(metricsToOptimize, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
@@ -133,7 +137,17 @@ public class OptimizerParameters extends SimpleParameterSet {
         new WizardBuilderParameterSolution(dummy.buildSampleToSampleRtTolSolution(-1).variable(),
             WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution),
         new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildTopToEdgeRatio),
-        new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildChromThreshold));
+        new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildChromThreshold),
+        // Wavelet resolver parameters (require optional mzio WaveletResolverModule - disabled by default)
+        new BatchWizardParameterSolution(WaveletBatchParameterSolutionBuilder::buildWaveletSnr),
+        new BatchWizardParameterSolution(
+            WaveletBatchParameterSolutionBuilder::buildWaveletNoiseCalculation),
+        new BatchWizardParameterSolution(
+            WaveletBatchParameterSolutionBuilder::buildWaveletBaselineMethod),
+        new BatchWizardParameterSolution(
+            WaveletBatchParameterSolutionBuilder::buildWaveletDipFilter),
+        new BatchWizardParameterSolution(
+            WaveletBatchParameterSolutionBuilder::buildWaveletEdgeDetector));
   }
 
   /**
@@ -147,7 +161,8 @@ public class OptimizerParameters extends SimpleParameterSet {
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
     param.setParameter(samplesPerParam, 7);
-    param.setParameter(paramToOptimize, new ArrayList<>(ALL_SOLUTIONS));
+    param.setParameter(paramToOptimize,
+        new ArrayList<>(ALL_SOLUTIONS.subList(0, ALL_SOLUTIONS.size() - WAVELET_SOLUTION_COUNT)));
     return param;
   }
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -26,11 +27,13 @@ package io.github.mzmine.modules.tools.batchwizard.builders;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.modules.batchmode.BatchQueue;
+import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.ResolvingDimension;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.OptionalValue;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
@@ -87,8 +90,17 @@ public class WizardBatchBuilderLcDDA extends BaseWizardBatchBuilder {
     makeAndAddSmoothingStep(q, rtSmoothing, minRtDataPoints, false);
 
     var groupMs2Params = createMs2GrouperParameters();
-    makeAndAddRtLocalMinResolver(q, groupMs2Params, minRtDataPoints, cropRtRange, rtFwhm,
-        maxIsomersInRt);
+
+    Boolean useWavelet = steps.get(WizardPart.ION_INTERFACE)
+        .map(p -> p.getFactory() == IonInterfaceWizardParameterFactory.LC_WAVELET).orElse(false);
+
+    if (!useWavelet) {
+      makeAndAddRtLocalMinResolver(q, groupMs2Params, minRtDataPoints, cropRtRange, rtFwhm,
+          maxIsomersInRt);
+    } else {
+      makeAndAddWaveletRtResolver(q, minRtDataPoints, ResolvingDimension.RETENTION_TIME,
+          groupMs2Params);
+    }
 
     if (isImsActive) {
       makeAndAddImsExpanderStep(q);

@@ -29,6 +29,7 @@ import io.github.mzmine.modules.MZmineProcessingModule;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.ApplicationScope;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
 import io.github.mzmine.parameters.UserParameter;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.Solution;
@@ -61,6 +62,28 @@ public sealed interface BatchParameterSolution {
       final UserParameter<Double, ?> cloned = param.cloneParameter();
       cloned.setValue(value);
       return new ParameterOverride(module.getName(), module.getSimpleName(), cloned, scope);
+    }
+  }
+
+  /**
+   * A general-purpose {@link BatchParameterSolution} that delegates override creation to a
+   * {@link Function}. Suitable for parameters that require reflection to set (e.g. optional modules
+   * not available at compile time).
+   *
+   * @param index           position in the MOEA solution vector
+   * @param variable        supplier for the optimization variable (determines search range and
+   *                        type)
+   * @param overrideFactory function that reads the solution variable at {@code index} and produces
+   *                        the {@link ParameterOverride} to apply
+   */
+  public final record FunctionalBatchParameterSolution(int index,
+                                                       Supplier<? extends Variable> variable,
+                                                       Function<Solution, ParameterOverride> overrideFactory) implements
+      BatchParameterSolution {
+
+    @Override
+    public @NotNull ParameterOverride toParameterOverride(@NotNull Solution solution) {
+      return overrideFactory.apply(solution);
     }
   }
 }
