@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -40,6 +41,7 @@ import io.github.mzmine.modules.tools.batchwizard.ParameterCustomizationModel.Ov
 import io.github.mzmine.modules.tools.batchwizard.subparameters.ApplicationScope;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.UserParameter;
 import io.github.mzmine.parameters.parametertypes.HiddenParameter;
 import java.util.ArrayList;
@@ -746,8 +748,9 @@ public class ParameterCustomizationViewBuilder extends FxViewBuilder<ParameterCu
         .get(new OverrideKey(selectedModule, parameter.getName(), currentScope));
     if (temp != null) {
       try {
+        ParameterUtils.copyParameterValue(temp.parameterWithValue(), parameter);
         ((UserParameter<Object, Node>) parameter).setValueToComponent(currentEditorComponent,
-            temp.parameterWithValue().getValue());
+            parameter.getValue());
       } catch (Exception e) {
         // Ignore type mismatch -- the override value may not be compatible.
       }
