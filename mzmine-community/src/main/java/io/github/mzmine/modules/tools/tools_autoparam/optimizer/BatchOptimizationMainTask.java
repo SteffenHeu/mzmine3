@@ -141,7 +141,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
     }
     ;
 
-    optimizer.run(iterations);
+    optimizer.run(new TaskStatusTerminationCondition(iterations, this::getStatus));
 
     final NondominatedPopulation result = optimizer.getResult();
 
