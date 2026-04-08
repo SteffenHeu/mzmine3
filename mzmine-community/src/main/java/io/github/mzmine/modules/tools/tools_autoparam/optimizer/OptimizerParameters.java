@@ -60,13 +60,14 @@ import org.jetbrains.annotations.Nullable;
 public class OptimizerParameters extends SimpleParameterSet {
 
   /**
-   * All available metrics as ordered singleton instances. {@link BenchmarkTargetCount}
-   * uses an empty placeholder list — at runtime the real target list is injected by
+   * All available metrics as ordered singleton instances. {@link BenchmarkTargetCount} uses an
+   * empty placeholder list — at runtime the real target list is injected by
    * {@link LcMsOptimizationProblem#buildEnabledMetrics}.
    */
   public static final List<SweepMetric> ALL_METRICS = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
       SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.HARMONIC_SLAW_ISOTOPES,
-      SweepMetric.DOUBLE_PEAK_RATIO, SweepMetric.FILL_RATIO, new BenchmarkTargetCount(List.of()));
+      SweepMetric.YASIN_ISOTOPE_SCORE, SweepMetric.DOUBLE_PEAK_RATIO, SweepMetric.FILL_RATIO,
+      new BenchmarkTargetCount(List.of()));
 
   /**
    * Default metrics enabled at startup: features with isotopes, integration score, and the combined
@@ -79,11 +80,12 @@ public class OptimizerParameters extends SimpleParameterSet {
       "Metrics to optimize", "Select which quality metrics should drive the optimization.",
       ALL_METRICS, new ArrayList<>(DEFAULT_METRICS));
 
-  public static final OptionalParameter<ImportTypeParameter> benchmarkFeatureTypes = new OptionalParameter<>(
-      new ImportTypeParameter("Benchmark feature csv column names", "",
-          List.of(new ImportType(true, "mz", new MZType()),
-              new ImportType(true, "rt", new RTType()),
-              new ImportType(false, "mobility", new MobilityType()))));
+  private static final List<ImportType<?>> DEFAULT_IMPORT_TYPES = List.of(
+      new ImportType<>(true, "mz", new MZType()), new ImportType<>(true, "rt", new RTType()),
+      new ImportType<>(false, "mobility", new MobilityType()));
+  public static final ImportTypeParameter benchmarkFeatureTypes = new ImportTypeParameter(
+      "Benchmark feature csv column names", "", DEFAULT_IMPORT_TYPES);
+
   public static final OptionalParameter<FileNameParameter> benchmarkFeaturesFile = new OptionalParameter<>(
       new FileNameParameter("Benchmark features file", "", ExtensionFilters.CSV_TSV_IMPORT,
           FileSelectionType.OPEN));
@@ -141,7 +143,7 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static ParameterSet create(@NotNull List<SweepMetric> metrics, int numIterations) {
     final ParameterSet param = new OptimizerParameters().cloneParameterSet();
     param.setParameter(metricsToOptimize, new ArrayList<>(metrics));
-    param.setParameter(benchmarkFeatureTypes, false);
+    param.setParameter(benchmarkFeatureTypes, DEFAULT_IMPORT_TYPES);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
     param.setParameter(samplesPerParam, 7);
@@ -156,12 +158,15 @@ public class OptimizerParameters extends SimpleParameterSet {
         skipRawDataAndFeatureListParameters);
 
     final boolean benchmarkFileSelected = getValue(benchmarkFeaturesFile);
-    final boolean benchmarkColumnsSelected = getValue(benchmarkFeatureTypes);
+    List<ImportType<?>> value = getValue(benchmarkFeatureTypes).stream()
+        .filter(ImportType::isSelected)
+        .filter(i -> i.getDataType().equals(new MZType()) || i.getDataType().equals(new RTType()))
+        .toList();
 
-    if (!((benchmarkFileSelected && benchmarkColumnsSelected) || (!benchmarkFileSelected
-        && !benchmarkColumnsSelected))) {
-      errorMessages.add("%s and %s must be both selected or both disabled.".formatted(
-          benchmarkFeatureTypes.getName(), benchmarkFeaturesFile.getName()));
+    if (benchmarkFileSelected && value.size() < 2) {
+      errorMessages.add(
+          "If %s is selected, RT and MZ values must be imported from the csv file.".formatted(
+              benchmarkFeaturesFile.getName()));
     }
 
     return superCheck && errorMessages.isEmpty();

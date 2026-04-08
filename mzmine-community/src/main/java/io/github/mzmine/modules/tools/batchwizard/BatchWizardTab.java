@@ -459,7 +459,7 @@ public class BatchWizardTab extends SimpleTab {
         .filter(f -> SampleType.ofString(f.getName()) == SampleType.QC).limit(10)
         .toArray(File[]::new);
 
-    if (qcFiles.length == 0) {
+    if (qcFiles.length < 3) {
       qcFiles = CollectionUtils.selectRandomElements(List.of(allFiles), 10).toArray(File[]::new);
     }
 

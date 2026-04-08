@@ -153,16 +153,13 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
   public static @NotNull List<FeatureRecord> extractFeatureRecordsFromFile(
       @Nullable List<@NotNull DataFileStatistics> stats, @NotNull ParameterSet param) {
-    final boolean useFeatureTypes = param.getValue(OptimizerParameters.benchmarkFeatureTypes);
     final boolean useBenchmarkFiles = param.getValue(OptimizerParameters.benchmarkFeaturesFile);
 
     List<FeatureRecord> featureRecordsFromFile = new ArrayList<>();
-    assert useFeatureTypes && useBenchmarkFiles || (!useBenchmarkFiles && !useFeatureTypes);
-    if (useBenchmarkFiles && useFeatureTypes) {
+    if (useBenchmarkFiles) {
       final File benchmarkFile = param.getEmbeddedParameterValue(
           OptimizerParameters.benchmarkFeaturesFile);
-      final List<ImportType<?>> types = param.getEmbeddedParameterValue(
-          OptimizerParameters.benchmarkFeatureTypes);
+      final List<ImportType<?>> types = param.getValue(OptimizerParameters.benchmarkFeatureTypes);
 
       final Character separator = CSVParsingUtils.autoDetermineSeparator(benchmarkFile);
       final SimpleStringProperty errorMessage = new SimpleStringProperty();
@@ -184,6 +181,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
             default -> {
             }
           }
+        }
+
+        if (lineIds.stream().filter(i -> i.getColumnIndex() != -1).filter(
+                i -> i.getDataType().equals(new MZType()) || i.getDataType().equals(new RTType()))
+            .toList().size() < 2) {
+          throw new RuntimeException("MZ and RT columns were not found");
         }
 
         for (int i = 1; i < csvData.size(); i++) {
@@ -215,8 +218,8 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
   /**
    * Builds the enabled {@link SweepMetric} list from the user's checklist selection.
-   * {@link BenchmarkTargetCount} placeholder instances are replaced with real instances
-   * carrying the actual target features derived from file statistics.
+   * {@link BenchmarkTargetCount} placeholder instances are replaced with real instances carrying
+   * the actual target features derived from file statistics.
    */
   private static @NotNull List<SweepMetric> buildEnabledMetrics(@NotNull ParameterSet param,
       @Nullable List<@NotNull DataFileStatistics> stats) {
