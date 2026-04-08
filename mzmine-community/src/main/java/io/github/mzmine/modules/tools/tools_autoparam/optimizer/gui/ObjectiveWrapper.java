@@ -28,7 +28,8 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SweepMetric;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.HarmonicSlawIsotopes;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -82,8 +83,8 @@ public record ObjectiveWrapper(String name, int index, Color color) {
   /**
    * Creates a column for the harmonic objective that displays scores normalised to [0, 1] across
    * the full population. The raw slaw and iso component values stored as solution attributes
-   * ({@link SweepMetric.HarmonicSlawIsotopes#ATTR_HARMONIC_SLAW} /
-   * {@link SweepMetric.HarmonicSlawIsotopes#ATTR_HARMONIC_ISO}) are min-max normalised across the
+   * ({@link HarmonicSlawIsotopes#ATTR_HARMONIC_SLAW} /
+   * {@link HarmonicSlawIsotopes#ATTR_HARMONIC_ISO}) are min-max normalised across the
    * population before the harmonic mean is computed.
    */
   public @NotNull TableColumn<Solution, Number> createNormalizedHarmonicColumn(
@@ -91,12 +92,12 @@ public record ObjectiveWrapper(String name, int index, Color color) {
     final List<Solution> solutions = population.asList();
 
     final double[] slawRaw = solutions.stream()
-        .mapToDouble(s -> attributeAsDouble(s, SweepMetric.HarmonicSlawIsotopes.ATTR_HARMONIC_SLAW))
+        .mapToDouble(s -> attributeAsDouble(s, HarmonicSlawIsotopes.ATTR_HARMONIC_SLAW))
         .toArray();
     final double[] isoRaw = solutions.stream()
-        .mapToDouble(s -> attributeAsDouble(s, SweepMetric.HarmonicSlawIsotopes.ATTR_HARMONIC_ISO))
+        .mapToDouble(s -> attributeAsDouble(s, HarmonicSlawIsotopes.ATTR_HARMONIC_ISO))
         .toArray();
-    final double[] normalized = SweepMetric.HarmonicSlawIsotopes.computeNormalizedScores(slawRaw,
+    final double[] normalized = HarmonicSlawIsotopes.computeNormalizedScores(slawRaw,
         isoRaw);
 
     final Map<Solution, Double> scoreMap = new IdentityHashMap<>(solutions.size());

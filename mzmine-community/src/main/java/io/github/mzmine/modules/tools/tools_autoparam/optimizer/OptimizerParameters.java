@@ -38,6 +38,8 @@ import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.BatchWizardParameterSolution;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.WizardBuilderParameterSolution;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.BenchmarkTargetCount;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
@@ -58,14 +60,13 @@ import org.jetbrains.annotations.Nullable;
 public class OptimizerParameters extends SimpleParameterSet {
 
   /**
-   * All available metrics as ordered singleton instances. {@link SweepMetric.BenchmarkTargetCount}
+   * All available metrics as ordered singleton instances. {@link BenchmarkTargetCount}
    * uses an empty placeholder list — at runtime the real target list is injected by
    * {@link LcMsOptimizationProblem#buildEnabledMetrics}.
    */
   public static final List<SweepMetric> ALL_METRICS = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
       SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.HARMONIC_SLAW_ISOTOPES,
-      SweepMetric.DOUBLE_PEAK_RATIO, SweepMetric.FILL_RATIO,
-      new SweepMetric.BenchmarkTargetCount(List.of()));
+      SweepMetric.DOUBLE_PEAK_RATIO, SweepMetric.FILL_RATIO, new BenchmarkTargetCount(List.of()));
 
   /**
    * Default metrics enabled at startup: features with isotopes, integration score, and the combined

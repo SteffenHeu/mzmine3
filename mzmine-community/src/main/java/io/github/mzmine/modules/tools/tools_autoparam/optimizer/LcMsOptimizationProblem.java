@@ -58,6 +58,8 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.Workfl
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.BenchmarkTargetCount;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -213,7 +215,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
 
   /**
    * Builds the enabled {@link SweepMetric} list from the user's checklist selection.
-   * {@link SweepMetric.BenchmarkTargetCount} placeholder instances are replaced with real instances
+   * {@link BenchmarkTargetCount} placeholder instances are replaced with real instances
    * carrying the actual target features derived from file statistics.
    */
   private static @NotNull List<SweepMetric> buildEnabledMetrics(@NotNull ParameterSet param,
@@ -221,12 +223,12 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final List<SweepMetric> selected = param.getValue(OptimizerParameters.metricsToOptimize);
     final List<SweepMetric> metrics = new ArrayList<>();
     for (final SweepMetric metric : selected) {
-      if (metric instanceof SweepMetric.BenchmarkTargetCount) {
+      if (metric instanceof BenchmarkTargetCount) {
         // decision: only include benchmark metric when file statistics are available to derive targets
         if (stats != null) {
           final List<FeatureRecord> targets = statsToTargetList(stats);
           if (targets != null) {
-            metrics.add(new SweepMetric.BenchmarkTargetCount(targets));
+            metrics.add(new BenchmarkTargetCount(targets));
           }
         }
       } else {
@@ -241,7 +243,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     final List<SweepMetric> selected = param.getValue(OptimizerParameters.metricsToOptimize);
     // BenchmarkTargetCount only counts as an objective when file statistics are available
     return (int) selected.stream()
-        .filter(m -> !(m instanceof SweepMetric.BenchmarkTargetCount) || stats != null).count();
+        .filter(m -> !(m instanceof BenchmarkTargetCount) || stats != null).count();
   }
 
   private List<WizardParameterSolution> createWizardParameters() {
