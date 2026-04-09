@@ -302,6 +302,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
     final MZmineProject project = ProjectService.getProject();
     final BatchTask batchTask = BatchModeModule.runBatchQueue(optimizedQueue, project, files, null,
         null, null, Instant.now());
+    final double fullBatchTime = batchTask.getStepTimes().getLast().secondsToFinish();
 
     while (!batchTask.isFinished() && !batchTask.isCanceled()) {
       try {
@@ -329,6 +330,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
               .sum());
     }
     solution.setAttribute("Total features", newest.streamFeatures().count());
+    solution.setAttribute("Runtime / s", fullBatchTime);
 
     project.removeFeatureLists(project.getCurrentFeatureLists());
   }
