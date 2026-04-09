@@ -41,7 +41,7 @@ public record IpoIsotopeScore() implements SweepMetric {
 
   @Override
   public @NotNull String name() {
-    return "Features with isotopes";
+    return "IPO isotope score";
   }
 
   @Override
