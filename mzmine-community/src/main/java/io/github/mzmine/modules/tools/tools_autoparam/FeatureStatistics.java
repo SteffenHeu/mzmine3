@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -56,7 +57,7 @@ public class FeatureStatistics {
     boolean previousPointZero = false;
     int stoppedAtIndex = 0;
     for (int i = 0; i < isoSeries.getNumberOfValues(); i++) {
-      if (previousPointZero) {
+      if (previousPointZero && isoSeries.getIntensity(i) > 0) {
         intensities.add(isoSeries.getIntensity(i));
         stoppedAtIndex = i;
         break;
@@ -69,7 +70,7 @@ public class FeatureStatistics {
     // only add the same point once, so we stop as soon as we reach the same index as we had before
     previousPointZero = false;
     for (int i = isoSeries.getNumberOfValues() - 1; i > 0 && i > stoppedAtIndex; i--) {
-      if (previousPointZero) {
+      if (previousPointZero && isoSeries.getIntensity(i) > 0) {
         intensities.add(isoSeries.getIntensity(i));
         break;
       }
