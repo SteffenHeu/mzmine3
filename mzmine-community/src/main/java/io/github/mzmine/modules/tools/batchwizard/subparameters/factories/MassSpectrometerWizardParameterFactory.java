@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,10 +25,15 @@
 
 package io.github.mzmine.modules.tools.batchwizard.subparameters.factories;
 
+import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.WizardBuilderParameterSolution;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -92,6 +97,19 @@ public enum MassSpectrometerWizardParameterFactory implements WizardParameterFac
       case LOW_RES -> new MassSpectrometerWizardParameters(this, getDefaultMassDetector(), 0, 0, 0,
           new MZTolerance(0.5, 0), new MZTolerance(0.5, 0), new MZTolerance(0.5, 0));
     };
+  }
+
+  @Override
+  public @NotNull List<WizardParameterPrototype> getOptimizationSolutions(
+      @NotNull WizardSequence steps, @NotNull WizardParameterSolutionBuilder dummyBuilder) {
+    return List.of(
+        new WizardBuilderParameterSolution(dummyBuilder.buildMs1NoiseSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildMs1NoiseSolution),
+        new WizardBuilderParameterSolution(
+            dummyBuilder.buildScanToScanToleranceSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildScanToScanToleranceSolution),
+        new WizardBuilderParameterSolution(dummyBuilder.buildMinHeightSolution(-1).variable(),
+            WizardParameterSolutionBuilder::buildMinHeightSolution));
   }
 
   public MassDetectorWizardOptions getDefaultMassDetector() {

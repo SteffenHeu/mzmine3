@@ -30,7 +30,7 @@ import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.statistics.FeaturesDataTable;
 import io.github.mzmine.modules.dataanalysis.utils.StatisticUtils;
 import io.github.mzmine.modules.dataanalysis.utils.imputation.ImputationFunctions;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import io.github.mzmine.parameters.parametertypes.statistics.AbundanceDataTablePreparationConfig;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.Solution;
@@ -40,7 +40,7 @@ import org.moeaframework.core.objective.Objective;
 
 /**
  * A metric that can be evaluated on a {@link FeatureList}. Each implementation corresponds to one
- * of the objectives used in {@link LcMsOptimizationProblem}.
+ * of the objectives used in {@link WizardOptimizationProblem}.
  * <p>
  * Convenience singleton constants are provided for all parameterless metrics. The
  * {@link BenchmarkTargetCount} record carries its own target list.

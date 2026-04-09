@@ -62,6 +62,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.Benchmar
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.ImportType;
+import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.project.ProjectService;
@@ -80,7 +81,7 @@ import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
 import org.moeaframework.problem.AbstractProblem;
 
-public class LcMsOptimizationProblem extends AbstractProblem {
+public class WizardOptimizationProblem extends AbstractProblem {
 
   private final int NUM_PARAM;
   private final List<WizardParameterPrototype> paramToOptimize;
@@ -99,14 +100,15 @@ public class LcMsOptimizationProblem extends AbstractProblem {
   private final int numBatchParam;
   private final @Nullable List<FeatureRecord> fileOnlyBenchmarkFeatures;
 
-  public LcMsOptimizationProblem(@NotNull final WizardSequence initialSequence,
+  public WizardOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param) {
 
     // decision: super() must be first — use static helper for objective count before enabledMetrics field is assigned
     super(param.getValue(OptimizerParameters.paramToOptimize).size(),
         calculateNumberOfObjectives(param, stats));
 
-    fileOnlyBenchmarkFeatures = LcMsOptimizationProblem.extractFeatureRecordsFromFile(null, param);
+    fileOnlyBenchmarkFeatures = WizardOptimizationProblem.extractFeatureRecordsFromFile(null,
+        param);
     target = statsToTargetList(stats);
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
     enabledMetrics = buildEnabledMetrics(param, stats);
@@ -249,7 +251,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
         .filter(m -> !(m instanceof BenchmarkTargetCount) || stats != null).count();
   }
 
-  private List<WizardParameterSolution> createWizardParameters() {
+  private @NotNull List<WizardParameterSolution> createWizardParameters() {
 
     int index = 0;
     final List<WizardParameterSolution> param = new ArrayList<>();
@@ -263,7 +265,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     return param;
   }
 
-  private List<BatchParameterSolution> createBatchParameters() {
+  private @NotNull List<BatchParameterSolution> createBatchParameters() {
     int index = numWizardParam;
 
     final List<BatchParameterSolution> param = new ArrayList<>();
@@ -344,6 +346,15 @@ public class LcMsOptimizationProblem extends AbstractProblem {
     customization.setParameter(CustomizationWizardParameters.overrides, overrides);
   }
 
+  /**
+   * Creates a wizard sequence from the solution. The wizard sequence also stores the parameters for
+   * the respective steps. The new sequence is ALWAYS created from the
+   * {@link WizardStepParameters#createDefaultParameterPreset()}, so potentially bad user-entered
+   * parameters are ignored.
+   *
+   * @param solution The current solution (stores the variables we pipe into the wizard parameters)
+   * @return The WizardSequence with the parameter values applied from the solution.
+   */
   public @NotNull WizardSequence createWizardSequenceFromSolution(@NotNull Solution solution) {
 
     final WizardSequence wizardSequence = new WizardSequence();
@@ -380,7 +391,10 @@ public class LcMsOptimizationProblem extends AbstractProblem {
           .accept(wizardSequence.get(parameter.part()).get(), solution, parameter.index());
     }
 
-    workflowParam.setParameter(WorkflowDdaWizardParameters.exportPath, false);
+    if (workflowParam.getNameParameterMap()
+        .get(WorkflowDdaWizardParameters.exportPath.getName()) instanceof OptionalParameter<?>) {
+      workflowParam.setParameter(WorkflowDdaWizardParameters.exportPath, false);
+    }
 
     applyBatchOverridesToSequence(solution, wizardSequence);
 
@@ -388,6 +402,7 @@ public class LcMsOptimizationProblem extends AbstractProblem {
       msParam.setParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance,
           mzSampleToSampleTolerance);
     }
+    // only set benchmark feature-derived rt tolerance if it is not an optimization target.
     if (rtSampleToSampleTolerance != null && paramToOptimize.stream()
         .noneMatch(s -> "Inter sample RT tolerance".equals(s.name()))) {
       lcParam.setParameter(IonInterfaceHplcWizardParameters.interSampleRTTolerance,

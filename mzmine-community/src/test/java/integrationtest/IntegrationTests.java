@@ -38,9 +38,9 @@ import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizationUtils;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.util.MemoryMapStorage;
@@ -290,7 +290,7 @@ public class IntegrationTests {
     final ParameterSet param = OptimizerParameters.create(
         List.of(SweepMetric.IPO_ISOTOPE_SCORE, SweepMetric.SLAW_INTEGRATION_SCORE), 100);
 
-    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(sequence, stats, param);
+    final WizardOptimizationProblem problem = new WizardOptimizationProblem(sequence, stats, param);
 
     final AbstractAlgorithm optimizer = new NSGAII(problem);
 

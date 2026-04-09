@@ -28,12 +28,12 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.types.annotations.shapeclassification.RtQualitySummaryType;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.peak_fitter.PeakShapeClassification;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Minimise: ratio of features classified as double-Gaussian peaks to total features. Mirrors
- * {@link LcMsOptimizationProblem}'s {@code minimizeDoublePeaks} objective.
+ * {@link WizardOptimizationProblem}'s {@code minimizeDoublePeaks} objective.
  */
 public record DoublePeakRatio() implements SweepMetric {
 

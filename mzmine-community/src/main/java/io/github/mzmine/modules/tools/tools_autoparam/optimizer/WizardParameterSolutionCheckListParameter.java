@@ -25,13 +25,17 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.parameters.UserParameter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javafx.collections.FXCollections;
 import javafx.scene.layout.Priority;
 import org.controlsfx.control.CheckListView;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -50,6 +54,8 @@ public class WizardParameterSolutionCheckListParameter implements
   private final String description;
   private final List<WizardParameterPrototype> choices;
   private List<WizardParameterPrototype> value;
+  @Nullable
+  private WizardSequence wizardSequence;
 
   /**
    * @param name        parameter name shown in the UI
@@ -75,6 +81,29 @@ public class WizardParameterSolutionCheckListParameter implements
     return description;
   }
 
+  /**
+   * Sets the wizard sequence used to filter which of the {@code choices} are visible in the
+   * checklist UI. Items selected but filtered out remain in {@link #getValue()} and are preserved
+   * in XML. Pass {@code null} to show all choices.
+   */
+  public void setWizardSequence(@Nullable WizardSequence sequence) {
+    this.wizardSequence = sequence;
+  }
+
+  /**
+   * Returns the subset of {@code choices} that are relevant for the current wizard sequence. When
+   * no sequence is set, all choices are returned.
+   */
+  private @NotNull List<WizardParameterPrototype> getFilteredChoices() {
+    if (wizardSequence == null) {
+      return choices;
+    }
+    final Set<String> available = OptimizerParameters.collectSolutions(wizardSequence).stream()
+        .map(WizardParameterPrototype::name).collect(Collectors.toSet());
+    // decision: filter choices by name so displayed items are always instances from choices (for identity matching in setValueToComponent)
+    return choices.stream().filter(c -> available.contains(c.name())).toList();
+  }
+
   @Override
   public Priority getComponentVgrowPriority() {
     return Priority.SOMETIMES;
@@ -83,14 +112,16 @@ public class WizardParameterSolutionCheckListParameter implements
   @Override
   public CheckListView<WizardParameterPrototype> createEditingComponent() {
     final CheckListView<WizardParameterPrototype> view = new CheckListView<>(
-        FXCollections.observableArrayList(choices));
+        FXCollections.observableArrayList(getFilteredChoices()));
     view.setPrefHeight(200);
     return view;
   }
 
   @Override
   public List<WizardParameterPrototype> getValue() {
-    return value;
+    List<WizardParameterPrototype> clone = new ArrayList<>(value);
+    clone.retainAll(getFilteredChoices());
+    return clone;
   }
 
   @Override
@@ -110,8 +141,12 @@ public class WizardParameterSolutionCheckListParameter implements
     if (newValue == null) {
       return;
     }
+    final List<WizardParameterPrototype> componentItems = component.getItems();
     for (WizardParameterPrototype selected : newValue) {
-      component.getCheckModel().check(selected);
+      // only check items actually present in the (possibly filtered) component list
+      if (componentItems.contains(selected)) {
+        component.getCheckModel().check(selected);
+      }
     }
   }
 

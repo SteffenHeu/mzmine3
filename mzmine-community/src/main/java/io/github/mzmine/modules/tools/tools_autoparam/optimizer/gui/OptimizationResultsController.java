@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -51,7 +52,7 @@ import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.FeatureRecord;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.AllTasksFinishedListener;
 import io.github.mzmine.taskcontrol.TaskService;
@@ -74,12 +75,12 @@ import org.moeaframework.util.format.TableFormat;
 public class OptimizationResultsController extends FxController<OptimizationResultModel> {
 
   private final BatchWizardTab wizardTab;
-  private final LcMsOptimizationProblem optimization;
+  private final WizardOptimizationProblem optimization;
   @Nullable
   private final Stage stage;
 
   public OptimizationResultsController(@NotNull BatchWizardTab wizardTab,
-      @NotNull LcMsOptimizationProblem optimization, final NondominatedPopulation result,
+      @NotNull WizardOptimizationProblem optimization, final NondominatedPopulation result,
       @Nullable final Stage stage) {
     super(new OptimizationResultModel());
     this.wizardTab = wizardTab;
@@ -97,9 +98,9 @@ public class OptimizationResultsController extends FxController<OptimizationResu
   public void applyToWizardSequence() {
 
     final ButtonType choice = ((MZmineGUI) DesktopService.getDesktop()).displayConfirmation(
-        "Warning", """
-            Setting the parameters to the wizard does not cover all parameters as some modules are optimised specifically.
-            Continue any way?""", ButtonType.YES, ButtonType.NO);
+        "Information", """
+            This will replace the current wizard parameters.
+            Continue?""", ButtonType.YES, ButtonType.NO);
     if (choice != ButtonType.YES) {
       return;
     }

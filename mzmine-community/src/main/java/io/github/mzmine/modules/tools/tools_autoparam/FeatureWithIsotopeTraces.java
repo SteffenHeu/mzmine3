@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -141,8 +142,19 @@ public record FeatureWithIsotopeTraces(double initialMz, @NotNull MZTolerance mz
   }
 
   public int getNumberOfLowestIsotopeDataPoints() {
-    final ModularFeature isotope = isotopeTraces.getLast();
-    final Float fwhm = isotope.getFWHM();
+    ModularFeature isotope = null;
+    Float fwhm = null;
+    for (int i = isotopeTraces.size() - 1; i >= 0; i--) {
+      isotope = isotopeTraces.get(i);
+      fwhm = isotope.getFWHM();
+      if (fwhm != null && Float.isFinite(fwhm)) {
+        break;
+      }
+    }
+    if (isotope == null || fwhm == null || !Float.isFinite(fwhm)) {
+      return 0;
+    }
+
     final Range<Float> range = RangeUtils.rangeAround(isotope.getRT(), (float) 2.5 * fwhm);
     return (int) isotope.getFeatureData().getSpectra().stream()
         .filter(s -> range.contains(s.getRetentionTime())).count();

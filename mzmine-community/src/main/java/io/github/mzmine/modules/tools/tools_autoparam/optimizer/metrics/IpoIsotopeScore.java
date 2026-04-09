@@ -29,13 +29,13 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import io.github.mzmine.util.MathUtils;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Maximise: number of features that carry an isotope pattern. Mirrors
- * {@link LcMsOptimizationProblem}'s {@code maximizeFeaturesWithIsos} objective.
+ * {@link WizardOptimizationProblem}'s {@code maximizeFeaturesWithIsos} objective.
  */
 public record IpoIsotopeScore() implements SweepMetric {
 

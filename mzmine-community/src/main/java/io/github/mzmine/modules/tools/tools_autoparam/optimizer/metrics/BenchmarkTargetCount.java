@@ -28,14 +28,14 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.FeatureRecord;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import java.util.Comparator;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Maximise: number of benchmark target features found in the result. Mirrors
- * {@link LcMsOptimizationProblem}'s {@code maximizeNumBenchmark} objective.
+ * {@link WizardOptimizationProblem}'s {@code maximizeNumBenchmark} objective.
  *
  * @param targets the list of expected benchmark features to match against
  */

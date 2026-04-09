@@ -25,10 +25,12 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.variable.Variable;
 
 /**
@@ -43,6 +45,8 @@ import org.moeaframework.core.variable.Variable;
  * </ul>
  * Instances carry only the data needed for display and XML serialisation. The real,
  * index-aware solution objects are produced on demand during optimisation.
+ * <p>
+ * All solutions must have a distinct name, because that is how the equality will be checked!
  */
 public sealed interface WizardParameterPrototype {
 
@@ -78,6 +82,16 @@ public sealed interface WizardParameterPrototype {
     public @NotNull String toString() {
       return name();
     }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(name());
+    }
+
+    @Override
+    public boolean equals(@Nullable Object other) {
+      return other instanceof WizardBuilderParameterSolution wp && wp.name().equals(this.name());
+    }
   }
 
   /**
@@ -104,6 +118,16 @@ public sealed interface WizardParameterPrototype {
     @Override
     public @NotNull String toString() {
       return name();
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(name());
+    }
+
+    @Override
+    public boolean equals(@Nullable Object other) {
+      return other instanceof BatchWizardParameterSolution wp && wp.name().equals(this.name());
     }
   }
 }

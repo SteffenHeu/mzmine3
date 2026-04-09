@@ -35,9 +35,11 @@ import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
+import io.github.mzmine.modules.tools.batchwizard.WizardPart;
+import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.BatchWizardParameterSolution;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.WizardBuilderParameterSolution;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.BenchmarkTargetCount;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
@@ -49,10 +51,14 @@ import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileSelectionType;
+import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.files.ExtensionFilters;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,7 +68,7 @@ public class OptimizerParameters extends SimpleParameterSet {
   /**
    * All available metrics as ordered singleton instances. {@link BenchmarkTargetCount} uses an
    * empty placeholder list — at runtime the real target list is injected by
-   * {@link LcMsOptimizationProblem#buildEnabledMetrics}.
+   * {@link WizardOptimizationProblem#buildEnabledMetrics}.
    */
   public static final List<SweepMetric> ALL_METRICS = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
       SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.HARMONIC_SLAW_ISOTOPES,
@@ -120,11 +126,41 @@ public class OptimizerParameters extends SimpleParameterSet {
         samplesPerParam, paramToOptimize);
   }
 
+  /**
+   * Collects all optimization parameter prototypes that are relevant for the given wizard sequence
+   * by querying each wizard step's factory. The dummy builder (null stats) is used only to derive
+   * variable names for display and XML; actual data ranges are injected at optimization time.
+   *
+   * @param steps the current wizard sequence
+   * @return ordered list of applicable prototypes, sourced from {@link #ALL_SOLUTIONS}
+   */
+  public static @NotNull List<WizardParameterPrototype> collectSolutions(
+      @NotNull WizardSequence steps) {
+    final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
+        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL);
+    return steps.stream().map(WizardStepParameters::getFactory)
+        .flatMap(f -> f.getOptimizationSolutions(steps, dummy).stream())
+        .sorted(Comparator.comparing(WizardParameterPrototype::name)).toList();
+  }
+
   private static List<WizardParameterPrototype> createAllSolutions() {
     final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
         MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL);
 
-    return List.of(new WizardBuilderParameterSolution(dummy.buildMs1NoiseSolution(-1).variable(),
+    final Set<WizardParameterPrototype> allSolutions = new HashSet<>();
+
+    for (WizardPart part : WizardPart.values()) {
+      for (WizardParameterFactory preset : part.getDefaultPresets()) {
+        WizardSequence sequence = new WizardSequence();
+        sequence.set(part, preset.create());
+        allSolutions.addAll(preset.getOptimizationSolutions(sequence, dummy));
+      }
+    }
+
+    return allSolutions.stream().sorted(Comparator.comparing(WizardParameterPrototype::name))
+        .toList();
+
+    /*return List.of(new WizardBuilderParameterSolution(dummy.buildMs1NoiseSolution(-1).variable(),
             WizardParameterSolutionBuilder::buildMs1NoiseSolution),
         new WizardBuilderParameterSolution(dummy.buildScanToScanToleranceSolution(-1).variable(),
             WizardParameterSolutionBuilder::buildScanToScanToleranceSolution),
@@ -147,7 +183,7 @@ public class OptimizerParameters extends SimpleParameterSet {
         new BatchWizardParameterSolution(
             WaveletBatchParameterSolutionBuilder::buildWaveletDipFilter),
         new BatchWizardParameterSolution(
-            WaveletBatchParameterSolutionBuilder::buildWaveletEdgeDetector));
+            WaveletBatchParameterSolutionBuilder::buildWaveletEdgeDetector));*/
   }
 
   /**
@@ -196,5 +232,12 @@ public class OptimizerParameters extends SimpleParameterSet {
         boldText(SweepMetric.SLAW_INTEGRATION_SCORE.name()), text(", "),
         boldText(SweepMetric.HARMONIC_SLAW_ISOTOPES.name()), text(": "),
         hyperlinkText("SLAW", "https://pubs.acs.org/doi/10.1021/acs.analchem.1c02687"));
+  }
+
+  public ExitCode showSetupDialog(boolean valueCheckRequired, @Nullable WizardSequence sequence) {
+    getParameter(paramToOptimize).setWizardSequence(sequence);
+    var superReturn = super.showSetupDialog(valueCheckRequired);
+    getParameter(paramToOptimize).setWizardSequence(null); // always reset to zero
+    return superReturn;
   }
 }

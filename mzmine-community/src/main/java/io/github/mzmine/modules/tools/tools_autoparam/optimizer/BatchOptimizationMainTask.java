@@ -107,7 +107,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
     setStatus(TaskStatus.PROCESSING);
 
     final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, metadata);
-    final List<FeatureRecord> benchmarkFeatures = LcMsOptimizationProblem.extractFeatureRecordsFromFile(
+    final List<FeatureRecord> benchmarkFeatures = WizardOptimizationProblem.extractFeatureRecordsFromFile(
         null, params);
 
     final List<DataFileStatistics> stats = importedFiles.stream().map(
@@ -119,8 +119,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
     // set a specific seed to make the results deterministic.
     PRNG.setSeed(42);
 
-    final LcMsOptimizationProblem problem = new LcMsOptimizationProblem(tab.getSequence(), stats,
-        params);
+    final WizardOptimizationProblem problem = new WizardOptimizationProblem(tab.getSequence(),
+        stats, params);
 
     optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
     final int iterations = params.getValue(OptimizerParameters.iterations);

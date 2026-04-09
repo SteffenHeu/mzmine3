@@ -26,12 +26,12 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics;
 
 import io.github.mzmine.datamodel.features.FeatureList;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.LcMsOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Maximise: ratio of detected features to the theoretical maximum (rows × files). Mirrors
- * {@link LcMsOptimizationProblem}'s {@code maximizeFillRatio} objective.
+ * {@link WizardOptimizationProblem}'s {@code maximizeFillRatio} objective.
  */
 public record FillRatio() implements SweepMetric {
 

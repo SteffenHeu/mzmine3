@@ -468,7 +468,8 @@ public class BatchWizardTab extends SimpleTab {
 
     final OptimizerParameters optimizerParam = (OptimizerParameters) ConfigService.getConfiguration()
         .getModuleParameters(OptimizerModule.class);
-    final ExitCode exitCode = optimizerParam.showSetupDialog(true);
+    // inject wizard sequence so the parameter checklist shows only relevant solutions
+    final ExitCode exitCode = optimizerParam.showSetupDialog(true, sequenceSteps);
     if (exitCode != ExitCode.OK) {
       return;
     }
