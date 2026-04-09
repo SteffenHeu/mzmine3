@@ -26,6 +26,7 @@ graphstream = "2.0"
 djl = "0.26.0"
 mzio = "1.0.0"
 jasper = "7.0.3"
+jfreechart = "1.5.3" # higher versions currently break the spectra plot
 
 [libraries]
 # mzio
@@ -54,7 +55,7 @@ ikonli-lineawesome = { group = "org.kordamp.ikonli", name = "ikonli-lineawesome-
 graphstream-javafx = { module = "org.graphstream:gs-ui-javafx", version.ref = "graphstream" }
 graphstream-algo = { module = "org.graphstream:gs-algo", version.ref = "graphstream" }
 graphstream-core = "com.github.robinschmid:gs-core:45504f632f"
-jfree-core = "org.jfree:jfreechart:1.5.3"
+jfree-core = { module = "org.jfree:jfreechart", version.ref = "jfreechart" }
 jfree-fx = "org.jfree:org.jfree.chart.fx:2.0.1"
 jfree-fxgraphics = "org.jfree:org.jfree.fxgraphics2d:2.1.1"
 fxcharts = "eu.hansolo.fx:charts:21.0.7"
