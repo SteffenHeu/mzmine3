@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
- *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -71,6 +70,8 @@ import io.github.mzmine.datamodel.features.types.numbers.MZType;
 import io.github.mzmine.datamodel.features.types.numbers.MzAbsoluteDifferenceType;
 import io.github.mzmine.datamodel.features.types.numbers.MzPpmDifferenceType;
 import io.github.mzmine.datamodel.features.types.numbers.NeutralMassType;
+import io.github.mzmine.datamodel.features.types.numbers.NormalizedAreaType;
+import io.github.mzmine.datamodel.features.types.numbers.NormalizedHeightType;
 import io.github.mzmine.datamodel.features.types.numbers.SizeType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.DoubleRangeType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.DoubleType;
@@ -84,6 +85,7 @@ import io.github.mzmine.datamodel.features.types.numbers.scores.CompoundAnnotati
 import io.github.mzmine.datamodel.features.types.numbers.scores.IsotopePatternScoreType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.MsMsScoreType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.SimilarityType;
+import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
@@ -196,6 +198,8 @@ public class FeatureTableFX extends BorderPane {
 
     initDataChangedNotification();
 
+    initTableF1Help();
+
     // add dummy root
     TreeItem<ModularFeatureListRow> root = new TreeItem<>();
     root.setExpanded(true);
@@ -268,6 +272,23 @@ public class FeatureTableFX extends BorderPane {
     });
   }
 
+  private void initTableF1Help() {
+    table.addEventHandler(KeyEvent.KEY_RELEASED, e -> {
+      if (e.getCode() != KeyCode.F1) {
+        return;
+      }
+      final DataType<?> selectedDataType = getSelectionModel().getSelectedCells().stream()
+          .findFirst().map(TreeTablePosition::getTableColumn).map(c -> getNewColumnMap().get(c))
+          .map(ColumnID::getDataType).orElse(null);
+      switch (selectedDataType) {
+        case PreferredAnnotationType _ -> DesktopService.getDesktop().openWebPage(
+            "https://mzmine.github.io/mzmine_documentation/terminology/annotations.html#preferred-annotation");
+        case null, default -> DesktopService.getDesktop().openWebPage(
+            "https://mzmine.github.io/mzmine_documentation/module_docs/lc-ms_featdet/featdet_results/featdet_results.html");
+      }
+    });
+  }
+
   /**
    * Opens quick column selection menu at the top + button over the scroll bar
    */
@@ -305,6 +326,20 @@ public class FeatureTableFX extends BorderPane {
     return switch (parameters.getValue(FeatureTableFXParameters.defaultAbundanceMeasure)) {
       case Height -> HeightType.class;
       case Area -> AreaType.class;
+      case NORMALIZED_HEIGHT -> {
+        if (getFeatureList() != null && getFeatureList().hasRowType(NormalizedHeightType.class)
+            && getFeatureList().hasFeatureType(NormalizedHeightType.class)) {
+          yield NormalizedHeightType.class;
+        }
+        yield HeightType.class;
+      }
+      case NORMALIZED_AREA -> {
+        if (getFeatureList() != null && getFeatureList().hasRowType(NormalizedAreaType.class)
+            && getFeatureList().hasFeatureType(NormalizedHeightType.class)) {
+          yield NormalizedAreaType.class;
+        }
+        yield AreaType.class;
+      }
     };
   }
 
@@ -464,6 +499,7 @@ public class FeatureTableFX extends BorderPane {
 
     setColumnVisibilityAndSubColumns(lipidMatches.getValue(), false, false);
 
+    setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, null, visible);
     setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, LipidMatchListType.class, visible);
     setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, AnnotationSummaryType.class, visible);
     setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, LipidSpectrumType.class, visible);
@@ -551,13 +587,12 @@ public class FeatureTableFX extends BorderPane {
     if (preferredAnnotations != null) {
       setColumnVisibilityAndSubColumns(preferredAnnotations.getValue(), false);
       setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, null, true);
-      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, PreferredAnnotationType.class, true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, PreferredAnnotationType.class,
+          true);
       setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, AnnotationSummaryType.class,
           true);
-      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, FormulaType.class,
-          true);
-      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, IonTypeType.class,
-          true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, FormulaType.class, true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, IonTypeType.class, true);
       setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, MolecularStructureType.class,
           true);
       setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, ScoreType.class, true);
