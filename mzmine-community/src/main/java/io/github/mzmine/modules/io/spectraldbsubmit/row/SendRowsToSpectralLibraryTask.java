@@ -96,6 +96,11 @@ public class SendRowsToSpectralLibraryTask extends AbstractTask {
         return;
       }
 
+      if (!row.isIdentified()) {
+        finishedRows.getAndIncrement();
+        continue;
+      }
+
       final List<SpectralLibraryEntry> entries = entryCreator.processRow(row);
       for (final SpectralLibraryEntry entry : entries) {
         entry.putIfNotNull(DBEntryField.ENTRY_ID, String.valueOf(nextId++));
