@@ -42,6 +42,7 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.GridPane;
 import javafx.util.StringConverter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Dialog for selecting a target spectral library. Allows the user to either add entries to an
@@ -57,8 +58,9 @@ public class SpectralLibrarySelectionDialog extends Dialog<SpectralLibrary> {
   private final ComboBox<SpectralLibrary> libraryCombo = new ComboBox<>();
   private final TextField nameField = new TextField();
 
-  public SpectralLibrarySelectionDialog(@NotNull final String suggestedName) {
-    setTitle("Send to Spectral Library");
+  public SpectralLibrarySelectionDialog(int nRows, List<SpectralLibrary> lastLibraries,
+      @NotNull final String suggestedName) {
+    setTitle("Sending %d rows to Spectral Library".formatted(nRows));
     setHeaderText("Select a target spectral library for the generated entries.");
 
     final ToggleGroup toggleGroup = new ToggleGroup();
@@ -74,8 +76,9 @@ public class SpectralLibrarySelectionDialog extends Dialog<SpectralLibrary> {
     libraryCombo.getItems().setAll(currentLibraries);
     libraryCombo.setConverter(new StringConverter<>() {
       @Override
-      public String toString(@NotNull SpectralLibrary lib) {
-        return lib.getNameWithSize();
+      public String toString(@Nullable SpectralLibrary lib) {
+        // null if no library loaded
+        return lib == null ? null : lib.getNameWithSize();
       }
 
       @Override
@@ -89,7 +92,17 @@ public class SpectralLibrarySelectionDialog extends Dialog<SpectralLibrary> {
     addExistingRadio.setDisable(!hasExistingLibraries);
     if (hasExistingLibraries) {
       addExistingRadio.setSelected(true);
-      libraryCombo.getSelectionModel().selectFirst();
+
+      // try select last selected library
+      if (!lastLibraries.isEmpty()) {
+        try {
+          libraryCombo.getSelectionModel().select(lastLibraries.getFirst());
+        } catch (Exception e) {
+          libraryCombo.getSelectionModel().selectFirst();
+        }
+      } else {
+        libraryCombo.getSelectionModel().selectFirst();
+      }
     } else {
       createNewRadio.setSelected(true);
     }

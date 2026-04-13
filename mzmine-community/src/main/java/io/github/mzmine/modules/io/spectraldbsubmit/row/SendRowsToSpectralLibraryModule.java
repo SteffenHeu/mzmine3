@@ -30,6 +30,7 @@ import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.io.spectraldbsubmit.batch.LibraryBatchGenerationSubParameters;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.selectors.SpectralLibrarySelection;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibrary;
 import java.time.Instant;
@@ -60,9 +61,18 @@ public class SendRowsToSpectralLibraryModule implements MZmineModule {
       return;
     }
 
+    final LibraryBatchGenerationSubParameters parameters = (LibraryBatchGenerationSubParameters) MZmineCore.getConfiguration()
+        .getModuleParameters(SendRowsToSpectralLibraryModule.class);
+    if (parameters == null) {
+      throw new IllegalStateException(MODULE_NAME + " parameter not found");
+    }
+
+    final SpectralLibrarySelection lastSelectedLib = parameters.getValue(
+        LibraryBatchGenerationSubParameters.lastLibrarySelection);
+    final List<SpectralLibrary> lastLibraries = lastSelectedLib.getMatchingLibraries();
     // suggest the feature list name as library name
     final String suggestedName = rows.getFirst().getFeatureList().getName();
-    final SpectralLibrarySelectionDialog libDialog = new SpectralLibrarySelectionDialog(
+    final SpectralLibrarySelectionDialog libDialog = new SpectralLibrarySelectionDialog(rows.size(), lastLibraries,
         suggestedName);
     final Optional<SpectralLibrary> libResult = libDialog.showAndWait();
 
@@ -71,15 +81,14 @@ public class SendRowsToSpectralLibraryModule implements MZmineModule {
     }
     final SpectralLibrary targetLibrary = libResult.get();
 
-    final LibraryBatchGenerationSubParameters parameters = (LibraryBatchGenerationSubParameters) MZmineCore.getConfiguration()
-        .getModuleParameters(SendRowsToSpectralLibraryModule.class);
-    if (parameters == null) {
-      return;
-    }
     final ExitCode exitCode = parameters.showSetupDialog(true);
     if (exitCode != ExitCode.OK) {
       return;
     }
+
+    // keep track of last library
+    SpectralLibrarySelection newSelection = new SpectralLibrarySelection(List.of(targetLibrary));
+    parameters.setParameter(LibraryBatchGenerationSubParameters.lastLibrarySelection, newSelection);
 
     final SendRowsToSpectralLibraryTask task = new SendRowsToSpectralLibraryTask(rows,
         targetLibrary, parameters, moduleCallDate);
