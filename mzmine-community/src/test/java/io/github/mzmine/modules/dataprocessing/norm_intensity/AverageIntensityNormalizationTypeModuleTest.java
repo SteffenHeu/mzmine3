@@ -108,20 +108,23 @@ class AverageIntensityNormalizationTypeModuleTest {
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, prevFile,
         targetFile, nextFile);
 
-    final FactorNormalizationFunction prevFunction = new FactorNormalizationFunction(prevFile,
-        prevFile.getStartTimeStamp(), 2d);
-    final FactorNormalizationFunction nextFunction = new FactorNormalizationFunction(nextFile,
-        nextFile.getStartTimeStamp(), 4d);
+    final FactorNormalizationFunction prevFunction = new FactorNormalizationFunction(2d);
+    final FactorNormalizationFunction nextFunction = new FactorNormalizationFunction(4d);
 
     final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
         featureList.getNumberOfRawDataFiles());
     summary.addMergeFunction(prevFile, prevFunction);
     summary.addMergeFunction(nextFile, nextFunction);
 
+    // internally we never use summary.functions for interpolation because
+    // interpolation should be based on a single steps functions not on the merged composite function
+    Map<RawDataFile, NormalizationFunction> functions = Map.of(prevFile, prevFunction, nextFile,
+        nextFunction);
+
     // apply interpolation in module
     module.interpolateAllFunctionsToSummary(summary, featureList,
-        new SamplesBatch(featureList.getRawDataFiles()), new MetadataTable(false),
-        summary.functions(), createMainParameters(AbundanceMeasure.Height),
+        new SamplesBatch(featureList.getRawDataFiles()), new MetadataTable(false), functions,
+        createMainParameters(AbundanceMeasure.Height),
         createFeatureIntensityParametersAllSamples(FeatureIntensityNormalizationMode.AVERAGE));
 
     // will check if interpolation is needed to then interpolate functions and save them to summary

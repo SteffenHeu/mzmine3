@@ -28,10 +28,8 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
-import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.util.MathUtils;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,11 +81,9 @@ public abstract class AbstractFactorNormalizationTypeModule extends
     final Map<@NotNull RawDataFile, @NotNull NormalizationFunction> functions = new HashMap<>();
     for (final Entry<@NotNull RawDataFile, @NotNull Double> entry : referenceToNormalizationMetric.entrySet()) {
       final RawDataFile file = entry.getKey();
-      final LocalDateTime runDate = MetadataTableUtils.getRunDate(metadata, file);
       final double normalizationFactor = medianNormMetric / entry.getValue();
 
-      final NormalizationFunction function = new FactorNormalizationFunction(file, runDate,
-          normalizationFactor);
+      final NormalizationFunction function = new FactorNormalizationFunction(normalizationFactor);
       // add or merge function into a new instance within summary
       summary.addMergeFunction(file, function);
 

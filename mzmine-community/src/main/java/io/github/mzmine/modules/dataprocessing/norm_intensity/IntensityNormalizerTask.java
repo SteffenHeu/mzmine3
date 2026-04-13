@@ -246,8 +246,7 @@ class IntensityNormalizerTask extends AbstractTask {
       for (RawDataFile raw : sampleBatch.getRaws()) {
 
         final LocalDateTime runDate = MetadataTableUtils.getRunDate(metadata, raw);
-        final FactorNormalizationFunction fileFunction = new FactorNormalizationFunction(raw,
-            runDate, normFactor);
+        final FactorNormalizationFunction fileFunction = new FactorNormalizationFunction(normFactor);
 
         // add and merge function into summary
         summary.addMergeFunction(raw, fileFunction);
@@ -368,15 +367,15 @@ class IntensityNormalizerTask extends AbstractTask {
    * Applies the normalization functions to all features in the feature list.
    */
   private void applyFunctionsToFeatures(@NotNull final ModularFeatureList featureList,
-      @NotNull final Map<RawDataFile, NormalizationFunction> fileToFunction) {
+      final @NotNull Map<RawDataFile, RawFileNormalizationFunction> fileToFunction) {
 
     if (hasFinishedApplyFunctions) {
       throw new IllegalStateException("Cannot apply functions twice. Should only normalize once.");
     }
     hasFinishedApplyFunctions = true;
 
-    for (Entry<RawDataFile, NormalizationFunction> entry : fileToFunction.entrySet()) {
-      final NormalizationFunction fn = entry.getValue();
+    for (Entry<RawDataFile, RawFileNormalizationFunction> entry : fileToFunction.entrySet()) {
+      final NormalizationFunction fn = entry.getValue().function();
       final RawDataFile raw = entry.getKey();
       if (isCanceled()) {
         return;

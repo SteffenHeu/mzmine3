@@ -35,7 +35,7 @@ import org.jetbrains.annotations.NotNull;
  * searchable version is used during normalization building
  * {@link IntensityNormalizationSearchableSummary}
  */
-public record IntensityNormalizationSummary(@NotNull List<NormalizationFunction> functions,
+public record IntensityNormalizationSummary(@NotNull List<RawFileNormalizationFunction> functions,
                                             @NotNull List<String> messages) {
 
   public static final @NotNull IntensityNormalizationSummary EMPTY = new IntensityNormalizationSummary(
@@ -47,7 +47,7 @@ public record IntensityNormalizationSummary(@NotNull List<NormalizationFunction>
   }
 
   public IntensityNormalizationSummary(
-      @NotNull List<NormalizationFunction> functions) {
+      @NotNull List<RawFileNormalizationFunction> functions) {
     this(functions, new ArrayList<>());
   }
 
@@ -57,5 +57,20 @@ public record IntensityNormalizationSummary(@NotNull List<NormalizationFunction>
 
   public boolean isEmpty() {
     return functions.isEmpty();
+  }
+
+  @NotNull
+  public NormalizationFunction get(int index) {
+    if (index < 0 || index >= size()) {
+      throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size());
+    }
+    return functions.get(index).function();
+  }
+  @NotNull
+  public RawFileNormalizationFunction getRawFileFunction(int index) {
+    if (index < 0 || index >= size()) {
+      throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + size());
+    }
+    return functions.get(index);
   }
 }

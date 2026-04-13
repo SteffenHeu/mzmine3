@@ -24,14 +24,9 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
-import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
 import io.github.mzmine.util.XMLUtils;
 import io.github.mzmine.util.maths.Precision;
-import java.time.LocalDateTime;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Element;
 
 /**
@@ -41,25 +36,17 @@ import org.w3c.dom.Element;
  * {@link FactorNormalizationFunction}.
  *
  */
-public record InterpolatedNormalizationFunction(
-    @NotNull RawDataFilePlaceholder rawDataFilePlaceholder,
-    @Nullable LocalDateTime acquisitionTimestamp, @NotNull NormalizationFunction previousFunction,
-    double previousWeight, @NotNull NormalizationFunction nextFunction,
-    double nextWeight) implements NormalizationFunction {
+public record InterpolatedNormalizationFunction(@NotNull NormalizationFunction previousFunction,
+                                                double previousWeight,
+                                                @NotNull NormalizationFunction nextFunction,
+                                                double nextWeight) implements
+    NormalizationFunction {
 
   public static final String XML_TYPE = "interpolated";
   private static final String XML_PREVIOUS_WEIGHT_ATTR = "previousWeight";
   private static final String XML_NEXT_WEIGHT_ATTR = "nextWeight";
   private static final String XML_PREVIOUS_FUNCTION_ELEMENT = "previousFunction";
   private static final String XML_NEXT_FUNCTION_ELEMENT = "nextFunction";
-
-  public InterpolatedNormalizationFunction(@NotNull final RawDataFile targetFile,
-      @Nullable final LocalDateTime acquisitionTimestamp,
-      @NotNull final NormalizationFunction previousFunction, final double previousWeight,
-      @NotNull final NormalizationFunction nextFunction, final double nextWeight) {
-    this(new RawDataFilePlaceholder(targetFile), acquisitionTimestamp, previousFunction,
-        previousWeight, nextFunction, nextWeight);
-  }
 
   public InterpolatedNormalizationFunction {
     if (!Precision.equalRelativeSignificance(previousWeight + nextWeight, 1d, 0.00001)) {
@@ -83,28 +70,22 @@ public record InterpolatedNormalizationFunction(
   @Override
   public void saveToXML(final @NotNull Element functionElement) {
     functionElement.setAttribute(XML_FUNCTION_TYPE_ATTR, getUniqueID());
-    rawDataFilePlaceholder.saveToXML(functionElement);
-    NormalizationFunction.saveAcquisitionTimestamp(functionElement, acquisitionTimestamp);
     functionElement.setAttribute(XML_PREVIOUS_WEIGHT_ATTR, Double.toString(previousWeight));
     functionElement.setAttribute(XML_NEXT_WEIGHT_ATTR, Double.toString(nextWeight));
 
     final Element previousElement = functionElement.getOwnerDocument()
         .createElement(XML_PREVIOUS_FUNCTION_ELEMENT);
-    NormalizationFunction.appendFunctionElement(previousElement, previousFunction);
+    previousFunction.saveToXML(previousElement);
     functionElement.appendChild(previousElement);
 
     final Element nextElement = functionElement.getOwnerDocument()
         .createElement(XML_NEXT_FUNCTION_ELEMENT);
-    NormalizationFunction.appendFunctionElement(nextElement, nextFunction);
+    nextFunction.saveToXML(nextElement);
     functionElement.appendChild(nextElement);
   }
 
   public static @NotNull InterpolatedNormalizationFunction loadFromXML(
       final @NotNull Element functionElement) {
-    final RawDataFilePlaceholder rawDataFilePlaceholder = RawDataFilePlaceholder.loadFromXML(
-        functionElement);
-    final LocalDateTime acquisitionTimestamp = NormalizationFunction.loadAcquisitionTimestamp(
-        functionElement);
     final double previousWeight = Double.parseDouble(
         XMLUtils.requireAttribute(functionElement, XML_PREVIOUS_WEIGHT_ATTR));
     final double nextWeight = Double.parseDouble(
@@ -112,27 +93,16 @@ public record InterpolatedNormalizationFunction(
 
     final Element previousFunctionContainer = XMLUtils.findChildElement(functionElement,
         XML_PREVIOUS_FUNCTION_ELEMENT);
-    final Element previousFunctionElement = XMLUtils.findChildElement(previousFunctionContainer,
-        XML_FUNCTION_ELEMENT);
     final NormalizationFunction previousFunction = NormalizationFunction.loadFromXML(
-        previousFunctionElement);
+        previousFunctionContainer);
 
     final Element nextFunctionContainer = XMLUtils.findChildElement(functionElement,
         XML_NEXT_FUNCTION_ELEMENT);
-    final Element nextFunctionElement = XMLUtils.findChildElement(nextFunctionContainer,
-        XML_FUNCTION_ELEMENT);
     final NormalizationFunction nextFunction = NormalizationFunction.loadFromXML(
-        nextFunctionElement);
+        nextFunctionContainer);
 
-    return new InterpolatedNormalizationFunction(rawDataFilePlaceholder, acquisitionTimestamp,
-        previousFunction, previousWeight, nextFunction, nextWeight);
-  }
-
-  @Override
-  public @NotNull NormalizationFunction withRawFile(@NotNull RawDataFile file) {
-    // previous and next are from different files so they are not changing reference to file, only this function
-    return new InterpolatedNormalizationFunction(file, MetadataTableUtils.getRunDate(file),
-        previousFunction, previousWeight, nextFunction, nextWeight);
+    return new InterpolatedNormalizationFunction(previousFunction, previousWeight, nextFunction,
+        nextWeight);
   }
 
 }

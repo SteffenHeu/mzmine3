@@ -115,7 +115,7 @@ public class NormalizationFunctionsParameter implements
 
   @Override
   public void loadValueFromXML(final @NotNull Element xmlElement) {
-    ArrayList<NormalizationFunction> functions = new ArrayList<>();
+    ArrayList<RawFileNormalizationFunction> functions = new ArrayList<>();
     ArrayList<String> messages = new ArrayList<>();
 
     final Element functionsElement;
@@ -128,14 +128,14 @@ public class NormalizationFunctionsParameter implements
       return;
     }
     final NodeList functionElements = functionsElement.getElementsByTagName(
-        NormalizationFunction.XML_FUNCTION_ELEMENT);
+        RawFileNormalizationFunction.XML_PARENT_ELEMENT);
     for (int i = 0; i < functionElements.getLength(); i++) {
       final Node node = functionElements.item(i);
       if (!(node instanceof Element functionElement) || node.getParentNode() != functionsElement) {
         continue;
       }
       try {
-        functions.add(NormalizationFunction.loadFromXML(functionElement));
+        functions.add(RawFileNormalizationFunction.loadFromXML(functionElement));
       } catch (RuntimeException e) {
         logger.log(Level.WARNING, "Error while loading normalization function", e);
         // do not set a summary if loading of a function fails. This will result in wrong results
@@ -168,7 +168,7 @@ public class NormalizationFunctionsParameter implements
     xmlElement.appendChild(funcElement);
 
     for (var function : summary.functions()) {
-      NormalizationFunction.appendFunctionElement(funcElement, function);
+      function.appendFunctionElement(funcElement);
     }
 
     final Element messagesElement = doc.createElement("messages");

@@ -69,14 +69,14 @@ class MetadataColumnNormalizationTypeModuleTest {
       module.createAllNormalizationFunctionsToSummary(summary, featureList,
           new SamplesBatch(featureList.getRawDataFiles(), null), metadata,
           createMainParameters(AbundanceMeasure.Height), moduleParameters);
-      final Map<RawDataFile, NormalizationFunction> functions = summary.functions();
+      final Map<RawDataFile, RawFileNormalizationFunction> functions = summary.functions();
 
       final FactorNormalizationFunction functionA = assertInstanceOf(
-          FactorNormalizationFunction.class, functions.get(fileA));
+          FactorNormalizationFunction.class, summary.get(fileA));
       final FactorNormalizationFunction functionB = assertInstanceOf(
-          FactorNormalizationFunction.class, functions.get(fileB));
+          FactorNormalizationFunction.class, summary.get(fileB));
       final FactorNormalizationFunction functionC = assertInstanceOf(
-          FactorNormalizationFunction.class, functions.get(fileC));
+          FactorNormalizationFunction.class, summary.get(fileC));
 
       assertEquals(3, functions.size());
       assertEquals(0.5d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
@@ -94,16 +94,15 @@ class MetadataColumnNormalizationTypeModuleTest {
       module.createAllNormalizationFunctionsToSummary(summary, featureList,
           new SamplesBatch(featureList.getRawDataFiles(), null), metadata,
           createMainParameters(AbundanceMeasure.Height), moduleParameters);
-      final Map<RawDataFile, NormalizationFunction> functions = summary.functions();
 
       final FactorNormalizationFunction functionA = assertInstanceOf(
-          FactorNormalizationFunction.class, functions.get(fileA));
+          FactorNormalizationFunction.class, summary.get(fileA));
       final FactorNormalizationFunction functionB = assertInstanceOf(
-          FactorNormalizationFunction.class, functions.get(fileB));
+          FactorNormalizationFunction.class, summary.get(fileB));
       final FactorNormalizationFunction functionC = assertInstanceOf(
-          FactorNormalizationFunction.class, functions.get(fileC));
+          FactorNormalizationFunction.class, summary.get(fileC));
 
-      assertEquals(3, functions.size());
+      assertEquals(3, summary.size());
       assertEquals(2d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
       assertEquals(1d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
       assertEquals(2d / 5d, functionC.getNormalizationFactor(0d, 0f), 1e-12);
@@ -130,12 +129,11 @@ class MetadataColumnNormalizationTypeModuleTest {
     module.createAllNormalizationFunctionsToSummary(summary, featureList,
         new SamplesBatch(featureList.getRawDataFiles(), null), metadata,
         createMainParameters(AbundanceMeasure.Height), moduleParameters);
-    final Map<RawDataFile, NormalizationFunction> functions = summary.functions();
 
     final FactorNormalizationFunction functionA = assertInstanceOf(
-        FactorNormalizationFunction.class, functions.get(fileA));
+        FactorNormalizationFunction.class, summary.get(fileA));
     final FactorNormalizationFunction functionB = assertInstanceOf(
-        FactorNormalizationFunction.class, functions.get(fileB));
+        FactorNormalizationFunction.class, summary.get(fileB));
 
     assertEquals(0.5d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
     assertEquals(1d, functionB.getNormalizationFactor(0d, 0f), 1e-12);

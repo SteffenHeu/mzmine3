@@ -25,17 +25,10 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
 import io.github.mzmine.util.XMLUtils;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 /**
  *
@@ -46,24 +39,6 @@ public record CompositeNormalizationFunction(
     @NotNull List<@NotNull NormalizationFunction> functions) implements NormalizationFunction {
 
   public static final String XML_TYPE = "composite_list_normalization";
-
-  public CompositeNormalizationFunction {
-    if (functions.stream().map(NormalizationFunction::rawDataFilePlaceholder).distinct().count()
-        > 1) {
-      throw new IllegalArgumentException(
-          "CompositeListNormalizationFunction requires sub functions for the same raw data files");
-    }
-  }
-
-  @Override
-  public @NotNull RawDataFilePlaceholder rawDataFilePlaceholder() {
-    return functions.getFirst().rawDataFilePlaceholder();
-  }
-
-  @Override
-  public @Nullable LocalDateTime acquisitionTimestamp() {
-    return functions.getFirst().acquisitionTimestamp();
-  }
 
   @Override
   public double getNormalizationFactor(@NotNull Double mz, @NotNull Float rt) {
@@ -96,25 +71,12 @@ public record CompositeNormalizationFunction(
   public static @NotNull CompositeNormalizationFunction loadFromXML(
       final @NotNull Element functionElement) {
 
-    final ArrayList<NormalizationFunction> functions = new ArrayList<>();
-
     final Element subfunctions = XMLUtils.findChildElement(functionElement, "subfunctions");
 
-    final NodeList matchingNodes = subfunctions.getElementsByTagName(XML_FUNCTION_ELEMENT);
-    for (int i = 0; i < matchingNodes.getLength(); i++) {
-      final Node node = matchingNodes.item(i);
-      if (node instanceof final Element subFunElement) {
-        final NormalizationFunction subfun = NormalizationFunction.loadFromXML(subFunElement);
-        functions.add(subfun);
-      }
-    }
+    final List<@NotNull NormalizationFunction> functions = XMLUtils.streamChildElementsByTagName(
+        subfunctions, XML_FUNCTION_ELEMENT).map(NormalizationFunction::loadFromXML).toList();
 
-    return new CompositeNormalizationFunction(List.copyOf(functions));
+    return new CompositeNormalizationFunction(functions);
   }
 
-  @Override
-  public @NotNull NormalizationFunction withRawFile(@NotNull RawDataFile file) {
-    return new CompositeNormalizationFunction(
-        functions.stream().map(f -> f.withRawFile(file)).toList());
-  }
 }
