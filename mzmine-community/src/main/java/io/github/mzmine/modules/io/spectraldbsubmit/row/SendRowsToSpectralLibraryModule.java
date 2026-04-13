@@ -86,10 +86,6 @@ public class SendRowsToSpectralLibraryModule implements MZmineModule {
       return;
     }
 
-    // keep track of last library
-    SpectralLibrarySelection newSelection = new SpectralLibrarySelection(List.of(targetLibrary));
-    parameters.setParameter(LibraryBatchGenerationSubParameters.lastLibrarySelection, newSelection);
-
     final SendRowsToSpectralLibraryTask task = new SendRowsToSpectralLibraryTask(rows,
         targetLibrary, parameters, moduleCallDate);
     MZmineCore.getTaskController().addTask(task);
