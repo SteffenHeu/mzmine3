@@ -26,12 +26,14 @@
 package io.github.mzmine.modules.io.spectraldbsubmit.row;
 
 import io.github.mzmine.javafx.components.factories.FxLabels;
+import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibrary;
 import java.io.File;
 import java.util.List;
 import javafx.geometry.Insets;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
@@ -139,8 +141,19 @@ public class SpectralLibrarySelectionDialog extends Dialog<SpectralLibrary> {
       if (addExistingRadio.isSelected()) {
         return libraryCombo.getValue();
       }
-      // create a new library with a placeholder file path
+
       final String name = nameField.getText().strip();
+      final List<SpectralLibrary> libraries = ProjectService.getProject()
+          .getCurrentSpectralLibraries();
+      if (libraries.stream().anyMatch(lib -> lib.getName().equals(name))) {
+        final boolean overwrite = DialogLoggerUtil.showDialogYesNo(AlertType.WARNING,
+            "Overwriting existing library?",
+            "Do you really want to overwrite the existing library, replacing all its content with the new library entries?");
+        if (!overwrite) {
+          return null;
+        }
+      }
+      // create a new library with a placeholder file path
       return new SpectralLibrary(MemoryMapStorage.forMassList(), name, new File(name + ".json"));
     });
   }
