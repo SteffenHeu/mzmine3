@@ -137,7 +137,7 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static @NotNull List<WizardParameterPrototype> collectSolutions(
       @NotNull WizardSequence steps) {
     final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
-        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL);
+        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
     return steps.stream().map(WizardStepParameters::getFactory)
         .flatMap(f -> f.getOptimizationSolutions(steps, dummy).stream())
         .sorted(Comparator.comparing(WizardParameterPrototype::name)).toList();
@@ -145,7 +145,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   private static List<WizardParameterPrototype> createAllSolutions() {
     final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
-        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL);
+        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
 
     final Set<WizardParameterPrototype> allSolutions = new HashSet<>();
 

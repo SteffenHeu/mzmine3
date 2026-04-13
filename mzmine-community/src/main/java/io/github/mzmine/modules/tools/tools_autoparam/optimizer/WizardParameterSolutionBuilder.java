@@ -26,6 +26,8 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.datamodel.IMSRawDataFile;
+import io.github.mzmine.datamodel.SimpleRange;
+import io.github.mzmine.datamodel.SimpleRange.SimpleIntegerRange;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
@@ -52,18 +54,22 @@ import org.moeaframework.core.variable.RealVariable;
 public class WizardParameterSolutionBuilder {
 
   public static final MZTolerance[] ALL_TOLERANCE_OPTIONS = new MZTolerance[]{ //
-      new MZTolerance(0.0005, 2), //
-      new MZTolerance(0.001, 5), //
-      new MZTolerance(0.003, 7), //
-      new MZTolerance(0.005, 15), //
-      new MZTolerance(0.008, 15), //
-      new MZTolerance(0.01, 20), //
-      new MZTolerance(0.015, 25), //
-      new MZTolerance(0.02, 25), //
-      new MZTolerance(0.05, 25)}; //
+      new MZTolerance(0.0005, 2), // 0
+      new MZTolerance(0.001, 5), //  1
+      new MZTolerance(0.003, 7), //  2
+      new MZTolerance(0.005, 15), // 3
+      new MZTolerance(0.008, 15), // 4
+      new MZTolerance(0.01, 20), //  5
+      new MZTolerance(0.015, 25), // 6
+      new MZTolerance(0.02, 25), //  7
+      new MZTolerance(0.05, 25), //  8
+      new MZTolerance(0.1, 25), //   9
+      new MZTolerance(0.3, 25), //  10
+      new MZTolerance(0.5, 25)}; // 11
+
   private static final Logger logger = Logger.getLogger(
       WizardParameterSolutionBuilder.class.getName());
-  private final MZTolerance[] availableTolerances;
+  private final SimpleIntegerRange availableTolerances;
 
   private final @Nullable List<DataFileStatistics> stats;
   private final double minFwhm;
@@ -80,7 +86,7 @@ public class WizardParameterSolutionBuilder {
   final MassDetectorWizardOptions massDetectorType;
 
   public WizardParameterSolutionBuilder(final @Nullable List<DataFileStatistics> dataFileStatistics,
-      @Nullable MassDetectorWizardOptions massDetectorType) {
+      @Nullable MassDetectorWizardOptions massDetectorType, final boolean isLowRes) {
     this.stats = dataFileStatistics;
 
     // just needed for the decision if we use factor of lowest or absolute
@@ -156,10 +162,14 @@ public class WizardParameterSolutionBuilder {
       maxRtSampleToSampleTol = 0.2;
     }
 
-    availableTolerances = switch (this.massDetectorType) {
-      case FACTOR_OF_LOWEST_SIGNAL -> Arrays.copyOfRange(ALL_TOLERANCE_OPTIONS, 1, 5);
-      case ABSOLUTE_NOISE_LEVEL -> Arrays.copyOfRange(ALL_TOLERANCE_OPTIONS, 2, 7);
-    };
+    if (!isLowRes) {
+      availableTolerances = switch (this.massDetectorType) {
+        case FACTOR_OF_LOWEST_SIGNAL -> SimpleRange.of(1, 4);
+        case ABSOLUTE_NOISE_LEVEL -> SimpleRange.of(2, 6);
+      };
+    } else {
+      availableTolerances = SimpleRange.of(5, 11);
+    }
 
     logger.info("Mass detector type: " + this.massDetectorType);
     logger.info("MS1 noise level range: " + minNoiseLevel + ", " + maxNoiseLevel);
@@ -181,8 +191,9 @@ public class WizardParameterSolutionBuilder {
     WizardParameterSolution scanToScanTolerance = new IntegerWizardParameterSolution(index,
         WizardPart.MS, (stepParam, sol, id) -> stepParam.setParameter(
         MassSpectrometerWizardParameters.scanToScanMzTolerance,
-        availableTolerances[BinaryIntegerVariable.getInt(sol.getVariable(id))]),
-        () -> new BinaryIntegerVariable("MZ tolerance option", 0, availableTolerances.length - 1));
+        ALL_TOLERANCE_OPTIONS[BinaryIntegerVariable.getInt(sol.getVariable(id))]),
+        () -> new BinaryIntegerVariable("MZ tolerance option", availableTolerances.lowerBound(),
+            availableTolerances.upperBound()));
     return scanToScanTolerance;
   }
 
@@ -233,7 +244,8 @@ public class WizardParameterSolutionBuilder {
   }
 
   public MZTolerance @NotNull [] getAvailableTolerances() {
-    return availableTolerances;
+    return Arrays.copyOfRange(ALL_TOLERANCE_OPTIONS, availableTolerances.lower(),
+        availableTolerances.upper() + 1);
   }
 
   public double getMinRtSampleToSampleTol() {

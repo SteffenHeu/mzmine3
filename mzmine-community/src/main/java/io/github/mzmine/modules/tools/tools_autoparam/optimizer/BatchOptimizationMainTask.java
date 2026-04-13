@@ -131,13 +131,6 @@ public class BatchOptimizationMainTask extends AbstractTask {
     final WizardOptimizationProblem problem = new WizardOptimizationProblem(tab.getSequence(),
         stats, params);
 
-    // single-pass parameter estimation: derive best-guess values and evaluate once
-    final Map<String, Double> singlePassEstimates = SinglePassParameterEstimation.estimate(stats,
-        problem.getBuilder());
-    final Solution singlePassSolution = problem.newSolution();
-    SinglePassParameterEstimation.applyToSolution(singlePassSolution, singlePassEstimates);
-    problem.evaluate(singlePassSolution);
-
     optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
     totalIterations = Math.max(params.getValue(OptimizerParameters.iterations), 30);
 
@@ -147,7 +140,16 @@ public class BatchOptimizationMainTask extends AbstractTask {
     final int numGuesstimatedPopulations = 10;
     final boolean initWithGuesses = params.getValue(
         OptimizerParameters.initializeWithRawDataGuesses);
+
+    final Map<String, Double> singlePassEstimates = SinglePassParameterEstimation.estimate(stats,
+        problem.getBuilder());
+    final Solution singlePassSolution = problem.newSolution();
+
     if (initWithGuesses) {
+      // single-pass parameter estimation: derive best-guess values and evaluate once
+      SinglePassParameterEstimation.applyToSolution(singlePassSolution, singlePassEstimates);
+      problem.evaluate(singlePassSolution);
+
       final List<Solution> injected = SinglePassParameterEstimation.createWarmStartSolutions(
           problem, singlePassEstimates, numGuesstimatedPopulations);
       logger.info(

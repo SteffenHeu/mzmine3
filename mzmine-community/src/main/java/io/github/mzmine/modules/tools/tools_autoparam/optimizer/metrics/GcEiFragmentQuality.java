@@ -44,7 +44,7 @@ public record GcEiFragmentQuality() implements SweepMetric {
 
   @Override
   public @NotNull String name() {
-    return "GC-EI fragment quality";
+    return "GC-EI fragment spectrum quality";
   }
 
   @Override

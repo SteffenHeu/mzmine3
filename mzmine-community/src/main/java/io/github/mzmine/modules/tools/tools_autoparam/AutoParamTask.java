@@ -45,6 +45,7 @@ import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.auto.AutoMassDetector;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.FeatureRecord;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -69,7 +70,8 @@ public class AutoParamTask extends AbstractRawDataFileTask {
 
   private static final Logger logger = Logger.getLogger(AutoParamTask.class.getName());
 
-  private static final MZTolerance[] tolerances = new MZTolerance[]{new MZTolerance(0.0005, 2), //
+  private static final MZTolerance[] tolerances = WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS;
+  /*new MZTolerance[]{new MZTolerance(0.0005, 2), //
       new MZTolerance(0.001, 5), //
       new MZTolerance(0.005, 15), //
       new MZTolerance(0.008, 15), //
@@ -77,7 +79,7 @@ public class AutoParamTask extends AbstractRawDataFileTask {
       new MZTolerance(0.015, 25), //
       new MZTolerance(0.02, 25), //
       new MZTolerance(0.05, 25) //
-  };
+  };*/
 
   /**
    * for matching {@link #additionalFeatures} to the base peak mzs.

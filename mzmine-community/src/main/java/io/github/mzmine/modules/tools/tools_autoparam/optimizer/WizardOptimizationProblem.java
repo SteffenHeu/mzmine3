@@ -54,6 +54,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometer
 import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
@@ -130,7 +131,9 @@ public class WizardOptimizationProblem extends AbstractProblem {
     rtSampleToSampleTolerance = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
         (int) (files.length * 0.8), 0.8f);
 
-    builder = new WizardParameterSolutionBuilder(stats, null);
+    builder = new WizardParameterSolutionBuilder(stats, null,
+        initialSequence.get(WizardPart.MS).map(WizardStepParameters::getFactory)
+            .map(MassSpectrometerWizardParameterFactory.LOW_RES::equals).orElse(false));
 
     numWizardParam = createWizardParameters().size();
     numBatchParam = createBatchParameters().size();
