@@ -2878,7 +2878,7 @@
         },
         {
             "moduleName": "org.jfree:jfreechart",
-            "moduleVersion": "1.5.5",
+            "moduleVersion": "1.5.3",
             "moduleUrls": [
                 "http://www.jfree.org/jfreechart/"
             ],
@@ -3119,9 +3119,9 @@
         },
         {
             "moduleName": "org.moeaframework:moeaframework",
-            "moduleVersion": "5.0",
+            "moduleVersion": "5.1",
             "moduleUrls": [
-                "https://moeaframework.org/"
+                "https://moeaframework.org"
             ],
             "moduleLicenses": [
                 {

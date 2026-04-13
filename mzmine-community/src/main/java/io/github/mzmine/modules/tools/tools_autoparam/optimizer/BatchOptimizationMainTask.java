@@ -41,6 +41,7 @@ import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
@@ -57,13 +58,13 @@ import org.moeaframework.algorithm.NSGAII;
 import org.moeaframework.algorithm.RVEA;
 import org.moeaframework.algorithm.SMSEMOA;
 import org.moeaframework.algorithm.SPEA2;
-import org.moeaframework.algorithm.pso.OMOPSO;
 import org.moeaframework.core.PRNG;
+import org.moeaframework.core.Solution;
+import org.moeaframework.core.initialization.InjectedInitialization;
 import org.moeaframework.core.population.NondominatedPopulation;
 
 public class BatchOptimizationMainTask extends AbstractTask {
 
-  private static final int MAX_EVALUATIONS = 100;
   private static final Logger logger = Logger.getLogger(BatchOptimizationMainTask.class.getName());
 
   private final File[] files;
@@ -72,12 +73,18 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private final BatchWizardTab tab;
   private final OptimizerParameters params;
 
+  /**
+   * Actual number of evaluations for this run. Set during {@link #run()} — may be reduced from the
+   * user-configured iterations when warm-starting.
+   */
+  private int totalIterations;
+
   @Nullable
   private AbstractAlgorithm optimizer;
 
   public BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
-      @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata, @NotNull BatchWizardTab tab,
-      @NotNull OptimizerParameters params) {
+      @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata,
+      @NotNull BatchWizardTab tab, @NotNull OptimizerParameters params) {
     super(storage, moduleCallDate);
     this.files = files;
     this.metadata = metadata;
@@ -93,13 +100,15 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
   @Override
   public String getTaskDescription() {
+    final int max = totalIterations > 0 ? totalIterations : 100;
     return "Performing batch optimization. Run %d/%d".formatted(
-        (optimizer != null ? optimizer.getNumberOfEvaluations() : 0), MAX_EVALUATIONS);
+        (optimizer != null ? optimizer.getNumberOfEvaluations() : 0), max);
   }
 
   @Override
   public double getFinishedPercentage() {
-    return optimizer != null ? (double) optimizer.getNumberOfEvaluations() / MAX_EVALUATIONS : 0;
+    final int max = totalIterations > 0 ? totalIterations : 100;
+    return optimizer != null ? (double) optimizer.getNumberOfEvaluations() / max : 0;
   }
 
   @Override
@@ -122,28 +131,80 @@ public class BatchOptimizationMainTask extends AbstractTask {
     final WizardOptimizationProblem problem = new WizardOptimizationProblem(tab.getSequence(),
         stats, params);
 
-    optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
-    final int iterations = params.getValue(OptimizerParameters.iterations);
+    // single-pass parameter estimation: derive best-guess values and evaluate once
+    final Map<String, Double> singlePassEstimates = SinglePassParameterEstimation.estimate(stats,
+        problem.getBuilder());
+    final Solution singlePassSolution = problem.newSolution();
+    SinglePassParameterEstimation.applyToSolution(singlePassSolution, singlePassEstimates);
+    problem.evaluate(singlePassSolution);
 
-    switch (optimizer) {
-      case MOEAD m -> m.setInitialPopulationSize(iterations);
-      case NSGAII n -> n.setInitialPopulationSize(iterations);
-      case AGEMOEAII a -> a.setInitialPopulationSize(iterations);
-      case GDE3 g -> g.setInitialPopulationSize(iterations);
-      case OMOPSO o -> o.setMaxIterations(iterations);
-      case RVEA r -> r.setInitialPopulationSize(iterations);
-      case SMSEMOA s -> s.setInitialPopulationSize(iterations);
-      case SPEA2 s -> s.setInitialPopulationSize(iterations);
-      case EpsilonMOEA e -> e.setInitialPopulationSize(iterations);
-      case IBEA e -> e.setInitialPopulationSize(iterations);
-      default -> {
+    optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
+    totalIterations = Math.max(params.getValue(OptimizerParameters.iterations), 30);
+
+    // Initial population is the number of evaluations before the actual evolutionary algorithm starts.
+    // warm-start for MOEAD: inject pre-built solutions via InjectedInitialization and reduce
+    // evaluation count since we start closer to good solutions
+    final int numGuesstimatedPopulations = 10;
+    final boolean initWithGuesses = params.getValue(
+        OptimizerParameters.initializeWithRawDataGuesses);
+    if (initWithGuesses) {
+      final List<Solution> injected = SinglePassParameterEstimation.createWarmStartSolutions(
+          problem, singlePassEstimates, numGuesstimatedPopulations);
+      logger.info(
+          "Warm-start enabled for %s: injected %d solutions, total evaluations %d".formatted(
+              optimizer.getName(), injected.size(), totalIterations));
+
+      switch (optimizer) {
+        case MOEAD m -> {
+          m.setInitialization(new InjectedInitialization(problem, injected));
+          m.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        case NSGAII n -> {
+          n.setInitialization(new InjectedInitialization(problem, injected));
+          n.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        case AGEMOEAII a -> {
+          a.setInitialization(new InjectedInitialization(problem, injected));
+          a.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        case GDE3 g -> {
+          g.setInitialization(new InjectedInitialization(problem, injected));
+          g.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        case RVEA r -> {
+          r.setInitialization(new InjectedInitialization(problem, injected));
+          r.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        case SMSEMOA s -> {
+          s.setInitialization(new InjectedInitialization(problem, injected));
+          s.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        case SPEA2 s -> {
+          s.setInitialization(new InjectedInitialization(problem, injected));
+          s.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        case EpsilonMOEA e -> {
+          e.setInitialization(new InjectedInitialization(problem, injected));
+          e.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        case IBEA e -> {
+          e.setInitialization(new InjectedInitialization(problem, injected));
+          e.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+        }
+        default -> {
+        }
       }
     }
-    ;
 
-    optimizer.run(new TaskStatusTerminationCondition(iterations, this::getStatus));
+    optimizer.run(new TaskStatusTerminationCondition(totalIterations, this::getStatus));
 
     final NondominatedPopulation result = optimizer.getResult();
+
+    // log comparison: single-pass vs best MOEA result
+    SinglePassParameterEstimation.logResults(singlePassSolution, singlePassEstimates,
+        problem.getEnabledMetrics());
+    SinglePassParameterEstimation.logComparison(singlePassSolution, result,
+        problem.getEnabledMetrics());
 
     FxThread.runLater(() -> {
       Stage stage = new Stage();

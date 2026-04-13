@@ -75,6 +75,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -82,6 +83,8 @@ import org.moeaframework.core.Solution;
 import org.moeaframework.problem.AbstractProblem;
 
 public class WizardOptimizationProblem extends AbstractProblem {
+
+  private static final Logger logger = Logger.getLogger(WizardOptimizationProblem.class.getName());
 
   private final int NUM_PARAM;
   private final List<WizardParameterPrototype> paramToOptimize;
@@ -441,5 +444,13 @@ public class WizardOptimizationProblem extends AbstractProblem {
 
   public @Nullable List<FeatureRecord> getFileOnlyBenchmarkFeatures() {
     return fileOnlyBenchmarkFeatures;
+  }
+
+  public @NotNull List<SweepMetric> getEnabledMetrics() {
+    return enabledMetrics;
+  }
+
+  public @NotNull WizardParameterSolutionBuilder getBuilder() {
+    return builder;
   }
 }

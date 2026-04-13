@@ -44,6 +44,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.Benchmar
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.ImportTypeParameter;
@@ -97,11 +98,10 @@ public class OptimizerParameters extends SimpleParameterSet {
           FileSelectionType.OPEN));
 
   public static final IntegerParameter iterations = new IntegerParameter("Iterations",
-      "Number of iterations during optimization.", 100, 50, 10_000);
+      "Number of iterations during optimization.", 100, 30, 10_000);
 
-  public static final IntegerParameter samplesPerParam = new IntegerParameter(
-      "Samples per parameter",
-      "Number of evenly-spaced values to sample for each parameter in the sweep.", 7, 3, 50);
+  public static final BooleanParameter initializeWithRawDataGuesses = new BooleanParameter(
+      "Initialize with raw data-based defaults", "", true);
 
   public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
       "Optimizer", "", OptimizerOptions.values(), OptimizerOptions.MOEAD);
@@ -123,7 +123,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public OptimizerParameters() {
     super(metricsToOptimize, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
-        samplesPerParam, paramToOptimize);
+        initializeWithRawDataGuesses, paramToOptimize);
   }
 
   /**
@@ -196,7 +196,6 @@ public class OptimizerParameters extends SimpleParameterSet {
     param.setParameter(benchmarkFeatureTypes, DEFAULT_IMPORT_TYPES);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
-    param.setParameter(samplesPerParam, 7);
     param.setParameter(paramToOptimize,
         new ArrayList<>(ALL_SOLUTIONS.subList(0, ALL_SOLUTIONS.size() - WAVELET_SOLUTION_COUNT)));
     return param;

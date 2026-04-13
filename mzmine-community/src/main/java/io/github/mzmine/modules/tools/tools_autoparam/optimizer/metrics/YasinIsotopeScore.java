@@ -43,6 +43,10 @@ import java.util.Comparator;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Checks the ratios of isotopic signals in a feature list across samples. This approach should
+ * perfom similar to the SLAW-integration score but not rely on QC samples.
+ */
 public final class YasinIsotopeScore implements SweepMetric {
 
   private final PercentTolerance areaTolerance = new PercentTolerance(0.2);
