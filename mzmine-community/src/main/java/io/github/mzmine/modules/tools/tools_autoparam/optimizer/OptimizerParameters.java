@@ -74,7 +74,7 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static final List<SweepMetric> ALL_METRICS = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
       SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.HARMONIC_SLAW_ISOTOPES,
       SweepMetric.YASIN_ISOTOPE_SCORE, SweepMetric.DOUBLE_PEAK_RATIO, SweepMetric.FILL_RATIO,
-      new BenchmarkTargetCount(List.of()));
+      SweepMetric.GC_EI_FRAGMENT_QUALITY, new BenchmarkTargetCount(List.of()));
 
   /**
    * Default metrics enabled at startup: features with isotopes, integration score, and the combined
