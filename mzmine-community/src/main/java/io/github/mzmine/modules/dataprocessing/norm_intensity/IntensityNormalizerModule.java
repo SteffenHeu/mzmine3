@@ -83,13 +83,13 @@ public class IntensityNormalizerModule implements MZmineProcessingModule {
     return IntensityNormalizerParameters.class;
   }
 
-  public static @NotNull IntensityNormalizationSimpleSummary getNormalizationFunctionsOfLatestCall(
+  public static @NotNull IntensityNormalizationSummary getNormalizationFunctionsOfLatestCall(
       final @NotNull FeatureList featureList) {
-    final IntensityNormalizationSimpleSummary normalizationFunctions = ParameterUtils.getParameterValueOfLatestMethodCall(
+    final IntensityNormalizationSummary normalizationFunctions = ParameterUtils.getParameterValueOfLatestMethodCall(
         featureList.getAppliedMethods(), IntensityNormalizerModule.class,
         IntensityNormalizerParameters.hiddenNormalizationSummary);
     if (normalizationFunctions == null) {
-      return IntensityNormalizationSimpleSummary.EMPTY;
+      return IntensityNormalizationSummary.EMPTY;
     }
     return normalizationFunctions;
   }
@@ -99,7 +99,7 @@ public class IntensityNormalizerModule implements MZmineProcessingModule {
    */
   public static @NotNull Optional<NormalizationFunction> getNormalizationFunctionsOfLatestCallForFile(
       final @NotNull FeatureList featureList, final @NotNull RawDataFile rawDataFile) {
-    IntensityNormalizationSimpleSummary summary = getNormalizationFunctionsOfLatestCall(
+    IntensityNormalizationSummary summary = getNormalizationFunctionsOfLatestCall(
         featureList);
     return summary.functions().stream()
         .filter(func -> func.rawDataFilePlaceholder().matches(rawDataFile)).findFirst();

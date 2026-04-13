@@ -78,7 +78,7 @@ public class FeatureIntensityNormalizationModule extends AbstractFactorNormaliza
     final double result = switch (mode) {
       case MEDIAN -> MathUtils.calcMedian(abundances);
       case AVERAGE -> MathUtils.calcAvg(abundances);
-      case TIC -> ArrayUtils.sum(abundances);
+      case SUM_TIC -> ArrayUtils.sum(abundances);
       case MAX -> ArrayUtils.max(abundances).orElse(0d);
     };
 

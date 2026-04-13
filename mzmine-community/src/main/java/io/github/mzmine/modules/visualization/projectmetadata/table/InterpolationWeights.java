@@ -72,8 +72,7 @@ public sealed interface InterpolationWeights {
   }
 
   /**
-   * Weights to interpolate normalization between two different two related data files. Data files
-   * might be null if there was a reference on only one side.
+   * Weights to interpolate normalization between two different two related data files.
    *
    * @param nextRun     sample and weight for the previous run (how close it is time)
    * @param previousRun sample and weight for the next run (how close it is in time)

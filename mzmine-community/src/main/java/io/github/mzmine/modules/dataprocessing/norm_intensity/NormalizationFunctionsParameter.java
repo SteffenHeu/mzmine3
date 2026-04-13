@@ -44,13 +44,13 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 public class NormalizationFunctionsParameter implements
-    UserParameter<IntensityNormalizationSimpleSummary, Label> {
+    UserParameter<IntensityNormalizationSummary, Label> {
 
   private static final Logger logger = Logger.getLogger(
       NormalizationFunctionsParameter.class.getName());
 
   @NotNull
-  private IntensityNormalizationSimpleSummary summary = new IntensityNormalizationSimpleSummary(
+  private IntensityNormalizationSummary summary = new IntensityNormalizationSummary(
       List.of());
 
   @Override
@@ -75,12 +75,12 @@ public class NormalizationFunctionsParameter implements
 
   @Override
   public void setValueToComponent(final @NotNull Label component,
-      final @Nullable IntensityNormalizationSimpleSummary newValue) {
+      final @Nullable IntensityNormalizationSummary newValue) {
     // no UI component editing for hidden parameter
   }
 
   @Override
-  public @NotNull UserParameter<IntensityNormalizationSimpleSummary, Label> cloneParameter() {
+  public @NotNull UserParameter<IntensityNormalizationSummary, Label> cloneParameter() {
     final NormalizationFunctionsParameter clonedParameter = new NormalizationFunctionsParameter();
     clonedParameter.setValue(summary.copy());
     return clonedParameter;
@@ -90,13 +90,13 @@ public class NormalizationFunctionsParameter implements
    * @return defensive copy of summary
    */
   @Override
-  public @NotNull IntensityNormalizationSimpleSummary getValue() {
+  public @NotNull IntensityNormalizationSummary getValue() {
     return summary.copy();
   }
 
   @Override
-  public void setValue(final @Nullable IntensityNormalizationSimpleSummary newValue) {
-    summary = requireNonNullElse(newValue, IntensityNormalizationSimpleSummary.EMPTY);
+  public void setValue(final @Nullable IntensityNormalizationSummary newValue) {
+    summary = requireNonNullElse(newValue, IntensityNormalizationSummary.EMPTY);
   }
 
   @Override
@@ -124,7 +124,7 @@ public class NormalizationFunctionsParameter implements
     } catch (Exception e) {
       // no valid xml
       logger.log(Level.WARNING, "Error while loading normalization functions from XML. No functions tag.", e);
-      summary = IntensityNormalizationSimpleSummary.EMPTY;
+      summary = IntensityNormalizationSummary.EMPTY;
       return;
     }
     final NodeList functionElements = functionsElement.getElementsByTagName(
@@ -140,7 +140,7 @@ public class NormalizationFunctionsParameter implements
         logger.log(Level.WARNING, "Error while loading normalization function", e);
         // do not set a summary if loading of a function fails. This will result in wrong results
         // normalization has to be applied a new
-        summary = IntensityNormalizationSimpleSummary.EMPTY;
+        summary = IntensityNormalizationSummary.EMPTY;
         return;
       }
     }
@@ -157,7 +157,7 @@ public class NormalizationFunctionsParameter implements
     }
 
     // finally loaded summary
-    summary = new IntensityNormalizationSimpleSummary(functions, messages);
+    summary = new IntensityNormalizationSummary(functions, messages);
   }
 
   @Override

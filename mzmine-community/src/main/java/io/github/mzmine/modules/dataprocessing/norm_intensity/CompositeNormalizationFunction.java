@@ -42,12 +42,12 @@ import org.w3c.dom.NodeList;
  * @param functions a list of all functions to be applied. Each factor is multiplied to get the
  *                  total factor.
  */
-public record CompositeListNormalizationFunction(
+public record CompositeNormalizationFunction(
     @NotNull List<@NotNull NormalizationFunction> functions) implements NormalizationFunction {
 
   public static final String XML_TYPE = "composite_list_normalization";
 
-  public CompositeListNormalizationFunction {
+  public CompositeNormalizationFunction {
     if (functions.stream().map(NormalizationFunction::rawDataFilePlaceholder).distinct().count()
         > 1) {
       throw new IllegalArgumentException(
@@ -93,7 +93,7 @@ public record CompositeListNormalizationFunction(
     functionElement.appendChild(subFunctions);
   }
 
-  public static @NotNull CompositeListNormalizationFunction loadFromXML(
+  public static @NotNull CompositeNormalizationFunction loadFromXML(
       final @NotNull Element functionElement) {
 
     final ArrayList<NormalizationFunction> functions = new ArrayList<>();
@@ -109,12 +109,12 @@ public record CompositeListNormalizationFunction(
       }
     }
 
-    return new CompositeListNormalizationFunction(List.copyOf(functions));
+    return new CompositeNormalizationFunction(List.copyOf(functions));
   }
 
   @Override
   public @NotNull NormalizationFunction withRawFile(@NotNull RawDataFile file) {
-    return new CompositeListNormalizationFunction(
+    return new CompositeNormalizationFunction(
         functions.stream().map(f -> f.withRawFile(file)).toList());
   }
 }

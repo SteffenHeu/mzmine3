@@ -35,18 +35,18 @@ import org.jetbrains.annotations.NotNull;
  * searchable version is used during normalization building
  * {@link IntensityNormalizationSearchableSummary}
  */
-public record IntensityNormalizationSimpleSummary(@NotNull List<NormalizationFunction> functions,
-                                                  @NotNull List<String> messages) {
+public record IntensityNormalizationSummary(@NotNull List<NormalizationFunction> functions,
+                                            @NotNull List<String> messages) {
 
-  public static final @NotNull IntensityNormalizationSimpleSummary EMPTY = new IntensityNormalizationSimpleSummary(
+  public static final @NotNull IntensityNormalizationSummary EMPTY = new IntensityNormalizationSummary(
       List.of(), List.of());
 
   @NotNull
-  public IntensityNormalizationSimpleSummary copy() {
-    return new IntensityNormalizationSimpleSummary(List.copyOf(functions), List.copyOf(messages));
+  public IntensityNormalizationSummary copy() {
+    return new IntensityNormalizationSummary(List.copyOf(functions), List.copyOf(messages));
   }
 
-  public IntensityNormalizationSimpleSummary(
+  public IntensityNormalizationSummary(
       @NotNull List<NormalizationFunction> functions) {
     this(functions, new ArrayList<>());
   }

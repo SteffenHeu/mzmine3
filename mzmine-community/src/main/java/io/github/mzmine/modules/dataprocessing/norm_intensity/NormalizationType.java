@@ -52,7 +52,7 @@ public enum NormalizationType implements ModuleOptionsEnum<NormalizationTypeModu
    * @return All internal normalizers. Currently only standard compound normalzier but could be
    * extended for lipid normalizer or similar.
    */
-  public static NormalizationType[] internalSampleNormalizers() {
+  public static NormalizationType[] intraSampleNormalizers() {
     return new NormalizationType[]{NoNormalization, StandardCompounds};
   }
 

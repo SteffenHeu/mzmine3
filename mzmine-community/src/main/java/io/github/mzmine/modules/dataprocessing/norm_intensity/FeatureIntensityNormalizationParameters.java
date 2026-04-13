@@ -41,8 +41,8 @@ public class FeatureIntensityNormalizationParameters extends SimpleParameterSet 
       """, SampleType.values(), List.of(SampleType.QC));
 
   public static final ComboParameter<FeatureIntensityNormalizationMode> mode = new ComboParameter<>(
-      "Use intensity", """
-      Use intensity median (default), TIC (total sum), or other to normalize feature intensities.""",
+      "Normalize by feature abundances", """
+      Use intensity median (default), TIC (total sum), or other to normalize feature abundances.""",
       FeatureIntensityNormalizationMode.values(), FeatureIntensityNormalizationMode.getDefault());
 
   public FeatureIntensityNormalizationParameters() {

@@ -100,7 +100,7 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
     }
     final Float rt = featureOrRow.get(RTType.class);
     final Double mz = featureOrRow.get(MZType.class);
-    return (float) normalizationFunction.getNormalizationFactor(mz, rt);
+    return (float)(value * normalizationFunction.getNormalizationFactor(mz, rt));
   }
 
 

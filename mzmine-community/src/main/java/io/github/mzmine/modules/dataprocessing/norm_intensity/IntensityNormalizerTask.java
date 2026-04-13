@@ -142,7 +142,7 @@ class IntensityNormalizerTask extends AbstractTask {
     this.interBatchCorrectionEnabled = intraBatchCorrectionEnabled;
 
     // 1+ for applying the functions at the end
-    totalNormalizationSteps = 1+ObjectUtils.countTrue(byMetadataEnabled, internalStandardEnabled,
+    totalNormalizationSteps = 1 + ObjectUtils.countTrue(byMetadataEnabled, internalStandardEnabled,
         intraBatchCorrectionEnabled, interBatchCorrectionEnabled);
   }
 
@@ -157,7 +157,7 @@ class IntensityNormalizerTask extends AbstractTask {
   public void run() {
 
     setStatus(TaskStatus.PROCESSING);
-    logger.info("Running Intensity normalizer");
+    logger.fine("Running Intensity normalizer");
 
     // create copy or prepare in place featurelist
     prepareNormalizedFeatureList();
@@ -208,7 +208,7 @@ class IntensityNormalizerTask extends AbstractTask {
     handleOriginal.reflectNewFeatureListToProject(suffix, project, normalizedFeatureList,
         originalFeatureList);
 
-    logger.info("Finished intensity normalization");
+    logger.fine("Finished intensity normalization");
     setStatus(TaskStatus.FINISHED);
   }
 
@@ -228,13 +228,13 @@ class IntensityNormalizerTask extends AbstractTask {
 
     // values might be NaN if they are unset
     if (batchNormMetrics.length != sampleBatches.size()) {
-      logger.info(
+      logger.fine(
           "Skipping inter batch correction as it seems to be not supported by this batch normalizer: "
               + normalizationTypeModule.getName());
       return;
     }
 
-    logger.info("Normalizing samples inter batches n=" + sampleBatches.size());
+    logger.fine("Normalizing samples inter batches n=" + sampleBatches.size());
     final double interBatchMedian = MathUtils.calcMedian(batchNormMetrics);
 
     // apply those to all samples in the same batch
@@ -256,6 +256,17 @@ class IntensityNormalizerTask extends AbstractTask {
     }
   }
 
+  /// Applies normalization to a single samples batch (intra batch) which may be selected by
+  /// metadata. If no batching is applied, all samples may be handled as a single batch.
+  ///
+  /// Applies:
+  /// - Metadata normalization by factor or division
+  /// - internal standards normalization sample-wise.
+  /// - Reference samples (QC)-based intra batch correction
+  ///
+  /// @param samplesBatch the samples of this batch. Normalizers may set the medianNormMetric of
+  /// this batch for later inter batch correction.
+  /// @param summary      the summary to save normalization results to
   private void normalizeSamplesBatch(SamplesBatch samplesBatch,
       IntensityNormalizationSearchableSummary summary) {
     final MetadataTable metadata = ProjectService.getMetadata();
@@ -360,8 +371,7 @@ class IntensityNormalizerTask extends AbstractTask {
       @NotNull final Map<RawDataFile, NormalizationFunction> fileToFunction) {
 
     if (hasFinishedApplyFunctions) {
-      throw new IllegalStateException(
-          "Cannot apply functions twice. Should only normalize once.");
+      throw new IllegalStateException("Cannot apply functions twice. Should only normalize once.");
     }
     hasFinishedApplyFunctions = true;
 

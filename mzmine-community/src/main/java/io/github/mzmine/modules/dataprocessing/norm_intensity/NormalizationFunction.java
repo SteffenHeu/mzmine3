@@ -40,7 +40,7 @@ import org.w3c.dom.Element;
  * Function that returns a normalization factor for specific feature coordinates.
  */
 public sealed interface NormalizationFunction extends UniqueIdSupplier permits
-    CompositeListNormalizationFunction, FactorNormalizationFunction,
+    CompositeNormalizationFunction, FactorNormalizationFunction,
     InterpolatedNormalizationFunction, StandardCompoundNormalizationFunction {
 
   String XML_FUNCTION_ELEMENT = "normalizationFunction";
@@ -50,7 +50,7 @@ public sealed interface NormalizationFunction extends UniqueIdSupplier permits
   /**
    * Merges the old and new function. If both are constant factors then the factors are merged into
    * a single function. If the functions are more complex like feature specific functions, then a
-   * {@link CompositeListNormalizationFunction} is returned.
+   * {@link CompositeNormalizationFunction} is returned.
    *
    * @param old      old function
    * @param function new function
@@ -67,19 +67,19 @@ public sealed interface NormalizationFunction extends UniqueIdSupplier permits
     }
 
     final List<NormalizationFunction> subfunctions = new ArrayList<>();
-    if (old instanceof CompositeListNormalizationFunction(var functions)) {
+    if (old instanceof CompositeNormalizationFunction(var functions)) {
       subfunctions.addAll(functions);
     } else {
       subfunctions.add(old);
     }
 
-    if (function instanceof CompositeListNormalizationFunction(var functions)) {
+    if (function instanceof CompositeNormalizationFunction(var functions)) {
       subfunctions.addAll(functions);
     } else {
       subfunctions.add(function);
     }
 
-    return new CompositeListNormalizationFunction(List.copyOf(subfunctions));
+    return new CompositeNormalizationFunction(List.copyOf(subfunctions));
   }
 
   /**

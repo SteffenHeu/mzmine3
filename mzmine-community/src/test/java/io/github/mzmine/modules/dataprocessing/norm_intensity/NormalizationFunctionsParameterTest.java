@@ -81,7 +81,7 @@ class NormalizationFunctionsParameterTest {
     final NormalizationFunctionsParameter loadedParameter = new NormalizationFunctionsParameter();
     ParameterUtils.loadParameterFromString(loadedParameter, xml);
 
-    final IntensityNormalizationSimpleSummary summary = loadedParameter.getValue();
+    final IntensityNormalizationSummary summary = loadedParameter.getValue();
     final List<NormalizationFunction> loadedFunctions = summary.functions();
     assertEquals(3, loadedFunctions.size());
 
@@ -129,7 +129,7 @@ class NormalizationFunctionsParameterTest {
     final NormalizationFunctionsParameter parameter = new NormalizationFunctionsParameter();
     parameter.loadValueFromXML(root);
 
-    final IntensityNormalizationSimpleSummary summary = parameter.getValue();
+    final IntensityNormalizationSummary summary = parameter.getValue();
     assertEquals(0, summary.size());
 
 //    final List<NormalizationFunction> loadedFunctions = summary.functions();
@@ -154,7 +154,7 @@ class NormalizationFunctionsParameterTest {
         AbundanceMeasure.Area, OriginalFeatureListOption.REMOVE, List.of());
     ParameterUtils.loadValuesFromXMLString(loaded, xml);
 
-    final IntensityNormalizationSimpleSummary summary = loaded.getValue(
+    final IntensityNormalizationSummary summary = loaded.getValue(
         IntensityNormalizerParameters.hiddenNormalizationSummary);
     assertNotNull(summary);
     assertEquals(1, summary.size());
@@ -188,7 +188,7 @@ class NormalizationFunctionsParameterTest {
         new SimpleFeatureListAppliedMethod(IntensityNormalizerModule.class, latestParameters,
             Instant.parse("2026-01-01T11:30:00Z")));
 
-    final IntensityNormalizationSimpleSummary summary = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCall(
+    final IntensityNormalizationSummary summary = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCall(
         featureList);
     assertNotNull(summary);
     assertEquals(1, summary.size());
@@ -213,7 +213,7 @@ class NormalizationFunctionsParameterTest {
     final RawDataFile rawDataFile = RawDataFile.createDummyFile();
     final ModularFeatureList featureList = new ModularFeatureList("flist", null, rawDataFile);
 
-    final IntensityNormalizationSimpleSummary functions = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCall(
+    final IntensityNormalizationSummary functions = IntensityNormalizerModule.getNormalizationFunctionsOfLatestCall(
         featureList);
 
     assertTrue(functions.isEmpty());
@@ -238,20 +238,20 @@ class NormalizationFunctionsParameterTest {
     assertEquals(StandardUsageType.Weighted, loadedFunction.usageType());
   }
 
-  private static @NotNull IntensityNormalizationSimpleSummary createSummary(
+  private static @NotNull IntensityNormalizationSummary createSummary(
       NormalizationFunction... functions) {
     return createSummary(List.of(functions));
   }
 
-  private static @NotNull IntensityNormalizationSimpleSummary createSummary(
+  private static @NotNull IntensityNormalizationSummary createSummary(
       List<NormalizationFunction> functions) {
-    return new IntensityNormalizationSimpleSummary(functions);
+    return new IntensityNormalizationSummary(functions);
   }
 
   @Test
   void saveLoadRoundtripWithEmptyList() {
     final NormalizationFunctionsParameter parameter = new NormalizationFunctionsParameter();
-    parameter.setValue(IntensityNormalizationSimpleSummary.EMPTY);
+    parameter.setValue(IntensityNormalizationSummary.EMPTY);
 
     final String xml = ParameterUtils.saveParameterToXMLString(parameter);
     final NormalizationFunctionsParameter loaded = new NormalizationFunctionsParameter();
@@ -277,7 +277,7 @@ class NormalizationFunctionsParameterTest {
     final NormalizationFunctionsParameter loadedParameter = new NormalizationFunctionsParameter();
     ParameterUtils.loadParameterFromString(loadedParameter, xml);
 
-    final IntensityNormalizationSimpleSummary summary = loadedParameter.getValue();
+    final IntensityNormalizationSummary summary = loadedParameter.getValue();
     final List<NormalizationFunction> loadedFunctions = summary.functions();
     assertEquals(2, loadedFunctions.size());
 

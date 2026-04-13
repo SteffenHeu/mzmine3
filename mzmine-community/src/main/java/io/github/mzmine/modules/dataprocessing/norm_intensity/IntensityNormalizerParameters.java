@@ -75,11 +75,11 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    * matrix effects.
    */
   public static final ModuleOptionsEnumComboParameter<NormalizationType> internalStandardization = new ModuleOptionsEnumComboParameter<>(
-      "Sample-internal normalization",
+      "Intra-sample normalization",
       "Normalize by internal standard compounds before QC drift correction. "
           + "Corrects for extraction efficiency and matrix effects. "
           + "Each feature is corrected by the nearest or weighted IS compound(s).",
-      NormalizationType.internalSampleNormalizers(), false);
+      NormalizationType.intraSampleNormalizers(), false);
 
   // ── Main normalization: QC-based signal drift correction
   public static final ModuleOptionsEnumComboParameter<NormalizationType> normalizationType = new ModuleOptionsEnumComboParameter<>(
@@ -96,7 +96,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    * normalization). Without a batch ID, all QC samples form one continuous reference sequence.
    */
   public static final OptionalParameter<MetadataGroupingParameter> batchIdColumn = new OptionalParameter<>(
-      new MetadataGroupingParameter("Batch ID metadata column", """
+      new MetadataGroupingParameter("Batch correction metadata column", """
           Metadata text column identifying the analytical batch (samples measured under comparable conditions).
           When set, QC drift correction is applied within each batch separately, \
           then batches are aligned by median QC scaling (pooled QC normalization)."""), false);
@@ -110,7 +110,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    * {@link IntensityNormalizerModule#getNormalizationFunctionsOfLatestCall(FeatureList)} to extract
    * these {@link NormalizationFunction}s.
    */
-  public static final HiddenParameter<IntensityNormalizationSimpleSummary> hiddenNormalizationSummary = new HiddenParameter<>(
+  public static final HiddenParameter<IntensityNormalizationSummary> hiddenNormalizationSummary = new HiddenParameter<>(
       new NormalizationFunctionsParameter());
 
   public IntensityNormalizerParameters() {
@@ -130,7 +130,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
       final @Nullable String selectedBatchIdColumn,
       final @NotNull AbundanceMeasure selectedFeatureMeasurementType,
       final @NotNull OriginalFeatureListOption selectedOriginalFeatureListHandling,
-      final @Nullable IntensityNormalizationSimpleSummary normalizationSummary) {
+      final @Nullable IntensityNormalizationSummary normalizationSummary) {
     final IntensityNormalizerParameters parameters = (IntensityNormalizerParameters) new IntensityNormalizerParameters().cloneParameterSet();
     parameters.setParameter(IntensityNormalizerParameters.featureLists, selectedFeatureLists);
     parameters.setParameter(IntensityNormalizerParameters.suffix, selectedSuffix);

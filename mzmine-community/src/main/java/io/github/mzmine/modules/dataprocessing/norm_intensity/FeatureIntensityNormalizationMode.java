@@ -35,7 +35,7 @@ public enum FeatureIntensityNormalizationMode implements UniqueIdSupplier {
   /**
    * default
    */
-  MEDIAN, TIC, AVERAGE, MAX;
+  MEDIAN, SUM_TIC, AVERAGE, MAX;
 
   public static @NotNull FeatureIntensityNormalizationMode getDefault() {
     return MEDIAN;
@@ -45,7 +45,7 @@ public enum FeatureIntensityNormalizationMode implements UniqueIdSupplier {
   public String toString() {
     return switch (this) {
       case MEDIAN -> "Median (default)";
-      case TIC -> "TIC";
+      case SUM_TIC -> "Sum (TIC)";
       case AVERAGE -> "Average";
       case MAX -> "Max";
     };
@@ -55,7 +55,7 @@ public enum FeatureIntensityNormalizationMode implements UniqueIdSupplier {
   public @NotNull String getUniqueID() {
     return switch (this) {
       case MEDIAN -> "median";
-      case TIC -> "tic";
+      case SUM_TIC -> "sum_tic";
       case AVERAGE -> "average";
       case MAX -> "max";
     };

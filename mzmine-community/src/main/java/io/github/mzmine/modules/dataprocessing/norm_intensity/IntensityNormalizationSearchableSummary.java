@@ -36,7 +36,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * This summary is a faster version that is optimized to search the functions for raw data files.
  * This class is used during intensity normalization and may be used when batch reapplying
- * normalization. The related {@link IntensityNormalizationSimpleSummary} is used for saving to
+ * normalization. The related {@link IntensityNormalizationSummary} is used for saving to
  * parameter and xml to save memory on the map and to use Weak references to raw data files to avoid
  * memory leaks.
  */
@@ -58,8 +58,8 @@ public record IntensityNormalizationSearchableSummary(
     this(HashMap.newHashMap(numRawFiles));
   }
 
-  public IntensityNormalizationSimpleSummary toSimpleSummary() {
-    return new IntensityNormalizationSimpleSummary(List.copyOf(functions.values()),
+  public IntensityNormalizationSummary toSimpleSummary() {
+    return new IntensityNormalizationSummary(List.copyOf(functions.values()),
         List.copyOf(messages));
   }
 
