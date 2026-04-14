@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -107,6 +107,7 @@ import io.github.mzmine.modules.tools.isotopepatternpreview.IsotopePatternPrevie
 import io.github.mzmine.modules.tools.qualityparameters.QualityParametersModule;
 import io.github.mzmine.modules.tools.timstofmaldiacq.TimsTOFMaldiAcquisitionModule;
 import io.github.mzmine.modules.tools.timstofmaldiacq.imaging.SimsefImagingSchedulerModule;
+import io.github.mzmine.modules.tools.tools_autoparam.AutoParamDashboardModule;
 import io.github.mzmine.modules.visualization.chromatogram.ChromatogramVisualizerModule;
 import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashboardModule;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberModule;
@@ -355,7 +356,8 @@ public abstract class AbstractWorkspace implements Workspace {
     final Menu menu = new Menu("Tools");
     addMenuItem(menu, "Quick search", ModuleQuickSelectDialog::openQuickSearch, KeyCode.F,
         KeyCombination.SHORTCUT_DOWN);
-    addModuleMenuItems(menu, IsotopePatternPreviewModule.class, QualityParametersModule.class);
+    addModuleMenuItems(menu, IsotopePatternPreviewModule.class, QualityParametersModule.class,
+        AutoParamDashboardModule.class);
     addModuleMenuItems(menu, "Libraries", LibraryAnalysisCSVExportModule.class,
         MsMsQualityExportModule.class, MergeLibrariesModule.class);
     addModuleMenuItems(menu, "timsTOF fleX", TimsTOFMaldiAcquisitionModule.class,

@@ -93,6 +93,7 @@ public class AutoParamTask extends AbstractRawDataFileTask {
    */
   @Nullable
   private final List<FeatureRecord> additionalFeatures;
+  private final boolean showTab;
   private DataFileStatistics dataFileStats;
 
   /**
@@ -107,8 +108,20 @@ public class AutoParamTask extends AbstractRawDataFileTask {
   public AutoParamTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
       @NotNull ParameterSet parameters, @NotNull Class<? extends MZmineModule> moduleClass,
       @NotNull RawDataFile raw, final @Nullable List<FeatureRecord> additionalFeatures) {
+    this(storage, moduleCallDate, parameters, moduleClass, raw, additionalFeatures, true);
+  }
+
+  /**
+   * @param showTab if false, suppresses the individual per-file {@link AutoParametersPane} tab
+   *                (used when the caller opens a combined dashboard instead)
+   */
+  public AutoParamTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
+      @NotNull ParameterSet parameters, @NotNull Class<? extends MZmineModule> moduleClass,
+      @NotNull RawDataFile raw, final @Nullable List<FeatureRecord> additionalFeatures,
+      boolean showTab) {
     super(storage, moduleCallDate, parameters, moduleClass);
     file = raw;
+    this.showTab = showTab;
     this.additionalFeatures = additionalFeatures != null ? additionalFeatures.stream().sorted(
         Comparator.comparingDouble(FeatureRecord::mz)).toList() : null;
   }
@@ -219,7 +232,7 @@ public class AutoParamTask extends AbstractRawDataFileTask {
     logger.finest("Combined tolerances: " + dataFileStats.getMzToleranceForIsotopes());
     logger.finest("Number of isotope dp: " + numIsoDpStr);
 
-    if (DesktopService.isGUI()) {
+    if (showTab && DesktopService.isGUI()) {
       MZmineCore.getDesktop()
           .addTab(new SimpleTab("Auto param", new AutoParametersPane(dataFileStats)));
     }

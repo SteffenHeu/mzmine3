@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -26,11 +27,13 @@ package io.github.mzmine.modules.tools.tools_autoparam;
 
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.Feature;
-import io.github.mzmine.datamodel.features.ModularFeature;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.stream.Stream;
+import java.util.Map;
+import org.jetbrains.annotations.NotNull;
 
 public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featureStatistics) {
 
@@ -54,6 +57,24 @@ public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featu
     return featureStatistics.stream()
         .map(stats -> new MzToMzTolerancePair(stats.getMz(), stats.getBestTolerance()))
         .toArray(MzToMzTolerancePair[]::new);
+  }
+
+  /**
+   * Counts how often each tolerance in {@link WizardParameterSolutionBuilder#ALL_TOLERANCE_OPTIONS}
+   * was selected as best tolerance. Returns a map from tolerance label to count, preserving the
+   * order of the tolerance array.
+   */
+  public @NotNull Map<MZTolerance, Integer> extractToleranceCounts() {
+    final MZTolerance[] allTolerances = WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS;
+    final Map<MZTolerance, Integer> counts = new LinkedHashMap<>();
+    for (MZTolerance tol : allTolerances) {
+      counts.put(tol, 0);
+    }
+    for (MzToMzTolerancePair pair : getBestTolerances()) {
+      final MZTolerance key = pair.tolerance();
+      counts.merge(key, 1, Integer::sum);
+    }
+    return counts;
   }
 
   public MZTolerance getMzToleranceForIsotopes() {

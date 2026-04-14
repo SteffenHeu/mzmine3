@@ -26,6 +26,8 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.gui.DesktopService;
+import io.github.mzmine.gui.mainwindow.SimpleTab;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
@@ -34,6 +36,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
+import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatisticsDashboardPane;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui.OptimizationResultsController;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -124,6 +127,12 @@ public class BatchOptimizationMainTask extends AbstractTask {
                 AutoParamParameters.of(importedFiles), AutoParamModule.class, file, benchmarkFeatures))
         .parallel().map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
+
+    if (DesktopService.isGUI()) {
+      final List<DataFileStatistics> dashboardStats = List.copyOf(stats);
+      FxThread.runLater(() -> MZmineCore.getDesktop().addTab(new SimpleTab("Auto Param Statistics",
+          new DataFileStatisticsDashboardPane(dashboardStats))));
+    }
 
     // set a specific seed to make the results deterministic.
     PRNG.setSeed(42);
