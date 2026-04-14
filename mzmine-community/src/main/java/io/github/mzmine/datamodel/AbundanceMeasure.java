@@ -103,6 +103,12 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
    */
   public float getOrNaN(@Nullable ModularDataModel featureOrRow,
       @Nullable NormalizationFunction normalizationFunction) {
+    if (isNormalized()) {
+      throw new IllegalStateException("""
+          Cannot apply normalization on already normalized values. The idea is to have composite \
+          normalization functions that apply multiply steps to the raw area or height values.""");
+    }
+
     if (featureOrRow == null) {
       return Float.NaN;
     }
@@ -116,6 +122,14 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
     final Float rt = featureOrRow.get(RTType.class);
     final Double mz = featureOrRow.get(MZType.class);
     return (float) (value * normalizationFunction.getNormalizationFactor(mz, rt));
+  }
+
+
+  /**
+   * @return true if normalized
+   */
+  public boolean isNormalized() {
+    return this == NORMALIZED_AREA || this == NORMALIZED_HEIGHT;
   }
 
 
