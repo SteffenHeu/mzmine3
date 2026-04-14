@@ -79,12 +79,12 @@ public final class SinglePassParameterEstimation {
       estimates.put("FWHM", MathUtils.calcQuantileSorted(fwhms, 0.5));
     }
 
-    // Min consecutive data points: 25th percentile
+    // Min consecutive data points: median
     final double[] dataPts = stats.stream()
         .map(DataFileStatistics::getNumberOfLowestIsotopeDataPoints).flatMapToInt(Arrays::stream)
         .mapToDouble(i -> i).sorted().toArray();
     if (dataPts.length > 0) {
-      estimates.put("Min consecutive", MathUtils.calcQuantileSorted(dataPts, 0.25));
+      estimates.put("Min consecutive", MathUtils.calcQuantileSorted(dataPts, 0.5));
     }
 
     // MS1 noise level: factor 5 for injection-time instruments, 15th percentile of edge intensities otherwise
@@ -98,16 +98,17 @@ public final class SinglePassParameterEstimation {
       }
     }
 
-    // Min height: 15th percentile of lowest isotope heights
+    // Min height: median of lowest isotope heights
     final double[] heights = stats.stream().map(DataFileStatistics::getLowestIsotopeHeights)
         .flatMapToDouble(Arrays::stream).sorted().toArray();
     if (heights.length > 0) {
-      estimates.put("Min height", MathUtils.calcQuantileSorted(heights, 0.15));
+      estimates.put("Min height", MathUtils.calcQuantileSorted(heights, 0.5));
     }
 
     // MZ tolerance option: index into availableTolerances covering the harmonized isotope tolerance
     final int bestTolIndex = estimateBestToleranceIndex(stats, builder);
-    estimates.put("MZ tolerance option", (double) bestTolIndex);
+    estimates.put("MZ tolerance option", (double) Math.max(bestTolIndex + 1,
+        WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS.length - 1));
 
     // Inter sample RT tolerance: midpoint of the range derived from aligned benchmarks
     final double rtMid =
