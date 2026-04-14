@@ -75,7 +75,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    * matrix effects.
    */
   public static final ModuleOptionsEnumComboParameter<NormalizationType> internalStandardization = new ModuleOptionsEnumComboParameter<>(
-      "Intra-sample normalization",
+      "Intra-sample correction",
       "Normalize by internal standard compounds before QC drift correction. "
           + "Corrects for extraction efficiency and matrix effects. "
           + "Each feature is corrected by the nearest or weighted IS compound(s).",
@@ -83,11 +83,11 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
 
   // ── Main normalization: QC-based signal drift correction
   public static final ModuleOptionsEnumComboParameter<NormalizationType> normalizationType = new ModuleOptionsEnumComboParameter<>(
-      "Sample batch correction", """
-      Runs after metadata sample injection normalization and after internal standards normalization.
-      Normalizes intensities intra-batch by the selected algorithm and then inter-batch.
+      "Inter-sample correction", """
+      Runs after metadata column normalization (e.g., sample injection volumne or weight) and after %s.
+      Normalizes intensities intra-batch by the selected algorithm and then inter-batch by median reference sample scaling.
       Algorithms may use QCs like pooled QCs to correct drifts within a sample batch and between batches. The correction is then applied to all samples.
-      Inter-batch normalization is performed by aligning the QC median of each batch to the global QC median.""",
+      Inter-batch normalization is performed by aligning the reference sample median of each batch to the global reference median.""".formatted(internalStandardization.getName()),
       NormalizationType.intraBatchDriftNormalizers());
 
   /**
@@ -97,9 +97,12 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    */
   public static final OptionalParameter<MetadataGroupingParameter> batchIdColumn = new OptionalParameter<>(
       new MetadataGroupingParameter("Batch correction metadata column", """
-          Metadata text column identifying the analytical batch (samples measured under comparable conditions).
-          When set, QC drift correction is applied within each batch separately, \
-          then batches are aligned by median QC scaling (pooled QC normalization)."""), false);
+          Metadata column identifying the analytical batch (samples measured under comparable conditions).
+          When set, samples batches are split first before applying all subsequent corrections like \
+          %s and %s. This means that reference samples (e.g., pooled QCs) are then \
+          batch specific and interpolation to other samples is limited to within a batch.
+          If multiple batches are normalized, a final inter-batch normalization is applied to \
+          the median reference sample scaling of each samples batch.""".formatted(internalStandardization.getName(), normalizationType.getName())), false);
 
   /**
    * Holds the result of the normalization in a
