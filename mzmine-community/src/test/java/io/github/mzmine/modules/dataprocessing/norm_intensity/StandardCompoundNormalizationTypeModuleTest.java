@@ -205,10 +205,10 @@ class StandardCompoundNormalizationTypeModuleTest {
         List.of(prevFile, targetFile, nextFile));
 
     final StandardCompoundNormalizationFunction prevFunction = new StandardCompoundNormalizationFunction(
-        prevFile, prevFile.getStartTimeStamp(), StandardUsageType.Nearest, 1.0d,
+        StandardUsageType.Nearest, 1.0d,
         List.of(new StandardCompoundReferencePoint(100d, 5f, 400d)));
     final StandardCompoundNormalizationFunction nextFunction = new StandardCompoundNormalizationFunction(
-        nextFile, nextFile.getStartTimeStamp(), StandardUsageType.Nearest, 1.0d,
+        StandardUsageType.Nearest, 1.0d,
         List.of(new StandardCompoundReferencePoint(100d, 5f, 200d)));
 
     final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
@@ -216,9 +216,14 @@ class StandardCompoundNormalizationTypeModuleTest {
     summary.addMergeFunction(prevFile, prevFunction);
     summary.addMergeFunction(nextFile, nextFunction);
 
+    // internally we never use summary.functions for interpolation because
+    // interpolation should be based on a single steps functions not on the merged composite function
+    Map<RawDataFile, NormalizationFunction> functions = Map.of(prevFile, prevFunction, nextFile,
+        nextFunction);
+
     module.interpolateAllFunctionsToSummary(summary, featureList,
         new SamplesBatch(featureList.getRawDataFiles()), new MetadataTable(false),
-        summary.functions(), createMainParameters(AbundanceMeasure.Height),
+        functions, createMainParameters(AbundanceMeasure.Height),
         createModuleParametersWithoutStandards(StandardUsageType.Nearest, false));
 
     var result = summary.get(targetFile);

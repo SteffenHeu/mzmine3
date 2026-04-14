@@ -31,9 +31,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
-import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.parameters.ParameterSet;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -91,13 +89,12 @@ public class StandardCompoundNormalizationTypeModule extends NormalizationTypeWi
     for (final RawDataFile rawFile : referenceFiles) {
       final List<StandardCompoundReferencePoint> referencePoints = createReferencePoints(summary,
           rawFile, standardRows, abundanceMeasure, requireAllStandards);
-      final LocalDateTime acquisitionTimestamp = MetadataTableUtils.getRunDate(metadata, rawFile);
-      NormalizationFunction function = new StandardCompoundNormalizationFunction(rawFile,
-          acquisitionTimestamp, standardUsageType, mzVsRtBalance, referencePoints);
+      NormalizationFunction function = new StandardCompoundNormalizationFunction(standardUsageType, mzVsRtBalance, referencePoints);
 
       // add or merge function into a new instance within summary
-      function = summary.addMergeFunction(rawFile, function);
+      summary.addMergeFunction(rawFile, function);
 
+      // return the actual function of this step for interpolation
       fileToFunction.put(rawFile, function);
     }
     return fileToFunction;
@@ -132,7 +129,7 @@ public class StandardCompoundNormalizationTypeModule extends NormalizationTypeWi
       }
 
       // apply existing function to abundance to normalize on already normalized values
-      final @Nullable NormalizationFunction existingFunction = summary.functions().get(rawFile);
+      final @Nullable RawFileNormalizationFunction existingFunction = summary.functions().get(rawFile);
 
       final float standardAbundance = abundanceMeasure.getOrNaN(standardFeature, existingFunction);
       if (Float.compare(standardAbundance, 0.0f) == 0 || !Float.isFinite(standardAbundance)) {

@@ -36,12 +36,13 @@ import org.jetbrains.annotations.Nullable;
 /**
  * This summary is a faster version that is optimized to search the functions for raw data files.
  * This class is used during intensity normalization and may be used when batch reapplying
- * normalization. The related {@link IntensityNormalizationSummary} is used for saving to
- * parameter and xml to save memory on the map and to use Weak references to raw data files to avoid
- * memory leaks.
+ * normalization. The related {@link IntensityNormalizationSummary} is used for saving to parameter
+ * and xml to save memory on the map and to use Weak references to raw data files to avoid memory
+ * leaks.
  */
 public record IntensityNormalizationSearchableSummary(
-    @NotNull Map<RawDataFile, NormalizationFunction> functions, @NotNull List<String> messages) {
+    @NotNull Map<RawDataFile, RawFileNormalizationFunction> functions,
+    @NotNull List<String> messages) {
 
   /**
    * instance with immutable maps and lists
@@ -50,7 +51,7 @@ public record IntensityNormalizationSearchableSummary(
       Map.of(), List.of());
 
   public IntensityNormalizationSearchableSummary(
-      @NotNull Map<RawDataFile, NormalizationFunction> functions) {
+      @NotNull Map<RawDataFile, RawFileNormalizationFunction> functions) {
     this(functions, new ArrayList<>());
   }
 
@@ -70,13 +71,30 @@ public record IntensityNormalizationSearchableSummary(
    * @return the new function either the input or a merged function from the input and previous
    */
   @NotNull
-  public NormalizationFunction addMergeFunction(@NotNull RawDataFile file,
+  public RawFileNormalizationFunction addMergeFunction(@NotNull RawDataFile file,
       @NotNull NormalizationFunction function) {
-    return functions.merge(file, function, NormalizationFunction::merge);
+    return functions.compute(file, (_, oldFunc) -> {
+      if (oldFunc == null) {
+        return new RawFileNormalizationFunction(file, function);
+      }
+
+      NormalizationFunction merged = NormalizationFunction.merge(oldFunc.function(), function);
+      return new RawFileNormalizationFunction(file, merged);
+    });
   }
 
   @Nullable
   public NormalizationFunction get(RawDataFile file) {
+    final RawFileNormalizationFunction fun = functions.get(file);
+    return fun != null ? fun.function() : null;
+  }
+
+  @Nullable
+  public RawFileNormalizationFunction getRawFileFunction(RawDataFile file) {
     return functions.get(file);
+  }
+
+  public int size() {
+    return functions.size();
   }
 }

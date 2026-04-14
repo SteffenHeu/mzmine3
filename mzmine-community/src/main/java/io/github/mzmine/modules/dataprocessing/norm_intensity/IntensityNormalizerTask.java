@@ -37,7 +37,6 @@ import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.numbers.NormalizedAreaType;
 import io.github.mzmine.datamodel.features.types.numbers.NormalizedHeightType;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
-import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter.OriginalFeatureListOption;
@@ -51,7 +50,6 @@ import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.StringUtils;
 import io.github.mzmine.util.objects.ObjectUtils;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -240,15 +238,13 @@ class IntensityNormalizerTask extends AbstractTask {
     // apply those to all samples in the same batch
     for (SamplesBatch sampleBatch : sampleBatches) {
       final double normFactor = interBatchMedian / sampleBatch.getMedianReferenceNormMetric();
+      // reuse same function for all files in this batch
+      final FactorNormalizationFunction fileFunction = new FactorNormalizationFunction(normFactor);
+
       logger.fine("Normalizing %d samples in batch %s inter batches norm metric=%.4f".formatted(
           sampleBatch.size(), sampleBatch.getGroupMetadataValueStr(), normFactor));
 
       for (RawDataFile raw : sampleBatch.getRaws()) {
-
-        final LocalDateTime runDate = MetadataTableUtils.getRunDate(metadata, raw);
-        final FactorNormalizationFunction fileFunction = new FactorNormalizationFunction(raw,
-            runDate, normFactor);
-
         // add and merge function into summary
         summary.addMergeFunction(raw, fileFunction);
         processedFiles++;
@@ -368,15 +364,15 @@ class IntensityNormalizerTask extends AbstractTask {
    * Applies the normalization functions to all features in the feature list.
    */
   private void applyFunctionsToFeatures(@NotNull final ModularFeatureList featureList,
-      @NotNull final Map<RawDataFile, NormalizationFunction> fileToFunction) {
+      final @NotNull Map<RawDataFile, RawFileNormalizationFunction> fileToFunction) {
 
     if (hasFinishedApplyFunctions) {
       throw new IllegalStateException("Cannot apply functions twice. Should only normalize once.");
     }
     hasFinishedApplyFunctions = true;
 
-    for (Entry<RawDataFile, NormalizationFunction> entry : fileToFunction.entrySet()) {
-      final NormalizationFunction fn = entry.getValue();
+    for (Entry<RawDataFile, RawFileNormalizationFunction> entry : fileToFunction.entrySet()) {
+      final NormalizationFunction fn = entry.getValue().function();
       final RawDataFile raw = entry.getKey();
       if (isCanceled()) {
         return;

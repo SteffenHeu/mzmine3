@@ -99,10 +99,10 @@ public class IntensityNormalizerModule implements MZmineProcessingModule {
    */
   public static @NotNull Optional<NormalizationFunction> getNormalizationFunctionsOfLatestCallForFile(
       final @NotNull FeatureList featureList, final @NotNull RawDataFile rawDataFile) {
-    IntensityNormalizationSummary summary = getNormalizationFunctionsOfLatestCall(
-        featureList);
+    IntensityNormalizationSummary summary = getNormalizationFunctionsOfLatestCall(featureList);
     return summary.functions().stream()
-        .filter(func -> func.rawDataFilePlaceholder().matches(rawDataFile)).findFirst();
+        .filter(func -> func.rawDataFilePlaceholder().matches(rawDataFile))
+        .map(RawFileNormalizationFunction::function).findFirst();
   }
 
 }

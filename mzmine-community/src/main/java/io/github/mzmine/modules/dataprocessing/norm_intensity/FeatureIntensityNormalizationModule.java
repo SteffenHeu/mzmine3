@@ -63,7 +63,7 @@ public class FeatureIntensityNormalizationModule extends AbstractFactorNormaliza
 
     // need to apply any previous normalization function if it is available
     // to apply the next normalization on top of the existing
-    final @Nullable NormalizationFunction existingNormFunction = summary.functions().get(file);
+    final @Nullable RawFileNormalizationFunction existingNormFunction = summary.functions().get(file);
     final double[] abundances = featureList.stream().map(r -> (ModularFeature) r.getFeature(file))
         .filter(Objects::nonNull)
         .mapToDouble(feature -> abundanceMeasure.getOrNaN(feature, existingNormFunction))

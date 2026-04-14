@@ -34,6 +34,7 @@ import io.github.mzmine.datamodel.features.types.numbers.NormalizedHeightType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import io.github.mzmine.modules.dataprocessing.norm_intensity.NormalizationFunction;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.RawFileNormalizationFunction;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -87,7 +88,27 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
    * null or not a finite number
    */
   public float getOrNaN(@Nullable ModularDataModel featureOrRow,
+      @Nullable RawFileNormalizationFunction normalizationFunction) {
+    return getOrNaN(featureOrRow,
+        normalizationFunction == null ? null : normalizationFunction.function());
+  }
+
+  /**
+   * Applies a normalization function to the value
+   *
+   * @param featureOrRow          the model
+   * @param normalizationFunction a function
+   * @return the normalized value or raw value if function is null or NaN if feature or value is
+   * null or not a finite number
+   */
+  public float getOrNaN(@Nullable ModularDataModel featureOrRow,
       @Nullable NormalizationFunction normalizationFunction) {
+    if (isNormalized()) {
+      throw new IllegalStateException("""
+          Cannot apply normalization on already normalized values. The idea is to have composite \
+          normalization functions that apply multiply steps to the raw area or height values.""");
+    }
+
     if (featureOrRow == null) {
       return Float.NaN;
     }
@@ -100,7 +121,15 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
     }
     final Float rt = featureOrRow.get(RTType.class);
     final Double mz = featureOrRow.get(MZType.class);
-    return (float)(value * normalizationFunction.getNormalizationFactor(mz, rt));
+    return (float) (value * normalizationFunction.getNormalizationFactor(mz, rt));
+  }
+
+
+  /**
+   * @return true if normalized
+   */
+  public boolean isNormalized() {
+    return this == NORMALIZED_AREA || this == NORMALIZED_HEIGHT;
   }
 
 

@@ -30,6 +30,7 @@ import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensi
 import static io.github.mzmine.modules.dataprocessing.norm_intensity.NormIntensityTestUtils.createRawFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -73,8 +74,13 @@ class FeatureIntensityNormalizationModuleTest {
     // Median(file_a)=2.5 and Median(file_b)=1.0 => median=3.5/2
     assertEquals(3.5/2d/2.5, functionA.getNormalizationFactor(0d, 0f), 1e-12);
     assertEquals(3.5/2d/1d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
-    assertEquals(fileA.getStartTimeStamp(), functionA.acquisitionTimestamp());
-    assertEquals(fileB.getStartTimeStamp(), functionB.acquisitionTimestamp());
+
+    final RawFileNormalizationFunction rawFileFuncA = summary.getRawFileFunction(fileA);
+    final RawFileNormalizationFunction rawFileFuncB = summary.getRawFileFunction(fileB);
+    assertNotNull(rawFileFuncA);
+    assertNotNull(rawFileFuncB);
+    assertEquals(fileA.getStartTimeStamp(), rawFileFuncA.acquisitionTimestamp());
+    assertEquals(fileB.getStartTimeStamp(), rawFileFuncB.acquisitionTimestamp());
   }
 
   @Test
@@ -167,8 +173,12 @@ class FeatureIntensityNormalizationModuleTest {
     final FactorNormalizationFunction functionB = assertInstanceOf(
         FactorNormalizationFunction.class, functions.get(fileB));
 
-    assertNull(functionA.acquisitionTimestamp());
-    assertNull(functionB.acquisitionTimestamp());
+    final RawFileNormalizationFunction rawFileFuncA = summary.getRawFileFunction(fileA);
+    final RawFileNormalizationFunction rawFileFuncB = summary.getRawFileFunction(fileB);
+    assertNotNull(rawFileFuncA);
+    assertNotNull(rawFileFuncB);
+    assertNull(rawFileFuncA.acquisitionTimestamp());
+    assertNull(rawFileFuncB.acquisitionTimestamp());
     // median a=2 median b=8 total median is 5
     assertEquals(5d/2d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
     assertEquals(5d/8d, functionB.getNormalizationFactor(0d, 0f), 1e-12);

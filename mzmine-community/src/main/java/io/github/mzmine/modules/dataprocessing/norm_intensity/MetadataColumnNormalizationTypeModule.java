@@ -27,12 +27,10 @@ package io.github.mzmine.modules.dataprocessing.norm_intensity;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
-import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.DoubleMetadataColumn;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.util.MathUtils;
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -98,10 +96,9 @@ public class MetadataColumnNormalizationTypeModule implements NormalizationTypeM
       // correct sample by factor/median to keep general intensity scales
       // could also think about using the factor as is
       final double factor =
-          Double.compare(entry.getValue(), 0) == 0 ? 1 : entry.getValue()/median;
-      final LocalDateTime runDate = MetadataTableUtils.getRunDate(metadata, file);
+          Double.compare(entry.getValue(), 0) == 0 ? 1 : entry.getValue() / median;
       // divide or multiple by factor
-      NormalizationFunction function = new FactorNormalizationFunction(file, runDate,
+      NormalizationFunction function = new FactorNormalizationFunction(
           metadataConfig.mode().isDivide() ? 1d / factor : factor);
 
       // add or merge function into a new instance within summary

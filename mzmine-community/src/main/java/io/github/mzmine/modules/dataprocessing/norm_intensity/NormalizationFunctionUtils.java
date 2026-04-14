@@ -35,10 +35,10 @@ import io.github.mzmine.modules.visualization.projectmetadata.table.Interpolatio
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import io.github.mzmine.util.StringUtils;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.UnknownNullability;
 
 public class NormalizationFunctionUtils {
 
@@ -76,7 +76,8 @@ public class NormalizationFunctionUtils {
    */
   public static void interpolateLinearBinary(
       @NotNull IntensityNormalizationSearchableSummary summary, @NotNull SamplesBatch samplesBatch,
-      Map<RawDataFile, NormalizationFunction> refFunctions, @NotNull MetadataTable metadata) {
+      @UnknownNullability Map<@NotNull RawDataFile, @NotNull NormalizationFunction> refFunctions,
+      @NotNull MetadataTable metadata) {
     if (refFunctions.size() == samplesBatch.size()) {
       return;
     } else if (refFunctions.size() > samplesBatch.size()) {
@@ -89,7 +90,6 @@ public class NormalizationFunctionUtils {
       if (refFunctions.containsKey(fileToInterpolate)) {
         continue;
       }
-      final LocalDateTime time = MetadataTableUtils.getRunDate(metadata, fileToInterpolate);
 
       // either binary or single reference sample found
       final InterpolationWeights weights = MetadataTableUtils.extractAcquisitionDateInterpolationWeights(
@@ -98,27 +98,30 @@ public class NormalizationFunctionUtils {
       final NormalizationFunction resultFunction = switch (weights) {
         // use a copy of the single function that was found
         case SingleInterpolationWeight w -> // only one reference found
-            refFunctions.get(w.closestRun()).withRawFile(fileToInterpolate);
+            refFunctions.get(w.closestRun());
 
         // interpolated between two functions
         case BinaryInterpolationWeights w -> {
           // both left and right functions are not null so interpolate between them
-          final NormalizationFunction previousFunction = refFunctions.get(w.previousRun().file());
+          final NormalizationFunction previousFunction = refFunctions.get(
+              w.previousRun().file());
           final NormalizationFunction nextFunction = refFunctions.get(w.nextRun().file());
 
           if (previousFunction == null || nextFunction == null) {
             throw new IllegalStateException(
                 "No reference normalization functions available for file: %s in samples batch %s".formatted(
                     fileToInterpolate.getName(), samplesBatch.getGroupMetadataValueStr()));
-          } else if (previousFunction instanceof FactorNormalizationFunction prev
+          }
+
+          if (previousFunction instanceof FactorNormalizationFunction prev
               && nextFunction instanceof FactorNormalizationFunction next) {
             // special case where simple factor functions can be turned into a new simple function
             final double factor =
                 next.factor() * w.nextRun().weight() + prev.factor() * w.previousRun().weight();
-            yield new FactorNormalizationFunction(fileToInterpolate, time, factor);
+            yield new FactorNormalizationFunction(factor);
           } else {
             // saves both functions to interpolate, works for all cases
-            yield new InterpolatedNormalizationFunction(fileToInterpolate, time, previousFunction,
+            yield new InterpolatedNormalizationFunction(previousFunction,
                 w.previousRun().weight(), nextFunction, w.nextRun().weight());
           }
         }
