@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -22,21 +23,41 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.datamodel.features.types.numbers;
+package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
+import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import org.jetbrains.annotations.NotNull;
 
-public class NormalizedHeightType extends HeightType {
+/**
+ * Normalize by feature abundance
+ */
+public enum FeatureIntensityNormalizationMode implements UniqueIdSupplier {
+  /**
+   * default
+   */
+  MEDIAN, SUM_TIC, AVERAGE, MAX;
 
-  public static final String UNIQUE_ID = "height_norm";
-
-  @Override
-  public @NotNull String getUniqueID() {
-    return UNIQUE_ID;
+  public static @NotNull FeatureIntensityNormalizationMode getDefault() {
+    return MEDIAN;
   }
 
   @Override
-  public @NotNull String getHeaderString() {
-    return "Norm. height";
+  public String toString() {
+    return switch (this) {
+      case MEDIAN -> "Median (default)";
+      case SUM_TIC -> "Sum (TIC)";
+      case AVERAGE -> "Average";
+      case MAX -> "Max";
+    };
+  }
+
+  @Override
+  public @NotNull String getUniqueID() {
+    return switch (this) {
+      case MEDIAN -> "median";
+      case SUM_TIC -> "sum_tic";
+      case AVERAGE -> "average";
+      case MAX -> "max";
+    };
   }
 }
