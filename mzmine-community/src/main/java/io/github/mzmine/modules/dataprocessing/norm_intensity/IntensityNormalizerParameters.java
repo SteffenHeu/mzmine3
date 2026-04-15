@@ -48,7 +48,7 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
   public static final FeatureListsParameter featureLists = new FeatureListsParameter();
 
   public static final StringParameter suffix = new StringParameter("Name suffix",
-      "Suffix to be added to feature list name", "norm");
+      "Suffix appended to the output feature list name (e.g., 'featurelist norm')", "norm");
 
   public static final AbundanceMeasureParameter featureMeasurementType = new AbundanceMeasureParameter(
       AbundanceMeasure.rawValues(), AbundanceMeasure.Height);
@@ -63,9 +63,9 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    */
   public static final OptionalParameter<MetadataNormalizationConfigParameter> metadataNormFactorCol = new OptionalParameter<>(
       new MetadataNormalizationConfigParameter(NormalizationType.MetadataColumn.toString(), """
-          Select numeric metadata values used to normalize each raw file. Each data file must have a value in that column.
-          Use 0 to disable normalization for that file.
-          Choose to divide or multiply the sample intensities, e.g., for divide by weight or multiply by dilution factor.""",
+          Step 1 of 3: Pre-normalization by a numeric metadata column applied before internal standard and QC drift corrections.
+          Each raw file is multiplied or divided by its metadata value (e.g., divide by sample weight or injection volume, multiply by dilution factor).
+          Every file must have a numeric value in the selected column; set a value to 0 to skip normalization for that file.""",
           MetadataNormalizationConfig.getDefault()), false);
 
   // ── Pre-normalization step 2: internal standard compounds
@@ -76,18 +76,18 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
    */
   public static final ModuleOptionsEnumComboParameter<NormalizationType> internalStandardization = new ModuleOptionsEnumComboParameter<>(
       "Intra-sample correction",
-      "Normalize by internal standard compounds before QC drift correction. "
-          + "Corrects for extraction efficiency and matrix effects. "
-          + "Each feature is corrected by the nearest or weighted IS compound(s).",
+      "Step 2 of 3: Feature-specific correction by internal standard compounds, applied after metadata normalization (step 1). "
+          + "Each feature is corrected by its nearest or distance-weighted IS compound(s) in m/z–RT space, "
+          + "accounting for extraction efficiency and matrix effects.",
       NormalizationType.intraSampleNormalizers(), false);
 
   // ── Main normalization: QC-based signal drift correction
   public static final ModuleOptionsEnumComboParameter<NormalizationType> normalizationType = new ModuleOptionsEnumComboParameter<>(
       "Inter-sample correction", """
-      Runs after metadata column normalization (e.g., sample injection volumne or weight) and after %s.
-      Normalizes intensities intra-batch by the selected algorithm and then inter-batch by median reference sample scaling.
-      Algorithms may use QCs like pooled QCs to correct drifts within a sample batch and between batches. The correction is then applied to all samples.
-      Inter-batch normalization is performed by aligning the reference sample median of each batch to the global reference median.""".formatted(internalStandardization.getName()),
+      Step 3 of 3: QC-based signal drift correction, applied after metadata normalization (step 1) and %s (step 2).
+      Corrects intra-batch drift using reference samples (e.g., pooled QCs) and then aligns batch medians to the global reference median for inter-batch correction.
+      Non-reference samples receive interpolated correction factors based on acquisition date entered in the project or data file metadata.""".formatted(
+          internalStandardization.getName()),
       NormalizationType.intraBatchDriftNormalizers());
 
   /**
@@ -98,11 +98,10 @@ public class IntensityNormalizerParameters extends SimpleParameterSet {
   public static final OptionalParameter<MetadataGroupingParameter> batchIdColumn = new OptionalParameter<>(
       new MetadataGroupingParameter("Batch correction metadata column", """
           Metadata column identifying the analytical batch (samples measured under comparable conditions).
-          When set, samples batches are split first before applying all subsequent corrections like \
-          %s and %s. This means that reference samples (e.g., pooled QCs) are then \
-          batch specific and interpolation to other samples is limited to within a batch.
-          If multiple batches are normalized, a final inter-batch normalization is applied to \
-          the median reference sample scaling of each samples batch.""".formatted(internalStandardization.getName(), normalizationType.getName())), false);
+          When set, samples are split into batches before applying steps 2 (%s) and 3 (%s), \
+          so that reference samples (e.g., pooled QCs) and interpolation are batch-specific.
+          After intra-batch correction, a final inter-batch normalization aligns the median \
+          reference-sample signal of each batch to the global reference median.""".formatted(internalStandardization.getName(), normalizationType.getName())), false);
 
   /**
    * Holds the result of the normalization in a
