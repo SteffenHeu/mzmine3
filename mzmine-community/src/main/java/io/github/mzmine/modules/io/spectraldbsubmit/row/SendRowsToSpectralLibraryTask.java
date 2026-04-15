@@ -26,8 +26,11 @@
 package io.github.mzmine.modules.io.spectraldbsubmit.row;
 
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.io.spectraldbsubmit.batch.LibraryBatchGenerationSubParameters;
 import io.github.mzmine.modules.io.spectraldbsubmit.batch.LibraryBatchGenerationTask;
+import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.selectors.SpectralLibrarySelection;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -113,9 +116,20 @@ public class SendRowsToSpectralLibraryTask extends AbstractTask {
     // add/update the library in the current project so it is visible and exportable
     ProjectService.getProjectManager().getCurrentProject().addSpectralLibrary(targetLibrary);
 
+    // make sure to track the last selected library in the config parameters
+    saveLastSelectedLibraryToConfig();
+
     logger.info("Added %d new spectral library entries to library '%s'".formatted(addedEntries,
         targetLibrary.getName()));
     setStatus(TaskStatus.FINISHED);
+  }
+
+  private void saveLastSelectedLibraryToConfig() {
+    final ParameterSet configParam = ConfigService.getConfiguration()
+        .getModuleParameters(SendRowsToSpectralLibraryModule.class);
+    SpectralLibrarySelection newSelection = new SpectralLibrarySelection(List.of(targetLibrary));
+    configParam.setParameter(LibraryBatchGenerationSubParameters.lastLibrarySelection,
+        newSelection);
   }
 
   /**
