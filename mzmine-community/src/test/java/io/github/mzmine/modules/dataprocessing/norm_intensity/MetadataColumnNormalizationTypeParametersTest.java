@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Scaling;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.DoubleMetadataColumn;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.StringMetadataColumn;
 import io.github.mzmine.project.ProjectService;
@@ -48,7 +49,8 @@ class MetadataColumnNormalizationTypeParametersTest {
   void checkParameterValuesPassesForNumericMetadataColumn() {
     final DoubleMetadataColumn concentration = new DoubleMetadataColumn("concentration");
     ProjectService.getMetadata().addColumn(concentration);
-    final MetadataColumnNormalizationTypeParameters parameters = MetadataColumnNormalizationTypeParameters.create(concentration.getTitle(), Mode.divide);
+    final MetadataColumnNormalizationTypeParameters parameters = MetadataColumnNormalizationTypeParameters.create(concentration.getTitle(), Mode.divide,
+        Scaling.scaled);
 
     final List<String> errors = new ArrayList<>();
     final boolean valid = parameters.checkParameterValues(errors, false);
@@ -60,7 +62,7 @@ class MetadataColumnNormalizationTypeParametersTest {
   @Test
   void checkParameterValuesFailsForMissingMetadataColumn() {
     final MetadataColumnNormalizationTypeParameters parameters = MetadataColumnNormalizationTypeParameters.create(
-       "missing_column", Mode.divide);
+       "missing_column", Mode.divide, Scaling.scaled);
 
     final List<String> errors = new ArrayList<>();
     final boolean valid = parameters.checkParameterValues(errors, false);
@@ -75,7 +77,7 @@ class MetadataColumnNormalizationTypeParametersTest {
     final StringMetadataColumn groupColumn = new StringMetadataColumn("sample_group");
     ProjectService.getMetadata().addColumn(groupColumn);
     final MetadataColumnNormalizationTypeParameters parameters = MetadataColumnNormalizationTypeParameters.create(
-        groupColumn.getTitle(), Mode.divide);
+        groupColumn.getTitle(), Mode.divide, Scaling.scaled);
 
     final List<String> errors = new ArrayList<>();
     final boolean valid = parameters.checkParameterValues(errors, false);
@@ -87,7 +89,7 @@ class MetadataColumnNormalizationTypeParametersTest {
   @Test
   void checkParameterValuesSkipsMetadataChecksWhenRequested() {
     final MetadataColumnNormalizationTypeParameters parameters = MetadataColumnNormalizationTypeParameters.create(
-        "missing_column", Mode.divide);
+        "missing_column", Mode.divide, Scaling.scaled);
 
     final List<String> errors = new ArrayList<>();
     final boolean valid = parameters.checkParameterValues(errors, true);

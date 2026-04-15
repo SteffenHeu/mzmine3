@@ -28,6 +28,7 @@ package io.github.mzmine.modules.dataprocessing.norm_intensity;
 import static java.util.Objects.requireNonNullElse;
 
 import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Scaling;
 import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataColumnParameters.AvailableTypes;
 import io.github.mzmine.parameters.CompositeParametersParameter;
 import io.github.mzmine.parameters.Parameter;
@@ -43,6 +44,7 @@ public class MetadataNormalizationConfigParameter extends
   private final MetadataGroupingParameter metadataCol;
 
   private final ComboParameter<MetadataNormalizationConfig.Mode> mode;
+  private final ComboParameter<MetadataNormalizationConfig.Scaling> scaling;
 
   public MetadataNormalizationConfigParameter(String name, String description) {
     this(name, description, MetadataNormalizationConfig.getDefault());
@@ -51,8 +53,14 @@ public class MetadataNormalizationConfigParameter extends
   public MetadataNormalizationConfigParameter(String name, String description,
       @NotNull MetadataNormalizationConfig defaultVal) {
     super(name, description);
-    mode = new ComboParameter<>("mode", "", MetadataNormalizationConfig.Mode.values(),
-        Mode.multiply);
+    final String modeScaleDescription = """
+        Either divide or multiply each sample by the metadata values:
+        - directly: values as provided in sample metadata
+        - scaled: by median centering to keep similar amplitudes""";
+    mode = new ComboParameter<>("mode", modeScaleDescription,
+        MetadataNormalizationConfig.Mode.values(), Mode.multiply);
+    scaling = new ComboParameter<>("scaling", modeScaleDescription,
+        MetadataNormalizationConfig.Scaling.values(), Scaling.directly);
     metadataCol = new MetadataGroupingParameter("metadata column", "", AvailableTypes.NUMBER);
 
     setValue(defaultVal);
@@ -60,13 +68,13 @@ public class MetadataNormalizationConfigParameter extends
 
   @Override
   protected Parameter<?>[] getInternalParameters() {
-    return new Parameter[]{mode, metadataCol};
+    return new Parameter[]{mode, metadataCol, scaling};
   }
 
   @Override
   public MetadataNormalizationConfigComponent createEditingComponent() {
     return new MetadataNormalizationConfigComponent(mode.createEditingComponent(),
-        metadataCol.createEditingComponent());
+        metadataCol.createEditingComponent(), scaling.createEditingComponent());
   }
 
   @Override
@@ -83,7 +91,8 @@ public class MetadataNormalizationConfigParameter extends
   @Override
   @NotNull
   public MetadataNormalizationConfig getValue() {
-    return new MetadataNormalizationConfig(metadataCol.getValue(), mode.getValue());
+    return new MetadataNormalizationConfig(metadataCol.getValue(), mode.getValue(),
+        scaling.getValue());
   }
 
   @Override
@@ -91,6 +100,7 @@ public class MetadataNormalizationConfigParameter extends
     newValue = requireNonNullElse(newValue, MetadataNormalizationConfig.getDefault());
     mode.setValue(newValue.mode());
     metadataCol.setValue(newValue.metadataColumn());
+    scaling.setValue(newValue.scaling());
   }
 
   @Override

@@ -27,6 +27,7 @@ package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Scaling;
 import io.github.mzmine.parameters.parametertypes.ComboComponent;
 import io.github.mzmine.parameters.parametertypes.metadata.MetadataGroupingComponent;
 import javafx.geometry.Insets;
@@ -37,21 +38,24 @@ public class MetadataNormalizationConfigComponent extends HBox {
 
   private final ComboComponent<Mode> modeCombo;
   private final MetadataGroupingComponent metadataCol;
+  private final ComboComponent<Scaling> scalingCombo;
 
   public MetadataNormalizationConfigComponent(ComboComponent<Mode> modeCombo,
-      MetadataGroupingComponent metadataCol) {
+      MetadataGroupingComponent metadataCol, ComboComponent<Scaling> scalingCombo) {
     super(FxLayout.DEFAULT_SPACE, modeCombo, metadataCol);
+    this.scalingCombo = scalingCombo;
     FxLayout.applyDefaults(this, Insets.EMPTY);
     this.modeCombo = modeCombo;
     this.metadataCol = metadataCol;
   }
 
   public MetadataNormalizationConfig getValue() {
-    return new MetadataNormalizationConfig(metadataCol.getValue(), modeCombo.getValue());
+    return new MetadataNormalizationConfig(metadataCol.getValue(), modeCombo.getValue(), scalingCombo.getValue());
   }
 
   public void setValue(@NotNull MetadataNormalizationConfig newValue) {
     modeCombo.setValue(newValue.mode());
     metadataCol.setValue(newValue.metadataColumn());
+    scalingCombo.setValue(newValue.scaling());
   }
 }

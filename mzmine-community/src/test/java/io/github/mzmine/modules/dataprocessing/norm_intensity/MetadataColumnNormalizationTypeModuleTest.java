@@ -34,6 +34,7 @@ import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Scaling;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.DoubleMetadataColumn;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.StringMetadataColumn;
@@ -62,7 +63,7 @@ class MetadataColumnNormalizationTypeModuleTest {
 
     {
       final MetadataColumnNormalizationTypeParameters moduleParameters = MetadataColumnNormalizationTypeParameters.create(
-          concentrationColumn.getTitle(), Mode.divide);
+          concentrationColumn.getTitle(), Mode.divide, Scaling.scaled);
 
       final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
           featureList.getNumberOfRawDataFiles());
@@ -87,7 +88,7 @@ class MetadataColumnNormalizationTypeModuleTest {
     {
       // multiply
       final MetadataColumnNormalizationTypeParameters moduleParameters = MetadataColumnNormalizationTypeParameters.create(
-          concentrationColumn.getTitle(), Mode.multiply);
+          concentrationColumn.getTitle(), Mode.multiply, Scaling.scaled);
 
       final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
           featureList.getNumberOfRawDataFiles());
@@ -289,6 +290,6 @@ class MetadataColumnNormalizationTypeModuleTest {
   private static @NotNull MetadataColumnNormalizationTypeParameters createModuleParameters(
       final @NotNull String metadataColumnName) {
     return MetadataColumnNormalizationTypeParameters.create(
-        new MetadataNormalizationConfig(metadataColumnName, Mode.divide));
+        new MetadataNormalizationConfig(metadataColumnName, Mode.divide, Scaling.scaled));
   }
 }

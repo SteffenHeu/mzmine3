@@ -75,9 +75,15 @@ public class MetadataColumnNormalizationTypeModule implements NormalizationTypeM
       // decision: allow 0 as value as "no normalization"
       if (metadataValue == null || !Double.isFinite(metadataValue) || metadataValue < 0) {
         throw new IllegalStateException(
-            "Invalid metadata value in column '%s' for file '%s': %s".formatted(columnName,
-                rawDataFile.getName(), metadataValue));
+            "Invalid metadata value (needs to be >=0) in column '%s' for file '%s': %s".formatted(
+                columnName, rawDataFile.getName(), metadataValue));
       }
+
+      // skip 0 factors and do not include them downstream
+      if (Double.compare(metadataValue, 0) == 0) {
+        continue;
+      }
+
       fileToMetadataValue.put(rawDataFile, metadataValue);
     }
 
@@ -95,8 +101,12 @@ public class MetadataColumnNormalizationTypeModule implements NormalizationTypeM
       final RawDataFile file = entry.getKey();
       // correct sample by factor/median to keep general intensity scales
       // could also think about using the factor as is
-      final double factor =
-          Double.compare(entry.getValue(), 0) == 0 ? 1 : entry.getValue() / median;
+      final double factor;
+      if (metadataConfig.scaling().isScaled()) {
+        factor = entry.getValue() / median;
+      } else {
+        factor = entry.getValue();
+      }
       // divide or multiple by factor
       NormalizationFunction function = new FactorNormalizationFunction(
           metadataConfig.mode().isDivide() ? 1d / factor : factor);
