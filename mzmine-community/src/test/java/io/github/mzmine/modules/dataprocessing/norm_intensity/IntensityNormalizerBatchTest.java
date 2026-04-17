@@ -38,7 +38,6 @@ import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.types.numbers.NormalizedHeightType;
-import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Scaling;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.DoubleMetadataColumn;
@@ -362,8 +361,7 @@ class IntensityNormalizerBatchTest {
   }
 
   private static @NotNull MetadataNormalizationConfig getMetadataNormalizationConfig() {
-    return new MetadataNormalizationConfig(DILUTION_COL, MetadataNormalizationConfig.Mode.divide,
-        Scaling.directly);
+    return new MetadataNormalizationConfig(DILUTION_COL, MetadataNormalizationConfig.Mode.divide);
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────────────────────────────

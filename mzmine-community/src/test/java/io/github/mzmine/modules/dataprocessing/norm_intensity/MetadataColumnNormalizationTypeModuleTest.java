@@ -35,7 +35,6 @@ import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
-import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Scaling;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.DoubleMetadataColumn;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.StringMetadataColumn;
@@ -64,7 +63,7 @@ class MetadataColumnNormalizationTypeModuleTest {
 
     {
       final MetadataColumnNormalizationTypeParameters moduleParameters = MetadataColumnNormalizationTypeParameters.create(
-          concentrationColumn.getTitle(), Mode.divide, Scaling.scaled);
+          concentrationColumn.getTitle(), Mode.divide);
 
       final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
           featureList.getNumberOfRawDataFiles());
@@ -81,15 +80,15 @@ class MetadataColumnNormalizationTypeModuleTest {
           FactorNormalizationFunction.class, summary.get(fileC));
 
       assertEquals(3, functions.size());
-      assertEquals(0.5d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-      assertEquals(1d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
-      assertEquals(2.5d, functionC.getNormalizationFactor(0d, 0f), 1e-12);
+      assertEquals(0.1, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+      assertEquals(0.2, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+      assertEquals(0.5, functionC.getNormalizationFactor(0d, 0f), 1e-12);
     }
 
     {
       // multiply
       final MetadataColumnNormalizationTypeParameters moduleParameters = MetadataColumnNormalizationTypeParameters.create(
-          concentrationColumn.getTitle(), Mode.multiply, Scaling.scaled);
+          concentrationColumn.getTitle(), Mode.multiply);
 
       final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
           featureList.getNumberOfRawDataFiles());
@@ -105,9 +104,9 @@ class MetadataColumnNormalizationTypeModuleTest {
           FactorNormalizationFunction.class, summary.get(fileC));
 
       assertEquals(3, summary.size());
-      assertEquals(2d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
-      assertEquals(1d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
-      assertEquals(2d / 5d, functionC.getNormalizationFactor(0d, 0f), 1e-12);
+      assertEquals(10d, functionA.getNormalizationFactor(0d, 0f), 1e-12);
+      assertEquals(5d, functionB.getNormalizationFactor(0d, 0f), 1e-12);
+      assertEquals(2d, functionC.getNormalizationFactor(0d, 0f), 1e-12);
     }
   }
 
@@ -124,7 +123,7 @@ class MetadataColumnNormalizationTypeModuleTest {
     metadata.setValue(concentrationColumn, fileB, 0d);
 
     final MetadataColumnNormalizationTypeParameters moduleParameters = createModuleParameters(
-        concentrationColumn.getTitle(), Scaling.directly);
+        concentrationColumn.getTitle());
 
     final IntensityNormalizationSearchableSummary summary = new IntensityNormalizationSearchableSummary(
         featureList.getNumberOfRawDataFiles());
@@ -289,14 +288,9 @@ class MetadataColumnNormalizationTypeModuleTest {
         exception.getMessage());
   }
 
-
   private static @NotNull MetadataColumnNormalizationTypeParameters createModuleParameters(
       final @NotNull String metadataColumnName) {
-    return createModuleParameters(metadataColumnName, Scaling.scaled);
-  }
-  private static @NotNull MetadataColumnNormalizationTypeParameters createModuleParameters(
-      final @NotNull String metadataColumnName, Scaling scaling) {
     return MetadataColumnNormalizationTypeParameters.create(
-        new MetadataNormalizationConfig(metadataColumnName, Mode.divide, scaling));
+        new MetadataNormalizationConfig(metadataColumnName, Mode.divide));
   }
 }

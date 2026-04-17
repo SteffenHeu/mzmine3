@@ -32,16 +32,15 @@ import org.jetbrains.annotations.NotNull;
  * Either multiply or divide value by metadata value. Weight is divided dilution factor is
  * multiplied
  */
-public record MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNull Mode mode, @NotNull Scaling scaling) {
+public record MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNull Mode mode) {
 
-  public MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNull Mode mode, @NotNull Scaling scaling) {
+  public MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNull Mode mode) {
     this.metadataColumn = metadataColumn.strip();
     this.mode = mode;
-    this.scaling = scaling;
   }
 
   public static @NotNull MetadataNormalizationConfig getDefault() {
-    return new MetadataNormalizationConfig("", Mode.multiply,  Scaling.directly);
+    return new MetadataNormalizationConfig("", Mode.multiply);
   }
 
   public enum Mode implements UniqueIdSupplier {
@@ -57,39 +56,6 @@ public record MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNu
 
     public boolean isDivide() {
       return this == divide;
-    }
-  }
-
-  public enum Scaling implements UniqueIdSupplier {
-    /**
-     * use median scaled factors.
-     */
-    scaled,
-    /**
-     * Use raw values
-     */
-    directly;
-
-    @Override
-    public @NotNull String getUniqueID() {
-      return switch (this) {
-        case scaled -> "scaled";
-        case directly -> "direct";
-      };
-    }
-
-    @NotNull
-    public String getDescription() {
-      return switch (this) {
-        case scaled ->
-            "Scale all metadata values to their median to keep similar abundances after normalization.";
-        case directly ->
-            "Use metadata values directly without scaling to multiply or divide values.";
-      };
-    }
-
-    public boolean isScaled() {
-      return this == scaled;
     }
   }
 }

@@ -30,7 +30,6 @@ import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTabl
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.DoubleMetadataColumn;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import io.github.mzmine.parameters.ParameterSet;
-import io.github.mzmine.util.MathUtils;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -92,21 +91,12 @@ public class MetadataColumnNormalizationTypeModule implements NormalizationTypeM
           "No valid metadata values available in column: " + columnName);
     }
 
-    // normalize intensities to the median of the factors to have a similar level of intensities
-    // before and after normalization
-    final double median = MathUtils.calcMedian(
-        fileToMetadataValue.values().stream().mapToDouble(Double::doubleValue).toArray());
-
     for (final Entry<@NotNull RawDataFile, @NotNull Double> entry : fileToMetadataValue.entrySet()) {
       final RawDataFile file = entry.getKey();
       // correct sample by factor/median to keep general intensity scales
       // could also think about using the factor as is
-      final double factor;
-      if (metadataConfig.scaling().isScaled()) {
-        factor = entry.getValue() / median;
-      } else {
-        factor = entry.getValue();
-      }
+      final double factor = entry.getValue();
+
       // divide or multiple by factor
       NormalizationFunction function = new FactorNormalizationFunction(
           metadataConfig.mode().isDivide() ? 1d / factor : factor);

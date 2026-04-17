@@ -25,7 +25,6 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
-import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Scaling;
 import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataColumnParameters.AvailableTypes;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
@@ -56,8 +55,8 @@ public class MetadataColumnNormalizationTypeParameters extends SimpleParameterSe
 
   @NotNull
   public static MetadataColumnNormalizationTypeParameters create(@NotNull String column,
-      @NotNull Mode mode, Scaling scaling) {
-    return create(new MetadataNormalizationConfig(column, mode, scaling));
+      @NotNull Mode mode) {
+    return create(new MetadataNormalizationConfig(column, mode));
   }
 
   @Override
