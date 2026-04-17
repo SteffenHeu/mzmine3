@@ -57,7 +57,7 @@ public class WizardParameterSolutionBuilder {
       new MZTolerance(0.0005, 2), // 0
       new MZTolerance(0.001, 5), //  1
       new MZTolerance(0.003, 7), //  2
-      new MZTolerance(0.005, 15), // 3
+      MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA,             // 3
       new MZTolerance(0.008, 15), // 4
       new MZTolerance(0.01, 20), //  5
       new MZTolerance(0.015, 25), // 6
@@ -179,6 +179,8 @@ public class WizardParameterSolutionBuilder {
     logger.info("FWHM range: " + minFwhm + ", " + maxFwhm);
     logger.info(
         "Rt inter sample tol range: " + minRtSampleToSampleTol + ", " + maxRtSampleToSampleTol);
+    logger.info("mz tolerance: " + ALL_TOLERANCE_OPTIONS[availableTolerances.lower()] + " - "
+        + ALL_TOLERANCE_OPTIONS[availableTolerances.upper()]);
   }
 
   public @NotNull WizardParameterSolution buildMinHeightSolution(int index) {

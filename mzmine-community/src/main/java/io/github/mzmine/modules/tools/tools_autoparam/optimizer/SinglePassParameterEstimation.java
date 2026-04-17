@@ -30,13 +30,16 @@ import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.HarmonicSlawIsotopes;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import io.github.mzmine.util.ArrayUtils;
 import io.github.mzmine.util.MathUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.PRNG;
 import org.moeaframework.core.Solution;
@@ -105,10 +108,11 @@ public final class SinglePassParameterEstimation {
       estimates.put("Min height", MathUtils.calcQuantileSorted(heights, 0.5));
     }
 
-    // MZ tolerance option: index into availableTolerances covering the harmonized isotope tolerance
-    final int bestTolIndex = estimateBestToleranceIndex(stats, builder);
-    estimates.put("MZ tolerance option", (double) Math.max(bestTolIndex + 1,
-        WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS.length - 1));
+    // mz tolerance: use one index higher than the most used one as default start
+    final MZTolerance bestTolerance = getMostFrequentTolerance(stats);
+    estimates.put("MZ tolerance option", (double) Math.clamp(
+        ArrayUtils.indexOf(bestTolerance, WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS) + 1,
+        0, WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS.length - 1));
 
     // Inter sample RT tolerance: midpoint of the range derived from aligned benchmarks
     final double rtMid =
@@ -127,40 +131,18 @@ public final class SinglePassParameterEstimation {
    * Finds the index in the builder's available tolerance array that best covers the harmonized
    * isotope tolerance across all files.
    */
-  private static int estimateBestToleranceIndex(@NotNull List<@NotNull DataFileStatistics> stats,
-      @NotNull WizardParameterSolutionBuilder builder) {
+  @NotNull
+  private static MZTolerance getMostFrequentTolerance(
+      @NotNull List<@NotNull DataFileStatistics> stats) {
 
-    final MZTolerance[] available = builder.getAvailableTolerances();
-
-    // decision: harmonize the per-file isotope tolerances into one covering tolerance
-    MZTolerance harmonized = null;
-    for (DataFileStatistics stat : stats) {
-      final MZTolerance fileTol = stat.getMzToleranceForIsotopes();
-      if (fileTol != null && harmonized == null) {
-        harmonized = fileTol;
-      } else if (fileTol != null) {
-        harmonized = MZTolerance.max(harmonized, fileTol);
-      }
-    }
-
-    if (harmonized == null) {
-      return available.length / 2;
-    }
-
-    // find smallest available tolerance that covers the harmonized value
-    for (int i = 0; i < available.length; i++) {
-      if (available[i].getMzTolerance() >= harmonized.getMzTolerance()
-          && available[i].getPpmTolerance() >= harmonized.getPpmTolerance()) {
-        return i;
-      }
-    }
-    return available.length - 1;
+    // find most used tolerance
+    return stats.stream().map(DataFileStatistics::extractToleranceCounts)
+        .flatMap(m -> m.entrySet().stream())
+        // sum occurrence counts
+        .collect(Collectors.toMap(Entry::getKey, Entry::getValue, Integer::sum)).entrySet().stream()
+        .max(Entry.comparingByValue()).map(Entry::getKey)
+        .orElse(MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA);
   }
-
-  /**
-   * Fraction of the population that will be warm-started near the single-pass estimate.
-   */
-  private static final double WARM_START_FRACTION = 0.3;
 
   /**
    * Standard deviation for warm-start perturbation as a fraction of each variable's range.
