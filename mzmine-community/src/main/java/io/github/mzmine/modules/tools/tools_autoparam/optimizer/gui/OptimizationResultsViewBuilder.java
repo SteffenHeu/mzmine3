@@ -164,7 +164,6 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
       buttonBar.getButtons().add(closeButton);
     }
 
-    TableColumns.autoFitLastColumn(solutionTable);
     return borderPane;
   }
 }

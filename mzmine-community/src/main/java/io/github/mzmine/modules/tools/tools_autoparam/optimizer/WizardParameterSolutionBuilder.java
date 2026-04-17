@@ -114,7 +114,7 @@ public class WizardParameterSolutionBuilder {
           MathUtils.calcQuantileSorted(array, 0.5) * 10);
 
       array = stats.stream().map(DataFileStatistics::getNumberOfLowestIsotopeDataPoints)
-          .flatMapToInt(Arrays::stream).mapToDouble(i -> (i * 0.5)).sorted().toArray();
+          .flatMapToInt(Arrays::stream).mapToDouble(i -> i).sorted().toArray();
       minMinDp = MathUtils.calcQuantileSorted(array, 0.05);
       // some peaks may be super long, so use a lower quantile
       maxMinDp = Math.max(minMinDp * 2, MathUtils.calcQuantileSorted(array, 0.8));
