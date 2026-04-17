@@ -46,6 +46,7 @@ import java.util.stream.Stream;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.ButtonBar;
@@ -56,6 +57,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -158,6 +160,23 @@ public class EmptyParameterSetupDialogBase extends Stage {
 
     setMinWidth(500.0);
     setMinHeight(400.0);
+
+    showingProperty().subscribe(showing -> {
+      if(!showing) {
+        return;
+      }
+      final Screen primary = Screen.getPrimary();
+      if (primary != null) {
+        // primary.getBounds is already scaling aware.
+        final Rectangle2D resolution = primary.getBounds();
+        // no dialogs larger than the screen
+        if (mainPane.getHeight() > resolution.getHeight() * 0.8
+            || scene.getHeight() > resolution.getHeight() * 0.8) {
+          setHeight(resolution.getHeight() * 0.8);
+          centerOnScreen();
+        }
+      }
+    });
 
     centerOnScreen();
   }
