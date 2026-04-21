@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -329,9 +330,9 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
     final List<ImportFile> unknownFileTypes = Arrays.stream(filesToImport)
         .filter(f -> f.type() == null).toList();
     if (!unknownFileTypes.isEmpty()) {
-      String files = Arrays.stream(filesToImport).map(f -> f.originalFile().getAbsolutePath())
+      String files = unknownFileTypes.stream().map(f -> f.originalFile().getAbsolutePath())
           .collect(Collectors.joining(",\n"));
-      String msg = "Could not identify the data type needed for import of n files=%d. The file/path might not exist.\n%s".formatted(
+      String msg = "Could not identify the data type needed for import of %d files. The file/path might not exist or be corrupt.\n%s".formatted(
           unknownFileTypes.size(), files);
       MZmineCore.getDesktop().displayErrorMessage(msg);
       logger.log(Level.SEVERE, "%s.  %s".formatted(msg, files));
