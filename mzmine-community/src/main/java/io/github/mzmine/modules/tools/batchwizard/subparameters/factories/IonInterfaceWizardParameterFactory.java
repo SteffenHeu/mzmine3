@@ -33,10 +33,10 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplc
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceImagingWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchParameterSolutionBuilder;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WaveletBatchParameterSolutionBuilder;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.BatchParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WaveletBatchParameterSolutionBuilder;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance.Unit;
@@ -166,13 +166,17 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
       case LC_WAVELET -> List.of(new WizardParameterSolutionPrototype(
               dummyBuilder.buildMinConsecutiveSolution(-1).variable(),
               WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
-          new BatchParameterSolutionPrototype(WaveletBatchParameterSolutionBuilder::buildWaveletSnr),
+          new WizardParameterSolutionPrototype(
+              dummyBuilder.buildSampleToSampleRtTolSolution(-1).variable(),
+              WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution),
+          new BatchParameterSolutionPrototype(
+              WaveletBatchParameterSolutionBuilder::buildWaveletSnr),
           new BatchParameterSolutionPrototype(
               WaveletBatchParameterSolutionBuilder::buildWaveletNoiseCalculation),
           new BatchParameterSolutionPrototype(
               WaveletBatchParameterSolutionBuilder::buildWaveletBaselineMethod),
-          new BatchParameterSolutionPrototype(
-              WaveletBatchParameterSolutionBuilder::buildWaveletDipFilter),
+//          new BatchParameterSolutionPrototype(
+//              WaveletBatchParameterSolutionBuilder::buildWaveletDipFilter),
           new BatchParameterSolutionPrototype(
               WaveletBatchParameterSolutionBuilder::buildWaveletEdgeDetector));
       case GC_EI -> List.of(
@@ -180,7 +184,10 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
               WizardParameterSolutionBuilder::buildFwhmSolution),
           new WizardParameterSolutionPrototype(
               dummyBuilder.buildMinConsecutiveSolution(-1).variable(),
-              WizardParameterSolutionBuilder::buildMinConsecutiveSolution));
+              WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
+          new WizardParameterSolutionPrototype(
+              dummyBuilder.buildSampleToSampleRtTolSolution(-1).variable(),
+              WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution));
       case MALDI, LDI, DESI, SIMS, DIRECT_INFUSION, FLOW_INJECT -> List.of();
     };
   }
