@@ -29,8 +29,8 @@ import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.WizardBuilderParameterSolution;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.List;
@@ -100,15 +100,15 @@ public enum MassSpectrometerWizardParameterFactory implements WizardParameterFac
   }
 
   @Override
-  public @NotNull List<WizardParameterPrototype> getOptimizationSolutions(
+  public @NotNull List<ParameterSolutionPrototype> getOptimizationSolutions(
       @NotNull WizardSequence steps, @NotNull WizardParameterSolutionBuilder dummyBuilder) {
     return List.of(
-        new WizardBuilderParameterSolution(dummyBuilder.buildMs1NoiseSolution(-1).variable(),
+        new WizardParameterSolutionPrototype(dummyBuilder.buildMs1NoiseSolution(-1).variable(),
             WizardParameterSolutionBuilder::buildMs1NoiseSolution),
-        new WizardBuilderParameterSolution(
+        new WizardParameterSolutionPrototype(
             dummyBuilder.buildScanToScanToleranceSolution(-1).variable(),
             WizardParameterSolutionBuilder::buildScanToScanToleranceSolution),
-        new WizardBuilderParameterSolution(dummyBuilder.buildMinHeightSolution(-1).variable(),
+        new WizardParameterSolutionPrototype(dummyBuilder.buildMinHeightSolution(-1).variable(),
             WizardParameterSolutionBuilder::buildMinHeightSolution));
   }
 

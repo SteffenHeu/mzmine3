@@ -40,7 +40,7 @@ import org.moeaframework.core.variable.Variable;
  * A fully-initialised optimization parameter that can apply itself to a wizard step. Instances are
  * created by {@link WizardParameterSolutionBuilder} during optimisation — they carry real data
  * ranges and a correct solution-vector index. Prototype / factory counterparts live in
- * {@link WizardParameterPrototype}.
+ * {@link ParameterSolutionPrototype}.
  */
 public sealed interface WizardParameterSolution {
 

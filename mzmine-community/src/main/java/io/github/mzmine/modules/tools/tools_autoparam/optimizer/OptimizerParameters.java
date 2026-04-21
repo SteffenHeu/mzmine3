@@ -107,11 +107,11 @@ public class OptimizerParameters extends SimpleParameterSet {
       "Optimizer", "", OptimizerOptions.values(), OptimizerOptions.MOEAD);
 
   /**
-   * All available optimization targets as {@link WizardParameterPrototype} prototypes. Wizard
+   * All available optimization targets as {@link ParameterSolutionPrototype} prototypes. Wizard
    * entries use a default-range dummy builder solely for display/XML. Batch entries wrap
    * {@link BatchParameterSolutionBuilder} method references.
    */
-  private static final List<WizardParameterPrototype> ALL_SOLUTIONS = createAllSolutions();
+  private static final List<ParameterSolutionPrototype> ALL_SOLUTIONS = createAllSolutions();
 
   // decision: wavelet solutions are at the end of ALL_SOLUTIONS and disabled by default
   // because they require the optional mzio WaveletResolverModule
@@ -134,20 +134,20 @@ public class OptimizerParameters extends SimpleParameterSet {
    * @param steps the current wizard sequence
    * @return ordered list of applicable prototypes, sourced from {@link #ALL_SOLUTIONS}
    */
-  public static @NotNull List<WizardParameterPrototype> collectSolutions(
+  public static @NotNull List<ParameterSolutionPrototype> collectSolutions(
       @NotNull WizardSequence steps) {
     final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
         MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
     return steps.stream().map(WizardStepParameters::getFactory)
         .flatMap(f -> f.getOptimizationSolutions(steps, dummy).stream())
-        .sorted(Comparator.comparing(WizardParameterPrototype::name)).toList();
+        .sorted(Comparator.comparing(ParameterSolutionPrototype::name)).toList();
   }
 
-  private static List<WizardParameterPrototype> createAllSolutions() {
+  private static List<ParameterSolutionPrototype> createAllSolutions() {
     final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
         MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
 
-    final Set<WizardParameterPrototype> allSolutions = new HashSet<>();
+    final Set<ParameterSolutionPrototype> allSolutions = new HashSet<>();
 
     for (WizardPart part : WizardPart.values()) {
       for (WizardParameterFactory preset : part.getDefaultPresets()) {
@@ -157,7 +157,7 @@ public class OptimizerParameters extends SimpleParameterSet {
       }
     }
 
-    return allSolutions.stream().sorted(Comparator.comparing(WizardParameterPrototype::name))
+    return allSolutions.stream().sorted(Comparator.comparing(ParameterSolutionPrototype::name))
         .toList();
 
     /*return List.of(new WizardBuilderParameterSolution(dummy.buildMs1NoiseSolution(-1).variable(),

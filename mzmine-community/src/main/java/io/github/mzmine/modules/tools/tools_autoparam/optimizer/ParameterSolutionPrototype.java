@@ -38,9 +38,9 @@ import org.moeaframework.core.variable.Variable;
  * {@link WizardParameterSolutionCheckListParameter} checklist and stored in
  * {@link OptimizerParameters}. Two sub-types exist:
  * <ul>
- *   <li>{@link WizardBuilderParameterSolution} — wizard-side parameter, built via
+ *   <li>{@link WizardParameterSolutionPrototype} — wizard-side parameter, built via
  *       {@link WizardParameterSolutionBuilder}</li>
- *   <li>{@link BatchWizardParameterSolution} — batch-queue parameter, built via
+ *   <li>{@link BatchParameterSolutionPrototype} — batch-queue parameter, built via
  *       {@link BatchParameterSolutionBuilder}</li>
  * </ul>
  * Instances carry only the data needed for display and XML serialisation. The real,
@@ -48,7 +48,7 @@ import org.moeaframework.core.variable.Variable;
  * <p>
  * All solutions must have a distinct name, because that is how the equality will be checked!
  */
-public sealed interface WizardParameterPrototype {
+public sealed interface ParameterSolutionPrototype {
 
   /**
    * Variable supplier used solely to derive {@link #name()} for display and XML.
@@ -67,9 +67,9 @@ public sealed interface WizardParameterPrototype {
    * @param variable dummy variable supplier from a default-range builder, used for {@link #name()}
    * @param factory  builds the real {@link WizardParameterSolution} given a builder and index
    */
-  record WizardBuilderParameterSolution(Supplier<? extends Variable> variable,
-                                        BiFunction<WizardParameterSolutionBuilder, Integer, WizardParameterSolution> factory) implements
-      WizardParameterPrototype {
+  record WizardParameterSolutionPrototype(Supplier<? extends Variable> variable,
+                                          BiFunction<WizardParameterSolutionBuilder, Integer, WizardParameterSolution> factory) implements
+      ParameterSolutionPrototype {
 
     /**
      * Builds the real solution with actual data ranges and the given solution-vector index.
@@ -90,7 +90,7 @@ public sealed interface WizardParameterPrototype {
 
     @Override
     public boolean equals(@Nullable Object other) {
-      return other instanceof WizardBuilderParameterSolution wp && wp.name().equals(this.name());
+      return other instanceof WizardParameterSolutionPrototype wp && wp.name().equals(this.name());
     }
   }
 
@@ -100,8 +100,8 @@ public sealed interface WizardParameterPrototype {
    *
    * @param factory builds the {@link BatchParameterSolution} for a given solution-vector index
    */
-  record BatchWizardParameterSolution(IntFunction<BatchParameterSolution> factory) implements
-      WizardParameterPrototype {
+  record BatchParameterSolutionPrototype(IntFunction<BatchParameterSolution> factory) implements
+      ParameterSolutionPrototype {
 
     @Override
     public Supplier<? extends Variable> variable() {
@@ -127,7 +127,7 @@ public sealed interface WizardParameterPrototype {
 
     @Override
     public boolean equals(@Nullable Object other) {
-      return other instanceof BatchWizardParameterSolution wp && wp.name().equals(this.name());
+      return other instanceof BatchParameterSolutionPrototype wp && wp.name().equals(this.name());
     }
   }
 }

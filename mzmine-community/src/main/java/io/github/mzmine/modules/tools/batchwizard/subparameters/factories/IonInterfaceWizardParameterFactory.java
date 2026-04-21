@@ -34,9 +34,9 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceImag
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchParameterSolutionBuilder;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WaveletBatchParameterSolutionBuilder;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.BatchWizardParameterSolution;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype.WizardBuilderParameterSolution;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.BatchParameterSolutionPrototype;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance.Unit;
@@ -146,39 +146,39 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
   }
 
   @Override
-  public @NotNull List<WizardParameterPrototype> getOptimizationSolutions(
+  public @NotNull List<ParameterSolutionPrototype> getOptimizationSolutions(
       @NotNull WizardSequence steps, @NotNull WizardParameterSolutionBuilder dummyBuilder) {
     // decision: FWHM, consecutive, and RT tolerance are chromatography-specific
     // decision: batch resolver solutions depend on whether Wavelet or MinimumSearch is used
     return switch (this) {
       case HPLC, UHPLC, HILIC, GC_CI -> List.of(
-          new WizardBuilderParameterSolution(dummyBuilder.buildFwhmSolution(-1).variable(),
+          new WizardParameterSolutionPrototype(dummyBuilder.buildFwhmSolution(-1).variable(),
               WizardParameterSolutionBuilder::buildFwhmSolution),
-          new WizardBuilderParameterSolution(
+          new WizardParameterSolutionPrototype(
               dummyBuilder.buildMinConsecutiveSolution(-1).variable(),
               WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
-          new WizardBuilderParameterSolution(
+          new WizardParameterSolutionPrototype(
               dummyBuilder.buildSampleToSampleRtTolSolution(-1).variable(),
               WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution),
-          new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildTopToEdgeRatio),
-          new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildChromThreshold));
+          new BatchParameterSolutionPrototype(BatchParameterSolutionBuilder::buildTopToEdgeRatio),
+          new BatchParameterSolutionPrototype(BatchParameterSolutionBuilder::buildChromThreshold));
       // assumption: LC_WAVELET uses WaveletResolverModule instead of MinimumSearch
-      case LC_WAVELET -> List.of(new WizardBuilderParameterSolution(
+      case LC_WAVELET -> List.of(new WizardParameterSolutionPrototype(
               dummyBuilder.buildMinConsecutiveSolution(-1).variable(),
               WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
-          new BatchWizardParameterSolution(WaveletBatchParameterSolutionBuilder::buildWaveletSnr),
-          new BatchWizardParameterSolution(
+          new BatchParameterSolutionPrototype(WaveletBatchParameterSolutionBuilder::buildWaveletSnr),
+          new BatchParameterSolutionPrototype(
               WaveletBatchParameterSolutionBuilder::buildWaveletNoiseCalculation),
-          new BatchWizardParameterSolution(
+          new BatchParameterSolutionPrototype(
               WaveletBatchParameterSolutionBuilder::buildWaveletBaselineMethod),
-          new BatchWizardParameterSolution(
+          new BatchParameterSolutionPrototype(
               WaveletBatchParameterSolutionBuilder::buildWaveletDipFilter),
-          new BatchWizardParameterSolution(
+          new BatchParameterSolutionPrototype(
               WaveletBatchParameterSolutionBuilder::buildWaveletEdgeDetector));
       case GC_EI -> List.of(
-          new WizardBuilderParameterSolution(dummyBuilder.buildFwhmSolution(-1).variable(),
+          new WizardParameterSolutionPrototype(dummyBuilder.buildFwhmSolution(-1).variable(),
               WizardParameterSolutionBuilder::buildFwhmSolution),
-          new WizardBuilderParameterSolution(
+          new WizardParameterSolutionPrototype(
               dummyBuilder.buildMinConsecutiveSolution(-1).variable(),
               WizardParameterSolutionBuilder::buildMinConsecutiveSolution));
       case MALDI, LDI, DESI, SIMS, DIRECT_INFUSION, FLOW_INJECT -> List.of();

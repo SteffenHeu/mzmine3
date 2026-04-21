@@ -28,7 +28,7 @@ package io.github.mzmine.modules.tools.batchwizard.subparameters.factories;
 import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterPrototype;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
@@ -62,7 +62,7 @@ public interface WizardParameterFactory extends UniqueIdSupplier {
    * @return prototypes available for this wizard step; empty by default
    */
   @NotNull
-  default List<WizardParameterPrototype> getOptimizationSolutions(@NotNull WizardSequence steps,
+  default List<ParameterSolutionPrototype> getOptimizationSolutions(@NotNull WizardSequence steps,
       @NotNull WizardParameterSolutionBuilder dummyBuilder) {
     return List.of();
   }

@@ -59,6 +59,8 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.Workfl
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.BatchParameterSolutionPrototype;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.BenchmarkTargetCount;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
@@ -88,7 +90,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
   private static final Logger logger = Logger.getLogger(WizardOptimizationProblem.class.getName());
 
   private final int NUM_PARAM;
-  private final List<WizardParameterPrototype> paramToOptimize;
+  private final List<ParameterSolutionPrototype> paramToOptimize;
   private final @NotNull List<SweepMetric> enabledMetrics;
 
   private final @NotNull File[] files;
@@ -262,8 +264,8 @@ public class WizardOptimizationProblem extends AbstractProblem {
     int index = 0;
     final List<WizardParameterSolution> param = new ArrayList<>();
 
-    for (WizardParameterPrototype factory : paramToOptimize) {
-      if (factory instanceof WizardParameterPrototype.WizardBuilderParameterSolution wbs) {
+    for (ParameterSolutionPrototype factory : paramToOptimize) {
+      if (factory instanceof WizardParameterSolutionPrototype wbs) {
         param.add(wbs.toRealSolution(builder, index++));
       }
     }
@@ -276,8 +278,8 @@ public class WizardOptimizationProblem extends AbstractProblem {
 
     final List<BatchParameterSolution> param = new ArrayList<>();
 
-    for (WizardParameterPrototype factory : paramToOptimize) {
-      if (factory instanceof WizardParameterPrototype.BatchWizardParameterSolution bws) {
+    for (ParameterSolutionPrototype factory : paramToOptimize) {
+      if (factory instanceof BatchParameterSolutionPrototype bws) {
         param.add(bws.toBatchParameterSolution(index++));
       }
     }

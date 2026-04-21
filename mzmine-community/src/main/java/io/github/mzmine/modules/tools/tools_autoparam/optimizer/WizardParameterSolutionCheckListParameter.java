@@ -42,18 +42,18 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 /**
- * A {@link UserParameter} that presents a list of {@link WizardParameterPrototype} choices in a
+ * A {@link UserParameter} that presents a list of {@link ParameterSolutionPrototype} choices in a
  * {@link CheckListView}. The parameter value is the list of currently checked (selected) factories.
- * Items are identified by their {@link WizardParameterPrototype#name()} for display and XML
+ * Items are identified by their {@link ParameterSolutionPrototype#name()} for display and XML
  * serialization.
  */
 public class WizardParameterSolutionCheckListParameter implements
-    UserParameter<List<WizardParameterPrototype>, CheckListView<WizardParameterPrototype>> {
+    UserParameter<List<ParameterSolutionPrototype>, CheckListView<ParameterSolutionPrototype>> {
 
   private final String name;
   private final String description;
-  private final List<WizardParameterPrototype> choices;
-  private List<WizardParameterPrototype> value;
+  private final List<ParameterSolutionPrototype> choices;
+  private List<ParameterSolutionPrototype> value;
   @Nullable
   private WizardSequence wizardSequence;
 
@@ -64,7 +64,7 @@ public class WizardParameterSolutionCheckListParameter implements
    * @param value       initially selected factories; pass a copy of {@code choices} to select all
    */
   public WizardParameterSolutionCheckListParameter(String name, String description,
-      List<WizardParameterPrototype> choices, List<WizardParameterPrototype> value) {
+      List<ParameterSolutionPrototype> choices, List<ParameterSolutionPrototype> value) {
     this.name = name;
     this.description = description;
     this.choices = List.copyOf(choices);
@@ -94,12 +94,12 @@ public class WizardParameterSolutionCheckListParameter implements
    * Returns the subset of {@code choices} that are relevant for the current wizard sequence. When
    * no sequence is set, all choices are returned.
    */
-  private @NotNull List<WizardParameterPrototype> getFilteredChoices() {
+  private @NotNull List<ParameterSolutionPrototype> getFilteredChoices() {
     if (wizardSequence == null) {
       return choices;
     }
     final Set<String> available = OptimizerParameters.collectSolutions(wizardSequence).stream()
-        .map(WizardParameterPrototype::name).collect(Collectors.toSet());
+        .map(ParameterSolutionPrototype::name).collect(Collectors.toSet());
     // decision: filter choices by name so displayed items are always instances from choices (for identity matching in setValueToComponent)
     return choices.stream().filter(c -> available.contains(c.name())).toList();
   }
@@ -110,39 +110,39 @@ public class WizardParameterSolutionCheckListParameter implements
   }
 
   @Override
-  public CheckListView<WizardParameterPrototype> createEditingComponent() {
-    final CheckListView<WizardParameterPrototype> view = new CheckListView<>(
+  public CheckListView<ParameterSolutionPrototype> createEditingComponent() {
+    final CheckListView<ParameterSolutionPrototype> view = new CheckListView<>(
         FXCollections.observableArrayList(getFilteredChoices()));
     view.setPrefHeight(200);
     return view;
   }
 
   @Override
-  public List<WizardParameterPrototype> getValue() {
-    List<WizardParameterPrototype> clone = new ArrayList<>(value);
+  public List<ParameterSolutionPrototype> getValue() {
+    List<ParameterSolutionPrototype> clone = new ArrayList<>(value);
     clone.retainAll(getFilteredChoices());
     return clone;
   }
 
   @Override
-  public void setValue(List<WizardParameterPrototype> newValue) {
+  public void setValue(List<ParameterSolutionPrototype> newValue) {
     this.value = new ArrayList<>(newValue);
   }
 
   @Override
-  public void setValueFromComponent(CheckListView<WizardParameterPrototype> component) {
+  public void setValueFromComponent(CheckListView<ParameterSolutionPrototype> component) {
     this.value = new ArrayList<>(component.getCheckModel().getCheckedItems());
   }
 
   @Override
-  public void setValueToComponent(CheckListView<WizardParameterPrototype> component,
-      @Nullable List<WizardParameterPrototype> newValue) {
+  public void setValueToComponent(CheckListView<ParameterSolutionPrototype> component,
+      @Nullable List<ParameterSolutionPrototype> newValue) {
     component.getCheckModel().clearChecks();
     if (newValue == null) {
       return;
     }
-    final List<WizardParameterPrototype> componentItems = component.getItems();
-    for (WizardParameterPrototype selected : newValue) {
+    final List<ParameterSolutionPrototype> componentItems = component.getItems();
+    for (ParameterSolutionPrototype selected : newValue) {
       // only check items actually present in the (possibly filtered) component list
       if (componentItems.contains(selected)) {
         component.getCheckModel().check(selected);
@@ -153,7 +153,7 @@ public class WizardParameterSolutionCheckListParameter implements
   @Override
   public void loadValueFromXML(Element xmlElement) {
     final NodeList items = xmlElement.getElementsByTagName("item");
-    final List<WizardParameterPrototype> loaded = new ArrayList<>();
+    final List<ParameterSolutionPrototype> loaded = new ArrayList<>();
     for (int i = 0; i < items.getLength(); i++) {
       final String itemName = items.item(i).getTextContent();
       choices.stream().filter(c -> c.name().equals(itemName)).findFirst().ifPresent(loaded::add);
@@ -169,7 +169,7 @@ public class WizardParameterSolutionCheckListParameter implements
       return;
     }
     final Document doc = xmlElement.getOwnerDocument();
-    for (WizardParameterPrototype s : value) {
+    for (ParameterSolutionPrototype s : value) {
       final Element item = doc.createElement("item");
       item.setTextContent(s.name());
       xmlElement.appendChild(item);
