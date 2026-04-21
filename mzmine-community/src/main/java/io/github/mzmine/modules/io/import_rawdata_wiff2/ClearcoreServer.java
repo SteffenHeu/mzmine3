@@ -73,6 +73,10 @@ public class ClearcoreServer {
       throw new RuntimeException("Cannot determine address of SCIEX clearcore service.");
     }
 
+//    ProcessBuilder b = new ProcessBuilder(dataAccessExe.getAbsolutePath(), "--console").inheritIO();
+//    b.directory(dataAccessExe.getParentFile());
+//    processHandle = b.start().toHandle();
+
     Arena arena = Arena.ofAuto();
     ByteArrayList bytes = new ByteArrayList(
         dataAccessExe.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
