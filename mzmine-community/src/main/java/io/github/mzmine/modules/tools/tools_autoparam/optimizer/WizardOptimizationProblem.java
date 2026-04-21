@@ -70,6 +70,7 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.SimpleRunnableTask;
+import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.CSVParsingUtils;
 import java.io.File;
 import java.io.IOException;
@@ -78,6 +79,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
 import org.jetbrains.annotations.NotNull;
@@ -320,6 +322,12 @@ public class WizardOptimizationProblem extends AbstractProblem {
       }
     }
 
+    if(batchTask.isCanceled()) {
+      // we need to throw here, because the the optimizer does not respect
+      // the termination condition with the task status
+      throw new RuntimeException("Batch optimization task was canceled");
+    }
+
     final FeatureList newest = project.getCurrentFeatureLists().stream()
         .max(Comparator.comparing(f -> f.getName().length())).get();
 
@@ -340,7 +348,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
     solution.setAttribute("Total features", newest.streamFeatures().count());
     solution.setAttribute("Runtime / s", fullBatchTime);
 
-    project.removeFeatureLists(project.getCurrentFeatureLists());
+    project.removeFeatureLists(batchTask.getLatestCreatedFeatureLists());
   }
 
   public void applyBatchOverridesToSequence(@NotNull Solution solution,
