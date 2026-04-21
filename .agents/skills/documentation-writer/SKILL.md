@@ -35,6 +35,8 @@ description: Create or update user-facing technical documentation from implement
 - Add warnings/tips for failure modes, prerequisites, and edge cases.
 - Keep content general enough for long-term maintenance; avoid one-off troubleshooting details
   unless requested.
+- When adding scientific citations, make sure they are specific to the documented module and not a
+  general resource
 
 5. Integrate into navigation when needed.
 

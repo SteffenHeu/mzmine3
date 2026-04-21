@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -25,38 +26,57 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import io.github.mzmine.util.XMLUtils;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.w3c.dom.Element;
 
 /**
- * Factor normalization function represented by one global factor.
+ *
+ * @param functions a list of all functions to be applied. Each factor is multiplied to get the
+ *                  total factor.
  */
-public record FactorNormalizationFunction(double factor) implements NormalizationFunction {
+public record CompositeNormalizationFunction(
+    @NotNull List<@NotNull NormalizationFunction> functions) implements NormalizationFunction {
 
-  public static final String XML_TYPE = "factor";
-  private static final String XML_FACTOR_ATTR = "factor";
+  public static final String XML_TYPE = "composite_list_normalization";
+
+  @Override
+  public double getNormalizationFactor(@NotNull Double mz, @NotNull Float rt) {
+    double f = 1;
+    for (NormalizationFunction function : functions) {
+      f *= function.getNormalizationFactor(mz, rt);
+    }
+    return f;
+  }
 
   @Override
   public @NotNull String getUniqueID() {
     return XML_TYPE;
   }
 
-  @Override
-  public double getNormalizationFactor(@NotNull final Double mz, @NotNull final Float rt) {
-    return factor;
-  }
 
   @Override
   public void saveToXML(final @NotNull Element functionElement) {
     functionElement.setAttribute(XML_FUNCTION_TYPE_ATTR, getUniqueID());
-    functionElement.setAttribute(XML_FACTOR_ATTR, Double.toString(factor));
+
+    final Element subFunctions = functionElement.getOwnerDocument().createElement("subfunctions");
+
+    for (NormalizationFunction function : functions) {
+      NormalizationFunction.appendFunctionElement(subFunctions, function);
+    }
+
+    functionElement.appendChild(subFunctions);
   }
 
-  public static @NotNull FactorNormalizationFunction loadFromXML(
+  public static @NotNull CompositeNormalizationFunction loadFromXML(
       final @NotNull Element functionElement) {
-    final double factor = Double.parseDouble(
-        XMLUtils.requireAttribute(functionElement, XML_FACTOR_ATTR));
-    return new FactorNormalizationFunction(factor);
+
+    final Element subfunctions = XMLUtils.findChildElement(functionElement, "subfunctions");
+
+    final List<@NotNull NormalizationFunction> functions = XMLUtils.streamChildElementsByTagName(
+        subfunctions, XML_FUNCTION_ELEMENT).map(NormalizationFunction::loadFromXML).toList();
+
+    return new CompositeNormalizationFunction(functions);
   }
 
 }

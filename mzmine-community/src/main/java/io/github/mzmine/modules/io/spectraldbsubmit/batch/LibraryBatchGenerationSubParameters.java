@@ -35,7 +35,11 @@ import io.github.mzmine.modules.io.export_merge_libraries.MergeLibrariesModule;
 import io.github.mzmine.parameters.dialogs.ParameterSetupDialog;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.HiddenParameter;
+import io.github.mzmine.parameters.parametertypes.selectors.SpectralLibrarySelection;
+import io.github.mzmine.parameters.parametertypes.selectors.SpectralLibrarySelectionParameter;
 import io.github.mzmine.util.ExitCode;
+import java.util.List;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -48,8 +52,14 @@ import org.jetbrains.annotations.Nullable;
  */
 public class LibraryBatchGenerationSubParameters extends SimpleParameterSet {
 
+  /**
+   * Keeps last selected library to open dialog with correct library
+   */
+  public static final HiddenParameter<SpectralLibrarySelection> lastLibrarySelection = new HiddenParameter<>(
+      new SpectralLibrarySelectionParameter(false, new SpectralLibrarySelection(List.of())));
+
   public LibraryBatchGenerationSubParameters() {
-    super(LibraryBatchGenerationParameters.postMergingMsLevelFilter,
+    super(lastLibrarySelection, LibraryBatchGenerationParameters.postMergingMsLevelFilter,
         LibraryBatchGenerationParameters.metadata, LibraryBatchGenerationParameters.normalizer,
         LibraryBatchGenerationParameters.merging, LibraryBatchGenerationParameters.handleChimerics,
         LibraryBatchGenerationParameters.quality, LibraryBatchGenerationParameters.advanced);

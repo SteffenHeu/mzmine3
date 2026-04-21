@@ -24,22 +24,28 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
-import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.modules.MZmineModule;
-import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
-import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
+import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.CheckComboParameter;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A base normalization module. {@link NormalizationTypeWithReferencesModule} if the normalization
- * may be applied to references samples and then interpolated for others.
+ * Normalizes with spectral TIC which is prone to influence by noise and baseline.
  */
-public interface NormalizationTypeModule extends MZmineModule {
+public class TotalRawSignalNormalizationTypeParameters extends SimpleParameterSet {
 
-  void createAllNormalizationFunctionsToSummary(
-      @NotNull IntensityNormalizationSearchableSummary summary,
-      @NotNull ModularFeatureList featureList, @NotNull SamplesBatch samplesBatch,
-      @NotNull MetadataTable metadata, @NotNull ParameterSet mainParameters,
-      @NotNull ParameterSet moduleSpecificParameters);
+  // needs to have the same name in all modules so that each instance can extract with the same name
+  public static final CheckComboParameter<SampleType> sampleTypes = FeatureIntensityNormalizationParameters.sampleTypes.cloneParameter();
 
+  public TotalRawSignalNormalizationTypeParameters() {
+    super(sampleTypes);
+  }
+
+  public static @NotNull TotalRawSignalNormalizationTypeParameters create(
+      final @NotNull List<SampleType> selectedSampleTypes) {
+    final TotalRawSignalNormalizationTypeParameters parameters = (TotalRawSignalNormalizationTypeParameters) new TotalRawSignalNormalizationTypeParameters().cloneParameterSet();
+    parameters.setParameter(TotalRawSignalNormalizationTypeParameters.sampleTypes, selectedSampleTypes);
+    return parameters;
+  }
 }

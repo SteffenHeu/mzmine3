@@ -26,12 +26,14 @@
 package io.github.mzmine.modules.io.spectraldbsubmit.row;
 
 import io.github.mzmine.javafx.components.factories.FxLabels;
+import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibrary;
 import java.io.File;
 import java.util.List;
 import javafx.geometry.Insets;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Dialog;
@@ -42,6 +44,7 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.GridPane;
 import javafx.util.StringConverter;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Dialog for selecting a target spectral library. Allows the user to either add entries to an
@@ -57,8 +60,9 @@ public class SpectralLibrarySelectionDialog extends Dialog<SpectralLibrary> {
   private final ComboBox<SpectralLibrary> libraryCombo = new ComboBox<>();
   private final TextField nameField = new TextField();
 
-  public SpectralLibrarySelectionDialog(@NotNull final String suggestedName) {
-    setTitle("Send to Spectral Library");
+  public SpectralLibrarySelectionDialog(int nRows, List<SpectralLibrary> lastLibraries,
+      @NotNull final String suggestedName) {
+    setTitle("Sending %d rows to Spectral Library".formatted(nRows));
     setHeaderText("Select a target spectral library for the generated entries.");
 
     final ToggleGroup toggleGroup = new ToggleGroup();
@@ -74,8 +78,9 @@ public class SpectralLibrarySelectionDialog extends Dialog<SpectralLibrary> {
     libraryCombo.getItems().setAll(currentLibraries);
     libraryCombo.setConverter(new StringConverter<>() {
       @Override
-      public String toString(@NotNull SpectralLibrary lib) {
-        return lib.getNameWithSize();
+      public String toString(@Nullable SpectralLibrary lib) {
+        // null if no library loaded
+        return lib == null ? null : lib.getNameWithSize();
       }
 
       @Override
@@ -89,7 +94,17 @@ public class SpectralLibrarySelectionDialog extends Dialog<SpectralLibrary> {
     addExistingRadio.setDisable(!hasExistingLibraries);
     if (hasExistingLibraries) {
       addExistingRadio.setSelected(true);
-      libraryCombo.getSelectionModel().selectFirst();
+
+      // try select last selected library
+      if (!lastLibraries.isEmpty()) {
+        try {
+          libraryCombo.getSelectionModel().select(lastLibraries.getFirst());
+        } catch (Exception e) {
+          libraryCombo.getSelectionModel().selectFirst();
+        }
+      } else {
+        libraryCombo.getSelectionModel().selectFirst();
+      }
     } else {
       createNewRadio.setSelected(true);
     }
@@ -126,8 +141,19 @@ public class SpectralLibrarySelectionDialog extends Dialog<SpectralLibrary> {
       if (addExistingRadio.isSelected()) {
         return libraryCombo.getValue();
       }
-      // create a new library with a placeholder file path
+
       final String name = nameField.getText().strip();
+      final List<SpectralLibrary> libraries = ProjectService.getProject()
+          .getCurrentSpectralLibraries();
+      if (libraries.stream().anyMatch(lib -> lib.getName().equals(name))) {
+        final boolean overwrite = DialogLoggerUtil.showDialogYesNo(AlertType.WARNING,
+            "Overwriting existing library?",
+            "Do you really want to overwrite the existing library, replacing all its content with the new library entries?");
+        if (!overwrite) {
+          return null;
+        }
+      }
+      // create a new library with a placeholder file path
       return new SpectralLibrary(MemoryMapStorage.forMassList(), name, new File(name + ".json"));
     });
   }

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -24,22 +25,33 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
-import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.modules.MZmineModule;
-import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
-import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.javafx.components.util.FxLayout;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.MetadataNormalizationConfig.Mode;
+import io.github.mzmine.parameters.parametertypes.ComboComponent;
+import io.github.mzmine.parameters.parametertypes.metadata.MetadataGroupingComponent;
+import javafx.geometry.Insets;
+import javafx.scene.layout.HBox;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * A base normalization module. {@link NormalizationTypeWithReferencesModule} if the normalization
- * may be applied to references samples and then interpolated for others.
- */
-public interface NormalizationTypeModule extends MZmineModule {
+public class MetadataNormalizationConfigComponent extends HBox {
 
-  void createAllNormalizationFunctionsToSummary(
-      @NotNull IntensityNormalizationSearchableSummary summary,
-      @NotNull ModularFeatureList featureList, @NotNull SamplesBatch samplesBatch,
-      @NotNull MetadataTable metadata, @NotNull ParameterSet mainParameters,
-      @NotNull ParameterSet moduleSpecificParameters);
+  private final ComboComponent<Mode> modeCombo;
+  private final MetadataGroupingComponent metadataCol;
 
+  public MetadataNormalizationConfigComponent(ComboComponent<Mode> modeCombo,
+      MetadataGroupingComponent metadataCol) {
+    super(FxLayout.DEFAULT_SPACE, modeCombo, metadataCol);
+    FxLayout.applyDefaults(this, Insets.EMPTY);
+    this.modeCombo = modeCombo;
+    this.metadataCol = metadataCol;
+  }
+
+  public MetadataNormalizationConfig getValue() {
+    return new MetadataNormalizationConfig(metadataCol.getValue(), modeCombo.getValue());
+  }
+
+  public void setValue(@NotNull MetadataNormalizationConfig newValue) {
+    modeCombo.setValue(newValue.mode());
+    metadataCol.setValue(newValue.metadataColumn());
+  }
 }

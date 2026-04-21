@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -22,21 +23,39 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.datamodel.features.types.numbers;
+package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
+import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import org.jetbrains.annotations.NotNull;
 
-public class NormalizedHeightType extends HeightType {
+/**
+ * Either multiply or divide value by metadata value. Weight is divided dilution factor is
+ * multiplied
+ */
+public record MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNull Mode mode) {
 
-  public static final String UNIQUE_ID = "height_norm";
-
-  @Override
-  public @NotNull String getUniqueID() {
-    return UNIQUE_ID;
+  public MetadataNormalizationConfig(@NotNull String metadataColumn, @NotNull Mode mode) {
+    this.metadataColumn = metadataColumn.strip();
+    this.mode = mode;
   }
 
-  @Override
-  public @NotNull String getHeaderString() {
-    return "Norm. height";
+  public static @NotNull MetadataNormalizationConfig getDefault() {
+    return new MetadataNormalizationConfig("", Mode.multiply);
+  }
+
+  public enum Mode implements UniqueIdSupplier {
+    multiply, divide;
+
+    @Override
+    public @NotNull String getUniqueID() {
+      return switch (this) {
+        case multiply -> "multiply";
+        case divide -> "divide";
+      };
+    }
+
+    public boolean isDivide() {
+      return this == divide;
+    }
   }
 }
