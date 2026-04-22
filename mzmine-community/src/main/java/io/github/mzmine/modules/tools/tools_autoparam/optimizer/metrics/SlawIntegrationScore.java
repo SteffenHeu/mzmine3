@@ -58,6 +58,6 @@ public record SlawIntegrationScore() implements SweepMetric {
       }
     }
 
-    return (double) (matchingRows * matchingRows) / featureList.getNumberOfRows();
+    return (double) (matchingRows * matchingRows) / Math.max(1, featureList.getNumberOfRows());
   }
 }

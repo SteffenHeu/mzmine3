@@ -68,7 +68,7 @@ public record IpoIsotopeScore() implements SweepMetric {
           numWithIsos++;
         }
       }
-      score += ((long) numWithIsos * numWithIsos) / numPeaks;
+      score += ((long) numWithIsos * numWithIsos) / Math.max(1, numPeaks);
     }
 
     return score;

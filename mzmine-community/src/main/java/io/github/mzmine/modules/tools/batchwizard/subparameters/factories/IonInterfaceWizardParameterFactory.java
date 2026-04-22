@@ -172,13 +172,13 @@ public enum IonInterfaceWizardParameterFactory implements WizardParameterFactory
           new BatchParameterSolutionPrototype(
               WaveletBatchParameterSolutionBuilder::buildWaveletSnr),
           new BatchParameterSolutionPrototype(
-              WaveletBatchParameterSolutionBuilder::buildWaveletNoiseCalculation),
-          new BatchParameterSolutionPrototype(
-              WaveletBatchParameterSolutionBuilder::buildWaveletBaselineMethod),
+              WaveletBatchParameterSolutionBuilder::buildWaveletNoiseCalculation));
+//          new BatchParameterSolutionPrototype(
+//              WaveletBatchParameterSolutionBuilder::buildWaveletBaselineMethod));
 //          new BatchParameterSolutionPrototype(
 //              WaveletBatchParameterSolutionBuilder::buildWaveletDipFilter),
-          new BatchParameterSolutionPrototype(
-              WaveletBatchParameterSolutionBuilder::buildWaveletEdgeDetector));
+//          new BatchParameterSolutionPrototype(
+//              WaveletBatchParameterSolutionBuilder::buildWaveletEdgeDetector));
       case GC_EI -> List.of(
           new WizardParameterSolutionPrototype(dummyBuilder.buildFwhmSolution(-1).variable(),
               WizardParameterSolutionBuilder::buildFwhmSolution),

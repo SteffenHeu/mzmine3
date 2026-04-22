@@ -196,8 +196,7 @@ public class OptimizerParameters extends SimpleParameterSet {
     param.setParameter(benchmarkFeatureTypes, DEFAULT_IMPORT_TYPES);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
-    param.setParameter(paramToOptimize,
-        new ArrayList<>(ALL_SOLUTIONS.subList(0, ALL_SOLUTIONS.size() - WAVELET_SOLUTION_COUNT)));
+    param.setParameter(paramToOptimize, new ArrayList<>(ALL_SOLUTIONS));
     return param;
   }
 
