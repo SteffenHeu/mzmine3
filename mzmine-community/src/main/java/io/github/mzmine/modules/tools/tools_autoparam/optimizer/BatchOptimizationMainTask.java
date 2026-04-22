@@ -28,6 +28,7 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.mainwindow.SimpleTab;
+import io.github.mzmine.gui.preferences.MZminePreferences;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.javafx.dialogs.NotificationService;
 import io.github.mzmine.javafx.dialogs.NotificationService.NotificationType;
@@ -140,6 +141,11 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     // set a specific seed to make the results deterministic.
     PRNG.setSeed(42);
+
+    // store all in ram while optimizing
+    addTaskStatusListener((_, _, _) -> ConfigService.getPreference(MZminePreferences.memoryOption)
+        .enforceToMemoryMapping());
+    MemoryMapStorage.setStoreAllInRam(true);
 
     final WizardOptimizationProblem problem = new WizardOptimizationProblem(tab.getSequence(),
         stats, params);
