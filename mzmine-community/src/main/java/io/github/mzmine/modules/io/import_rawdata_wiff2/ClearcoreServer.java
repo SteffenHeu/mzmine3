@@ -38,6 +38,7 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout.OfByte;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -66,8 +67,8 @@ public class ClearcoreServer {
     // Read port/address from the file we just wrote.
     final File appsettings = FileAndPathUtil.resolveInExternalToolsDir(getAppSettingsPath());
     Map<String, String> o = JsonUtils.readValueOrThrow(appsettings);
-    port = Integer.parseInt(o.get("Port"));
-    address = o.get("Host");
+    port = Integer.parseInt(Objects.requireNonNullElse(o.get("port"), o.get("Port")));
+    address = Objects.requireNonNullElse(o.get("Host"), o.get("host"));
 
     if (address == null) {
       throw new RuntimeException("Cannot determine address of SCIEX clearcore service.");
@@ -77,14 +78,14 @@ public class ClearcoreServer {
 //    b.directory(dataAccessExe.getParentFile());
 //    processHandle = b.start().toHandle();
 
-    Arena arena = Arena.ofAuto();
-    ByteArrayList bytes = new ByteArrayList(
+    final Arena arena = Arena.ofAuto();
+    final ByteArrayList bytes = new ByteArrayList(
         dataAccessExe.getAbsolutePath().getBytes(StandardCharsets.UTF_8));
     bytes.add((byte) 0);
-    MemorySegment memorySegment = arena.allocateFrom(OfByte.JAVA_BYTE, bytes.toByteArray());
+    final MemorySegment memorySegment = arena.allocateFrom(OfByte.JAVA_BYTE, bytes.toByteArray());
 
     // Decrypt + write the license file, spawn the server, delete the license.
-    long handle = Wiff2LauncherLib_h.wiff2_launch_server(memorySegment);
+    final long handle = Wiff2LauncherLib_h.wiff2_launch_server(memorySegment);
 
     processHandle = ProcessHandle.of(handle)
         .orElseThrow(() -> new RuntimeException("Cannot launch wiff2 data access server."));
