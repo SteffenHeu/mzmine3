@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,6 +26,7 @@
 package io.github.mzmine.parameters.dialogs;
 
 import io.github.mzmine.gui.DesktopService;
+import io.github.mzmine.gui.StageWindowSettingsUtil;
 import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.javafx.util.FxIconUtil;
 import io.github.mzmine.main.MZmineCore;
@@ -165,16 +166,14 @@ public class EmptyParameterSetupDialogBase extends Stage {
       if(!showing) {
         return;
       }
-      final Screen primary = Screen.getPrimary();
-      if (primary != null) {
-        // primary.getBounds is already scaling aware.
-        final Rectangle2D resolution = primary.getBounds();
-        // no dialogs larger than the screen
-        if (mainPane.getHeight() > resolution.getHeight() * 0.8
-            || scene.getHeight() > resolution.getHeight() * 0.8) {
-          setHeight(resolution.getHeight() * 0.8);
-          centerOnScreen();
-        }
+      final Screen screen = StageWindowSettingsUtil.getCurrentScreenOrPrimary(this);
+      // primary.getBounds is already scaling aware.
+      final Rectangle2D resolution = screen.getBounds();
+      // no dialogs larger than the screen
+      if (mainPane.getHeight() > resolution.getHeight() * 0.8
+          || scene.getHeight() > resolution.getHeight() * 0.8) {
+        setHeight(resolution.getHeight() * 0.8);
+        centerOnScreen();
       }
     });
 
