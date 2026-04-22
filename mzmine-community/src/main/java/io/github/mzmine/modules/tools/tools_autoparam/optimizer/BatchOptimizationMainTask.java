@@ -29,6 +29,8 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.mainwindow.SimpleTab;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
+import io.github.mzmine.javafx.dialogs.NotificationService;
+import io.github.mzmine.javafx.dialogs.NotificationService.NotificationType;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardTab;
@@ -46,8 +48,10 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -123,9 +127,9 @@ public class BatchOptimizationMainTask extends AbstractTask {
         null, params);
 
     final List<DataFileStatistics> stats = importedFiles.stream().map(
-            file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
-                AutoParamParameters.of(importedFiles), AutoParamModule.class, file, benchmarkFeatures))
-        .parallel().map(AutoParamTask::runAndGet).toList();
+        file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
+            AutoParamParameters.of(importedFiles), AutoParamModule.class, file, benchmarkFeatures,
+            false)).parallel().map(AutoParamTask::runAndGet).toList();
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
     if (DesktopService.isGUI()) {
@@ -165,42 +169,52 @@ public class BatchOptimizationMainTask extends AbstractTask {
           "Warm-start enabled for %s: injected %d solutions, total evaluations %d".formatted(
               optimizer.getName(), injected.size(), totalIterations));
 
+      final int initialPopulationSize = Math.clamp(numGuesstimatedPopulations + 5, 20, 30);
+      NotificationService.show(NotificationType.INFO, "Starting optimizer", """
+          Using %d attempts around raw-data based estimations, %d random guesses and %d total optimization iterations.
+          Estimates:
+          %s""".formatted(numGuesstimatedPopulations,
+          initialPopulationSize - numGuesstimatedPopulations, totalIterations,
+          singlePassEstimates.entrySet().stream()
+              .map(e -> "%s: %.2f".formatted(e.getKey(), e.getValue()))
+              .collect(Collectors.joining("\n"))));
+
       switch (optimizer) {
         case MOEAD m -> {
           m.setInitialization(new InjectedInitialization(problem, injected));
-          m.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          m.setInitialPopulationSize(initialPopulationSize);
         }
         case NSGAII n -> {
           n.setInitialization(new InjectedInitialization(problem, injected));
-          n.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          n.setInitialPopulationSize(initialPopulationSize);
         }
         case AGEMOEAII a -> {
           a.setInitialization(new InjectedInitialization(problem, injected));
-          a.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          a.setInitialPopulationSize(initialPopulationSize);
         }
         case GDE3 g -> {
           g.setInitialization(new InjectedInitialization(problem, injected));
-          g.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          g.setInitialPopulationSize(initialPopulationSize);
         }
         case RVEA r -> {
           r.setInitialization(new InjectedInitialization(problem, injected));
-          r.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          r.setInitialPopulationSize(initialPopulationSize);
         }
         case SMSEMOA s -> {
           s.setInitialization(new InjectedInitialization(problem, injected));
-          s.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          s.setInitialPopulationSize(initialPopulationSize);
         }
         case SPEA2 s -> {
           s.setInitialization(new InjectedInitialization(problem, injected));
-          s.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          s.setInitialPopulationSize(initialPopulationSize);
         }
         case EpsilonMOEA e -> {
           e.setInitialization(new InjectedInitialization(problem, injected));
-          e.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          e.setInitialPopulationSize(initialPopulationSize);
         }
         case IBEA e -> {
           e.setInitialization(new InjectedInitialization(problem, injected));
-          e.setInitialPopulationSize(Math.clamp(numGuesstimatedPopulations + 5, 20, 30));
+          e.setInitialPopulationSize(initialPopulationSize);
         }
         default -> {
         }
@@ -228,6 +242,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
       ConfigService.getConfiguration().getTheme().apply(scene.getStylesheets());
       stage.setScene(scene);
       stage.show();
+      stage.setMaxWidth(Screen.getPrimary().getBounds().getWidth() * 0.8);
+      stage.centerOnScreen();
     });
 
     setStatus(TaskStatus.FINISHED);

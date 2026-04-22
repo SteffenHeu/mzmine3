@@ -82,12 +82,12 @@ public final class SinglePassParameterEstimation {
       estimates.put("FWHM", MathUtils.calcQuantileSorted(fwhms, 0.5));
     }
 
-    // Min consecutive data points: median
+    // Min consecutive data points: 30% quantile
     final double[] dataPts = stats.stream()
         .map(DataFileStatistics::getNumberOfLowestIsotopeDataPoints).flatMapToInt(Arrays::stream)
         .mapToDouble(i -> i).sorted().toArray();
     if (dataPts.length > 0) {
-      estimates.put("Min consecutive", MathUtils.calcQuantileSorted(dataPts, 0.5));
+      estimates.put("Min consecutive", MathUtils.calcQuantileSorted(dataPts, 0.3));
     }
 
     // MS1 noise level: factor 5 for injection-time instruments, 15th percentile of edge intensities otherwise
