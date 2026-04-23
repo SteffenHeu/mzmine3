@@ -87,7 +87,9 @@ public final class SinglePassParameterEstimation {
         .map(DataFileStatistics::getNumberOfLowestIsotopeDataPoints).flatMapToInt(Arrays::stream)
         .mapToDouble(i -> i).sorted().toArray();
     if (dataPts.length > 0) {
-      estimates.put("Min consecutive", MathUtils.calcQuantileSorted(dataPts, 0.3));
+      // often overestimated, so we go with 5 or lower
+      estimates.put("Min consecutive",
+          Math.min(Math.max(5, dataPts[0]), MathUtils.calcQuantileSorted(dataPts, 0.3)));
     }
 
     // MS1 noise level: factor 5 for injection-time instruments, 15th percentile of edge intensities otherwise

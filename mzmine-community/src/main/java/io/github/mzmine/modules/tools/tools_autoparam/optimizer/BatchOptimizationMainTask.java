@@ -48,6 +48,7 @@ import java.io.File;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javafx.scene.Scene;
@@ -80,7 +81,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private final File metadata;
   private final BatchWizardTab tab;
   private final OptimizerParameters params;
-
+  private final AtomicReference<TaskStatus> externalStatus = new AtomicReference<>(
+      TaskStatus.PROCESSING);
   /**
    * Actual number of evaluations for this run. Set during {@link #run()} — may be reduced from the
    * user-configured iterations when warm-starting.
@@ -123,6 +125,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
   public void run() {
     setStatus(TaskStatus.PROCESSING);
 
+    addTaskStatusListener((_, newStatus, _) -> externalStatus.set(newStatus));
+
     final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, metadata);
     final List<FeatureRecord> benchmarkFeatures = WizardOptimizationProblem.extractFeatureRecordsFromFile(
         null, params);
@@ -148,7 +152,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
     MemoryMapStorage.setStoreAllInRam(true);
 
     final WizardOptimizationProblem problem = new WizardOptimizationProblem(tab.getSequence(),
-        stats, params);
+        stats, params, externalStatus);
 
     optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
     totalIterations = Math.max(params.getValue(OptimizerParameters.iterations), 30);
@@ -227,7 +231,11 @@ public class BatchOptimizationMainTask extends AbstractTask {
       }
     }
 
-    optimizer.run(new TaskStatusTerminationCondition(totalIterations, this::getStatus));
+    try {
+      optimizer.run(new TaskStatusTerminationCondition(totalIterations, this::getStatus));
+    } catch (RuntimeException e) {
+      // we throw an exception to cancel the optimization if the user wants to stop. Termination condition is not checked continuously
+    }
 
     final NondominatedPopulation result = optimizer.getResult();
 

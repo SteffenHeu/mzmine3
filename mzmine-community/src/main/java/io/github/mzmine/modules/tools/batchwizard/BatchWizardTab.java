@@ -455,12 +455,16 @@ public class BatchWizardTab extends SimpleTab {
     final WizardStepParameters importParam = sequenceSteps.get(DATA_IMPORT).get();
     final @NotNull File[] allFiles = importParam.getParameter(DataImportWizardParameters.fileNames)
         .getValue();
-    File[] qcFiles = Arrays.stream(allFiles)
-        .filter(f -> SampleType.ofString(f.getName()) == SampleType.QC).limit(10)
-        .toArray(File[]::new);
+    List<File> qcFiles = CollectionUtils.selectRandomElements(
+        Arrays.stream(allFiles).filter(f -> SampleType.ofString(f.getName()) == SampleType.QC)
+            .limit(10).toList(), 10);
 
-    if (qcFiles.length < 3) {
-      qcFiles = CollectionUtils.selectRandomElements(List.of(allFiles), 10).toArray(File[]::new);
+    if (qcFiles.size() < 3) {
+      File[] nonBlanks = Arrays.stream(allFiles)
+          .filter(f -> SampleType.ofString(f.getName()) != SampleType.BLANK).limit(10)
+          .toArray(File[]::new);
+      qcFiles = CollectionUtils.selectRandomElements(
+          List.of(nonBlanks.length > 3 ? nonBlanks : allFiles), 10);
     }
 
     final var metadataFile = importParam.getOptionalValue(DataImportWizardParameters.metadataFile)
@@ -475,8 +479,8 @@ public class BatchWizardTab extends SimpleTab {
     }
 
     final BatchOptimizationMainTask optimizer = new BatchOptimizationMainTask(
-        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles, metadataFile, this,
-        optimizerParam);
+        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles.toArray(File[]::new),
+        metadataFile, this, optimizerParam);
     TaskService.getController().addTask(optimizer);
   }
 
