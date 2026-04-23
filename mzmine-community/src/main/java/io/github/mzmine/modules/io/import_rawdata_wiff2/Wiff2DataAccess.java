@@ -405,7 +405,8 @@ public class Wiff2DataAccess implements AutoCloseable {
 
     try {
       if (!tracesIterator.hasNext()) {
-        logger.info("File: %s\tSample: %d\tdoes not contain any analog traces.");
+        logger.info("File: %s\tSample: %s\tdoes not contain any analog traces.".formatted(
+            rawDataFile.getName(), sample.getSampleName()));
         return List.of();
       }
     } catch (StatusRuntimeException e) {

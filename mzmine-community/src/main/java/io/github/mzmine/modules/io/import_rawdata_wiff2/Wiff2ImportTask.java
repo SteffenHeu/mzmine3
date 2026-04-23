@@ -51,6 +51,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -79,6 +80,8 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
     String sampleName = sample.getSampleName();
     String userSampleID = sample.getUserSampleId();
     String filename = FileAndPathUtil.eraseFormat(file.getName());
+    String extension = Optional.ofNullable(FileAndPathUtil.getExtension(file))
+        .filter(e -> e.contains("wiff")).orElse("wiff2");
 
     if (samples.size() <= 1) {
       return file.getName();
@@ -109,11 +112,11 @@ public class Wiff2ImportTask extends AbstractRawDataFileTask implements RawDataI
       b.append("_").append(userSampleID);
     }
 
-    return b.append(".wiff2").toString();
+    return b.append(".").append(extension).toString();
   }
 
   public static List<File> mapImportedFileNames(@NotNull File file, @NotNull RawDataFileType type) {
-    if (type != RawDataFileType.SCIEX_WIFF2) {
+    if (type != RawDataFileType.SCIEX_WIFF2 && type != RawDataFileType.SCIEX_WIFF) {
       return List.of(file);
     }
 
