@@ -522,6 +522,12 @@ public class Wiff2DataAccess implements AutoCloseable {
 
     final SimpleSpectralArrays spectralData = scanProcessorConfig.processor()
         .processScan(metadataScan, getSimpleSpectralArrays(spectrum));
+    if (spectralData.getNumberOfDataPoints() == 0 && msLevel >= 2 && msmsInfo != null
+        && msmsInfo.getActivationEnergy() != null && msmsInfo.getActivationEnergy() == 0f) {
+      // heuristic: for wiff1 data the ms2 scans may be empty if not enough precursors were found.
+      // filter them out.
+      return null;
+    }
     final ScanWindow massRange = experiment.getMassRanges(0).getSelectionWindow();
 
     StringBuilder scanDesc = new StringBuilder();
