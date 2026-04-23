@@ -57,23 +57,4 @@ public class ComboWithDoubleOrAutoParameter extends
     clone.setValue(new DoubleOrAutoValue(value.value(), value.manual()));
     return clone;
   }
-
-  @Override
-  public void loadValueFromXML(final Element xmlElement) {
-    // Used to be a plain DoubleParameter - still support direct numeric content.
-    try {
-      final String selected = xmlElement.getAttribute("selected");
-      if (selected == null || selected.isBlank()) {
-        final String numString = xmlElement.getTextContent();
-        if (numString != null && !numString.isBlank()) {
-          setValue(new DoubleOrAutoValue(DoubleOrAuto.MANUAL, Double.parseDouble(numString)));
-          return;
-        }
-      }
-    } catch (Exception e) {
-      // decision: fall back to the standard combo-with-input XML parsing below.
-    }
-
-    super.loadValueFromXML(xmlElement);
-  }
 }
