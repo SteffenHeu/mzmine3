@@ -25,25 +25,24 @@
 package io.github.mzmine.parameters.parametertypes.combowithinput;
 
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
-import io.github.mzmine.parameters.parametertypes.combowithinput.DoubleOrAutoValue.DoubleOrAuto;
 import java.util.Objects;
 import org.w3c.dom.Element;
 
 public class ComboWithDoubleOrAutoParameter extends
-    ComboWithInputParameter<DoubleOrAuto, DoubleOrAutoValue, DoubleParameter> {
+    ComboWithInputParameter<ValueOrAuto, DoubleOrAutoValue, DoubleParameter> {
 
   public ComboWithDoubleOrAutoParameter(final DoubleParameter embeddedParameter) {
-    this(embeddedParameter, new DoubleOrAutoValue(DoubleOrAuto.AUTO,
+    this(embeddedParameter, new DoubleOrAutoValue(ValueOrAuto.AUTO,
         Objects.requireNonNullElse(embeddedParameter.getValue(), 0d)));
   }
 
   public ComboWithDoubleOrAutoParameter(final DoubleParameter embeddedParameter,
       final DoubleOrAutoValue defaultValue) {
-    super(embeddedParameter, DoubleOrAuto.values(), DoubleOrAuto.MANUAL, defaultValue);
+    super(embeddedParameter, ValueOrAuto.values(), ValueOrAuto.MANUAL, defaultValue);
   }
 
   @Override
-  public DoubleOrAutoValue createValue(final DoubleOrAuto option,
+  public DoubleOrAutoValue createValue(final ValueOrAuto option,
       final DoubleParameter embeddedParameter) {
     return new DoubleOrAutoValue(option, embeddedParameter.getValue());
   }

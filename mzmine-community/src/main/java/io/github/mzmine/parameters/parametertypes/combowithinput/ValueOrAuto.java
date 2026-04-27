@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -24,20 +25,25 @@
 
 package io.github.mzmine.parameters.parametertypes.combowithinput;
 
+import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import org.jetbrains.annotations.NotNull;
 
-public record DoubleOrAutoValue(@NotNull ValueOrAuto value,
-                                double manual) implements
-    ComboWithInputValue<ValueOrAuto, Double> {
+public enum ValueOrAuto implements UniqueIdSupplier {
+    AUTO, MANUAL;
 
-  @Override
-  public @NotNull ValueOrAuto getSelectedOption() {
-    return value;
+    @Override
+    public @NotNull String getUniqueID() {
+      return switch (this) {
+        case AUTO -> "auto";
+        case MANUAL -> "manual";
+      };
+    }
+
+    @Override
+    public String toString() {
+      return switch (this) {
+        case AUTO -> "auto";
+        case MANUAL -> "manual";
+      };
+    }
   }
-
-  @Override
-  public Double getEmbeddedValue() {
-    return manual;
-  }
-
-}
