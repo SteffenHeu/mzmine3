@@ -37,14 +37,15 @@ import ai.djl.repository.zoo.ZooModel;
 import ai.djl.training.util.ProgressBar;
 import ai.djl.translate.TranslateException;
 import io.github.mzmine.datamodel.MassSpectrum;
+import io.github.mzmine.util.scans.similarity.impl.djl.PyTorchModelLoader;
 import io.github.mzmine.util.scans.similarity.impl.ms2deepscore.EmbeddingBasedSimilarity;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public class DreaMSModel extends EmbeddingBasedSimilarity {
 
@@ -54,24 +55,25 @@ public class DreaMSModel extends EmbeddingBasedSimilarity {
     private final Predictor<NDList, NDList> predictor;
     private final ZooModel<NDList, NDList> model;
 
-    public DreaMSModel(File modelFilePath, File settingsFilePath)
+  public DreaMSModel(@NotNull final File modelFilePath, @NotNull final File settingsFilePath)
             throws ModelNotFoundException, MalformedModelException, IOException {
         this(modelFilePath.toPath(), settingsFilePath.toPath());
     }
 
-    public DreaMSModel(Path modelFilePath, Path settingsFilePath)
+  public DreaMSModel(@NotNull final Path modelFilePath, @NotNull final Path settingsFilePath)
             throws ModelNotFoundException, MalformedModelException, IOException {
         /*
          * Predicts the DreaMS embedding
          * Model is autocloseable
          */
-        Criteria<NDList, NDList> criteria = Criteria.builder().setTypes(NDList.class, NDList.class)
+    final Criteria<NDList, NDList> criteria = Criteria.builder()
+        .setTypes(NDList.class, NDList.class)
                 .optModelPath(modelFilePath)
                 .optOption("mapLocation", "true") // this model requires mapLocation for GPU
                 .optProgress(new ProgressBar()).build();
-        model = criteria.loadModel();
+    model = PyTorchModelLoader.loadWithCpuFallback("DreaMS", logger, criteria::loadModel);
 
-        DreaMSSettings settings = DreaMSSettings.load(settingsFilePath.toFile());
+    final DreaMSSettings settings = DreaMSSettings.load(settingsFilePath.toFile());
         this.spectrumTensorizer = new DreaMSSpectrumTensorizer(settings);
         this.ndManager = NDManager.newBaseManager();
         this.predictor = model.newPredictor();

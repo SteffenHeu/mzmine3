@@ -36,6 +36,7 @@ import ai.djl.repository.zoo.ZooModel;
 import ai.djl.training.util.ProgressBar;
 import ai.djl.translate.TranslateException;
 import io.github.mzmine.datamodel.MassSpectrum;
+import io.github.mzmine.util.scans.similarity.impl.djl.PyTorchModelLoader;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -43,6 +44,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jetbrains.annotations.NotNull;
 
 public class MS2DeepscoreModel extends EmbeddingBasedSimilarity {
 
@@ -52,15 +54,16 @@ public class MS2DeepscoreModel extends EmbeddingBasedSimilarity {
   private final Predictor<NDList, NDList> predictor;
   private final ZooModel<NDList, NDList> model;
 
-  public MS2DeepscoreModel(File modelFilePath, File settingsFilePath)
+  public MS2DeepscoreModel(@NotNull final File modelFilePath, @NotNull final File settingsFilePath)
       throws ModelNotFoundException, MalformedModelException, IOException {
     this(modelFilePath.toPath(), settingsFilePath.toPath());
   }
 
-  public MS2DeepscoreModel(Path modelFilePath, Path settingsFilePath)
+  public MS2DeepscoreModel(@NotNull final Path modelFilePath, @NotNull final Path settingsFilePath)
       throws ModelNotFoundException, MalformedModelException, IOException {
 //        todo load settings as well.
-    Criteria<NDList, NDList> criteria = Criteria.builder().setTypes(NDList.class, NDList.class)
+    final Criteria<NDList, NDList> criteria = Criteria.builder()
+        .setTypes(NDList.class, NDList.class)
         .optModelPath(modelFilePath)
         .optOption("mapLocation", "true") // this model requires mapLocation for GPU
         .optProgress(new ProgressBar()).build();
@@ -69,8 +72,8 @@ public class MS2DeepscoreModel extends EmbeddingBasedSimilarity {
      * Predicts the MS2Deepscore embedding
      * Model is autocloseable
      */
-    model = criteria.loadModel();
-    MS2DeepscoreSettings settings = MS2DeepscoreSettings.load(settingsFilePath.toFile());
+    model = PyTorchModelLoader.loadWithCpuFallback("MS2Deepscore", logger, criteria::loadModel);
+    final MS2DeepscoreSettings settings = MS2DeepscoreSettings.load(settingsFilePath.toFile());
     // TODO just read json to record and compare those
     if (!Arrays.deepToString(settings.additionalMetadata()).equals(
         "[[StandardScaler, {metadata_field=precursor_mz, mean=0.0, standard_deviation=1000.0}], [CategoricalToBinary, {metadata_field=ionmode, entries_becoming_one=positive, entries_becoming_zero=negative}]]")) {
