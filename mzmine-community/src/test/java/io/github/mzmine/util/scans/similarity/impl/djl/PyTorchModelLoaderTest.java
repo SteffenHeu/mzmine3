@@ -26,7 +26,6 @@
 package io.github.mzmine.util.scans.similarity.impl.djl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,8 +38,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 class PyTorchModelLoaderTest {
 
@@ -78,22 +77,65 @@ class PyTorchModelLoaderTest {
   }
 
   @Test
-  void defaultsToCpuOnWindowsBeforeFirstLoad() throws Exception {
+  void usesDefaultDjlLoadPathOnWindowsBeforeCpuFallback() throws Exception {
     System.clearProperty(PYTORCH_FLAVOR_PROPERTY);
     System.setProperty(OS_NAME_PROPERTY, "Windows 11");
+    System.setProperty(USER_HOME_PROPERTY, createTestHome().toString());
 
     final AtomicInteger attempts = new AtomicInteger();
     final Object expected = new Object();
 
     final Object loaded = PyTorchModelLoader.loadWithCpuFallback("MS2Deepscore", logger, () -> {
       attempts.incrementAndGet();
-      assertEquals("cpu", System.getProperty(PYTORCH_FLAVOR_PROPERTY));
+      Assertions.assertNull(System.getProperty(PYTORCH_FLAVOR_PROPERTY));
       return expected;
     });
 
     assertSame(expected, loaded);
     assertEquals(1, attempts.get());
+    Assertions.assertNull(System.getProperty(PYTORCH_FLAVOR_PROPERTY));
+  }
+
+  @Test
+  void retriesWithCpuAfterSafeNativeLoadFailureOnWindows() throws Exception {
+    System.clearProperty(PYTORCH_FLAVOR_PROPERTY);
+    System.setProperty(OS_NAME_PROPERTY, "Windows 11");
+    System.setProperty(USER_HOME_PROPERTY, createTestHome().toString());
+
+    final AtomicInteger attempts = new AtomicInteger();
+    final Object expected = new Object();
+
+    final Object loaded = PyTorchModelLoader.loadWithCpuFallback("MS2Deepscore", logger, () -> {
+      if (attempts.getAndIncrement() == 0) {
+        Assertions.assertNull(System.getProperty(PYTORCH_FLAVOR_PROPERTY));
+        throw nativeLoadFailure();
+      }
+      assertEquals("cpu", System.getProperty(PYTORCH_FLAVOR_PROPERTY));
+      return expected;
+    });
+
+    assertSame(expected, loaded);
+    assertEquals(2, attempts.get());
     assertEquals("cpu", System.getProperty(PYTORCH_FLAVOR_PROPERTY));
+  }
+
+  @Test
+  void doesNotRetryUnsafeCudaNativeLoadFailureInProcess() throws IOException {
+    System.clearProperty(PYTORCH_FLAVOR_PROPERTY);
+    System.setProperty(OS_NAME_PROPERTY, "Windows 11");
+    System.setProperty(USER_HOME_PROPERTY, createTestHome().toString());
+
+    final AtomicInteger attempts = new AtomicInteger();
+
+    final IOException exception = assertThrows(IOException.class,
+        () -> PyTorchModelLoader.loadWithCpuFallback("MS2Deepscore", logger, () -> {
+          attempts.incrementAndGet();
+          throw unsafeCudaNativeLoadFailure();
+        }));
+
+    assertEquals(1, attempts.get());
+    Assertions.assertNull(System.getProperty(PYTORCH_FLAVOR_PROPERTY));
+    assertTrue(exception.getMessage().contains("cannot be attempted safely"));
   }
 
   @Test
@@ -117,8 +159,8 @@ class PyTorchModelLoaderTest {
   }
 
   @Test
-  void findsLatestWindowsRuntimeDirectoryForFlavor(@TempDir final Path tempHome)
-      throws IOException {
+  void findsLatestWindowsRuntimeDirectoryForFlavor() throws IOException {
+    final Path tempHome = createTestHome();
     System.setProperty(USER_HOME_PROPERTY, tempHome.toString());
 
     final Path pytorchCacheDirectory = tempHome.resolve(".djl.ai").resolve("pytorch");
@@ -131,15 +173,40 @@ class PyTorchModelLoaderTest {
     Files.createFile(newerRuntime.resolve("torch_cuda.dll"));
 
     final Path runtimeDirectory = PyTorchModelLoader.findWindowsRuntimeDirectory("cu128");
-    assertNotNull(runtimeDirectory);
+    Assertions.assertNotNull(runtimeDirectory);
     assertEquals(newerRuntime.toAbsolutePath().normalize(),
         runtimeDirectory.toAbsolutePath().normalize());
   }
 
   @Test
-  void doesNotOverrideExplicitPyTorchFlavor() {
+  void findsLatestWindowsGpuRuntimeDirectory() throws IOException {
+    final Path tempHome = createTestHome();
+    System.setProperty(USER_HOME_PROPERTY, tempHome.toString());
+
+    final Path pytorchCacheDirectory = tempHome.resolve(".djl.ai").resolve("pytorch");
+    final Path cpuRuntime = Files.createDirectories(
+        pytorchCacheDirectory.resolve("2.8.0-cpu-win-x86_64"));
+    Files.createFile(cpuRuntime.resolve("torch_cpu.dll"));
+
+    final Path olderGpuRuntime = Files.createDirectories(
+        pytorchCacheDirectory.resolve("2.7.0-cu128-win-x86_64"));
+    Files.createFile(olderGpuRuntime.resolve("torch_cuda.dll"));
+
+    final Path newerGpuRuntime = Files.createDirectories(
+        pytorchCacheDirectory.resolve("2.7.1-cu128-win-x86_64"));
+    Files.createFile(newerGpuRuntime.resolve("torch_cuda.dll"));
+
+    final Path runtimeDirectory = PyTorchModelLoader.findLatestWindowsGpuRuntimeDirectory();
+    Assertions.assertNotNull(runtimeDirectory);
+    assertEquals(newerGpuRuntime.toAbsolutePath().normalize(),
+        runtimeDirectory.toAbsolutePath().normalize());
+  }
+
+  @Test
+  void doesNotOverrideExplicitPyTorchFlavor() throws IOException {
     System.setProperty(PYTORCH_FLAVOR_PROPERTY, "cu128");
     System.setProperty(OS_NAME_PROPERTY, "Windows 11");
+    System.setProperty(USER_HOME_PROPERTY, createTestHome().toString());
 
     final AtomicInteger attempts = new AtomicInteger();
 
@@ -175,5 +242,16 @@ class PyTorchModelLoaderTest {
   private static EngineException nativeLoadFailure() {
     return new EngineException("Failed to load PyTorch native library",
         new UnsatisfiedLinkError("cublas64_12.dll: Can't find dependent libraries"));
+  }
+
+  private static Path createTestHome() throws IOException {
+    final Path tempRoot = Path.of("build", "tmp", "pytorch-model-loader-test");
+    Files.createDirectories(tempRoot);
+    return Files.createTempDirectory(tempRoot, "home-");
+  }
+
+  private static EngineException unsafeCudaNativeLoadFailure() {
+    return new EngineException("Failed to load PyTorch native library", new UnsatisfiedLinkError(
+        "C:\\Users\\Steffen\\.djl.ai\\pytorch\\2.7.1-cu128-win-x86_64\\torch_cuda.dll: Can't find dependent libraries"));
   }
 }

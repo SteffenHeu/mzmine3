@@ -36,8 +36,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Configures the Windows DLL lookup path for native libraries that are unpacked into the DJL
- * cache.
+ * Configures the Windows DLL lookup path for native libraries unpacked into the DJL cache.
  */
 final class WindowsDllSearchPathConfigurer {
 

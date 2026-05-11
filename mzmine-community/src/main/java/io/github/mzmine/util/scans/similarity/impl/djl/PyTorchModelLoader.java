@@ -52,6 +52,7 @@ public final class PyTorchModelLoader {
   private static final String TORCH_CPU_DLL = "torch_cpu.dll";
   private static final String TORCH_CUDA_DLL = "torch_cuda.dll";
   private static final String USER_HOME_PROPERTY = "user.home";
+  private static final String WINDOWS_RUNTIME_SUFFIX = "-win-x86_64";
   private static final Set<String> configuredWindowsRuntimeDirectories = ConcurrentHashMap.newKeySet();
 
   private PyTorchModelLoader() {
@@ -60,36 +61,11 @@ public final class PyTorchModelLoader {
   public static <T> @NotNull T loadWithCpuFallback(@NotNull final String modelLabel,
       @NotNull final Logger logger, @NotNull final ModelLoadAction<T> loadAction)
       throws ModelNotFoundException, MalformedModelException, IOException {
-    configureDefaultFlavor(modelLabel, logger);
     configureWindowsGpuRuntimeLibraryPath(modelLabel, logger);
     try {
       return loadAction.load();
     } catch (EngineException | UnsatisfiedLinkError e) {
       return handleLoadFailure(modelLabel, logger, loadAction, e);
-    }
-  }
-
-  private static void configureDefaultFlavor(@NotNull final String modelLabel,
-      @NotNull final Logger logger) {
-    if (!isWindows()) {
-      return;
-    }
-
-    final String configuredFlavor = getConfiguredPyTorchFlavor();
-    if (configuredFlavor != null && !configuredFlavor.isBlank()) {
-      return;
-    }
-
-    synchronized (CPU_FALLBACK_LOCK) {
-      final String effectiveFlavor = getConfiguredPyTorchFlavor();
-      if (effectiveFlavor != null && !effectiveFlavor.isBlank()) {
-        return;
-      }
-
-      logger.info("No explicit PyTorch runtime configured for " + modelLabel
-          + " on Windows. Defaulting to CPU inference (PYTORCH_FLAVOR=cpu)."
-          + " Set PYTORCH_FLAVOR=cu128 before starting mzmine to opt into GPU inference.");
-      System.setProperty(PYTORCH_FLAVOR_PROPERTY, CPU_FLAVOR);
     }
   }
 
@@ -101,12 +77,11 @@ public final class PyTorchModelLoader {
       throw createRuntimeLoadException(modelLabel, failure, false, getConfiguredPyTorchFlavor());
     }
 
-    final String configuredFlavor = getConfiguredPyTorchFlavor();
-    if (configuredFlavor != null && !configuredFlavor.isBlank() && !CPU_FLAVOR.equalsIgnoreCase(
-        configuredFlavor) && configureWindowsGpuRuntimeLibraryPath(modelLabel, logger)) {
-      return retryWithConfiguredFlavor(modelLabel, loadAction, configuredFlavor);
+    if (isUnsafeToRetryInProcess(failure)) {
+      throw createUnsafeInProcessRetryException(modelLabel, failure);
     }
 
+    final String configuredFlavor = getConfiguredPyTorchFlavor();
     if (configuredFlavor != null && !configuredFlavor.isBlank()) {
       throw createRuntimeLoadException(modelLabel, failure, false, configuredFlavor);
     }
@@ -132,16 +107,6 @@ public final class PyTorchModelLoader {
     } catch (EngineException | UnsatisfiedLinkError retryFailure) {
       throw createRuntimeLoadException(modelLabel, retryFailure, true,
           getConfiguredPyTorchFlavor());
-    }
-  }
-
-  private static <T> @NotNull T retryWithConfiguredFlavor(@NotNull final String modelLabel,
-      @NotNull final ModelLoadAction<T> loadAction, @NotNull final String configuredFlavor)
-      throws ModelNotFoundException, MalformedModelException, IOException {
-    try {
-      return loadAction.load();
-    } catch (EngineException | UnsatisfiedLinkError retryFailure) {
-      throw createRuntimeLoadException(modelLabel, retryFailure, false, configuredFlavor);
     }
   }
 
@@ -174,33 +139,6 @@ public final class PyTorchModelLoader {
     return null;
   }
 
-  static @Nullable Path findWindowsRuntimeDirectory(@NotNull final String flavor) {
-    final String userHome = System.getProperty(USER_HOME_PROPERTY);
-    if (userHome == null || userHome.isBlank()) {
-      return null;
-    }
-
-    final Path pytorchCacheDirectory = Path.of(userHome, DJL_CACHE_DIRECTORY,
-        PYTORCH_CACHE_DIRECTORY);
-    if (!Files.isDirectory(pytorchCacheDirectory)) {
-      return null;
-    }
-
-    final String expectedSuffix = "-" + flavor.toLowerCase(Locale.ROOT) + "-win-x86_64";
-    final String requiredLibrary =
-        CPU_FLAVOR.equalsIgnoreCase(flavor) ? TORCH_CPU_DLL : TORCH_CUDA_DLL;
-
-    try (var candidates = Files.list(pytorchCacheDirectory)) {
-      return candidates.filter(Files::isDirectory).filter(path -> {
-        final String directoryName = path.getFileName().toString().toLowerCase(Locale.ROOT);
-        return directoryName.endsWith(expectedSuffix.toLowerCase(Locale.ROOT))
-            && Files.isRegularFile(path.resolve(requiredLibrary));
-      }).max(PyTorchModelLoader::compareRuntimeDirectories).orElse(null);
-    } catch (IOException e) {
-      return null;
-    }
-  }
-
   private static boolean configureWindowsGpuRuntimeLibraryPath(@NotNull final String modelLabel,
       @NotNull final Logger logger) {
     if (!isWindows()) {
@@ -208,12 +146,15 @@ public final class PyTorchModelLoader {
     }
 
     final String configuredFlavor = getConfiguredPyTorchFlavor();
-    if (configuredFlavor == null || configuredFlavor.isBlank() || CPU_FLAVOR.equalsIgnoreCase(
-        configuredFlavor)) {
+    final Path runtimeDirectory;
+    if (configuredFlavor == null || configuredFlavor.isBlank()) {
+      runtimeDirectory = findLatestWindowsGpuRuntimeDirectory();
+    } else if (CPU_FLAVOR.equalsIgnoreCase(configuredFlavor)) {
       return false;
+    } else {
+      runtimeDirectory = findWindowsRuntimeDirectory(configuredFlavor);
     }
 
-    final Path runtimeDirectory = findWindowsRuntimeDirectory(configuredFlavor);
     if (runtimeDirectory == null) {
       return false;
     }
@@ -238,9 +179,70 @@ public final class PyTorchModelLoader {
     }
   }
 
+  static @Nullable Path findWindowsRuntimeDirectory(@NotNull final String flavor) {
+    final Path pytorchCacheDirectory = getPytorchCacheDirectory();
+    if (pytorchCacheDirectory == null || !Files.isDirectory(pytorchCacheDirectory)) {
+      return null;
+    }
+
+    final String expectedSuffix = "-" + flavor.toLowerCase(Locale.ROOT) + WINDOWS_RUNTIME_SUFFIX;
+    final String requiredLibrary =
+        CPU_FLAVOR.equalsIgnoreCase(flavor) ? TORCH_CPU_DLL : TORCH_CUDA_DLL;
+
+    try (var candidates = Files.list(pytorchCacheDirectory)) {
+      return candidates.filter(Files::isDirectory)
+          .filter(path -> isRuntimeDirectory(path, expectedSuffix, requiredLibrary))
+          .max(PyTorchModelLoader::compareRuntimeDirectories).orElse(null);
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
+  static @Nullable Path findLatestWindowsGpuRuntimeDirectory() {
+    final Path pytorchCacheDirectory = getPytorchCacheDirectory();
+    if (pytorchCacheDirectory == null || !Files.isDirectory(pytorchCacheDirectory)) {
+      return null;
+    }
+
+    try (var candidates = Files.list(pytorchCacheDirectory)) {
+      return candidates.filter(Files::isDirectory).filter(
+              path -> isWindowsGpuRuntimeDirectory(path) && Files.isRegularFile(
+                  path.resolve(TORCH_CUDA_DLL))).max(PyTorchModelLoader::compareRuntimeDirectories)
+          .orElse(null);
+    } catch (IOException e) {
+      return null;
+    }
+  }
+
+  private static @Nullable Path getPytorchCacheDirectory() {
+    final String userHome = System.getProperty(USER_HOME_PROPERTY);
+    if (userHome == null || userHome.isBlank()) {
+      return null;
+    }
+    return Path.of(userHome, DJL_CACHE_DIRECTORY, PYTORCH_CACHE_DIRECTORY);
+  }
+
+  private static boolean isRuntimeDirectory(@NotNull final Path path,
+      @NotNull final String expectedSuffix, @NotNull final String requiredLibrary) {
+    final String directoryName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+    return directoryName.endsWith(expectedSuffix.toLowerCase(Locale.ROOT)) && Files.isRegularFile(
+        path.resolve(requiredLibrary));
+  }
+
+  private static boolean isWindowsGpuRuntimeDirectory(@NotNull final Path path) {
+    final String directoryName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+    return directoryName.endsWith(WINDOWS_RUNTIME_SUFFIX) && !directoryName.contains(
+        "-" + CPU_FLAVOR.toLowerCase(Locale.ROOT) + WINDOWS_RUNTIME_SUFFIX);
+  }
+
   private static int compareRuntimeDirectories(@NotNull final Path left,
       @NotNull final Path right) {
-    return compareVersionStrings(extractRuntimeVersion(left), extractRuntimeVersion(right));
+    final int versionComparison = compareVersionStrings(extractRuntimeVersion(left),
+        extractRuntimeVersion(right));
+    if (versionComparison != 0) {
+      return versionComparison;
+    }
+    return left.getFileName().toString().compareTo(right.getFileName().toString());
   }
 
   private static @NotNull String extractRuntimeVersion(@NotNull final Path runtimeDirectory) {
@@ -272,6 +274,43 @@ public final class PyTorchModelLoader {
     } catch (NumberFormatException e) {
       return 0;
     }
+  }
+
+  private static boolean isUnsafeToRetryInProcess(@NotNull final Throwable failure) {
+    for (Throwable current = failure; current != null; current = current.getCause()) {
+      final String message = current.getMessage();
+      if (message == null) {
+        continue;
+      }
+
+      final String lowerMessage = message.toLowerCase(Locale.ROOT);
+      if (lowerMessage.contains("torch_cuda.dll") || lowerMessage.contains("torch_cpu.dll")
+          || lowerMessage.contains("djl_torch.dll")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static @NotNull IOException createUnsafeInProcessRetryException(
+      @NotNull final String modelLabel, @NotNull final Throwable failure) {
+    final StringBuilder message = new StringBuilder(
+        "PyTorch runtime could not be initialized for ").append(modelLabel).append(
+        ". The default DJL load failed after PyTorch native libraries started loading, so CPU fallback cannot be attempted safely in the same JVM.");
+
+    message.append(" Restart mzmine with PYTORCH_FLAVOR=cpu to force CPU inference.");
+
+    if (isWindows()) {
+      message.append(
+          " On Windows this is often caused by an unusable CUDA runtime or DLL search path issue.");
+    }
+
+    final String rootMessage = findRootCauseMessage(failure);
+    if (rootMessage != null && !rootMessage.isBlank()) {
+      message.append(" Root cause: ").append(rootMessage);
+    }
+
+    return new IOException(message.toString(), failure);
   }
 
   private static @NotNull IOException createRuntimeLoadException(@NotNull final String modelLabel,
