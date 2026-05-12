@@ -58,8 +58,8 @@ import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
 import io.github.mzmine.datamodel.features.types.annotations.iin.IonIdentityListType;
 import io.github.mzmine.datamodel.features.types.fx.ColumnType;
 import io.github.mzmine.datamodel.features.types.modifiers.AnnotationType;
-import io.github.mzmine.datamodel.identities.iontype.IonModification;
 import io.github.mzmine.datamodel.identities.iontype.IonType;
+import io.github.mzmine.datamodel.identities.iontype.IonTypes;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.javafx.util.FxIconUtil;
 import io.github.mzmine.main.ConfigService;
@@ -76,7 +76,7 @@ import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.Spectra
 import io.github.mzmine.modules.io.export_features_gnps.masst.GnpsMasstSubmitModule;
 import io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule;
 import io.github.mzmine.modules.io.export_image_csv.ImageToCsvExportModule;
-import io.github.mzmine.modules.io.spectraldbsubmit.view.MSMSLibrarySubmissionWindow;
+import io.github.mzmine.modules.io.spectraldbsubmit.row.SendRowsToSpectralLibraryModule;
 import io.github.mzmine.modules.tools.fraggraphdashboard.FragDashboardTab;
 import io.github.mzmine.modules.tools.siriusapi.MzmineToSirius;
 import io.github.mzmine.modules.tools.siriusapi.modules.export.SiriusApiExportRowsModule;
@@ -113,8 +113,6 @@ import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.util.FeatureUtils;
 import io.github.mzmine.util.IonMobilityUtils;
-import io.github.mzmine.util.SortingDirection;
-import io.github.mzmine.util.SortingProperty;
 import io.github.mzmine.util.annotations.CompoundAnnotationUtils;
 import io.github.mzmine.util.components.ConditionalMenuItem;
 import io.github.mzmine.util.scans.ScanUtils;
@@ -333,34 +331,24 @@ public class FeatureTableContextMenu extends ContextMenu {
         _ -> SiriusExportModule.exportSingleRows(selectedRows.toArray(new ModularFeatureListRow[0]),
             Instant.now()));
 
-    final MenuItem exportMS1Library = new ConditionalMenuItem("Export to MS1 library",
-        () -> !selectedRows.isEmpty());
-    exportMS1Library.setOnAction(_ -> FxThread.runLater(() -> {
-      MSMSLibrarySubmissionWindow window = new MSMSLibrarySubmissionWindow();
-      window.setData(selectedRows.toArray(new ModularFeatureListRow[0]), SortingProperty.MZ,
-          SortingDirection.Ascending, false);
-      window.show();
-    }));
-
-    final MenuItem exportMSMSLibrary = new ConditionalMenuItem("Export to MS/MS library",
-        () -> !selectedRows.isEmpty());
-    exportMSMSLibrary.setOnAction(_ -> FxThread.runLater(() -> {
-      MSMSLibrarySubmissionWindow window = new MSMSLibrarySubmissionWindow();
-      window.setData(selectedRows.toArray(new ModularFeatureListRow[0]), SortingProperty.MZ,
-          SortingDirection.Ascending, true);
-      window.show();
-    }));
-
     final MenuItem exportImageToCsv = new ConditionalMenuItem("Export image to .csv",
         () -> !selectedRows.isEmpty() && selectedRows.getFirst().hasFeatureType(ImageType.class));
     exportImageToCsv.visibleProperty().bind(hasImagingData);
     exportImageToCsv.setOnAction(
         _ -> ImageToCsvExportModule.showExportDialog(selectedRows, Instant.now()));
 
+    final MenuItem sendToLibraryItem = new ConditionalMenuItem("Send to spectral library",
+        () -> !selectedRows.isEmpty() && selectedRows.stream().anyMatch(
+            row -> row.getMostIntenseFragmentScan() != null && row.streamAllFeatureAnnotations()
+                .findAny().isPresent()));
+    sendToLibraryItem.setOnAction(
+        _ -> SendRowsToSpectralLibraryModule.showDialogAndSubmitTask(new ArrayList<>(selectedRows),
+            Instant.now()));
+
     // export menu
     exportMenu.getItems()
         .addAll(exportIsotopesItem, exportMSMSItem, exportToSirius, new SeparatorMenuItem(),
-            exportMS1Library, exportMSMSLibrary, new SeparatorMenuItem(), exportImageToCsv);
+            exportImageToCsv, new SeparatorMenuItem(), sendToLibraryItem);
   }
 
   private void initSearchMenu() {
@@ -398,7 +386,7 @@ public class FeatureTableContextMenu extends ContextMenu {
     searchFormulaPubChem.setOnAction(_ -> {
       final List<IonType> ionTypes = FeatureUtils.extractAllIonTypes(selectedRow);
       new PubChemResultsController(selectedRow,
-          ionTypes.isEmpty() ? new IonType(IonModification.H) : ionTypes.getFirst(),
+          ionTypes.isEmpty() ? IonTypes.H.asIonType() : ionTypes.getFirst(),
           CompoundAnnotationUtils.getBestFormula(selectedRow)).showInWindow();
     });
 
@@ -406,8 +394,7 @@ public class FeatureTableContextMenu extends ContextMenu {
         () -> selectedRow != null);
     searchMassPubChem.setOnAction(_ -> {
       final List<IonType> ionTypes = FeatureUtils.extractAllIonTypes(selectedRow);
-      final IonType ionType =
-          ionTypes.isEmpty() ? new IonType(IonModification.H) : ionTypes.getFirst();
+      final IonType ionType = ionTypes.isEmpty() ? IonTypes.H.asIonType() : ionTypes.getFirst();
       new PubChemResultsController(selectedRow, ionType,
           ionType.getMass(selectedRow.getAverageMZ())).showInWindow();
     });
