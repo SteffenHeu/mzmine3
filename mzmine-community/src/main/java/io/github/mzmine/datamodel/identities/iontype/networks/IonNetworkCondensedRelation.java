@@ -26,8 +26,14 @@
 package io.github.mzmine.datamodel.identities.iontype.networks;
 
 
-import io.github.mzmine.datamodel.identities.iontype.IonType;
 import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
+import io.github.mzmine.datamodel.identities.iontype.IonType;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+import javax.xml.stream.events.XMLEvent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Relationship between two IonNetworks: 2a --> b - H2O (condensation reaction)
@@ -83,5 +89,40 @@ public class IonNetworkCondensedRelation extends AbstractIonNetworkRelation {
   @Override
   public IonNetwork[] getAllNetworks() {
     return new IonNetwork[]{monomer, condensedMultimer};
+  }
+
+  @Override
+  public @NotNull String getRelationTypeId() {
+    return TYPE_CONDENSED;
+  }
+
+  @Override
+  public void saveOwnXML(@NotNull XMLStreamWriter writer) throws XMLStreamException {
+    if (multimerModification != null) {
+      multimerModification.saveToXML(writer);
+    }
+  }
+
+  /**
+   * Reader is positioned at the {@code <relation reltype="condensed">} start element. {@code nets}
+   * is in saved order: [monomer, condensedMultimer].
+   */
+  static @Nullable IonNetworkCondensedRelation loadFromXML(@NotNull XMLStreamReader reader,
+      @NotNull IonNetwork[] nets) throws XMLStreamException {
+    if (nets.length != 2) {
+      return null;
+    }
+    IonType mod = null;
+    while (reader.hasNext()) {
+      final int event = reader.next();
+      if (event == XMLEvent.END_ELEMENT && "relation".equals(reader.getLocalName())) {
+        break;
+      }
+      if (event == XMLEvent.START_ELEMENT && IonType.XML_ELEMENT.equals(reader.getLocalName())) {
+        mod = IonType.loadFromXML(reader);
+      }
+    }
+    // multimerModification may be null in some legacy paths — pass through.
+    return new IonNetworkCondensedRelation(nets[0], nets[1], mod);
   }
 }

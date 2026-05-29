@@ -37,15 +37,12 @@ import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
 import io.github.mzmine.datamodel.identities.iontype.IonNetworkLogic;
 import io.github.mzmine.datamodel.identities.iontype.IonType;
 import io.github.mzmine.datamodel.identities.iontype.SearchableIonLibrary;
-import io.github.mzmine.datamodel.identities.iontype.networks.IonNetworkSorter;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.refinement.IonNetworkRefinementParameters;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.refinement.IonNetworkRefinementTask;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
-import io.github.mzmine.util.SortingDirection;
-import io.github.mzmine.util.SortingProperty;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -207,13 +204,9 @@ public class AddIonNetworkingTask extends AbstractTask {
   }
 
   private void refineAndFinishNetworks() {
-    // create network IDs
-    LOG.info("Corr: create annotation network numbers");
-    AtomicInteger netID = new AtomicInteger(0);
-    IonNetworkLogic.streamNetworks(featureList,
-        new IonNetworkSorter(SortingProperty.RT, SortingDirection.Ascending), false).forEach(n -> {
-      n.setID(netID.getAndIncrement());
-    });
+    // network IDs are assigned at construction via featureList.nextIonNetworkId() and never
+    // renumbered — sort order is purely a display concern, handled by IonNetworkSorter at read
+    // time.
 
     // recalc annotation networks
     IonNetworkLogic.removeEmptyNetworks(featureList);

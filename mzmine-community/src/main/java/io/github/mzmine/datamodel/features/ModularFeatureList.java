@@ -45,6 +45,7 @@ import io.github.mzmine.datamodel.features.types.modifiers.AnnotationType;
 import io.github.mzmine.datamodel.features.types.modifiers.GraphicalColumType;
 import io.github.mzmine.datamodel.features.types.numbers.IDType;
 import io.github.mzmine.datamodel.features.types.tasks.NodeGenerationThread;
+import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.io.projectload.CachedIMSFrame;
 import io.github.mzmine.modules.io.projectload.CachedIMSRawDataFile;
@@ -67,6 +68,7 @@ import java.util.Date;
 import java.util.DoubleSummaryStatistics;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -126,6 +128,16 @@ public class ModularFeatureList implements FeatureList {
   private final ObservableList<FeatureListAppliedMethod> descriptionOfAppliedTasks;
 
   private final R2RNetworkingMaps r2rNetworkingMaps = new R2RNetworkingMaps();
+
+  /**
+   * Registry of all {@link IonNetwork}s in this feature list. Networks are owned here; rows
+   * reference them via
+   * {@link io.github.mzmine.datamodel.features.types.annotations.iin.IonIdentityListType} entries
+   * that resolve to a network by id. LinkedHashMap preserves insertion order so save output is
+   * deterministic.
+   */
+  private final Map<Integer, IonNetwork> ionNetworks = new LinkedHashMap<>();
+  private int nextIonNetworkId = 0;
 
   @NotNull
   private String nameProperty = "";
@@ -740,6 +752,62 @@ public class ModularFeatureList implements FeatureList {
     }
 
     return featureListRows.get(0);
+  }
+
+  /**
+   * Allocate the next {@link IonNetwork} ID. IDs are assigned at creation and never reused or
+   * renumbered.
+   */
+  public int nextIonNetworkId() {
+    return nextIonNetworkId++;
+  }
+
+  /**
+   * Register a network with this feature list. The network must already carry its final id (see
+   * {@link #nextIonNetworkId()}). Returns the network for fluent use.
+   */
+  public @NotNull IonNetwork addIonNetwork(@NotNull IonNetwork network) {
+    final IonNetwork previous = ionNetworks.put(network.getID(), network);
+    if (previous != null && previous != network) {
+      logger.warning(
+          () -> "IonNetwork with id %d already registered in feature list %s — replacing.".formatted(
+              network.getID(), getName()));
+    }
+    // make sure nextIonNetworkId never collides with a manually assigned id
+    if (network.getID() >= nextIonNetworkId) {
+      nextIonNetworkId = network.getID() + 1;
+    }
+    return network;
+  }
+
+  /**
+   * Remove a network from the registry. Does not touch row ion identities; callers should clean up
+   * row references separately (see {@link IonNetwork#delete()}).
+   */
+  public void removeIonNetwork(@NotNull IonNetwork network) {
+    ionNetworks.remove(network.getID(), network);
+  }
+
+  /**
+   * @return the network registered under {@code id}, or {@code null} if none.
+   */
+  public @Nullable IonNetwork getIonNetwork(int id) {
+    return ionNetworks.get(id);
+  }
+
+  /**
+   * @return an unmodifiable view of all registered ion networks in insertion order.
+   */
+  public @NotNull Collection<IonNetwork> getIonNetworks() {
+    return Collections.unmodifiableCollection(ionNetworks.values());
+  }
+
+  /**
+   * Remove all registered networks. Used by clear-annotations style actions.
+   */
+  public void clearIonNetworks() {
+    ionNetworks.clear();
+    nextIonNetworkId = 0;
   }
 
   @Override

@@ -26,15 +26,11 @@
 package io.github.mzmine.datamodel.identities.iontype;
 
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.corrgrouping.CorrelateGroupingTask;
-import io.github.mzmine.modules.dataprocessing.id_formulaprediction.ResultFormula;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.formula.prediction.FormulaPredictionIonNetworkModule;
 import io.github.mzmine.modules.io.export_features_gnps.fbmn.GnpsFbmnExportAndSubmitModule;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * IonIdentities are connected to {@link IonNetwork}s and represent different ion species (M+H,
@@ -43,11 +39,14 @@ import org.jetbrains.annotations.NotNull;
  * {@link FormulaPredictionIonNetworkModule} and they are part of the Ion Identity Molecular
  * Networking workflow on https://gnps.ucsd.edu/, which is accessible through
  * {@link GnpsFbmnExportAndSubmitModule}.
+ * <p>
+ * IonIdentity is intentionally narrow: it holds the adduct type and a back-reference to its
+ * owning network. All other per-ion state (notably candidate molecular formulas) now lives on
+ * {@link IonNetwork} so that ions in the same network share a single source of truth and the
+ * network can be persisted once instead of duplicated across every member row.
  */
 public class IonIdentity implements Comparable<IonIdentity> {
 
-  @NotNull
-  private final List<ResultFormula> molFormulas;
   @NotNull
   private final IonType ionType;
   private IonNetwork network;
@@ -60,7 +59,6 @@ public class IonIdentity implements Comparable<IonIdentity> {
   public IonIdentity(@NotNull IonType ionType) {
     super();
     this.ionType = ionType;
-    molFormulas = new ArrayList<>();
   }
 
   /**
@@ -91,14 +89,17 @@ public class IonIdentity implements Comparable<IonIdentity> {
     return network == null ? -1 : network.getID();
   }
 
-  public IonNetwork getNetwork() {
+  public @Nullable IonNetwork getNetwork() {
     return network;
   }
 
   /**
-   * Network number
+   * Set by {@link IonNetwork#put(io.github.mzmine.datamodel.features.FeatureListRow, IonIdentity)}
+   * / {@link IonNetwork#remove(io.github.mzmine.datamodel.features.FeatureListRow)} when the ion is
+   * attached to or detached from a network. Callers outside the network code should not invoke
+   * this directly.
    */
-  public void setNetwork(IonNetwork net) {
+  public void setNetwork(@Nullable IonNetwork net) {
     network = net;
   }
 
@@ -112,72 +113,6 @@ public class IonIdentity implements Comparable<IonIdentity> {
       return 0;
     }
     return network.size();
-  }
-
-  /**
-   * @return unmodifiable copy of formulas
-   */
-  @NotNull
-  public List<ResultFormula> getMolFormulas() {
-    return Collections.unmodifiableList(molFormulas);
-  }
-
-  public synchronized void clearMolFormulas() {
-    molFormulas.clear();
-  }
-
-  /**
-   * The first formula should be the best
-   *
-   * @param molFormulas
-   */
-  public synchronized void addMolFormulas(List<ResultFormula> molFormulas) {
-    this.molFormulas.removeAll(molFormulas);
-    this.molFormulas.addAll(molFormulas);
-  }
-
-  /**
-   * The first formula should be the best
-   *
-   * @param molFormulas
-   */
-  public synchronized void addMolFormulas(ResultFormula... molFormulas) {
-    this.molFormulas.removeAll(List.of(molFormulas));
-    this.molFormulas.addAll(List.of(molFormulas));
-  }
-
-  public synchronized void addMolFormula(ResultFormula formula) {
-    addMolFormula(formula, false);
-  }
-
-  public synchronized void addMolFormula(ResultFormula formula, boolean asBest) {
-    if (!molFormulas.isEmpty()) {
-      molFormulas.remove(formula);
-    }
-
-    if (asBest) {
-      this.molFormulas.add(0, formula);
-    } else {
-      this.molFormulas.add(formula);
-    }
-  }
-
-  /**
-   * Best molecular formula (first in list)
-   *
-   * @return
-   */
-  public Optional<ResultFormula> getBestMolFormula() {
-    return molFormulas.isEmpty() ? Optional.empty() : Optional.of(molFormulas.get(0));
-  }
-
-
-  public void setBestMolFormula(ResultFormula formula) {
-    addMolFormula(formula, true);
-  }
-
-  public synchronized void removeMolFormula(ResultFormula formula) {
-    molFormulas.remove(formula);
   }
 
   @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,7 +26,6 @@ package io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.formu
 
 
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.datamodel.identities.iontype.IonIdentity;
 import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
 import io.github.mzmine.datamodel.identities.iontype.IonNetworkLogic;
 import io.github.mzmine.modules.dataprocessing.id_formula_sort.FormulaSortParameters;
@@ -144,32 +143,16 @@ public class CreateAvgNetworkFormulasTask extends AbstractTask {
   }
 
   public List<ResultFormula> combineFormulasOfNetwork(IonNetwork net) {
-    // find all formula lists of ions in network
-    List<List<ResultFormula>> allLists = new ArrayList<>();
-    for (var e : net.getNodes()) {
-      IonIdentity ion = e.ion();
-      if (!ion.getIonType().isUndefinedAdduct()) {
-        List<ResultFormula> list = ion.getMolFormulas();
-        if (list != null && !list.isEmpty()) {
-          // copy to not change original
-          allLists.add(new ArrayList<>(list));
-        }
-      }
-    }
-
-    List<ResultFormula> results = new ArrayList<>();
-
-    // find equals
-    createAllAvgFormulas(allLists, results);
-
-    if (!results.isEmpty()) {
-      // find best formula for neutral mol of network
-      // add all that have the same mol formula in at least 2 different ions (rows)
-      if (sortResults && sorter != null) {
-        double neutralMass = net.getNeutralMass();
-        sorter.sort(results, neutralMass);
-      }
-      // add to net
+    // TODO: per-ion formula lists have been removed (formulas now live solely on the IonNetwork).
+    // The original "consensus across ions" pass relied on comparing distinct per-ion candidate
+    // lists; that distinction no longer exists. As a degraded behavior we just (optionally)
+    // re-sort the network's existing list. The module is kept available for batch compatibility
+    // but no longer produces a real consensus — consider deprecating or rewriting against the
+    // network-level list directly.
+    final List<ResultFormula> results = new ArrayList<>(net.getMolFormulas());
+    if (!results.isEmpty() && sortResults && sorter != null) {
+      sorter.sort(results, net.getNeutralMass());
+      net.clearMolFormulas();
       net.addMolFormulas(results);
     }
     return results;

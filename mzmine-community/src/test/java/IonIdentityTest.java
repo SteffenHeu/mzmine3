@@ -110,7 +110,7 @@ public class IonIdentityTest {
     flist.setGroups(groups);
 
     // add ions to rows - not really done much as the tasks handle this
-    final IonNetwork network = new IonNetwork(1);
+    final IonNetwork network = flist.addIonNetwork(new IonNetwork(flist.nextIonNetworkId()));
     final IonIdentity ionH = new IonIdentity(hAdduct);
     rowProtonated.addIonIdentity(ionH);
     final IonIdentity ionNa = new IonIdentity(naAdduct);
@@ -131,11 +131,6 @@ public class IonIdentityTest {
     assertEquals(1, nets.size());
     assertEquals(2, nets.get(0).size());
 
-    IonNetworkLogic.renumberNetworks(flist);
-    nets = IonNetworkLogic.streamNetworks(flist).collect(Collectors.toList());
-    assertEquals(1, nets.size());
-    assertEquals(2, nets.get(0).size());
-
     // recalc annotation networks
     IonNetworkLogic.removeEmptyNetworks(flist);
     nets = IonNetworkLogic.streamNetworks(flist).collect(Collectors.toList());
@@ -148,18 +143,18 @@ public class IonIdentityTest {
     assertEquals(1, nets.size());
     assertEquals(2, nets.get(0).size());
 
-    // test add formula
+    // test add formula — molFormulas now live on the IonNetwork (shared across all ions)
     when(formula.getIsotopeScore()).thenReturn(0.9f);
     when(formula.getRDBE()).thenReturn(4.5f);
     IonIdentity ion = rowProtonated.getBestIonIdentity();
-    ion.addMolFormula(formula);
-    ResultFormula best = ion.getBestMolFormula().get();
+    ion.getNetwork().addMolFormula(formula);
+    ResultFormula best = ion.getNetwork().getBestMolFormula();
     assertEquals(0.9f, best.getIsotopeScore());
     assertEquals(4.5f, best.getRDBE());
 
     // setting the formula should have updated the sub properties
-    // test properties in ion identity
-    best = rowProtonated.get(IonIdentityListType.class).get(0).getBestMolFormula().get();
+    // test properties via the network of the ion identity
+    best = rowProtonated.get(IonIdentityListType.class).get(0).getNetwork().getBestMolFormula();
     assertEquals(4.5f, best.getRDBE(),
         "Cannot access formula specific types from sub types of IonIdentityModularType.class");
     assertEquals(0.9f, best.getIsotopeScore(),

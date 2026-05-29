@@ -290,15 +290,17 @@ public class IonNetworkingTask extends AbstractTask {
       final IonNetwork oldNetA = results.get(a);
       final IonNetwork oldNetB = results.get(b);
       if (oldNetA == null && oldNetB == null) {
-        // create new
-        final IonNetwork network = new IonNetwork(-1);
+        // create new — id assigned at creation, registered with the feature list
+        final IonNetwork network = featureList.addIonNetwork(
+            new IonNetwork(featureList.nextIonNetworkId()));
         network.put(rowA, new IonIdentity(id.a()));
         network.put(rowB, new IonIdentity(id.b()));
         results.put(a, network);
         results.put(b, network);
       } else if (oldNetA != null && oldNetB != null) {
-        // have to merge the networks
+        // have to merge the networks: B is absorbed into A and deregistered
         oldNetA.addAll(oldNetB);
+        featureList.removeIonNetwork(oldNetB);
         // mark all nodes of B as now belonging to a
         for (IonNetworkNode node : oldNetB.getNodes()) {
           results.put(new RowIonAnnotation(node.row(), node.ion().getIonType()), oldNetA);
@@ -341,8 +343,8 @@ public class IonNetworkingTask extends AbstractTask {
     LOG.info("Corr: show most likely annotations");
     IonNetworkLogic.sortIonIdentities(featureList, true);
 
-    // create network IDs
-    LOG.info("Corr: create annotation network numbers");
-    IonNetworkLogic.renumberNetworks(featureList);
+    // network IDs are assigned at construction via featureList.nextIonNetworkId() and never
+    // renumbered — sort order is purely a display concern, handled by IonNetworkSorter at read
+    // time.
   }
 }

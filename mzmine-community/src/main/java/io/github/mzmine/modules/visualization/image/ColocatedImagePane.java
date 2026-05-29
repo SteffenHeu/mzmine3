@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,7 +31,6 @@ import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.correlation.RowsRelationship;
-import io.github.mzmine.datamodel.identities.MolecularFormulaIdentity;
 import io.github.mzmine.datamodel.identities.iontype.IonIdentity;
 import io.github.mzmine.gui.chartbasics.chartgroups.ChartGroup;
 import io.github.mzmine.gui.chartbasics.gui.javafx.EChartViewer;
@@ -195,8 +194,12 @@ public class ColocatedImagePane extends StackPane {
     } else {
       final IonIdentity bestIon = row.getBestIonIdentity();
       if (bestIon != null) {
-        return bestIon.toString() + " " + bestIon.getBestMolFormula()
-            .map(MolecularFormulaIdentity::getFormulaAsString) + " " + mz;
+        // Formulas live on the network now; look up best formula via the network.
+        final var net = bestIon.getNetwork();
+        final var bestFormula = net == null ? null : net.getBestMolFormula();
+        final String formulaStr = bestFormula == null ? java.util.Optional.empty().toString()
+            : java.util.Optional.of(bestFormula.getFormulaAsString()).toString();
+        return bestIon.toString() + " " + formulaStr + " " + mz;
       } else {
         return mz;
       }

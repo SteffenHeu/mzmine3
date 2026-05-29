@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -459,9 +460,9 @@ public class FeatureTableFX extends BorderPane {
 
     // formula
     final ModularFeatureList flist = getFeatureList();
-    boolean hasFormula =
-        flist != null && flist.stream().flatMap(row -> row.getIonIdentities().stream())
-            .anyMatch(ion -> ion.getMolFormulas().size() > 0);
+    // formulas now live on the IonNetwork (one shared list per network) rather than per-ion
+    boolean hasFormula = flist != null && flist.getIonNetworks().stream()
+        .anyMatch(net -> !net.getMolFormulas().isEmpty());
     setVisible(ColumnType.ROW_TYPE, parentType, ConsensusFormulaListType.class,
         toggledState && hasFormula);
     setVisible(ColumnType.ROW_TYPE, parentType, SimpleFormulaListType.class,

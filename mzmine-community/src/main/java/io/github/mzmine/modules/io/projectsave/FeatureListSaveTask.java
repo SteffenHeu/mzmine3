@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -36,6 +36,7 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.numbers.IDType;
+import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -71,6 +72,10 @@ public class FeatureListSaveTask extends AbstractTask {
 
   public static final String METADATA_FILE_SUFFIX = "_metadata.xml";
   public static final String DATA_FILE_SUFFIX = "_data.xml";
+  /**
+   * Separate per-flist file holding the IonNetwork registry.
+   */
+  public static final String ION_NETWORKS_FILE_SUFFIX = "_ionnetworks.xml";
   public static final String FLIST_FOLDER = "featurelists/";
   private static final Logger logger = Logger.getLogger(FeatureListSaveTask.class.getName());
   private static final IDType idType = new IDType();
@@ -97,6 +102,11 @@ public class FeatureListSaveTask extends AbstractTask {
     return FLIST_FOLDER + CONST.XML_FEATURE_LIST_ELEMENT + "_" + flistname + METADATA_FILE_SUFFIX;
   }
 
+  public static String getIonNetworksFileName(String flistname) {
+    return FLIST_FOLDER + CONST.XML_FEATURE_LIST_ELEMENT + "_" + flistname
+        + ION_NETWORKS_FILE_SUFFIX;
+  }
+
   @Override
   public String getTaskDescription() {
     return "Saving feature list " + flist.getName();
@@ -115,9 +125,75 @@ public class FeatureListSaveTask extends AbstractTask {
       return;
     }
 
+    if (!saveIonNetworks()) {
+      return;
+    }
+
     saveAppliedMethods();
 
     setStatus(TaskStatus.FINISHED);
+  }
+
+  /**
+   * Write the registered {@link IonNetwork}s for this feature list into a sibling XML file
+   * ({@code {name}_ionnetworks.xml}). Always called; if the registry is empty we still emit the
+   * wrapper element so the file presence/absence is a stable signal (presence => post-refactor
+   * project).
+   */
+  private boolean saveIonNetworks() {
+    final File tempFile;
+    try {
+      tempFile = FileAndPathUtil.createTempFile("mzmine_featurelist_ionnetworks", ".tmp");
+    } catch (IOException e) {
+      logger.log(Level.SEVERE, "Cannot create temporary file for ion networks.", e);
+      setStatus(TaskStatus.ERROR);
+      return false;
+    }
+
+    try (OutputStream os = new FileOutputStream(tempFile)) {
+      final XMLOutputFactory xof = XMLOutputFactory.newInstance();
+      final XMLStreamWriter writer = new IndentingXMLStreamWriter(xof.createXMLStreamWriter(os));
+      writer.writeStartDocument("UTF-8", "1.0");
+
+      final java.util.Collection<IonNetwork> networks = flist.getIonNetworks();
+      writer.writeStartElement(CONST.XML_ION_NETWORKS_ELEMENT);
+      writer.writeAttribute(CONST.XML_FLIST_NAME_ATTR, flist.getName());
+      writer.writeAttribute(CONST.XML_DATE_CREATED_ATTR, flist.getDateCreated());
+      writer.writeAttribute("count", String.valueOf(networks.size()));
+
+      for (IonNetwork network : networks) {
+        if (isCanceled()) {
+          break;
+        }
+        network.saveToXML(writer);
+      }
+
+      writer.writeEndElement();
+      writer.writeEndDocument();
+      writer.flush();
+      writer.close();
+    } catch (IOException | XMLStreamException e) {
+      logger.log(Level.SEVERE, "Failed to write ion networks file", e);
+      setStatus(TaskStatus.ERROR);
+      return false;
+    }
+
+    if (isCanceled()) {
+      tempFile.delete();
+      return false;
+    }
+
+    try (FileInputStream is = new FileInputStream(tempFile)) {
+      zos.putNextEntry(new ZipEntry(getIonNetworksFileName(flist.getName())));
+      copy.copy(is, zos);
+    } catch (IOException e) {
+      logger.log(Level.SEVERE, "Failed to copy ion networks file into project zip", e);
+      setStatus(TaskStatus.ERROR);
+      return false;
+    }
+
+    tempFile.delete();
+    return true;
   }
 
   private boolean saveAppliedMethods() {

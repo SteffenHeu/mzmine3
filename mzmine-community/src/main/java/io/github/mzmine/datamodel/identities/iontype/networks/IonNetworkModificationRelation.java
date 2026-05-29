@@ -26,9 +26,14 @@
 package io.github.mzmine.datamodel.identities.iontype.networks;
 
 
-import io.github.mzmine.datamodel.identities.iontype.IonType;
 import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
+import io.github.mzmine.datamodel.identities.iontype.IonType;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+import javax.xml.stream.events.XMLEvent;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Relationship between two IonNetworks
@@ -82,5 +87,43 @@ public class IonNetworkModificationRelation extends AbstractIonNetworkRelation {
   @Override
   public IonNetwork[] getAllNetworks() {
     return new IonNetwork[]{a, b};
+  }
+
+  @Override
+  public @NotNull String getRelationTypeId() {
+    return TYPE_MODIFICATION;
+  }
+
+  @Override
+  public void saveOwnXML(@NotNull XMLStreamWriter writer) throws XMLStreamException {
+    // modA is sufficient — modB is derived as the opposite at construction time.
+    if (modA != null) {
+      modA.saveToXML(writer);
+    }
+  }
+
+  /**
+   * Reader is positioned at the {@code <relation reltype="modification">} start element.
+   * {@code nets} is in saved order: [a, b].
+   */
+  static @Nullable IonNetworkModificationRelation loadFromXML(@NotNull XMLStreamReader reader,
+      @NotNull IonNetwork[] nets) throws XMLStreamException {
+    if (nets.length != 2) {
+      return null;
+    }
+    IonType mod = null;
+    while (reader.hasNext()) {
+      final int event = reader.next();
+      if (event == XMLEvent.END_ELEMENT && "relation".equals(reader.getLocalName())) {
+        break;
+      }
+      if (event == XMLEvent.START_ELEMENT && IonType.XML_ELEMENT.equals(reader.getLocalName())) {
+        mod = IonType.loadFromXML(reader);
+      }
+    }
+    if (mod == null) {
+      return null;
+    }
+    return new IonNetworkModificationRelation(nets[0], nets[1], mod);
   }
 }

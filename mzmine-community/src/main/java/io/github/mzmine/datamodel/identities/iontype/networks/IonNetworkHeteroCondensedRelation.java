@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,6 +26,11 @@
 package io.github.mzmine.datamodel.identities.iontype.networks;
 
 import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLStreamWriter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A relationship of two molecules a+b --> c - H2O represented by 3 IonNetworks
@@ -68,5 +73,28 @@ public class IonNetworkHeteroCondensedRelation extends AbstractIonNetworkRelatio
   @Override
   public String getDescription() {
     return "condensation (X+Y→XY+H₂O)";
+  }
+
+  @Override
+  public @NotNull String getRelationTypeId() {
+    return TYPE_HETERO_CONDENSED;
+  }
+
+  @Override
+  public void saveOwnXML(@NotNull XMLStreamWriter writer) throws XMLStreamException {
+    // No subclass-specific payload — the network IDs in the wrapper element are sufficient.
+  }
+
+  /**
+   * Reader is positioned at the {@code <relation reltype="hetero_condensed">} start element.
+   * {@code nets} is in saved order: [a, b, condensed].
+   */
+  static @Nullable IonNetworkHeteroCondensedRelation loadFromXML(@NotNull XMLStreamReader reader,
+      @NotNull IonNetwork[] nets) throws XMLStreamException {
+    // Skip the (empty) body of <relation> — caller still positioned at start element.
+    if (nets.length != 3) {
+      return null;
+    }
+    return new IonNetworkHeteroCondensedRelation(nets[0], nets[1], nets[2]);
   }
 }

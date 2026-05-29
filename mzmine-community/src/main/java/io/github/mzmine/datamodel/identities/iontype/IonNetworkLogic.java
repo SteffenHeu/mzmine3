@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,17 +27,13 @@ package io.github.mzmine.datamodel.identities.iontype;
 
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.correlation.RowGroup;
 import io.github.mzmine.datamodel.identities.iontype.networks.IonNetworkSorter;
-import io.github.mzmine.util.SortingDirection;
-import io.github.mzmine.util.SortingProperty;
 import io.github.mzmine.util.collections.CollectionUtils;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
 
@@ -82,12 +78,6 @@ public class IonNetworkLogic {
     return Integer.compare(b.getIonType().absTotalCharge(), a.getIonType().absTotalCharge());
   }
 
-
-  public static void resetNetworkIDs(List<IonNetwork> nets) {
-    for (int i = 0; i < nets.size(); i++) {
-      nets.get(i).setID(i);
-    }
-  }
 
   /**
    * All annotation networks of all annotations of row
@@ -284,15 +274,4 @@ public class IonNetworkLogic {
     return results;
   }
 
-  /**
-   * Renumber all networks in a feature list in ascending order of the retention time (0-based)
-   *
-   * @param featureList
-   */
-  public static void renumberNetworks(ModularFeatureList featureList) {
-    AtomicInteger netID = new AtomicInteger(0);
-    IonNetworkLogic.streamNetworks(featureList,
-            new IonNetworkSorter(SortingProperty.RT, SortingDirection.Ascending), false)
-        .forEach(n -> n.setID(netID.getAndIncrement()));
-  }
 }

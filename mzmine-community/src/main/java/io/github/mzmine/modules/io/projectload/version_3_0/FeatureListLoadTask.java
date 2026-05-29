@@ -37,6 +37,7 @@ import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.numbers.IDType;
+import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingModule;
 import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingParameters;
@@ -196,6 +197,16 @@ public class FeatureListLoadTask extends AbstractTask {
                   + metadataFile.getAbsolutePath());
           continue;
         }
+
+        // Pass 1.5: load IonNetworks before rows are filled. Rows already exist with their IDs
+        // from createRows() above, so IonNetworkNode rowId references can be resolved here. Once
+        // the registry is populated, IonIdentityListType.loadFromXML can resolve a row's
+        // IonIdentity instances via flist.getIonNetwork(id).getIonForRow(row) during pass 2.
+        final File ionNetworksFile = new File(flistFile.toString()
+            .replace(FeatureListSaveTask.DATA_FILE_SUFFIX,
+                FeatureListSaveTask.ION_NETWORKS_FILE_SUFFIX));
+        loadIonNetworks(flist, ionNetworksFile);
+
         parseFeatureList(storage, project, flist, flistFile);
 
         // TODO maybe remove so that ModularFeatureList.getFeatureList can be unmodifiable
@@ -227,6 +238,71 @@ public class FeatureListLoadTask extends AbstractTask {
         flist -> flist.setExcludedFromBatchLast(!mostRecentStepFeatureLists.contains(flist)));
 
     setStatus(TaskStatus.FINISHED);
+  }
+
+  /**
+   * Pass 1.5 of the load pipeline: read {@code {name}_ionnetworks.xml} and register the resulting
+   * {@link IonNetwork} instances on {@code flist}. Two sweeps over the same file: the first
+   * constructs networks (with nodes resolved against existing rows by row id); the second wires up
+   * cross-network relations now that every network is in the registry. Missing file is treated as
+   * "no ion networks" — typical for old projects pre-dating this refactor.
+   */
+  private void loadIonNetworks(@NotNull ModularFeatureList flist, @NotNull File ionNetworksFile) {
+    if (!ionNetworksFile.exists()) {
+      // pre-refactor project, or no networks for this flist — nothing to do.
+      return;
+    }
+
+    // Sweep 1 — construct IonNetwork objects (without relations) and register them on the flist.
+    try (InputStream fis = new FileInputStream(ionNetworksFile)) {
+      final XMLInputFactory xif = XMLInputFactory.newInstance();
+      final XMLStreamReader reader = xif.createXMLStreamReader(fis);
+
+      while (reader.hasNext()) {
+        if (isCanceled()) {
+          return;
+        }
+        final int event = reader.next();
+        if (event != XMLEvent.START_ELEMENT) {
+          continue;
+        }
+        if (CONST.XML_ION_NETWORK_ELEMENT.equals(reader.getLocalName())) {
+          final IonNetwork network = IonNetwork.loadFromXML(reader, flist);
+          if (network != null) {
+            flist.addIonNetwork(network);
+          }
+        }
+      }
+      reader.close();
+    } catch (IOException | XMLStreamException e) {
+      logger.log(Level.WARNING,
+          "Failed to load ion networks (sweep 1) for " + flist.getName() + " from "
+              + ionNetworksFile.getAbsolutePath(), e);
+      return;
+    }
+
+    // Sweep 2 — wire relations now that every network exists in the registry.
+    try (InputStream fis = new FileInputStream(ionNetworksFile)) {
+      final XMLInputFactory xif = XMLInputFactory.newInstance();
+      final XMLStreamReader reader = xif.createXMLStreamReader(fis);
+
+      while (reader.hasNext()) {
+        if (isCanceled()) {
+          return;
+        }
+        final int event = reader.next();
+        if (event != XMLEvent.START_ELEMENT) {
+          continue;
+        }
+        if (CONST.XML_ION_NETWORK_ELEMENT.equals(reader.getLocalName())) {
+          IonNetwork.loadRelationsFromXML(reader, flist);
+        }
+      }
+      reader.close();
+    } catch (IOException | XMLStreamException e) {
+      logger.log(Level.WARNING,
+          "Failed to load ion network relations (sweep 2) for " + flist.getName(), e);
+    }
   }
 
   private void parseFeatureList(MemoryMapStorage storage, MZmineProject project,

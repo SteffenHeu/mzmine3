@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -236,15 +236,20 @@ public class FormulaPredictionIonNetworkTask extends AbstractTask {
       }
     } else {
       // run on all rows
+      // molFormulas are now owned by the IonNetwork (shared across all member ions). The
+      // per-ion clear/add pattern is replaced with a single accumulating write to the network.
+      // NOTE: this collapses the former per-ion candidate lists into a single union list — the
+      // downstream "consensus across ions" pass (CreateAvgNetworkFormulasTask) no longer has
+      // distinct per-ion inputs to compare. See TODO in that class.
+      net.clearMolFormulas();
       net.forEach((row, ion) -> {
         if (!ion.getIonType().isUndefinedAdduct()) {
-          ion.clearMolFormulas();
           List<ResultFormula> list = predictFormulas(row, ion.getIonType());
           if (!list.isEmpty()) {
             if (sortResults && sorter != null) {
               sorter.sort(list);
             }
-            ion.addMolFormulas(list);
+            net.addMolFormulas(list);
           }
         }
       });
@@ -327,18 +332,20 @@ public class FormulaPredictionIonNetworkTask extends AbstractTask {
       }
     }
 
+    // Aggregate all per-ion results into the network's single shared formula list.
+    if (addToIon) {
+      net.clearMolFormulas();
+    }
     for (int i = 0; i < net.size(); i++) {
-      final FeatureListRow row = entries.get(i).row();
       final IonIdentity ion = entries.get(i).ion();
       if (!ion.getIonType().isUndefinedAdduct()) {
-        ion.clearMolFormulas();
         List<ResultFormula> list = resultingFormulas[i];
         if (!list.isEmpty()) {
           if (sort && sortResults && sorter != null) {
             sorter.sort(list);
           }
           if (addToIon) {
-            ion.addMolFormulas(list);
+            net.addMolFormulas(list);
           }
         }
       }

@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -76,6 +77,26 @@ public class CONST {
   public static final String XML_FLIST_SELECTED_SCANS_ELEMENT = "selectedscans";
   public static final String XML_FLIST_APPLIED_METHOD_ELEMENT = "appliedmethod";
   public static final String XML_FLIST_APPLIED_METHODS_LIST_ELEMENT = "appliedmethodslist";
+  /**
+   * Ion networks (persisted in a separate per-flist file so the row-data XML stays small).
+   */
+  public static final String XML_ION_NETWORKS_ELEMENT = "ionnetworks";
+  public static final String XML_ION_NETWORK_ELEMENT = "ionnetwork";
+  public static final String XML_ION_NETWORK_NODES_ELEMENT = "nodes";
+  public static final String XML_ION_NETWORK_NODE_ELEMENT = "node";
+  public static final String XML_ION_NETWORK_RELATIONS_ELEMENT = "relations";
+  public static final String XML_ION_NETWORK_RELATION_ELEMENT = "relation";
+  public static final String XML_ION_NETWORK_FORMULAS_ELEMENT = "molformulas";
+  public static final String XML_ION_NETWORK_ID_ATTR = "id";
+  public static final String XML_ION_NETWORK_NEUTRAL_MASS_ATTR = "neutralmass";
+  public static final String XML_ION_NETWORK_AVG_RT_ATTR = "avgrt";
+  public static final String XML_ION_NETWORK_HEIGHT_SUM_ATTR = "heightsum";
+  public static final String XML_ROW_ID_ATTR = "rowid";
+  public static final String XML_ION_NETWORK_REF_ELEMENT = "ref";
+  public static final String XML_ION_NETWORK_REFS_ELEMENT = "networkrefs";
+  public static final String XML_RELATION_TYPE_ATTR = "reltype";
+  public static final String XML_RELATION_OTHER_NETWORK_ID_ATTR = "othernetworkid";
+
   /**
    * Other data file stuff
    */
