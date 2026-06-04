@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -40,7 +40,9 @@ import org.jetbrains.annotations.Nullable;
  */
 public class MZTolerance {
 
+  public static final MZTolerance NARROW_5_PPM_OR_1_MDA = new MZTolerance(0.001, 5);
   public static final MZTolerance FIFTEEN_PPM_OR_FIVE_MDA = new MZTolerance(0.005, 15);
+  public static final MZTolerance WIDE_25_PPM_OR_10_MDA = new MZTolerance(0.01, 25);
 
   // PPM conversion factor.
   private static final double MILLION = 1000000.0;
