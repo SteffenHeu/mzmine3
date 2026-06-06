@@ -94,7 +94,8 @@ public class OptimizerParameters extends SimpleParameterSet {
       "Benchmark feature csv column names", "", DEFAULT_IMPORT_TYPES);
 
   public static final OptionalParameter<FileNameParameter> benchmarkFeaturesFile = new OptionalParameter<>(
-      new FileNameParameter("Benchmark features file", "", ExtensionFilters.CSV_TSV_IMPORT,
+      new FileNameParameter("Benchmark features file (optional)",
+          "Optional file with additional benchmark features.", ExtensionFilters.CSV_TSV_IMPORT,
           FileSelectionType.OPEN));
 
   public static final IntegerParameter iterations = new IntegerParameter("Iterations",

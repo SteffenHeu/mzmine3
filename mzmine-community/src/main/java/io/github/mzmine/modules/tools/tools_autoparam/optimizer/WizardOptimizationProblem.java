@@ -40,6 +40,7 @@ import io.github.mzmine.modules.batchmode.BatchTask;
 import io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.MultiThreadPeakFinderModule;
+import io.github.mzmine.modules.dataprocessing.group_compoundgrouper.CompoundGrouperModule;
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.corrgrouping.CorrelateGroupingModule;
 import io.github.mzmine.modules.dataprocessing.group_spectral_networking.MainSpectralNetworkingModule;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingModule;
@@ -311,11 +312,12 @@ public class WizardOptimizationProblem extends AbstractProblem {
     optimizedQueue.removeIf(step -> step.getModule() instanceof SpectralLibrarySearchModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof MainSpectralNetworkingModule);
     optimizedQueue.removeIf(step -> step.getModule() instanceof IsotopeGrouperModule);
+    optimizedQueue.removeIf(step -> step.getModule() instanceof CompoundGrouperModule);
 
     // use the current project, so we dont import files on every iteration
     final MZmineProject project = ProjectService.getProject();
     final BatchTask batchTask = BatchModeModule.runBatchQueue(optimizedQueue, project, files, null,
-        null, null, Instant.now());
+        null, null, Instant.now(), null, null);
     final double fullBatchTime = batchTask.getStepTimes().getLast().secondsToFinish();
 
     while (!batchTask.isFinished() && !batchTask.isCanceled()) {

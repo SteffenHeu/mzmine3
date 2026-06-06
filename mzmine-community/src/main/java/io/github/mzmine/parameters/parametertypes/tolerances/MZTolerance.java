@@ -148,6 +148,10 @@ public class MZTolerance {
     return mzValue * (ppmTolerance / MILLION);
   }
 
+  public double getPpmToleranceForMass(final double mzValue) {
+    return Math.max(ppmTolerance, mzTolerance / (mzValue / MILLION));
+  }
+
   public Range<Double> getToleranceRange(final double mzValue) {
     final double absoluteTolerance = getMzToleranceForMass(mzValue);
     return Range.closed(mzValue - absoluteTolerance, mzValue + absoluteTolerance);
