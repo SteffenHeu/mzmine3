@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -26,6 +26,8 @@
 package io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder;
 
 
+import static java.util.Objects.requireNonNullElse;
+
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
 import com.google.common.collect.TreeRangeMap;
@@ -43,6 +45,7 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.types.FeatureShapeType;
+import io.github.mzmine.datamodel.msms.DDAMsMsInfo;
 import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.featdet_imagebuilder.ImageBuilderModule;
@@ -64,7 +67,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
-import static java.util.Objects.requireNonNullElse;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -338,6 +340,9 @@ public class ModularADAPChromatogramBuilderTask extends AbstractTask {
     // ensure that the default columns are available
     DataTypeUtils.addDefaultChromatographicTypeColumns(newFeatureList);
 
+    final boolean fileHasDdaData = dataFile.getScanNumbers(2).stream()
+        .filter(s -> s.getMsMsInfo() instanceof DDAMsMsInfo).findAny().isPresent();
+
     int newFeatureID = 1;
     // add chromatograms that match criteria
     for (ADAPChromatogram chromatogram : finalRangeMap.values()) {
@@ -359,7 +364,7 @@ public class ModularADAPChromatogramBuilderTask extends AbstractTask {
 
         // add to list
         ModularFeature modular = FeatureConvertors.ADAPChromatogramToModularFeature(newFeatureList,
-            dataFile, chromatogram, mzTolerance);
+            dataFile, chromatogram, mzTolerance, fileHasDdaData);
         ModularFeatureListRow newRow = new ModularFeatureListRow(newFeatureList, newFeatureID,
             modular);
         newFeatureList.addRow(newRow);

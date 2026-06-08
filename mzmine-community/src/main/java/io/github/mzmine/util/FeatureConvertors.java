@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -92,7 +92,8 @@ public class FeatureConvertors {
    * @return output modular feature
    */
   static public ModularFeature ADAPChromatogramToModularFeature(ModularFeatureList featureList,
-      RawDataFile dataFile, @NotNull ADAPChromatogram chromatogram, final MZTolerance mzTolerance) {
+      RawDataFile dataFile, @NotNull ADAPChromatogram chromatogram, final MZTolerance mzTolerance,
+      boolean fileHasDdaData) {
     // Data points of feature
     final Collection<DataPoint> dataPoints = chromatogram.getDataPoints();
     final Collection<Scan> scans = chromatogram.getScanNumbers();
@@ -109,9 +110,12 @@ public class FeatureConvertors {
     // use wider mz range to group MS2 with chromatogram
     Range<Double> toleranceRange = mzTolerance.getToleranceRange(modularFeature.getMZ());
     Range<Double> mzRange = toleranceRange.span(modularFeature.getRawDataPointsMZRange());
-    List<Scan> allMS2 = ScanUtils.streamAllMS2FragmentScans(dataFile,
-        modularFeature.getRawDataPointsRTRange(), mzRange).toList();
-    modularFeature.setAllMS2FragmentScans(allMS2);
+
+    if (fileHasDdaData) {
+      List<Scan> allMS2 = ScanUtils.streamAllMS2FragmentScans(dataFile,
+          modularFeature.getRawDataPointsRTRange(), mzRange).toList();
+      modularFeature.setAllMS2FragmentScans(allMS2);
+    }
 
     return modularFeature;
   }
