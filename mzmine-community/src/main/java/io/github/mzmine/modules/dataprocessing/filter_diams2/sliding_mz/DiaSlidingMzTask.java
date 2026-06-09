@@ -125,7 +125,7 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         i -> ms1Scans.get(i).getRetentionTime());
 
     final int startIndex = Math.max(bestMs1Index - 1, 0);
-    final int endIndex = Math.min(bestMs1Index + 2, ms1Scans.size());
+    final int endIndex = Math.min(bestMs1Index + 2, ms1Scans.size() - 1);
 
     final double ms2RtRangeStart = ms1Scans.get(startIndex).getRetentionTime();
     final double ms2RtRangeEnd = ms1Scans.get(endIndex).getRetentionTime();
