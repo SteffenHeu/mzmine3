@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -55,6 +56,7 @@ public class VendorImportParameters extends SimpleParameterSet {
       """, false);*/
 
   public static final MassLynxImportOptions DEFAULT_WATERS_OPTION = MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING;
+  public static final AgilentImportOptions DEFAULT_AGILENT_OPTION = AgilentImportOptions.AGILENT_BRIDGE;
   public static final boolean DEFAULT_VENDOR_CENTROIDING = true;
   public static final boolean DEFAULT_WATERS_LOCKMASS_ENABLED = true;
   public static final boolean DEFAULT_THERMO_EXCEPTION_SIGNALS = true;
@@ -72,6 +74,13 @@ public class VendorImportParameters extends SimpleParameterSet {
           slow for IMS data. Centroiding is only applied if "Try vendor centroiding" is enabled.""",
           MassLynxImportOptions.values(), DEFAULT_WATERS_OPTION),
       createJumpToPrefButton("Waters MassLynx data import"));
+
+  public static final ComponentWrapperParameter<AgilentImportOptions, ComboParameter<AgilentImportOptions>> agilentImportChoice = new ComponentWrapperParameter<>(
+      new ComboParameter<>("Agilent .d data import", """
+          Select if Agilent .d data files shall be imported via the native AgilentBridge or MSConvert.
+          The native AgilentBridge reads regular MS and ion mobility (.d) data directly via a bundled
+          Windows helper; MSConvert converts to mzML first.""", AgilentImportOptions.values(),
+          DEFAULT_AGILENT_OPTION), createJumpToPrefButton("Agilent .d data import"));
 
   public static final ComponentWrapperParameter<Boolean, BooleanParameter> applyVendorCentroiding = new ComponentWrapperParameter<>(
       new BooleanParameter("Try vendor centroiding", """
@@ -96,7 +105,7 @@ public class VendorImportParameters extends SimpleParameterSet {
 
   public VendorImportParameters() {
     super(applyVendorCentroiding, excludeThermoExceptionMasses, watersLockmass,
-        massLynxImportChoice);
+        massLynxImportChoice, agilentImportChoice);
   }
 
   private static @NotNull Supplier<Node> createJumpToPrefButton(String preferenceParameterName) {
@@ -106,11 +115,13 @@ public class VendorImportParameters extends SimpleParameterSet {
 
   public static VendorImportParameters create(boolean applyCentroiding,
       MassLynxImportOptions massLynxOption, boolean watersLockmassEnabled,
-      WatersLockmassParameters lockmassParam, boolean removeThermoExceptionMasses) {
+      WatersLockmassParameters lockmassParam, boolean removeThermoExceptionMasses,
+      AgilentImportOptions agilentImportOption) {
     final VendorImportParameters param = (VendorImportParameters) new VendorImportParameters().cloneParameterSet();
 
     param.setParameter(applyVendorCentroiding, applyCentroiding);
     param.setParameter(massLynxImportChoice, massLynxOption);
+    param.setParameter(agilentImportChoice, agilentImportOption);
     param.getParameter(watersLockmass).setValue(watersLockmassEnabled);
     param.getParameter(watersLockmass).getEmbeddedParameter().setEmbeddedParameters(lockmassParam);
     param.setParameter(excludeThermoExceptionMasses, removeThermoExceptionMasses);
@@ -120,7 +131,7 @@ public class VendorImportParameters extends SimpleParameterSet {
   public static VendorImportParameters createDefault() {
     return create(DEFAULT_VENDOR_CENTROIDING, DEFAULT_WATERS_OPTION,
         DEFAULT_WATERS_LOCKMASS_ENABLED, WatersLockmassParameters.createDefault(),
-        DEFAULT_THERMO_EXCEPTION_SIGNALS);
+        DEFAULT_THERMO_EXCEPTION_SIGNALS, DEFAULT_AGILENT_OPTION);
   }
 
   /**
@@ -129,11 +140,14 @@ public class VendorImportParameters extends SimpleParameterSet {
    */
   public static VendorImportParameters createFromPreferences() {
     final MZminePreferences preferences = ConfigService.getConfiguration().getPreferences();
-    return create(preferences.getValue(MZminePreferences.applyVendorCentroiding),
+    final VendorImportParameters param = create(
+        preferences.getValue(MZminePreferences.applyVendorCentroiding),
         /*preferences.getValue(MZminePreferences.thermoImportChoice)*/
         preferences.getValue(MZminePreferences.massLynxImportChoice),
         preferences.getValue(MZminePreferences.watersLockmass),
         preferences.getParameter(MZminePreferences.watersLockmass).getEmbeddedParameters(),
-        preferences.getValue(MZminePreferences.excludeThermoExceptionMasses));
+        preferences.getValue(MZminePreferences.excludeThermoExceptionMasses),
+        preferences.getValue(MZminePreferences.agilentImportChoice));
+    return param;
   }
 }
