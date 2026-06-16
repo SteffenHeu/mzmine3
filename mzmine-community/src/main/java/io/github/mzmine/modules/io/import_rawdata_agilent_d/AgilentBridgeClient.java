@@ -29,6 +29,8 @@ import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.sun.jna.Platform;
+import io.github.mzmine.util.DotNetUtils;
 import io.github.mzmine.util.files.FileAndPathUtil;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -70,6 +72,7 @@ final class AgilentBridgeClient implements AutoCloseable {
       .enable(JsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS).build();
 
   AgilentBridgeClient() {
+    ensureRuntimeAvailable();
     final File exe = locateExecutable();
     try {
       final ProcessBuilder builder = new ProcessBuilder(exe.getAbsolutePath());
@@ -177,6 +180,24 @@ final class AgilentBridgeClient implements AutoCloseable {
     }, "AgilentBridge-stderr");
     t.setDaemon(true);
     t.start();
+  }
+
+  /**
+   * Verifies the host can run the bridge before launching it: the Agilent MassHunter SDK is
+   * Windows-only, and {@code AgilentBridge.exe} targets .NET Framework 4.8. Throws a user-facing
+   * {@link RuntimeException} with remediation guidance when a prerequisite is missing. Reuses the
+   * shared {@link DotNetUtils} check (also used by the SCIEX wiff2/Clearcore import).
+   */
+  private static void ensureRuntimeAvailable() {
+    if (!Platform.isWindows()) {
+      throw new RuntimeException(
+          "Agilent .d import is only supported on Windows: it relies on the Windows-only Agilent MassHunter SDK.");
+    }
+    if (!DotNetUtils.isWindowsFrameworkInstalled(DotNetUtils.NET_FRAMEWORK_48_RELEASE_KEY)) {
+      throw new RuntimeException(
+          "Agilent .d import requires Microsoft .NET Framework 4.8 or later. Please install it from "
+              + "https://dotnet.microsoft.com/download/dotnet-framework and restart mzmine.");
+    }
   }
 
   private static @NotNull File locateExecutable() {
