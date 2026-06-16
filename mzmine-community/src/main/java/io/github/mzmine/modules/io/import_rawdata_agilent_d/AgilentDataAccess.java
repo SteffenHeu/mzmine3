@@ -32,6 +32,7 @@ import io.github.mzmine.datamodel.MobilityType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.featuredata.OtherFeatureUtils;
 import io.github.mzmine.datamodel.features.types.otherdectectors.ChromatogramTypeType;
+import io.github.mzmine.datamodel.features.types.otherdectectors.WavelengthType;
 import io.github.mzmine.datamodel.impl.BuildingMobilityScan;
 import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
 import io.github.mzmine.datamodel.impl.DIAImsMsMsInfoImpl;
@@ -61,11 +62,15 @@ import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.DoubleUnaryOperator;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,6 +86,7 @@ import org.jetbrains.annotations.Nullable;
 public class AgilentDataAccess implements AutoCloseable {
 
   private static final Logger logger = Logger.getLogger(AgilentDataAccess.class.getName());
+  private static final Pattern wavelengthPattern = Pattern.compile("Sig=([0-9]+[,\\.]?[0-9]+)");
 
   private final AgilentBridgeClient client;
   private final File rawFile;
@@ -276,8 +282,7 @@ public class AgilentDataAccess implements AutoCloseable {
 
   /**
    * Reads the file's MRM/SRM transitions and attaches them to {@code dataFile} as one
-   * {@link io.github.mzmine.modules.io.import_rawdata_mzml.msdk.data.ChromatogramType#MRM_SRM}
-   * other-data file. No-op for non-MRM files.
+   * {@link ChromatogramType#MRM_SRM} other-data file. No-op for non-MRM files.
    */
   public void readMrms(@NotNull RawDataFileImpl dataFile) {
     final JsonNode h = client.send(Map.of("op", "mrm"));
@@ -327,6 +332,7 @@ public class AgilentDataAccess implements AutoCloseable {
    * {@code dataFile}, grouped by unit into one other-data file each.
    */
   public void readAnalogChannels(@NotNull RawDataFileImpl dataFile) {
+
     final JsonNode h = client.send(Map.of("op", "analog"));
     final int count = h.path("count").asInt(0);
     final JsonNode channels = h.get("channels");
@@ -334,6 +340,7 @@ public class AgilentDataAccess implements AutoCloseable {
     final String[] names = new String[count];
     final String[] units = new String[count];
     final String[] deviceTypes = new String[count];
+    final String[] channelDescriptions = new String[count];
     final float[][] rts = new float[count][];
     final double[][] intensities = new double[count][];
     for (int i = 0; i < count; i++) {
@@ -341,6 +348,7 @@ public class AgilentDataAccess implements AutoCloseable {
       names[i] = c.path("name").asText("");
       units[i] = c.path("unit").asText("");
       deviceTypes[i] = c.path("deviceType").asText("");
+      channelDescriptions[i] = c.path("signalDesc").asText("");
       final int n = c.path("numPoints").asInt(0);
       rts[i] = toFloats(client.readBlob(n));
       intensities[i] = client.readBlob(n);
@@ -349,28 +357,65 @@ public class AgilentDataAccess implements AutoCloseable {
       return;
     }
 
-    final Map<AnalogDevice, OtherTimeSeriesDataImpl> unitToData = new HashMap<>();
+    final Map<DeviceWithUnit, OtherTimeSeriesDataImpl> unitToData = new HashMap<>();
     for (int i = 0; i < count; i++) {
-      AnalogDevice device = AnalogDevice.fromTitle(deviceTypes[i]);
+      final String channelDescription = channelDescriptions[i];
 
-      final OtherTimeSeriesDataImpl tsd = unitToData.computeIfAbsent(device, dev -> {
-        final OtherDataFileImpl otherFile = new OtherDataFileImpl(dataFile);
-        final OtherTimeSeriesDataImpl data = new OtherTimeSeriesDataImpl(otherFile);
-        otherFile.setOtherTimeSeriesData(data);
-        otherFile.setDescription(dev.title);
-        data.setTimeSeriesRangeUnit(dev.units.getSign());
-        data.setTimeSeriesRangeLabel(dev.units.getLabel());
-        data.setChromatogramType(dev.type);
-        return data;
-      });
+      final AnalogDevice device = AnalogDevice.fromTitle(deviceTypes[i]);
+      AnalogUnit unit = AnalogUnit.fromDescription(channelDescription);
+      if (device == null) {
+        continue;
+      }
+      if (unit == AnalogUnit.UNKNOWN) {
+        unit = AnalogUnit.fromDevice(device);
+      }
+
+      final OtherTimeSeriesDataImpl tsd = unitToData.computeIfAbsent(
+          new DeviceWithUnit(device, unit), dwu -> {
+            final OtherDataFileImpl otherFile = new OtherDataFileImpl(dataFile);
+            final OtherTimeSeriesDataImpl data = new OtherTimeSeriesDataImpl(otherFile);
+            otherFile.setOtherTimeSeriesData(data);
+            otherFile.setDescription(device.title + " " + dwu.unit.description);
+            data.setTimeSeriesRangeUnit(dwu.unit.unit.getSign());
+            data.setTimeSeriesRangeLabel(dwu.unit.unit.getLabel());
+            data.setChromatogramType(dwu.unit.type);
+            return data;
+          });
+
+      if (unit.getMapper() != null) {
+        final DoubleUnaryOperator mapper = unit.getMapper();
+        intensities[i] = Arrays.stream(intensities[i]).map(mapper).toArray();
+      }
       final SimpleOtherTimeSeries trace = new SimpleOtherTimeSeries(storage, rts[i], intensities[i],
-          names[i], tsd);
+          channelDescriptions[i], tsd);
+
       OtherFeatureImpl feature = new OtherFeatureImpl(trace);
-      feature.set(ChromatogramTypeType.class, device.type);
+      feature.set(ChromatogramTypeType.class, unit.type);
+      setWavelength(unit, wavelengthPattern, channelDescription, feature);
+
       tsd.addRawTrace(feature);
     }
     dataFile.addOtherDataFiles(
         unitToData.values().stream().map(OtherTimeSeriesDataImpl::getOtherDataFile).toList());
+  }
+
+  private static void setWavelength(@NotNull AnalogUnit unit, @NotNull Pattern wavelengthPattern,
+      @NotNull String channelDescription, @NotNull OtherFeatureImpl feature) {
+    if (unit.type != ChromatogramType.ABSORPTION) {
+      return;
+    }
+    Matcher matcher = wavelengthPattern.matcher(channelDescription);
+    if (!matcher.find()) {
+      return;
+    }
+
+    final String strWavelength = matcher.group(1).replace(',', '.');
+    try {
+      final double v = Double.parseDouble(strWavelength);
+      feature.set(WavelengthType.class, v);
+    } catch (NumberFormatException e) {
+      // silent
+    }
   }
 
   private static float[] toFloats(double[] values) {
@@ -537,36 +582,38 @@ public class AgilentDataAccess implements AutoCloseable {
    * Taken from DeviceType from the MHDAC sdk.
    */
   private enum AnalogDevice {
-    TCC("ThermostattedColumnCompartment", MzMLUnits.DEGREE_CELSIUS, ChromatogramType.UNKNOWN), //
-    DAD("DiodeArrayDetector", MzMLUnits.ABSORBANCE, ChromatogramType.ABSORPTION),  //
-    FID("FlameIonizationDetector", MzMLUnits.PICO_AMPERE, ChromatogramType.UNKNOWN), //
-    TCD("ThermalConductivityDetector", MzMLUnits.UNKNOWN, ChromatogramType.UNKNOWN), //
-    RID("RefractiveIndexDetector", MzMLUnits.UNKNOWN, ChromatogramType.UNKNOWN), //
-    MWD("MultiWavelengthDetector", MzMLUnits.ABSORBANCE, ChromatogramType.ABSORPTION), //
-    VWD("VariableWavelengthDetector", MzMLUnits.ABSORBANCE, ChromatogramType.ABSORPTION), //
-    ECD("ElectronCaptureDetector", MzMLUnits.UNKNOWN,
-        ChromatogramType.UNKNOWN), // some kind of current, but which order of magnitude?
-    FD("FluorescenceDetector", MzMLUnits.DIMENSIONLESS,
-        ChromatogramType.EMISSION), // No unit for emission yet?
-    ELSD("EvaporativeLightScatteringDetector", MzMLUnits.UNKNOWN, ChromatogramType.UNKNOWN), //
-    IP("IsocraticPump", MzMLUnits.BAR, ChromatogramType.PRESSURE), BP("BipolarPump", MzMLUnits.BAR,
-        ChromatogramType.PRESSURE), QP("QuarternaryPump", MzMLUnits.BAR,
-        ChromatogramType.PRESSURE), CP("CapillaryPump", MzMLUnits.BAR,
-        ChromatogramType.PRESSURE), NP("NanoPump", MzMLUnits.BAR, ChromatogramType.PRESSURE), LFP(
-        "LowFlowPump", MzMLUnits.BAR, ChromatogramType.PRESSURE),
+    TCC("ThermostattedColumnCompartment"), //
+    DAD("DiodeArrayDetector"),  //
+    FID("FlameIonizationDetector"), //
+    TCD("ThermalConductivityDetector"), //
+    RID("RefractiveIndexDetector"), //
+    MWD("MultiWavelengthDetector"), //
+    VWD("VariableWavelengthDetector"), //
+    ECD("ElectronCaptureDetector"), // some kind of current, but which order of magnitude?
+    FD("FluorescenceDetector"), // No unit for emission yet?
+    ELSD("EvaporativeLightScatteringDetector"), //
+    IP("IsocraticPump"), //
+    BP("BinaryPump"), //
+    QP("QuarternaryPump"), //
+    CP("CapillaryPump"), //
+    NP("NanoPump"), //
+    LFP("LowFlowPump"),
     ;
 
-    final MzMLUnits units;
+    /**
+     * enum name in agilent software
+     */
     final String title;
-    final ChromatogramType type;
 
-    AnalogDevice(String title, MzMLUnits units, ChromatogramType type) {
+    AnalogDevice(String title) {
       this.title = title;
-      this.units = units;
-      this.type = type;
     }
 
-    public static AnalogDevice fromTitle(String title) {
+    @Nullable
+    public static AnalogDevice fromTitle(@Nullable String title) {
+      if (title == null) {
+        return null;
+      }
       for (var device : values()) {
         if (device.title.equalsIgnoreCase(title)) {
           return device;
@@ -574,5 +621,67 @@ public class AgilentDataAccess implements AutoCloseable {
       }
       return null;
     }
+  }
+
+  private enum AnalogUnit {
+    UNKNOWN("unknown", MzMLUnits.UNKNOWN, ChromatogramType.UNKNOWN), //
+    PRESSURE("pressure", MzMLUnits.BAR, ChromatogramType.PRESSURE), //
+    ABSORBANCE("absorbance", MzMLUnits.ABSORBANCE, ChromatogramType.ABSORPTION), // to be changed
+    FLOW("flow", MzMLUnits.MICRO_LITER_PER_MINUTE, ChromatogramType.FLOW_RATE), //
+    PICO_AMPERE("pico ampere", MzMLUnits.PICO_AMPERE, ChromatogramType.UNKNOWN), // to be changed
+    TEMPERATURE("temperature", MzMLUnits.DEGREE_CELSIUS, ChromatogramType.UNKNOWN), EMISSION(
+        "emission", MzMLUnits.DIMENSIONLESS,
+        ChromatogramType.EMISSION), // emission unknown - to be changed
+    SOLVENT_RATIO("solvent ratio", MzMLUnits.UNKNOWN, ChromatogramType.UNKNOWN),
+    ;
+
+    private final String description;
+    private final MzMLUnits unit;
+    private final ChromatogramType type;
+
+
+    AnalogUnit(String description, MzMLUnits unit, ChromatogramType type) {
+      this.description = description;
+      this.unit = unit;
+      this.type = type;
+    }
+
+    @Nullable
+    public DoubleUnaryOperator getMapper() {
+      return switch (this) {
+        case FLOW -> value -> value * 1000; // agilent flow is mL/min, Unit ontology is uL/min
+        default -> null;
+      };
+    }
+
+    @NotNull
+    static AnalogUnit fromDescription(@Nullable String description) {
+      if (description == null) {
+        return UNKNOWN;
+      }
+
+      for (var unit : values()) {
+        if (unit.description.equalsIgnoreCase(description) || description.toLowerCase()
+            .contains(unit.description)) {
+          return unit;
+        }
+      }
+      return UNKNOWN;
+    }
+
+    @NotNull
+    static AnalogUnit fromDevice(AnalogDevice device) {
+      return switch (device) {
+        case TCC, ECD, NP, BP, QP, CP, LFP, IP, ELSD, FD -> UNKNOWN;
+        case DAD, VWD, MWD -> ABSORBANCE;
+        case FID -> PICO_AMPERE;
+        case TCD -> TEMPERATURE;
+        case RID -> SOLVENT_RATIO;
+      };
+    }
+  }
+
+  private record DeviceWithUnit(AnalogDevice device, AnalogUnit unit) {
+
   }
 }

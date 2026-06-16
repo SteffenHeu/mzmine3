@@ -137,15 +137,18 @@ public class AgilentImportTask extends AbstractTask implements RawDataImportTask
           }
           loadedItems++;
         }
-        // non-MS data: MRM/SRM transitions (as OtherTimeSeries) and analog (DAD/UV, curve) channels
-        if (isCanceled()) {
-          return;
-        }
-        if (da.hasMrm()) {
-          da.readMrms(dataFile);
-        }
-        da.readAnalogChannels(dataFile);
       }
+
+      // non-MS data: MRM/SRM transitions (as OtherTimeSeries) and analog (DAD/UV, pump, curve)
+      // channels. These live in the device directories regardless of MS mode, so they are read for
+      // IMS files too (the bridge serves them via an MHDAC sidecar over the same file).
+      if (isCanceled()) {
+        return;
+      }
+      if (da.hasMrm()) {
+        da.readMrms(dataFile);
+      }
+      da.readAnalogChannels(dataFile);
 
       if (dataFile instanceof IMSRawDataFile imsFile) {
         final CCSCalibration ccs = da.getCcsCalibration();
