@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -32,6 +33,7 @@ import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.gui.preferences.AgilentImportOptions;
 import io.github.mzmine.gui.preferences.VendorImportParameters;
 import io.github.mzmine.gui.preferences.WatersLockmassParameters;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxMassDetector;
@@ -144,7 +146,8 @@ public class MassDetectionErrorTests {
         VendorImportParameters.create(false, VendorImportParameters.DEFAULT_WATERS_OPTION,
             VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
             WatersLockmassParameters.createDefault(),
-            VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS));
+            VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
+            AgilentImportOptions.AGILENT_READER_AUTO_CENTROID));
 
     final RawDataFile file = brukerImport.runImport().getFirst();
     final Scan scan = file.getScans().getLast();
