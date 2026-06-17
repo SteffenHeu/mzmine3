@@ -27,6 +27,7 @@ package io.github.mzmine.modules.io.import_rawdata_agilent_d;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Range;
+import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.MobilityType;
 import io.github.mzmine.datamodel.PolarityType;
@@ -37,6 +38,7 @@ import io.github.mzmine.datamodel.impl.BuildingMobilityScan;
 import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
 import io.github.mzmine.datamodel.impl.DIAImsMsMsInfoImpl;
 import io.github.mzmine.datamodel.impl.SimpleFrame;
+import io.github.mzmine.datamodel.impl.SimpleMassSpectrum;
 import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.datamodel.impl.builders.SimpleBuildingScan;
 import io.github.mzmine.datamodel.impl.masslist.ScanPointerMassList;
@@ -49,7 +51,10 @@ import io.github.mzmine.datamodel.otherdetectors.OtherFeature;
 import io.github.mzmine.datamodel.otherdetectors.OtherFeatureImpl;
 import io.github.mzmine.datamodel.otherdetectors.OtherTimeSeriesDataImpl;
 import io.github.mzmine.datamodel.otherdetectors.SimpleOtherTimeSeries;
+import io.github.mzmine.gui.preferences.AgilentImportOptions;
 import io.github.mzmine.gui.preferences.VendorImportParameters;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxGaussianModule;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxMassDetector;
 import io.github.mzmine.modules.dataprocessing.id_ccscalibration.CCSCalibration;
 import io.github.mzmine.modules.dataprocessing.id_ccscalibration.DriftTubeCCSCalibration;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.ScanImportProcessorConfig;
@@ -71,6 +76,7 @@ import java.util.function.DoubleUnaryOperator;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.concurrent.NotThreadSafe;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -83,6 +89,7 @@ import org.jetbrains.annotations.Nullable;
  * Frame numbers are 1-based (1..{@link #getFrameCount()}); scans are 0-based
  * (0..{@link #getScanCount()}-1), matching the bridge.
  */
+@NotThreadSafe
 public class AgilentDataAccess implements AutoCloseable {
 
   private static final Logger logger = Logger.getLogger(AgilentDataAccess.class.getName());
@@ -94,6 +101,15 @@ public class AgilentDataAccess implements AutoCloseable {
   private final MemoryMapStorage storage;
   @Nullable
   private final ScanImportProcessorConfig processor;
+
+  /**
+   * if import option is {@link AgilentImportOptions#AGILENT_READER_AUTO_CENTROID} and
+   * {@link AgilentDataAccess#requestCentroid}, centroiding will be applied using the
+   * {@code imsCentroider}
+   */
+  private final AgilentImportOptions importOption;
+  private final LocalMaxMassDetector imsCentroider = new LocalMaxMassDetector(0,
+      AbundanceMeasure.Height, 3, new LocalMaxGaussianModule(7));
 
   // cached "open" response
   private final boolean isIms;
@@ -113,6 +129,7 @@ public class AgilentDataAccess implements AutoCloseable {
     this.storage = storage;
     this.processor = processor;
     this.requestCentroid = vendorParam.getValue(VendorImportParameters.applyVendorCentroiding);
+    this.importOption = vendorParam.getValue(VendorImportParameters.agilentImportChoice);
 
     this.client = new AgilentReaderClient();
     final JsonNode open = client.send(
@@ -130,7 +147,7 @@ public class AgilentDataAccess implements AutoCloseable {
     this.hasMsScans = open.path("hasMsScans").asBoolean(true);
 
     logger.finest(
-        "AgilentBridge opened %s: ims=%b, frames=%d, scans=%d, requestCentroid=%b".formatted(
+        "AgilentReader opened %s: ims=%b, frames=%d, scans=%d, requestCentroid=%b".formatted(
             rawFile.getName(), isIms, numFrames, numScans, requestCentroid));
   }
 
@@ -199,9 +216,19 @@ public class AgilentDataAccess implements AutoCloseable {
     // --- Total Frame Spectrum (peak data) -> the Frame ---
     final JsonNode tfs = client.send(Map.of("op", "tfs", "frameId", frameId));
     final int numPoints = tfs.path("numPoints").asInt(0);
-    final boolean centroided = tfs.path("centroided").asBoolean(false);
-    final double[] mzs = client.readBlob(numPoints);
-    final double[] intensities = client.readBlob(numPoints);
+    boolean centroided = tfs.path("centroided").asBoolean(false);
+    double[] mzs = client.readBlob(numPoints);
+    double[] intensities = client.readBlob(numPoints);
+
+    if (!centroided && requestCentroid
+        && importOption == AgilentImportOptions.AGILENT_READER_AUTO_CENTROID) {
+      final SimpleMassSpectrum preCentroid = new SimpleMassSpectrum(mzs, intensities,
+          MassSpectrumType.PROFILE);
+      final double[][] centroidedSpectrum = imsCentroider.getMassValues(preCentroid);
+      mzs = centroidedSpectrum[0];
+      intensities = centroidedSpectrum[1];
+      centroided = true;
+    }
 
     final MassSpectrumType type = spectrumType(centroided, msLevel);
     final var meta = new SimpleBuildingScan(0, msLevel, polarity, type, rt, 0, 0);
@@ -217,16 +244,25 @@ public class AgilentDataAccess implements AutoCloseable {
       frame.addMassList(new ScanPointerMassList(frame));
     }
 
-    // --- mobility scans for this frame ---
-    final MassSpectrumType mobType = spectrumType(false, msLevel);
+    // --- mobility scans for this frame --- mobility scans are always profile if they come from the API.
+    final MassSpectrumType mobType = spectrumType(requestCentroid, msLevel);
     final JsonNode mob = client.send(Map.of("op", "mobilityScans", "frameId", frameId));
     final int numMobScans = mob.path("numScans").asInt(0);
     final JsonNode pointsPerScan = mob.get("pointsPerScan");
     final List<BuildingMobilityScan> mobScans = new ArrayList<>(numMobScans);
     for (int i = 0; i < numMobScans; i++) {
       final int pts = pointsPerScan.get(i).asInt(0);
-      final double[] mobMz = client.readBlob(pts);
-      final double[] mobIntensity = client.readBlob(pts);
+      double[] mobMz = client.readBlob(pts);
+      double[] mobIntensity = client.readBlob(pts);
+
+      if (requestCentroid && importOption == AgilentImportOptions.AGILENT_READER_AUTO_CENTROID) {
+        final SimpleMassSpectrum preCentroid = new SimpleMassSpectrum(mobMz, mobIntensity,
+            MassSpectrumType.PROFILE);
+        final double[][] centroidedSpectrum = imsCentroider.getMassValues(preCentroid);
+        mobMz = centroidedSpectrum[0];
+        mobIntensity = centroidedSpectrum[1];
+      }
+
       final var mobMeta = new SimpleBuildingScan(0, msLevel, polarity, mobType, rt, 0, 0);
       final SimpleSpectralArrays data = applyProcessor(mobMeta, mobMz, mobIntensity);
       mobScans.add(new BuildingMobilityScan(i, data.mzs(), data.intensities(), mobType));

@@ -26,6 +26,10 @@
 package io.github.mzmine.gui.preferences;
 
 import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxMassDetector;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxSmoothingOptions;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -33,12 +37,13 @@ import org.jetbrains.annotations.NotNull;
  * conversion through MSConvert.
  */
 public enum AgilentImportOptions implements UniqueIdSupplier {
-  AGILENT_READER, MSCONVERT;
+  AGILENT_READER, AGILENT_READER_AUTO_CENTROID, MSCONVERT;
 
   @Override
   public @NotNull String getUniqueID() {
     return switch (this) {
-      case AGILENT_READER -> "agilent_bridge";
+      case AGILENT_READER -> "agilent_reader";
+      case AGILENT_READER_AUTO_CENTROID -> "agilent_reader_auto_centroid_ims";
       case MSCONVERT -> "msconvert";
     };
   }
@@ -47,11 +52,33 @@ public enum AgilentImportOptions implements UniqueIdSupplier {
   public String toString() {
     return switch (this) {
       case AGILENT_READER -> "Native (AgilentReader)";
+      case AGILENT_READER_AUTO_CENTROID -> "Native (AgilentReader, auto-centroid IMS)";
       case MSCONVERT -> "MSConvert";
     };
   }
 
   public boolean isNative() {
-    return this == AGILENT_READER;
+    return this == AGILENT_READER || this == AGILENT_READER_AUTO_CENTROID;
+  }
+
+  public String getDescriptions() {
+    return switch (this) {
+      case AGILENT_READER ->
+          "Import Agilent .d files using the native Agilent reader (Windows only)";
+      case AGILENT_READER_AUTO_CENTROID -> """
+          Import Agilent .d files using the native Agilent reader (Windows only) and automatically
+          centroid IMS datasets during import using an mzmine algorithm (%s with %s smoothing)
+          (Agilent reader does not support centroiding for IMS data). The "vendor centroiding" option
+          must be enabled for the mzmine-centroiding to be applied. If advanced parameters are used
+          during data import, they will be applied after centroiding.""".formatted(
+          LocalMaxMassDetector.NAME, LocalMaxSmoothingOptions.GAUSSIAN);
+      case MSCONVERT ->
+          "Import Agilent .d files by converting them to mzML using MSConvert. (Windows only)";
+    };
+  }
+
+  public static String getTooltip() {
+    return Arrays.stream(values()).map(opt -> opt.toString() + ": " + opt.getDescriptions())
+        .collect(Collectors.joining("\n"));
   }
 }

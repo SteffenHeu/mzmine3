@@ -56,7 +56,7 @@ public class VendorImportParameters extends SimpleParameterSet {
       """, false);*/
 
   public static final MassLynxImportOptions DEFAULT_WATERS_OPTION = MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING;
-  public static final AgilentImportOptions DEFAULT_AGILENT_OPTION = AgilentImportOptions.AGILENT_READER;
+  public static final AgilentImportOptions DEFAULT_AGILENT_OPTION = AgilentImportOptions.AGILENT_READER_AUTO_CENTROID;
   public static final boolean DEFAULT_VENDOR_CENTROIDING = true;
   public static final boolean DEFAULT_WATERS_LOCKMASS_ENABLED = true;
   public static final boolean DEFAULT_THERMO_EXCEPTION_SIGNALS = true;
@@ -77,9 +77,11 @@ public class VendorImportParameters extends SimpleParameterSet {
 
   public static final ComponentWrapperParameter<AgilentImportOptions, ComboParameter<AgilentImportOptions>> agilentImportChoice = new ComponentWrapperParameter<>(
       new ComboParameter<>("Agilent .d data import", """
-          Select if Agilent .d data files shall be imported via the native AgilentBridge or MSConvert.
-          The native AgilentBridge reads regular MS and ion mobility (.d) data directly via a bundled
-          Windows helper; MSConvert converts to mzML first.""", AgilentImportOptions.values(),
+          Select if Agilent .d data files shall be imported via the native AgilentReader or MSConvert.
+          The native AgilentReader reads regular MS and ion mobility (.d) data directly via a bundled
+          Windows helper; MSConvert converts to mzML first.
+          
+          %s""".formatted(AgilentImportOptions.getTooltip()), AgilentImportOptions.values(),
           DEFAULT_AGILENT_OPTION), createJumpToPrefButton("Agilent .d data import"));
 
   public static final ComponentWrapperParameter<Boolean, BooleanParameter> applyVendorCentroiding = new ComponentWrapperParameter<>(
