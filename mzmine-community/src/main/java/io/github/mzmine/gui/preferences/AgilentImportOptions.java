@@ -29,16 +29,16 @@ import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Selects how Agilent {@code .d} files are imported: via the native AgilentBridge subprocess or by
+ * Selects how Agilent {@code .d} files are imported: via the native AgilentReader subprocess or by
  * conversion through MSConvert.
  */
 public enum AgilentImportOptions implements UniqueIdSupplier {
-  AGILENT_BRIDGE, MSCONVERT;
+  AGILENT_READER, MSCONVERT;
 
   @Override
   public @NotNull String getUniqueID() {
     return switch (this) {
-      case AGILENT_BRIDGE -> "agilent_bridge";
+      case AGILENT_READER -> "agilent_bridge";
       case MSCONVERT -> "msconvert";
     };
   }
@@ -46,12 +46,12 @@ public enum AgilentImportOptions implements UniqueIdSupplier {
   @Override
   public String toString() {
     return switch (this) {
-      case AGILENT_BRIDGE -> "Native (AgilentBridge, recommended)";
+      case AGILENT_READER -> "Native (AgilentReader)";
       case MSCONVERT -> "MSConvert";
     };
   }
 
   public boolean isNative() {
-    return this == AGILENT_BRIDGE;
+    return this == AGILENT_READER;
   }
 }

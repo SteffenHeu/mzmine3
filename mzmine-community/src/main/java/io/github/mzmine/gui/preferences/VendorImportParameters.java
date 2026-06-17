@@ -56,7 +56,7 @@ public class VendorImportParameters extends SimpleParameterSet {
       """, false);*/
 
   public static final MassLynxImportOptions DEFAULT_WATERS_OPTION = MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING;
-  public static final AgilentImportOptions DEFAULT_AGILENT_OPTION = AgilentImportOptions.AGILENT_BRIDGE;
+  public static final AgilentImportOptions DEFAULT_AGILENT_OPTION = AgilentImportOptions.AGILENT_READER;
   public static final boolean DEFAULT_VENDOR_CENTROIDING = true;
   public static final boolean DEFAULT_WATERS_LOCKMASS_ENABLED = true;
   public static final boolean DEFAULT_THERMO_EXCEPTION_SIGNALS = true;

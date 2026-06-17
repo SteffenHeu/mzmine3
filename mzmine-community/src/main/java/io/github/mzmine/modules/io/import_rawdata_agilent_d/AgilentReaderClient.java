@@ -54,14 +54,14 @@ import org.jetbrains.annotations.Nullable;
  * This is the Agilent equivalent of {@code MassLynxLib} (which binds an in-process native library);
  * here the vendor code lives in a separate Windows process and we talk to it over stdio.
  */
-final class AgilentBridgeClient implements AutoCloseable {
+final class AgilentReaderClient implements AutoCloseable {
 
-  private static final Logger logger = Logger.getLogger(AgilentBridgeClient.class.getName());
+  private static final Logger logger = Logger.getLogger(AgilentReaderClient.class.getName());
 
   /**
    * Path relative to the {@code external_tools} directory.
    */
-  private static final String RELATIVE_EXE = "agilent_bridge/AgilentBridge.exe";
+  private static final String RELATIVE_EXE = "agilent_bridge/AgilentReader.exe";
 
   private final Process process;
   private final OutputStream stdin;
@@ -71,7 +71,7 @@ final class AgilentBridgeClient implements AutoCloseable {
   private final ObjectMapper mapper = JsonMapper.builder()
       .enable(JsonReadFeature.ALLOW_NON_NUMERIC_NUMBERS).build();
 
-  AgilentBridgeClient() {
+  AgilentReaderClient() {
     ensureRuntimeAvailable();
     final File exe = locateExecutable();
     try {

@@ -88,7 +88,7 @@ public class AgilentDataAccess implements AutoCloseable {
   private static final Logger logger = Logger.getLogger(AgilentDataAccess.class.getName());
   private static final Pattern wavelengthPattern = Pattern.compile("Sig=([0-9]+[,\\.]?[0-9]+)");
 
-  private final AgilentBridgeClient client;
+  private final AgilentReaderClient client;
   private final File rawFile;
   @Nullable
   private final MemoryMapStorage storage;
@@ -114,7 +114,7 @@ public class AgilentDataAccess implements AutoCloseable {
     this.processor = processor;
     this.requestCentroid = vendorParam.getValue(VendorImportParameters.applyVendorCentroiding);
 
-    this.client = new AgilentBridgeClient();
+    this.client = new AgilentReaderClient();
     final JsonNode open = client.send(
         Map.of("op", "open", "path", rawFile.getAbsolutePath(), "requestCentroid",
             requestCentroid));
