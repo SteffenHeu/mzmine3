@@ -47,6 +47,7 @@ import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaCorrelationOptions;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrTask;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.no_corr.DiaMs2NoCorrParameters;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.rt_corr.DiaMs2RtCorrParameters;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
@@ -104,12 +105,12 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
     pregrouping = parameters.getParameter(DiaSlidingMzParameters.pregrouping)
         .getValueWithParameters();
 
-    if (pregrouping.value() == DiaCorrelationOptions.RT_CORRELATION) {
-      minFragmentIntensity = pregrouping.parameters()
-          .getValue(DiaMs2RtCorrParameters.minMs2Intensity);
-    } else {
-      minFragmentIntensity = 500;
-    }
+    minFragmentIntensity = switch (pregrouping.value()) {
+      case RT_CORRELATION -> parameters.getValue(DiaMs2RtCorrParameters.minMs2Intensity);
+      case NO_CORRELATION -> parameters.getValue(DiaMs2NoCorrParameters.minIntensity);
+      case SLIDING_MZ -> throw new RuntimeException(
+          "Select a valid pregrouping option, RT correlation or no correlation");
+    };
 
     pregroupingTask = pregrouping.value()
         .createLogicTask(flist, mainParam, pregrouping.parameters(),
