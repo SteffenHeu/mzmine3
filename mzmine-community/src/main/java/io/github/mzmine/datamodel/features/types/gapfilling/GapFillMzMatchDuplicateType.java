@@ -25,7 +25,11 @@
 
 package io.github.mzmine.datamodel.features.types.gapfilling;
 
+import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.abstr.StringType;
+import java.util.List;
+import javafx.beans.property.Property;
+import javafx.beans.property.SimpleObjectProperty;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -34,7 +38,7 @@ import org.jetbrains.annotations.NotNull;
  * at least 50 % of its m/z values with the gap-filled feature (compared only within the same scan,
  * since m/z is unaffected by smoothing). Value is "no" or "yes (IDs: ...)" listing the other rows.
  */
-public class GapFillMzMatchDuplicateType extends StringType {
+public class GapFillMzMatchDuplicateType extends DataType<List<Integer>> {
 
   @Override
   public @NotNull String getUniqueID() {
@@ -44,5 +48,15 @@ public class GapFillMzMatchDuplicateType extends StringType {
   @Override
   public @NotNull String getHeaderString() {
     return "Gap dup (m/z)";
+  }
+
+  @Override
+  public Property<List<Integer>> createProperty() {
+    return new SimpleObjectProperty<>();
+  }
+
+  @Override
+  public Class<List<Integer>> getValueClass() {
+    return (Class) List.class;
   }
 }

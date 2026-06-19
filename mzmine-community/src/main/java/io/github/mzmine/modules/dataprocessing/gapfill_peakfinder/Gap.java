@@ -210,7 +210,10 @@ public class Gap {
       }
     }
 
-    newFeature.set(GapFillMzMatchDuplicateType.class, formatTag(mzIds));
+    if(mzIds.isEmpty()) {
+      return;
+    }
+    newFeature.set(GapFillMzMatchDuplicateType.class, mzIds);
   }
 
   /**
