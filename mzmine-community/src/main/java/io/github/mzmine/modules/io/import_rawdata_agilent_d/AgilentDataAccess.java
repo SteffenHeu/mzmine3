@@ -245,7 +245,9 @@ public class AgilentDataAccess implements AutoCloseable {
     }
 
     // --- mobility scans for this frame --- mobility scans are always profile if they come from the API.
-    final MassSpectrumType mobType = spectrumType(requestCentroid, msLevel);
+    final MassSpectrumType mobType = spectrumType(
+        requestCentroid && importOption == AgilentImportOptions.AGILENT_READER_AUTO_CENTROID,
+        msLevel);
     final JsonNode mob = client.send(Map.of("op", "mobilityScans", "frameId", frameId));
     final int numMobScans = mob.path("numScans").asInt(0);
     final JsonNode pointsPerScan = mob.get("pointsPerScan");
