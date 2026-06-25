@@ -32,8 +32,10 @@ import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import java.util.List;
 import java.util.Map;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.paint.Color;
 
@@ -58,6 +60,9 @@ public class IntensityPlotModel {
   private final ObjectProperty<List<DatasetAndRenderer>> datasets = new SimpleObjectProperty<>(
       List.of());
   private final BooleanProperty showRsdInterval = new SimpleBooleanProperty(true);
+  // mean / standard deviation of the displayed intensities (NaN when not available)
+  private final DoubleProperty mean = new SimpleDoubleProperty(Double.NaN);
+  private final DoubleProperty sd = new SimpleDoubleProperty(Double.NaN);
 
   public List<FeatureListRow> getSelectedRows() {
     return selectedRows.get();
@@ -109,5 +114,29 @@ public class IntensityPlotModel {
 
   public BooleanProperty showRsdIntervalProperty() {
     return showRsdInterval;
+  }
+
+  public double getMean() {
+    return mean.get();
+  }
+
+  public void setMean(double mean) {
+    this.mean.set(mean);
+  }
+
+  public DoubleProperty meanProperty() {
+    return mean;
+  }
+
+  public double getSd() {
+    return sd.get();
+  }
+
+  public void setSd(double sd) {
+    this.sd.set(sd);
+  }
+
+  public DoubleProperty sdProperty() {
+    return sd;
   }
 }

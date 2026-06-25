@@ -40,6 +40,9 @@ import javafx.scene.layout.Region;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.ui.Layer;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.ui.RectangleInsets;
+import org.jfree.chart.ui.TextAnchor;
 
 public class DetectionCountViewBuilder extends FxViewBuilder<DetectionCountModel> {
 
@@ -85,6 +88,10 @@ public class DetectionCountViewBuilder extends FxViewBuilder<DetectionCountModel
       final ValueMarker good = new ValueMarker(model.getGoodQualityFraction() * totalFeatures,
           color, markerStroke);
       good.setLabel("Good: " + percent(model.getGoodQualityFraction()));
+      // anchor the label to the top-left of the line with an offset, away from the top axis
+      good.setLabelAnchor(RectangleAnchor.TOP_LEFT);
+      good.setLabelTextAnchor(TextAnchor.TOP_LEFT);
+      good.setLabelOffset(new RectangleInsets(6, 6, 0, 0));
       chart.getXYPlot().addDomainMarker(0, good, Layer.FOREGROUND);
     }
 
@@ -93,6 +100,10 @@ public class DetectionCountViewBuilder extends FxViewBuilder<DetectionCountModel
       final ValueMarker warwick = new ValueMarker(model.getWarwickFraction() * qcCount, color,
           markerStroke);
       warwick.setLabel("Warwick: " + percent(model.getWarwickFraction()));
+      // right-anchor so the label sits at the right edge, not behind the y-axis
+      warwick.setLabelAnchor(RectangleAnchor.TOP_RIGHT);
+      warwick.setLabelTextAnchor(TextAnchor.TOP_RIGHT);
+      warwick.setLabelOffset(new RectangleInsets(2, 0, 0, 8));
       chart.getXYPlot().addRangeMarker(0, warwick, Layer.FOREGROUND);
     }
   }

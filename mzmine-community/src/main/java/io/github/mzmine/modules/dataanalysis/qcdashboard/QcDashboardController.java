@@ -117,6 +117,13 @@ public class QcDashboardController extends FxController<QcDashboardModel> implem
     detectionCountController.goodQualityFractionProperty().bind(model.goodQualityFractionProperty());
     detectionCountController.warwickFractionProperty().bind(model.warwickFractionProperty());
 
+    // global mean ± SD overlay toggle -> each per-file plot
+    intensityController.showMeanSdIntervalProperty().bind(model.showMeanSdIntervalProperty());
+    mzDeviationController.showMeanSdIntervalProperty().bind(model.showMeanSdIntervalProperty());
+    rtDeviationController.showMeanSdIntervalProperty().bind(model.showMeanSdIntervalProperty());
+    featureCountController.showMeanSdIntervalProperty().bind(model.showMeanSdIntervalProperty());
+    sumIntensityController.showMeanSdIntervalProperty().bind(model.showMeanSdIntervalProperty());
+
     // recompute derived state (orderedFiles / qcFiles / fileColors) when inputs change
     model.flistsProperty().addListener((_, _, _) -> recomputeDerivedState());
     model.sampleTypesToShowProperty().addListener((_, _, _) -> recomputeDerivedState());

@@ -49,8 +49,18 @@ public class DeviationPlotViewBuilder extends FxViewBuilder<DeviationPlotModel> 
     chart.setRangeAxisNumberFormatOverride(model.getKind().numberFormat());
     // signed deviations are centered on zero -> don't force the axis to include/stick to zero
     chart.setStickyZeroRangeAxis(false);
-    model.datasetsProperty()
-        .addListener((_, _, datasets) -> QcPlotDatasets.applyTo(chart, datasets));
+    model.datasetsProperty().addListener((_, _, datasets) -> {
+      QcPlotDatasets.applyTo(chart, datasets);
+      redrawOverlay();
+    });
+    model.showMeanSdIntervalProperty().addListener((_, _, _) -> redrawOverlay());
+    model.meanProperty().addListener((_, _, _) -> redrawOverlay());
+    model.sdProperty().addListener((_, _, _) -> redrawOverlay());
     return chart;
+  }
+
+  private void redrawOverlay() {
+    QcPlotDatasets.drawMeanSdOverlay(chart, model.isShowMeanSdInterval(), model.getMean(),
+        model.getSd());
   }
 }

@@ -83,4 +83,8 @@ public class PerFileAggregateController extends FxController<PerFileAggregateMod
   public ObjectProperty<Map<RawDataFile, Color>> fileColorsProperty() {
     return model.fileColorsProperty();
   }
+
+  public javafx.beans.property.BooleanProperty showMeanSdIntervalProperty() {
+    return model.showMeanSdIntervalProperty();
+  }
 }

@@ -33,8 +33,6 @@ import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataanalysis.qcdashboard.QcDashboardModel;
-import io.github.mzmine.modules.dataprocessing.filter_blanksubtraction.FeatureListBlankSubtractionModule;
-import io.github.mzmine.modules.dataprocessing.filter_blanksubtraction.FeatureListBlankSubtractionParameters;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterParameters;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
@@ -46,6 +44,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Spinner;
@@ -70,8 +69,11 @@ public class QcDashboardControlsBuilder {
   }
 
   public @NotNull Region build() {
+    final CheckBox meanSd = new CheckBox("Show mean ± SD");
+    meanSd.selectedProperty().bindBidirectional(model.showMeanSdIntervalProperty());
+
     final VBox box = new VBox(8, new Label("Controls"), buildAbundanceBox(), buildSampleTypeBox(),
-        buildBatchBox(), buildThresholdSpinner("Good quality (fraction of features)",
+        buildBatchBox(), meanSd, buildThresholdSpinner("Good quality (fraction of features)",
             model.getGoodQualityFraction(), model.goodQualityFractionProperty()::set),
         buildThresholdSpinner("Warwick (fraction of QCs)", model.getWarwickFraction(),
             model.warwickFractionProperty()::set), buildFilterBox());
@@ -129,14 +131,7 @@ public class QcDashboardControlsBuilder {
         ConfigService.getConfiguration().getModuleParameters(RowsFilterModule.class)
             .getParameter(RowsFilterParameters.FEATURE_LISTS)));
 
-    final Button blankSubtraction = new Button("Subtract blanks…");
-    blankSubtraction.setMaxWidth(Double.MAX_VALUE);
-    blankSubtraction.setOnAction(_ -> launchWithFeatureList(FeatureListBlankSubtractionModule.class,
-        ConfigService.getConfiguration()
-            .getModuleParameters(FeatureListBlankSubtractionModule.class)
-            .getParameter(FeatureListBlankSubtractionParameters.alignedPeakList)));
-
-    return new VBox(4, FxLabels.newLabel("Batch-safe filtering"), rowsFilter, blankSubtraction);
+    return new VBox(4, FxLabels.newLabel("Batch-safe filtering"), rowsFilter);
   }
 
   /**

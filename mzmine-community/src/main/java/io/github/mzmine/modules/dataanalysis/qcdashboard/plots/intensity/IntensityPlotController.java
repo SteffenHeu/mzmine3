@@ -35,6 +35,7 @@ import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataanalysis.qcdashboard.plots.QcPlotDatasets;
+import io.github.mzmine.util.MathUtils;
 import java.util.List;
 import java.util.Map;
 import javafx.beans.property.ObjectProperty;
@@ -76,6 +77,18 @@ public class IntensityPlotController extends FxController<IntensityPlotModel> im
       model.setDatasets(QcPlotDatasets.perFile(files, colors,
           file -> measure.getOrNaN((ModularFeature) row.getFeature(file)), measure.toString(),
           MZmineCore.getConfiguration().getIntensityFormat()));
+
+      // mean / SD over the displayed (non-NaN) intensities for the mean ± SD overlay
+      final double[] values = files.stream()
+          .mapToDouble(file -> measure.getOrNaN((ModularFeature) row.getFeature(file)))
+          .filter(v -> !Double.isNaN(v)).toArray();
+      if (values.length == 0) {
+        model.setMean(Double.NaN);
+        model.setSd(Double.NaN);
+      } else {
+        model.setMean(MathUtils.calcAvg(values));
+        model.setSd(MathUtils.calcStd(values));
+      }
     });
   }
 
@@ -100,5 +113,9 @@ public class IntensityPlotController extends FxController<IntensityPlotModel> im
 
   public ObjectProperty<Map<RawDataFile, Color>> fileColorsProperty() {
     return model.fileColorsProperty();
+  }
+
+  public javafx.beans.property.BooleanProperty showMeanSdIntervalProperty() {
+    return model.showRsdIntervalProperty();
   }
 }

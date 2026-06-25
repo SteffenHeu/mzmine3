@@ -53,9 +53,47 @@ public class DeviationPlotModel {
   // output
   private final ObjectProperty<List<DatasetAndRenderer>> datasets = new SimpleObjectProperty<>(
       List.of());
+  private final javafx.beans.property.BooleanProperty showMeanSdInterval = new javafx.beans.property.SimpleBooleanProperty(
+      true);
+  private final javafx.beans.property.DoubleProperty mean = new javafx.beans.property.SimpleDoubleProperty(
+      Double.NaN);
+  private final javafx.beans.property.DoubleProperty sd = new javafx.beans.property.SimpleDoubleProperty(
+      Double.NaN);
 
   public DeviationPlotModel(DeviationKind kind) {
     this.kind = kind;
+  }
+
+  public boolean isShowMeanSdInterval() {
+    return showMeanSdInterval.get();
+  }
+
+  public javafx.beans.property.BooleanProperty showMeanSdIntervalProperty() {
+    return showMeanSdInterval;
+  }
+
+  public double getMean() {
+    return mean.get();
+  }
+
+  public void setMean(double mean) {
+    this.mean.set(mean);
+  }
+
+  public javafx.beans.property.DoubleProperty meanProperty() {
+    return mean;
+  }
+
+  public double getSd() {
+    return sd.get();
+  }
+
+  public void setSd(double sd) {
+    this.sd.set(sd);
+  }
+
+  public javafx.beans.property.DoubleProperty sdProperty() {
+    return sd;
   }
 
   public DeviationKind getKind() {

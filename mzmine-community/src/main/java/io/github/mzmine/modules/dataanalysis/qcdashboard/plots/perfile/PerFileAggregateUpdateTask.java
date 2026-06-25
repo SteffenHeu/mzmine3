@@ -49,6 +49,8 @@ class PerFileAggregateUpdateTask extends FxUpdateTask<PerFileAggregateModel> {
   private final FileAggregateKind kind;
 
   private @Nullable List<DatasetAndRenderer> result;
+  private double mean = Double.NaN;
+  private double sd = Double.NaN;
 
   PerFileAggregateUpdateTask(PerFileAggregateModel model) {
     super("qc_perfile_" + model.getKind(), model);
@@ -72,11 +74,18 @@ class PerFileAggregateUpdateTask extends FxUpdateTask<PerFileAggregateModel> {
     final Map<RawDataFile, Double> perFile = kind.computePerFile(flist, orderedFiles, abundance);
     result = QcPlotDatasets.perFile(orderedFiles, fileColors,
         file -> perFile.getOrDefault(file, Double.NaN), kind.rangeAxisLabel(), kind.numberFormat());
+
+    final double[] stats = QcPlotDatasets.meanSd(
+        perFile.values().stream().mapToDouble(Double::doubleValue).toArray());
+    mean = stats[0];
+    sd = stats[1];
   }
 
   @Override
   protected void updateGuiModel() {
     model.setDatasets(result != null ? result : List.of());
+    model.setMean(mean);
+    model.setSd(sd);
   }
 
   @Override

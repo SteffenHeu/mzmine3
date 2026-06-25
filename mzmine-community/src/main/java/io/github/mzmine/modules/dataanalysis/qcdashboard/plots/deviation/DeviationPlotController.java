@@ -69,6 +69,11 @@ public class DeviationPlotController extends FxController<DeviationPlotModel> im
       model.setDatasets(
           QcPlotDatasets.perFile(files, model.getFileColors(), file -> kind.deviation(row, file),
               kind.rangeAxisLabel(), kind.numberFormat()));
+
+      final double[] stats = QcPlotDatasets.meanSd(
+          files.stream().mapToDouble(file -> kind.deviation(row, file)).toArray());
+      model.setMean(stats[0]);
+      model.setSd(stats[1]);
     });
   }
 
@@ -88,5 +93,9 @@ public class DeviationPlotController extends FxController<DeviationPlotModel> im
 
   public ObjectProperty<Map<RawDataFile, Color>> fileColorsProperty() {
     return model.fileColorsProperty();
+  }
+
+  public javafx.beans.property.BooleanProperty showMeanSdIntervalProperty() {
+    return model.showMeanSdIntervalProperty();
   }
 }

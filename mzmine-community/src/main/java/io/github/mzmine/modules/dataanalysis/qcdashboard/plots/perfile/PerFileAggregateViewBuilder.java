@@ -47,8 +47,18 @@ public class PerFileAggregateViewBuilder extends FxViewBuilder<PerFileAggregateM
   public Region build() {
     chart.setDefaultRenderer(new ColoredXYShapeRenderer());
     chart.setRangeAxisNumberFormatOverride(model.getKind().numberFormat());
-    model.datasetsProperty()
-        .addListener((_, _, datasets) -> QcPlotDatasets.applyTo(chart, datasets));
+    model.datasetsProperty().addListener((_, _, datasets) -> {
+      QcPlotDatasets.applyTo(chart, datasets);
+      redrawOverlay();
+    });
+    model.showMeanSdIntervalProperty().addListener((_, _, _) -> redrawOverlay());
+    model.meanProperty().addListener((_, _, _) -> redrawOverlay());
+    model.sdProperty().addListener((_, _, _) -> redrawOverlay());
     return chart;
+  }
+
+  private void redrawOverlay() {
+    QcPlotDatasets.drawMeanSdOverlay(chart, model.isShowMeanSdInterval(), model.getMean(),
+        model.getSd());
   }
 }

@@ -26,11 +26,14 @@
 package io.github.mzmine.modules.dataanalysis.qcdashboard.plots;
 
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.gui.chartbasics.chartthemes.EStandardChartTheme;
 import io.github.mzmine.gui.chartbasics.simplechart.SimpleXYChart;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.ColoredXYDataset;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYShapeRenderer;
+import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.util.MathUtils;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,6 +41,10 @@ import java.util.Map;
 import java.util.function.ToDoubleFunction;
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
+import org.jfree.chart.plot.ValueMarker;
+import org.jfree.chart.ui.Layer;
+import org.jfree.chart.ui.RectangleAnchor;
+import org.jfree.chart.ui.TextAnchor;
 
 /**
  * Builds per-file scatter datasets for the QC dashboard. Each file becomes its own
@@ -100,5 +107,48 @@ public final class QcPlotDatasets {
           new ColoredXYShapeRenderer()));
     }
     return datasets;
+  }
+
+  /**
+   * @return {mean, standard deviation} of the finite values, or {NaN, NaN} if there are none.
+   */
+  public static double[] meanSd(double[] values) {
+    final double[] finite = java.util.Arrays.stream(values).filter(v -> !Double.isNaN(v)).toArray();
+    if (finite.length == 0) {
+      return new double[]{Double.NaN, Double.NaN};
+    }
+    return new double[]{MathUtils.calcAvg(finite), MathUtils.calcStd(finite)};
+  }
+
+  /**
+   * Draws horizontal mean and mean ± SD range markers on a per-file plot. The mean marker is
+   * labelled with the %RSD; labels are right-anchored so they don't collide with the y-axis. Clears
+   * existing range markers first (per-file plots use range markers only for this overlay). FX
+   * thread.
+   */
+  public static void drawMeanSdOverlay(@NotNull SimpleXYChart<?> chart, boolean show, double mean,
+      double sd) {
+    chart.getXYPlot().clearRangeMarkers();
+    if (!show || Double.isNaN(mean)) {
+      return;
+    }
+    final java.awt.Color color = ConfigService.getConfiguration().getDefaultColorPalette()
+        .getNeutralColorAWT();
+    final double rsdPercent = mean != 0 ? sd / mean * 100 : 0;
+    final ValueMarker meanMarker = new ValueMarker(mean, color,
+        EStandardChartTheme.DEFAULT_MARKER_STROKE);
+    meanMarker.setLabel(String.format("Mean (RSD %.1f%%)", rsdPercent));
+    meanMarker.setLabelAnchor(RectangleAnchor.TOP_RIGHT);
+    meanMarker.setLabelTextAnchor(TextAnchor.TOP_RIGHT);
+    chart.getXYPlot().addRangeMarker(0, meanMarker, Layer.FOREGROUND);
+
+    if (!Double.isNaN(sd) && sd > 0) {
+      chart.getXYPlot().addRangeMarker(0,
+          new ValueMarker(mean + sd, color, EStandardChartTheme.DEFAULT_MARKER_STROKE),
+          Layer.FOREGROUND);
+      chart.getXYPlot().addRangeMarker(0,
+          new ValueMarker(mean - sd, color, EStandardChartTheme.DEFAULT_MARKER_STROKE),
+          Layer.FOREGROUND);
+    }
   }
 }

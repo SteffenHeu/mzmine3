@@ -36,8 +36,10 @@ import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import java.util.List;
 import java.util.Map;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.paint.Color;
@@ -122,6 +124,17 @@ public class QcDashboardModel {
 
   /** Dunn/Warwick recommendation: keep features detected in >70% of QCs (fraction of QC files). */
   private final DoubleProperty warwickFraction = new SimpleDoubleProperty(0.7);
+
+  /** Global toggle for the mean ± SD overlay drawn on each per-file plot. */
+  private final BooleanProperty showMeanSdInterval = new SimpleBooleanProperty(true);
+
+  public boolean isShowMeanSdInterval() {
+    return showMeanSdInterval.get();
+  }
+
+  public BooleanProperty showMeanSdIntervalProperty() {
+    return showMeanSdInterval;
+  }
 
   public @NotNull List<FeatureList> getFlists() {
     return requireNonNullElse(flists.get(), List.of());
