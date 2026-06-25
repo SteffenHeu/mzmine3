@@ -65,12 +65,16 @@ public class RsdFilterParameters extends SimpleParameterSet {
       "Maximum allowed relative standard deviation (coefficient of variation) of a feature inside the selected group.",
       0.2, 0d, 10d);
 
+  public static final PercentParameter minCv = new PercentParameter("Minimum RSD",
+      "Minimum relative standard deviation (coefficient of variation) of a feature inside the selected group. Features with an RSD below this value are removed (\"too good to be true\"). 0 disables the lower bound.",
+      0d, 0d, 10d);
+
 
   public static final BooleanParameter keepUndetected = new BooleanParameter("Keep undetected",
       "Keep features that were not detected in the specified group in the feature list.", false);
 
   public RsdFilterParameters() {
-    super(abundanceMeasure, missingValueImputation, grouping, maxMissingValues, maxCv,
+    super(abundanceMeasure, missingValueImputation, grouping, maxMissingValues, minCv, maxCv,
         keepUndetected);
   }
 
@@ -94,13 +98,14 @@ public class RsdFilterParameters extends SimpleParameterSet {
   public @Nullable String getVersionMessage(int version) {
     return switch (version) {
       case 2 -> "Added missing value imputation";
+      case 3 -> "Added minimum RSD (lower bound) filter";
       default -> null;
     };
   }
 
   @Override
   public int getVersion() {
-    return 2;
+    return 3;
   }
 
   /**
@@ -119,6 +124,7 @@ public class RsdFilterParameters extends SimpleParameterSet {
     // create filter
     final Metadata1GroupSelection group = getValue(RsdFilterParameters.grouping);
     final double maxMissing = getValue(RsdFilterParameters.maxMissingValues);
+    final double minCV = getValue(RsdFilterParameters.minCv);
     final double maxCV = getValue(RsdFilterParameters.maxCv);
     final boolean keepUndedected = getValue(RsdFilterParameters.keepUndetected);
 
@@ -126,7 +132,7 @@ public class RsdFilterParameters extends SimpleParameterSet {
     final List<RawDataFile> groupFiles = group.getMatchingFiles(dataTable.getRawDataFiles());
     final FeaturesDataTable subsetTable = dataTable.subsetBySamples(groupFiles);
 
-    return new RsdFilter(group, subsetTable, maxMissing, maxCV, keepUndedected);
+    return new RsdFilter(group, subsetTable, maxMissing, minCV, maxCV, keepUndedected);
   }
 
 }

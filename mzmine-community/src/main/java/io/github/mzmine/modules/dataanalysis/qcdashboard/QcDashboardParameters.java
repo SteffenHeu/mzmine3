@@ -23,23 +23,23 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.visualization.featurelisttable_modular;
+package io.github.mzmine.modules.dataanalysis.qcdashboard;
 
-/**
- * Defines the owner of a {@link FeatureTableFX} this can be useful when defining double click
- * actions or the right click menu options.
- */
-public enum FeatureTableOwner {
-  UNDEFINED, FEATURE_TABLE_TAB, STATS_DASHBOARD, COMPOUND_DASHBOARD, LIPID_DASHBOARD, NETWORK_DASHBOARD, FEATURE_INTEGRATION_DASHBOARD, QC_DASHBOARD, OTHER_DETECTOR_CORRELATION;
+import io.github.mzmine.parameters.impl.CurrentProjectNoDialogParameterSet;
+import io.github.mzmine.parameters.impl.IonMobilitySupport;
+import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
+import org.jetbrains.annotations.NotNull;
 
-  /**
-   * @return FeatureTable or UNDEFINED are flagged as simple, true for other dashboards
-   */
-  public boolean isOtherComplexDashboard() {
-    return switch (this) {
-      case UNDEFINED, FEATURE_TABLE_TAB -> false;
-      case OTHER_DETECTOR_CORRELATION, STATS_DASHBOARD, COMPOUND_DASHBOARD, LIPID_DASHBOARD,
-           NETWORK_DASHBOARD, FEATURE_INTEGRATION_DASHBOARD, QC_DASHBOARD -> true;
-    };
+public class QcDashboardParameters extends CurrentProjectNoDialogParameterSet {
+
+  public static final FeatureListsParameter flists = new FeatureListsParameter(1, 1, true);
+
+  public QcDashboardParameters() {
+    super(flists);
+  }
+
+  @Override
+  public @NotNull IonMobilitySupport getIonMobilitySupport() {
+    return IonMobilitySupport.SUPPORTED;
   }
 }

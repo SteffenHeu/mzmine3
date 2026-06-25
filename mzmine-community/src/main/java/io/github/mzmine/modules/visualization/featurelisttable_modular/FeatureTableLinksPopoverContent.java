@@ -166,6 +166,7 @@ public class FeatureTableLinksPopoverContent extends VBox {
       case LIPID_DASHBOARD -> "Lipid QC dashboard";
       case NETWORK_DASHBOARD -> "Network dashboard";
       case FEATURE_INTEGRATION_DASHBOARD -> "Feature integration dashboard";
+      case QC_DASHBOARD -> "QC dashboard";
       case OTHER_DETECTOR_CORRELATION -> "Other detector correlation";
       case FEATURE_TABLE_TAB -> "Feature table";
       case UNDEFINED -> "Feature table";

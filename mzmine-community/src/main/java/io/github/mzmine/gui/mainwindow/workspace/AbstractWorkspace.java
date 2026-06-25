@@ -44,6 +44,7 @@ import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.ModuleQuickSelectDialog;
 import io.github.mzmine.modules.dataanalysis.compounddashboard.CompoundDashboardModule;
+import io.github.mzmine.modules.dataanalysis.qcdashboard.QcDashboardModule;
 import io.github.mzmine.modules.dataanalysis.statsdashboard.StatsDasboardModule;
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverModule;
@@ -359,7 +360,7 @@ public abstract class AbstractWorkspace implements Workspace {
         LipidAnnotationSummaryModule.class);
     addModuleMenuItems(featureVis, "Dashboards", CompoundDashboardModule.class,
         IntegrationDashboardModule.class, LipidAnnotationQCDashboardModule.class,
-        StatsDasboardModule.class);
+        QcDashboardModule.class, StatsDasboardModule.class);
     // end of feature visualization
     // back to main visualization menu
     addModuleMenuItems(menu, MSnTreeVisualizerModule.class);

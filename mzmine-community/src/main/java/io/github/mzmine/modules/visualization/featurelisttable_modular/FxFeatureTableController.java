@@ -56,12 +56,23 @@ public class FxFeatureTableController extends FxCachedViewController<FxFeatureTa
 
   private final FxFeatureTableViewBuilder viewBuilder;
   private final FxFeatureTableInteractor interactor;
+  /**
+   * If false, the (cloned) parameters are not written back to the module config on close. Used by
+   * views that customize column visibility (e.g. the QC dashboard) and must not leak that into the
+   * global feature table configuration.
+   */
+  private final boolean persistParametersOnClose;
 
   public FxFeatureTableController(FeatureTableOwner tableOwner) {
-    // use a clone, will set parameters to module params after tab close
+    this(tableOwner, true);
+  }
+
+  public FxFeatureTableController(FeatureTableOwner tableOwner, boolean persistParametersOnClose) {
+    // use a clone, will set parameters to module params after tab close (unless opted out)
     var params = ConfigService.getConfiguration().getModuleParameters(FeatureTableFXModule.class)
         .cloneParameterSet();
     super(new FxFeatureTableModel(params, tableOwner));
+    this.persistParametersOnClose = persistParametersOnClose;
 
     // interactor before view is built; it wires the model bindings to the FeatureTableFX.
     interactor = new FxFeatureTableInteractor(model);
@@ -84,9 +95,11 @@ public class FxFeatureTableController extends FxCachedViewController<FxFeatureTa
     final FeatureTableFX table = model.getFeatureTable();
     table.getProperties().remove(CONTROLLER_PROPERTY_KEY);
     table.closeTable();
-    // save parameters
-    ConfigService.getConfiguration()
-        .setModuleParameters(FeatureTableFXModule.class, model.getParameters());
+    // save parameters (unless this view opted out to avoid leaking custom column visibility)
+    if (persistParametersOnClose) {
+      ConfigService.getConfiguration()
+          .setModuleParameters(FeatureTableFXModule.class, model.getParameters());
+    }
   }
 
   public void setFeatureList(@Nullable FeatureList featureList) {

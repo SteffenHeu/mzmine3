@@ -38,15 +38,26 @@ import java.util.List;
  * @param dataTable        data table that only contains the data files that are grouped and
  *                         selected
  * @param maxMissingValues
+ * @param minCvPercent     minimum RSD; rows below this RSD are removed ("too good to be true"). 0
+ *                         disables the lower bound.
  * @param maxCvPercent
  * @param keepUndetected
  */
 record RsdFilter(Metadata1GroupSelection group,
-                 FeaturesDataTable dataTable, double maxMissingValues, double maxCvPercent,
-                 boolean keepUndetected) {
+                 FeaturesDataTable dataTable, double maxMissingValues, double minCvPercent,
+                 double maxCvPercent, boolean keepUndetected) {
 
   /**
-   * @return True if the row passes the filter and is thereby below the set {@link #maxCvPercent}.
+   * Backwards-compatible constructor without a lower RSD bound ({@code minCvPercent = 0}).
+   */
+  RsdFilter(Metadata1GroupSelection group, FeaturesDataTable dataTable, double maxMissingValues,
+      double maxCvPercent, boolean keepUndetected) {
+    this(group, dataTable, maxMissingValues, 0d, maxCvPercent, keepUndetected);
+  }
+
+  /**
+   * @return True if the row passes the filter, i.e. its RSD is within
+   * [{@link #minCvPercent}, {@link #maxCvPercent}].
    */
   public boolean matches(FeatureListRow row, final int rowIndex) {
     final double[] abundances = dataTable.getFeatureData(rowIndex, false);
@@ -70,7 +81,7 @@ record RsdFilter(Metadata1GroupSelection group,
 
     row.set(CvType.class, (float) rsd);
 
-    return rsd <= maxCvPercent;
+    return rsd >= minCvPercent && rsd <= maxCvPercent;
   }
 
   public List<RawDataFile> getGroupDataFiles() {

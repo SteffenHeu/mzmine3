@@ -33,6 +33,7 @@ import io.github.mzmine.modules.dataanalysis.compounddashboard.CompoundDashboard
 import io.github.mzmine.modules.dataanalysis.feat_ms2_similarity_intra.IntraFeatureRowMs2SimilarityModule;
 import io.github.mzmine.modules.dataanalysis.pca_new.PCALoadingsExtractionModule;
 import io.github.mzmine.modules.dataanalysis.pca_new.PCAModule;
+import io.github.mzmine.modules.dataanalysis.qcdashboard.QcDashboardModule;
 import io.github.mzmine.modules.dataanalysis.spec_chimeric_precursor.PrecursorPurityCheckerModule;
 import io.github.mzmine.modules.dataanalysis.statsdashboard.StatsDasboardModule;
 import io.github.mzmine.modules.dataanalysis.volcanoplot.VolcanoPlotModule;
@@ -501,6 +502,7 @@ public class BatchModeModulesList {
           MultidetectorVisualizerModule.class, //
 
           // stats
+          QcDashboardModule.class, //
           StatsDasboardModule.class, //
           ExternalRowHtmlVisualizerModule.class, //
           PCAModule.class, //

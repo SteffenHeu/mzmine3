@@ -32,6 +32,7 @@ import io.github.mzmine.modules.dataanalysis.feat_ms2_similarity_intra.IntraFeat
 import io.github.mzmine.modules.dataanalysis.pca_new.PCAModule;
 import io.github.mzmine.modules.dataanalysis.significance.anova.AnovaModule;
 import io.github.mzmine.modules.dataanalysis.spec_chimeric_precursor.PrecursorPurityCheckerModule;
+import io.github.mzmine.modules.dataanalysis.qcdashboard.QcDashboardModule;
 import io.github.mzmine.modules.dataanalysis.statsdashboard.StatsDasboardModule;
 import io.github.mzmine.modules.dataanalysis.volcanoplot.VolcanoPlotModule;
 import io.github.mzmine.modules.dataprocessing.align_append_rows.MergeAlignerModule;
@@ -203,8 +204,8 @@ public final class AcademicWorkspace extends AbstractWorkspace {
 
     menu.getItems().add(buildDefaultAnnotationSubMenu());
 
-    addModuleMenuItems(menu, "Statistics", StatsDasboardModule.class, VolcanoPlotModule.class,
-        PCAModule.class, AnovaModule.class);
+    addModuleMenuItems(menu, "Statistics", QcDashboardModule.class, StatsDasboardModule.class,
+        VolcanoPlotModule.class, PCAModule.class, AnovaModule.class);
     return menu;
   }
 
