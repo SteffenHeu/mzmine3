@@ -98,6 +98,7 @@ import io.github.mzmine.modules.io.export_features_sirius.SiriusExportModule;
 import io.github.mzmine.modules.io.export_features_sql.SQLExportModule;
 import io.github.mzmine.modules.io.export_features_venn.VennExportModule;
 import io.github.mzmine.modules.io.export_features_xml.ExportFeaturesDataModule;
+import io.github.mzmine.modules.io.export_la_csv.LaCsvExportModule;
 import io.github.mzmine.modules.io.export_library_analysis_csv.LibraryAnalysisCSVExportModule;
 import io.github.mzmine.modules.io.export_library_gnps_batch.GNPSLibraryBatchExportModule;
 import io.github.mzmine.modules.io.export_merge_libraries.MergeLibrariesModule;
@@ -278,8 +279,9 @@ public abstract class AbstractWorkspace implements Workspace {
     final Menu menu = new Menu("Export feature list");
 
     addModuleMenuItems(menu, "Graphics", ExportAllIdsGraphicalModule.class);
-    addModuleMenuItems(menu, CSVExportModularModule.class, CompoundAnnotationsCSVExportModule.class,
-        LegacyCSVExportModule.class, SQLExportModule.class,
+    addModuleMenuItems(menu, LaCsvExportModule.class, CSVExportModularModule.class,
+        CompoundAnnotationsCSVExportModule.class, LegacyCSVExportModule.class,
+        SQLExportModule.class,
         // scans
         ExportScansFeatureModule.class, AdapMspExportModule.class, AdapMgfExportModule.class,
         GnpsFbmnExportAndSubmitModule.class, GnpsGcExportAndSubmitModule.class,
@@ -355,8 +357,7 @@ public abstract class AbstractWorkspace implements Workspace {
         MassvoltammogramFromFeatureListModule.class);
     addSeparator(featureVis);
     addModuleMenuItems(featureVis, "Lipids", LipidAnnotationQCDashboardModule.class,
-        EquivalentCarbonNumberModule.class,
-        LipidAnnotationSummaryModule.class);
+        EquivalentCarbonNumberModule.class, LipidAnnotationSummaryModule.class);
     addModuleMenuItems(featureVis, "Dashboards", CompoundDashboardModule.class,
         IntegrationDashboardModule.class, LipidAnnotationQCDashboardModule.class,
         StatsDasboardModule.class);
