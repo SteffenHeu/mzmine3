@@ -62,7 +62,7 @@ public record FilesToImport(@NotNull List<String> filePaths,
       VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
       WatersLockmassParameters.createDefault(),
       VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
-      AgilentImportOptions.AGILENT_READER_AUTO_CENTROID);
+      VendorImportParameters.DEFAULT_AGILENT_OPTION);
 
   public static FilesToImport factor5(@NotNull String fileName) {
     return factor5(List.of(fileName));

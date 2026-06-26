@@ -147,7 +147,7 @@ public class MassDetectionErrorTests {
             VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
             WatersLockmassParameters.createDefault(),
             VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
-            AgilentImportOptions.AGILENT_READER_AUTO_CENTROID));
+            VendorImportParameters.DEFAULT_AGILENT_OPTION));
 
     final RawDataFile file = brukerImport.runImport().getFirst();
     final Scan scan = file.getScans().getLast();

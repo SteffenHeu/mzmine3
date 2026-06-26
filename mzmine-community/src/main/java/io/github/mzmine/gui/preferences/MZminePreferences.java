@@ -44,6 +44,7 @@ import io.github.mzmine.parameters.dialogs.GroupedParameterSetupPane.ParameterGr
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
+import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithComboInputParameter;
 import io.github.mzmine.parameters.parametertypes.FontSpecs;
 import io.github.mzmine.parameters.parametertypes.HiddenParameter;
 import io.github.mzmine.parameters.parametertypes.OptOutParameter;
@@ -241,7 +242,7 @@ public class MZminePreferences extends SimpleParameterSet {
       .cloneParameter();
   public static final ComboParameter<MassLynxImportOptions> massLynxImportChoice = VendorImportParameters.massLynxImportChoice.getEmbeddedParameter()
       .cloneParameter();
-  public static final ComboParameter<AgilentImportOptions> agilentImportChoice = VendorImportParameters.agilentImportChoice.getEmbeddedParameter()
+  public static final ComboWithComboInputParameter<AgilentImportOptions, AgilentCentroidingOption> agilentImportChoice = VendorImportParameters.agilentImportChoice.getEmbeddedParameter()
       .cloneParameter();
   public static final BooleanParameter excludeThermoExceptionMasses = VendorImportParameters.excludeThermoExceptionMasses.getEmbeddedParameter()
       .cloneParameter();

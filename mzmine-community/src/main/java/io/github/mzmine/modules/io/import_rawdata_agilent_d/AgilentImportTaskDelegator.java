@@ -62,7 +62,7 @@ public class AgilentImportTaskDelegator extends AbstractSimpleTask implements Ra
     super(storage, moduleCallDate, parameters, moduleClass);
 
     final AgilentImportOptions importChoice = ConfigService.getPreference(
-        MZminePreferences.agilentImportChoice);
+        MZminePreferences.agilentImportChoice).getSelectedOption();
     actualTask = importChoice == AgilentImportOptions.MSCONVERT ? new MSConvertImportTask(storage,
         moduleCallDate, file, processorConfig, project, moduleClass, parameters)
         : new AgilentImportTask(storage, moduleCallDate, file, moduleClass, parameters, project,

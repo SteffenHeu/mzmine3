@@ -29,7 +29,6 @@ import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.MobilityScan;
 import io.github.mzmine.datamodel.impl.SimpleFrame;
 import io.github.mzmine.datamodel.impl.SimpleScan;
-import io.github.mzmine.gui.preferences.AgilentImportOptions;
 import io.github.mzmine.gui.preferences.MassLynxImportOptions;
 import io.github.mzmine.gui.preferences.VendorImportParameters;
 import io.github.mzmine.gui.preferences.WatersLockmassParameters;
@@ -63,7 +62,7 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(true,
         MassLynxImportOptions.NATIVE_WATERS_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        AgilentImportOptions.AGILENT_READER_AUTO_CENTROID);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION);
     return (AllSpectralDataImportParameters) AllSpectralDataImportParameters.create(vendorParam,
         new File[]{file}, null, null);
   }
@@ -72,7 +71,7 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(true,
         MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        AgilentImportOptions.AGILENT_READER_AUTO_CENTROID);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION);
     return (AllSpectralDataImportParameters) AllSpectralDataImportParameters.create(vendorParam,
         new File[]{file}, null, null);
   }
@@ -81,7 +80,7 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(false,
         MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        AgilentImportOptions.AGILENT_READER_AUTO_CENTROID);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION);
     return (AllSpectralDataImportParameters) AllSpectralDataImportParameters.create(vendorParam,
         new File[]{file}, null, null);
   }
@@ -90,7 +89,7 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(false,
         MassLynxImportOptions.NATIVE_WATERS_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        AgilentImportOptions.AGILENT_READER_AUTO_CENTROID);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION);
     return (AllSpectralDataImportParameters) AllSpectralDataImportParameters.create(vendorParam,
         new File[]{file}, null, null);
   }
@@ -99,7 +98,7 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(false,
         MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        AgilentImportOptions.AGILENT_READER_AUTO_CENTROID);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION);
 
     final var param = (ExactMassDetectorParameters) new ExactMassDetectorParameters().cloneParameterSet();
     param.setParameter(ExactMassDetectorParameters.noiseLevel, 0d);

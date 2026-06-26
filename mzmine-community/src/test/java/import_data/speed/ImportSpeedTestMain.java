@@ -142,7 +142,7 @@ public class ImportSpeedTestMain {
     ParameterSet paramDataImport = AllSpectralDataImportParameters.create(
         VendorImportParameters.create(true, MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
             WatersLockmassParameters.createDefault(), true,
-            AgilentImportOptions.AGILENT_READER_AUTO_CENTROID), files, null, null, advanced);
+            VendorImportParameters.DEFAULT_AGILENT_OPTION), files, null, null, advanced);
 
     logger.info("Testing data import of mzML and mzXML without advanced parameters");
 
