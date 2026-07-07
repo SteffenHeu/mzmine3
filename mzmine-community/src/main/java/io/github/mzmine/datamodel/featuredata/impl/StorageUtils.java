@@ -172,18 +172,28 @@ public class StorageUtils {
    */
   @NotNull
   public static MemorySegment storeValuesToDoubleBuffer(@Nullable final MemoryMapStorage storage,
-      @NotNull final double[] values) {
+      @NotNull final double[] values, int length) {
     if (values.length == 0) {
       return EMPTY_DOUBLE_SEGMENT;
     }
 
     MemorySegment buffer;
     if (storage != null) {
-      buffer = storage.storeData(values);
+      buffer = storage.storeData(values, length);
     } else {
-      buffer = MemorySegment.ofArray(values);
+      if(values.length != length) {
+        buffer = MemorySegment.ofArray(Arrays.copyOfRange(values, 0, length));
+      } else {
+        buffer = MemorySegment.ofArray(values);
+      }
     }
     return buffer;
+  }
+
+  @NotNull
+  public static MemorySegment storeValuesToDoubleBuffer(@Nullable final MemoryMapStorage storage,
+      @NotNull final double[] values) {
+    return storeValuesToDoubleBuffer(storage, values, values.length);
   }
 
   /**

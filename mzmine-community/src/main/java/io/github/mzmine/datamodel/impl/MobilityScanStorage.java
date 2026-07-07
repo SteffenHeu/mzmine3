@@ -165,7 +165,8 @@ public class MobilityScanStorage {
    */
   public MobilityScanStorage(final @Nullable MemoryMapStorage storage, final SimpleFrame frame,
       final MemorySegment mzValues, final MemorySegment intensityValues, final int maxNumPoints,
-      final int[] storageOffsets, final int[] basePeakIndices, final boolean useAsMassList, final MassSpectrumType spectrumType) {
+      final int[] storageOffsets, final int[] basePeakIndices, final boolean useAsMassList,
+      final MassSpectrumType spectrumType) {
     this.frame = frame;
     this.spectrumType = spectrumType;
     rawBasePeakIndices = StorageUtils.storeValuesToIntBuffer(storage, basePeakIndices);
@@ -507,6 +508,18 @@ public class MobilityScanStorage {
     }
     return massListIntensityValues.getAtIndex(ValueLayout.JAVA_DOUBLE,
         getMassListStorageOffset(mobilityScanIndex) + index);
+  }
+
+  public void setMassListMzValues(final double[] mzValues, int length,
+      @Nullable final MemoryMapStorage storage) {
+    if (massListMzValues == null) {
+      throw new IllegalStateException(
+          "Cannot set mobility scan mz values without them already being set.");
+    }
+    if (mzValues.length < length || length != getMassListTotalNumPoints()) {
+      throw new IllegalStateException("New mass list mz values differ in length");
+    }
+    massListMzValues = StorageUtils.storeValuesToDoubleBuffer(storage, mzValues, length);
   }
 
   public MassSpectrumType getSpectrumType() {

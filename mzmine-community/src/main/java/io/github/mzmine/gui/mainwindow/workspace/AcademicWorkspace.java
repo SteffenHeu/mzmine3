@@ -138,7 +138,8 @@ public final class AcademicWorkspace extends AbstractWorkspace {
 
     addModuleMenuItems(menu, "Spectra processing", MassDetectionModule.class,
         MobilityScanMergerModule.class, ShoulderPeaksFilterModule.class,
-        ScanSignalRemovalModule.class, MassCalibrationModule.class);
+        ScanSignalRemovalModule.class, MassCalibrationModule.class,
+        io.github.mzmine.modules.dataprocessing.masscalibration.MassCalibrationModule.class);
 
     addModuleMenuItems(menu, "Raw data filtering", ScanFiltersModule.class, CropFilterModule.class,
         AlignScansModule.class, ScanSmoothingModule.class,

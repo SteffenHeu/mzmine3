@@ -26,10 +26,14 @@
 package io.github.mzmine.parameters.dialogs;
 
 import io.github.mzmine.javafx.components.factories.FxButtons;
+import io.github.mzmine.javafx.components.factories.FxTextFlows;
+import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.javafx.util.FxIcons;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.dialogs.previewpane.AbstractPreviewPane;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -37,6 +41,8 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.TextAlignment;
+import javafx.scene.text.TextFlow;
 import org.jetbrains.annotations.NotNull;
 
 public class ParameterDialogWithPreviewPanes extends ParameterSetupDialogWithPreview {
@@ -45,6 +51,7 @@ public class ParameterDialogWithPreviewPanes extends ParameterSetupDialogWithPre
   private final VBox vbox = FxLayout.newVBox(Pos.TOP_CENTER, Insets.EMPTY, true);
   @NotNull
   private final Function<ParameterSet, AbstractPreviewPane<?>> createNewPreview;
+  private final TextFlow errorMessages = FxTextFlows.newTextFlow(TextAlignment.LEFT);
 
   public ParameterDialogWithPreviewPanes(boolean valueCheckRequired, ParameterSet parameters,
       Region message, @NotNull Function<ParameterSet, AbstractPreviewPane<?>> createNewPreview,
@@ -80,6 +87,14 @@ public class ParameterDialogWithPreviewPanes extends ParameterSetupDialogWithPre
   @Override
   protected void parametersChanged() {
     super.parametersChanged();
+
+    List<String> errors = new ArrayList<>();
+    if (!parameterSet.checkParameterValues(errors, true)) {
+      errorMessages.getChildren()
+          .addAll(errors.stream().map(content -> FxTexts.text(content + "\n")).toList());
+    } else {
+      errorMessages.getChildren().clear();
+    }
     updatePreview();
   }
 
