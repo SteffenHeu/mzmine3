@@ -23,23 +23,33 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.dataprocessing.masscalibration.methods.standards;
+package io.github.mzmine.modules.dataprocessing.masscalibration.methods.standards.errormodel;
+
+import io.github.mzmine.parameters.ParameterSet;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
- * Bias-estimation choices for the internal-standards method. Mirrors the legacy
- * {@code BiasEstimationChoice} and adds {@link #AUTO}, which tries all three existing functions and
- * keeps the one with the lowest residual.
+ * Error model: K-nearest-neighbor regression of the m/z error over m/z.
  */
-public enum InternalStandardsBiasMethod {
-  ARITHMETIC_MEAN, KNN_REGRESSION, OLS_REGRESSION, AUTO;
+public class KnnErrorModelModule implements MzErrorModelModule {
+
+  public KnnErrorModelModule() {
+  }
 
   @Override
-  public String toString() {
-    return switch (this) {
-      case ARITHMETIC_MEAN -> "Arithmetic mean";
-      case KNN_REGRESSION -> "KNN regression";
-      case OLS_REGRESSION -> "OLS regression";
-      case AUTO -> "Auto (lowest residual)";
-    };
+  public MzErrorModel fit(@Nullable ParameterSet params, double[] mz, double[] deltaMz) {
+    final double percentage = params.getValue(KnnErrorModelParameters.nearestNeighborsPercentage);
+    return MzErrorModelModule.knnModel(mz, deltaMz, percentage / 100.0);
+  }
+
+  @Override
+  public @NotNull String getName() {
+    return "KNN regression";
+  }
+
+  @Override
+  public @Nullable Class<? extends ParameterSet> getParameterSetClass() {
+    return KnnErrorModelParameters.class;
   }
 }

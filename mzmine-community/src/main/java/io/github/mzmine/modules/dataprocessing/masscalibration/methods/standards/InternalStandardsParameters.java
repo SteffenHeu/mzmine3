@@ -26,15 +26,14 @@
 package io.github.mzmine.modules.dataprocessing.masscalibration.methods.standards;
 
 import io.github.mzmine.modules.dataprocessing.masscalibration.api.CalibrantListSource;
-import io.github.mzmine.modules.dataprocessing.masscalibration.api.PolynomialMzErrorFit;
+import io.github.mzmine.modules.dataprocessing.masscalibration.methods.standards.errormodel.MzErrorModels;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
-import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
-import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithFileInputParameter;
 import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithFileInputValue;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileSelectionType;
+import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnumComboParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance.Unit;
@@ -62,21 +61,12 @@ public class InternalStandardsParameters extends SimpleParameterSet {
       "Candidate peaks below this intensity are ignored.", NumberFormat.getNumberInstance(), 0.0,
       0.0, null);
 
-  public static final ComboParameter<InternalStandardsBiasMethod> biasMethod = new ComboParameter<>(
-      "Calibration method",
-      "How the mass error trend is modeled. \"Auto\" tries all three and keeps the lowest-residual fit.",
-      InternalStandardsBiasMethod.values(), InternalStandardsBiasMethod.ARITHMETIC_MEAN);
-
-  public static final DoubleParameter nearestNeighborsPercentage = new DoubleParameter(
-      "KNN neighbors (%)", "Percentage of nearest neighbors used by the KNN regression.",
-      NumberFormat.getNumberInstance(), 10.0, 0.0, 100.0);
-
-  public static final IntegerParameter polynomialDegree = new IntegerParameter(
-      "OLS polynomial degree", "Polynomial degree used by the OLS regression.", 1, 0,
-      PolynomialMzErrorFit.MAX_UI_DEGREE);
+  public static final ModuleOptionsEnumComboParameter<MzErrorModels> errorModel =
+      new ModuleOptionsEnumComboParameter<>("Calibration method",
+          "How the mass-error trend is modeled. Each option shows only its own parameters; \"Auto\" "
+              + "tries all three and keeps the lowest-residual fit.", MzErrorModels.ARITHMETIC_MEAN);
 
   public InternalStandardsParameters() {
-    super(standardsList, mzTolerance, rtTolerance, minIntensity, biasMethod,
-        nearestNeighborsPercentage, polynomialDegree);
+    super(standardsList, mzTolerance, rtTolerance, minIntensity, errorModel);
   }
 }
