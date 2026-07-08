@@ -62,6 +62,7 @@ public class ParameterDialogWithPreviewPanes extends ParameterSetupDialogWithPre
     scroll.setFitToHeight(true);
     scroll.setContent(vbox);
     vbox.setFillWidth(true);
+    vbox.getChildren().add(errorMessages);
     if (allowMultiplePreviews) {
       previewWrapperPane.setBottom(
           FxButtons.createButton("Add preview", FxIcons.PLUS, "Add another preview", () -> {
@@ -89,11 +90,11 @@ public class ParameterDialogWithPreviewPanes extends ParameterSetupDialogWithPre
     super.parametersChanged();
 
     List<String> errors = new ArrayList<>();
+    errorMessages.getChildren().clear();
+    updateParameterSetFromComponents();
     if (!parameterSet.checkParameterValues(errors, true)) {
       errorMessages.getChildren()
           .addAll(errors.stream().map(content -> FxTexts.text(content + "\n")).toList());
-    } else {
-      errorMessages.getChildren().clear();
     }
     updatePreview();
   }
