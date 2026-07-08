@@ -137,13 +137,13 @@ public enum CalibrantListSource implements UniqueIdSupplier {
       case NaFormPos -> "Sodium Formate (+)";
       case NaFormNeg -> "Sodium Formate (-)";
       case NaFormPosNeg -> "Sodium formate (+/-)";
-      case AgilentTuneMix -> "Agilent Tune Mix (+/-) (Stow et al. Anal. Chem., 2017, 89, 9048-9055)";
-      case UNIVERSAL_1_POSITIVE -> "Universal calibrants 1 (positive)";
-      case UNIVERSAL_1_NEGATIVE -> "Universal calibrants 1 (negative)";
-      case UNIVERSAL_2_POSITIVE -> "Universal calibrants 2 (positive)";
-      case UNIVERSAL_2_NEGATIVE -> "Universal calibrants 2 (negative)";
-      case UNIVERSAL_MERGED_POSITIVE -> "Universal calibrants merged (positive)";
-      case UNIVERSAL_MERGED_NEGATIVE -> "Universal calibrants merged (negative)";
+      case AgilentTuneMix -> "Agilent Tune Mix (Stow et al.) (+/-)";
+      case UNIVERSAL_1_POSITIVE -> "Universal calibrants (Keller) (+)";
+      case UNIVERSAL_1_NEGATIVE -> "Universal calibrants (Keller) (-)";
+      case UNIVERSAL_2_POSITIVE -> "Universal calibrants (Hawkes) (+)";
+      case UNIVERSAL_2_NEGATIVE -> "Universal calibrants (Hawkes) (-)";
+      case UNIVERSAL_MERGED_POSITIVE -> "Universal calibrants merged (+)";
+      case UNIVERSAL_MERGED_NEGATIVE -> "Universal calibrants merged (-)";
     };
   }
 }

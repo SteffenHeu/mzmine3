@@ -25,6 +25,12 @@
 
 package io.github.mzmine.modules.dataprocessing.masscalibration;
 
+import static io.github.mzmine.javafx.components.factories.FxTexts.boldText;
+import static io.github.mzmine.javafx.components.factories.FxTexts.hyperlinkText;
+import static io.github.mzmine.javafx.components.factories.FxTexts.linebreak;
+import static io.github.mzmine.javafx.components.factories.FxTexts.text;
+
+import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.modules.dataprocessing.masscalibration.gui.MassCalibrationPreviewPane;
 import io.github.mzmine.parameters.dialogs.ParameterDialogWithPreviewPanes;
 import io.github.mzmine.parameters.dialogs.ParameterSetupDialog;
@@ -35,6 +41,8 @@ import io.github.mzmine.parameters.parametertypes.selectors.ScanSelectionParamet
 import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnumComboParameter;
 import io.github.mzmine.util.ExitCode;
 import javafx.application.Platform;
+import javafx.scene.layout.Region;
+import org.jetbrains.annotations.Nullable;
 
 public class MassCalibrationParameters extends SimpleParameterSet {
 
@@ -46,9 +54,9 @@ public class MassCalibrationParameters extends SimpleParameterSet {
           + "are corrected using the calibration at the closest available retention time.",
       ScanSelection.ALL_SCANS);
 
-  public static final ModuleOptionsEnumComboParameter<MzCalibrationMethods> calibrationMethod =
-      new ModuleOptionsEnumComboParameter<>("Calibration method",
-          "The mass-calibration strategy and its parameters.", MzCalibrationMethods.LOCKMASS);
+  public static final ModuleOptionsEnumComboParameter<MzCalibrationMethods> calibrationMethod = new ModuleOptionsEnumComboParameter<>(
+      "Calibration method", "The mass-calibration strategy and its parameters.",
+      MzCalibrationMethods.LOCKMASS);
 
   public MassCalibrationParameters() {
     super(dataFiles, scanSelection, calibrationMethod);
@@ -60,9 +68,21 @@ public class MassCalibrationParameters extends SimpleParameterSet {
     if (parameters == null || parameters.length == 0) {
       return ExitCode.OK;
     }
-    final ParameterSetupDialog dialog = new ParameterDialogWithPreviewPanes(valueCheckRequired, this,
-        MassCalibrationPreviewPane::new);
+    final ParameterSetupDialog dialog = new ParameterDialogWithPreviewPanes(valueCheckRequired,
+        this, MassCalibrationPreviewPane::new);
     dialog.showAndWait();
     return dialog.getExitCode();
+  }
+
+  @Override
+  public @Nullable Region getMessage() {
+    return FxTextFlows.newTextFlowInAccordion("Citation", text("When using the calibrant list "),
+        boldText("Agilent Tune mix"), text(" please cite "),
+        hyperlinkText("Stow et al. Anal. Chem., 2017, 89, 9048-9055",
+            "https://pubs.acs.org/doi/abs/10.1021/acs.analchem.7b01729"), text("."), linebreak(),
+        text(
+            "When using the contaminant calibration with the Universal calibrants list, please cite "),
+        hyperlinkText("Keller", "https://doi.org/10.1016/j.aca.2008.04.043"), text(" and/or "),
+        hyperlinkText("Hawkes", " https://doi.org/10.1002/lom3.10364"), text("."));
   }
 }
