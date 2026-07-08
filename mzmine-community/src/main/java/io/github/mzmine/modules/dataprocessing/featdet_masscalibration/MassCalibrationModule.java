@@ -39,7 +39,7 @@ import org.jetbrains.annotations.NotNull;
 
 public class MassCalibrationModule implements MZmineProcessingModule {
 
-  private static final String MODULE_NAME = "Mass calibration";
+  private static final String MODULE_NAME = "Mass calibration (legacy)";
   private static final String MODULE_DESCRIPTION =
       "This module estimates systematic error of measurement by analysing differences between actual mass peaks"
           + " and masses of assigned compounds, it then shifts the mass peaks to account against that bias.";
