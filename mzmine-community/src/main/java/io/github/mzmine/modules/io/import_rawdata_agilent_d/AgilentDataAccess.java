@@ -644,7 +644,8 @@ public class AgilentDataAccess implements AutoCloseable {
     QP("QuarternaryPump"), //
     CP("CapillaryPump"), //
     NP("NanoPump"), //
-    LFP("LowFlowPump"),
+    LFP("LowFlowPump"), //
+    UIB2("UIB2"), // "Universal interface box"
     ;
 
     /**
@@ -719,7 +720,7 @@ public class AgilentDataAccess implements AutoCloseable {
     @NotNull
     static AnalogUnit fromDevice(AnalogDevice device) {
       return switch (device) {
-        case TCC, ECD, NP, BP, QP, CP, LFP, IP, ELSD, FD -> UNKNOWN;
+        case TCC, ECD, NP, BP, QP, CP, LFP, IP, ELSD, FD, UIB2 -> UNKNOWN;
         case DAD, VWD, MWD -> ABSORBANCE;
         case FID -> PICO_AMPERE;
         case TCD -> TEMPERATURE;
