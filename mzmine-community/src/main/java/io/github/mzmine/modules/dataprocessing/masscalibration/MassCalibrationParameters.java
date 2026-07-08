@@ -69,7 +69,7 @@ public class MassCalibrationParameters extends SimpleParameterSet {
       return ExitCode.OK;
     }
     final ParameterSetupDialog dialog = new ParameterDialogWithPreviewPanes(valueCheckRequired,
-        this, MassCalibrationPreviewPane::new);
+        this, getMessage(), MassCalibrationPreviewPane::new, true);
     dialog.showAndWait();
     return dialog.getExitCode();
   }
@@ -78,11 +78,11 @@ public class MassCalibrationParameters extends SimpleParameterSet {
   public @Nullable Region getMessage() {
     return FxTextFlows.newTextFlowInAccordion("Citation", text("When using the calibrant list "),
         boldText("Agilent Tune mix"), text(" please cite "),
-        hyperlinkText("Stow et al. Anal. Chem., 2017, 89, 9048-9055",
-            "https://pubs.acs.org/doi/abs/10.1021/acs.analchem.7b01729"), text("."), linebreak(),
-        text(
-            "When using the contaminant calibration with the Universal calibrants list, please cite "),
-        hyperlinkText("Keller", "https://doi.org/10.1016/j.aca.2008.04.043"), text(" and/or "),
-        hyperlinkText("Hawkes", " https://doi.org/10.1002/lom3.10364"), text("."));
+        hyperlinkText("Stow et al.", "https://pubs.acs.org/doi/abs/10.1021/acs.analchem.7b01729"),
+        text("."), linebreak(), text("When using the contaminant calibration with the "),
+        boldText("Universal calibrants"), text(" list, please cite "),
+        hyperlinkText("Keller et. al.", "https://doi.org/10.1016/j.aca.2008.04.043"),
+        text(" and/or "), hyperlinkText("Hawkes et. al.", " https://doi.org/10.1002/lom3.10364"),
+        text("."));
   }
 }
