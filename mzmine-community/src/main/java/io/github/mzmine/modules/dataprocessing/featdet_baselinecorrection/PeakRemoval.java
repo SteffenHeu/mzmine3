@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -30,13 +31,9 @@ import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.Resolver;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.ResolvingDimension;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolver;
-import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.wavelet.AdvancedWaveletParameters;
-import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.wavelet.WaveletResolver;
-import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.wavelet.WaveletResolverParameters;
-import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.wavelet.WaveletResolverParameters.NoiseCalculation;
-import io.github.mzmine.modules.dataprocessing.filter_groupms2.GroupMS2SubParameters;
-import io.github.mzmine.parameters.parametertypes.OriginalFeatureListHandlingParameter.OriginalFeatureListOption;
-import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
+import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.mzioresolver.MzioResolvers;
+import io.github.mzmine.parameters.ParameterSet;
+import java.lang.reflect.InvocationTargetException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,13 +47,14 @@ public enum PeakRemoval implements UniqueIdSupplier {
           new MinimumSearchFeatureResolver(flist, ResolvingDimension.RETENTION_TIME, 0.5, 0.04,
               0.005, 1, 2.5, Range.closed(0d, 50d), 5);
       case WAVELET -> {
-        WaveletResolverParameters waveletResolverParameters = WaveletResolverParameters.create(
-            new FeatureListsSelection(flist), ResolvingDimension.RETENTION_TIME, false,
-            GroupMS2SubParameters.createDefault(), 5, "", OriginalFeatureListOption.KEEP, 1.3, null,
-            1, NoiseCalculation.STANDARD_DEVIATION, true, false,
-            AdvancedWaveletParameters.createLcDefault());
-
-        yield new WaveletResolver(flist, waveletResolverParameters);
+        try {
+          ParameterSet param = MzioResolvers.WAVELET.getDefaultBaselineCorrectionParameters(flist);
+          yield MzioResolvers.WAVELET.getResolverInstance(param, flist);
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException |
+                 NoSuchMethodException | InvocationTargetException e) {
+          throw new RuntimeException(
+              "Cannot instantiate WaveletResolver. This module is only available in mzio-authored versions of mzmine.");
+        }
       }
       default -> null;
     };
