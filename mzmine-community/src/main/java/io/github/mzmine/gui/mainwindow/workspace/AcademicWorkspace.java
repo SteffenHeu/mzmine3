@@ -56,6 +56,7 @@ import io.github.mzmine.modules.dataprocessing.filter_featurefilter.FeatureFilte
 import io.github.mzmine.modules.dataprocessing.filter_groupms2.GroupMS2Module;
 import io.github.mzmine.modules.dataprocessing.filter_groupms2_refine.GroupedMs2RefinementModule;
 import io.github.mzmine.modules.dataprocessing.filter_ims_msms_refinement.ImsMs2RefinementModule;
+import io.github.mzmine.modules.dataprocessing.filter_imstoraw.ImsToRawDataFileModule;
 import io.github.mzmine.modules.dataprocessing.filter_isotopefinder.IsotopeFinderModule;
 import io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule;
 import io.github.mzmine.modules.dataprocessing.filter_maldigroupms2.MaldiGroupMS2Module;
@@ -142,6 +143,7 @@ public final class AcademicWorkspace extends AbstractWorkspace {
 
     addModuleMenuItems(menu, "Raw data filtering", ScanFiltersModule.class, CropFilterModule.class,
         AlignScansModule.class, ScanSmoothingModule.class,
+        ImsToRawDataFileModule.class,
         DenormalizeScansMultiplyByInjectTimeModule.class, MaldiPseudoFileGeneratorModule.class);
 
     addSeparator(menu);
