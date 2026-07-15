@@ -76,6 +76,7 @@ import io.github.mzmine.modules.dataprocessing.filter_featurefilter.FeatureFilte
 import io.github.mzmine.modules.dataprocessing.filter_groupms2.GroupMS2Module;
 import io.github.mzmine.modules.dataprocessing.filter_groupms2_refine.GroupedMs2RefinementModule;
 import io.github.mzmine.modules.dataprocessing.filter_ims_msms_refinement.ImsMs2RefinementModule;
+import io.github.mzmine.modules.dataprocessing.filter_imstoraw.ImsToRawDataFileModule;
 import io.github.mzmine.modules.dataprocessing.filter_interestingfeaturefinder.AnnotateIsomersModule;
 import io.github.mzmine.modules.dataprocessing.filter_isotopefinder.IsotopeFinderModule;
 import io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule;
@@ -267,6 +268,7 @@ public class BatchModeModulesList {
           ScanSignalRemovalModule.class, //
           ScanFiltersModule.class, //
           ScanSmoothingModule.class, //
+          ImsToRawDataFileModule.class, //
           MaldiPseudoFileGeneratorModule.class, //
           DenormalizeScansMultiplyByInjectTimeModule.class, //
 

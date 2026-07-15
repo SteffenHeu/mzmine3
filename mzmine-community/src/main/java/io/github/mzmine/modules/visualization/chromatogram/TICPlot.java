@@ -39,6 +39,7 @@ import io.github.mzmine.gui.chartbasics.gui.javafx.model.PlotCursorUtils;
 import io.github.mzmine.gui.chartbasics.listener.ZoomHistory;
 import io.github.mzmine.gui.chartbasics.simplechart.PlotCursorPosition;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
+import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYSamplingLineRenderer;
 import io.github.mzmine.main.MZmineCore;
 import java.awt.Color;
 import java.awt.Paint;
@@ -369,17 +370,13 @@ public class TICPlot extends EChartViewer implements LabelColorMatch {
 
   public synchronized int addTICDataSet(final TICDataSet dataSet, Color lineColor,
       Color fillColor) {
-    try {
-      final TICPlotRenderer renderer = (TICPlotRenderer) defaultRenderer.clone();
-      renderer.setSeriesPaint(0, lineColor);
-      renderer.setSeriesFillPaint(0, fillColor);
-      renderer.setSeriesShape(0, DATA_POINT_SHAPE);
-      renderer.setDefaultItemLabelsVisible(labelsVisible == 1);
-      return addTICDataSet(dataSet, renderer);
-    } catch (CloneNotSupportedException e) {
-      logger.log(Level.WARNING, "Unable to clone renderer", e);
-    }
-    return -1;
+    //      final TICPlotRenderer renderer = (TICPlotRenderer) defaultRenderer.clone();
+    ColoredXYSamplingLineRenderer renderer = new ColoredXYSamplingLineRenderer();
+    renderer.setSeriesPaint(0, lineColor);
+    renderer.setSeriesFillPaint(0, fillColor);
+    renderer.setSeriesShape(0, DATA_POINT_SHAPE);
+    renderer.setDefaultItemLabelsVisible(labelsVisible == 1);
+    return addDataSetAndRenderer(dataSet, renderer);
   }
 
   /**
