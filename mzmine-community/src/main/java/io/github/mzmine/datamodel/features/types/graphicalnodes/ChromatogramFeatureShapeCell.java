@@ -33,13 +33,16 @@ import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.types.modifiers.GraphicalColumType;
 import io.github.mzmine.gui.chartbasics.simplechart.SimpleXYChart;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.ColoredXYDataset;
+import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.series.IonTimeSeriesToXYProvider;
+import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYSamplingLineRenderer;
 import io.github.mzmine.gui.preferences.UnitFormat;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.util.MathUtils;
 import io.github.mzmine.util.RangeUtils;
 import java.util.ArrayList;
+import java.util.List;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.Range;
@@ -84,7 +87,7 @@ public class ChromatogramFeatureShapeCell extends ChartCell<SimpleXYChart<?>> {
 
     //
     final int size = row.getFilesFeatures().size();
-    ArrayList<ColoredXYDataset> datasets = new ArrayList<>(size);
+    List<DatasetAndRenderer> datasets = new ArrayList<>(size);
     for (ModularFeature f : row.getFeatures()) {
       if (f.getRawDataFile() instanceof ImagingRawDataFile) {
         continue;
@@ -100,7 +103,7 @@ public class ChromatogramFeatureShapeCell extends ChartCell<SimpleXYChart<?>> {
         // therefore no need for caching and other thread
         ColoredXYDataset dataset = new ColoredXYDataset(new IonTimeSeriesToXYProvider(f),
             RunOption.THIS_THREAD);
-        datasets.add(dataset);
+        datasets.add(new DatasetAndRenderer(dataset, new ColoredXYSamplingLineRenderer()));
       }
     }
 
@@ -115,7 +118,7 @@ public class ChromatogramFeatureShapeCell extends ChartCell<SimpleXYChart<?>> {
 
     final double finalMaxHeight = maxHeight * 1.2;
     getChart().applyWithNotifyChanges(false, true, () -> {
-      getChart().setDatasets(datasets);
+      getChart().setDatasetsAndRenderers(datasets);
 
       final XYPlot xyplot = getChart().getXYPlot();
       xyplot.getRangeAxis().setRange(new Range(0, finalMaxHeight), true, false);

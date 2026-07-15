@@ -345,7 +345,8 @@ public class SimpleXYChart<T extends PlotXYDataProvider> extends EChartViewer im
   public void setDatasetsAndRenderers(@NotNull List<@NotNull DatasetAndRenderer> datasets) {
     final List<ColoredXYDataset> data = datasets.stream().map(DatasetAndRenderer::dataset).toList();
     final List<XYItemRenderer> renderers = datasets.stream().map(DatasetAndRenderer::renderer)
-        .map(r -> r != null ? r : defaultRenderer.get()).map(this::prepareRenderer).toList();
+        .map(r -> r != null ? prepareRenderer(r) : defaultRenderer.get()).map(this::prepareRenderer)
+        .toList();
 
     plot.setDatasets(data, renderers);
   }

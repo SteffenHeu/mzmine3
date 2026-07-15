@@ -25,12 +25,11 @@
 
 package io.github.mzmine.modules.dataprocessing.filter_imstoraw;
 
-import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
-import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
+import io.github.mzmine.parameters.parametertypes.PercentParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelectionParameter;
 import org.jetbrains.annotations.NotNull;
@@ -45,15 +44,13 @@ public class ImsToRawDataFileParameters extends SimpleParameterSet {
       "Mobility scans to merge", "The number of consecutive mobility scans to sum into one scan. "
       + "Groups continue across frame boundaries.", 1, 1, Integer.MAX_VALUE);
 
-  public static final DoubleParameter maxTicRsdDeviation = new DoubleParameter(
+  public static final PercentParameter maxTicRsdDeviation = new PercentParameter(
       "Maximum low TIC deviation (RSD)",
       "Removes merged scans whose TIC is more than this number of relative standard deviations "
-          + "(RSDs) below the mean TIC. High-TIC scans are not removed.",
-      MZmineCore.getConfiguration().getScoreFormat(), 3d, 0d, Double.MAX_VALUE);
+          + "(RSDs) below the mean TIC. High-TIC scans are not removed.", 3d, 0d, Double.MAX_VALUE);
 
   public ImsToRawDataFileParameters() {
-    super(new Parameter[]{rawDataFiles, scanSelection, mobilityScansToMerge,
-        maxTicRsdDeviation});
+    super(new Parameter[]{rawDataFiles, scanSelection, mobilityScansToMerge, maxTicRsdDeviation});
   }
 
   @Override
