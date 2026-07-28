@@ -186,14 +186,12 @@ public class InternalStandardsCalibrationModule implements MzCalibrationMethod {
     additionalData.add(new AnyXYProvider(java.awt.Color.GRAY, "standard error (m/z)", mz.length,
         i -> mz[i], i -> delta[i]));
 
-    double min = Double.POSITIVE_INFINITY;
     double max = Double.NEGATIVE_INFINITY;
     for (double m : mz) {
-      min = Math.min(min, m);
       max = Math.max(max, m);
     }
-    final double lo = min;
-    final double hi = max;
+    final double lo = 0;
+    final double hi = max * 1.3;
     final int steps = 200;
     // fitted model as absolute error Δ(mz) = measured - calibrated (RT-independent)
     additionalData.add(new AnyXYProvider(java.awt.Color.RED, "fit (m/z)", steps,

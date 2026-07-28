@@ -33,19 +33,21 @@ import io.github.mzmine.datamodel.data_access.EfficientDataAccess.ScanDataType;
 import io.github.mzmine.datamodel.data_access.ScanDataAccess;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.PlotXYDataProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.AnyXYProvider;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.masscalibration.api.MzCalibrationFunction;
 import io.github.mzmine.modules.dataprocessing.masscalibration.api.MzCalibrationMethod;
 import io.github.mzmine.modules.dataprocessing.masscalibration.api.PolynomialMzErrorFit;
+import io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.MovingAverage;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.color.SimpleColorPalette;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
-import org.apache.commons.math3.analysis.interpolation.LoessInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialFunction;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.jetbrains.annotations.NotNull;
@@ -55,7 +57,8 @@ import org.jetbrains.annotations.Nullable;
  * Lockmass calibration: a reference ion present in (most) MS1 scans is located in each spectrum and
  * used to derive a per-spectrum ppm correction. With multiple lockmasses the correction is a
  * polynomial of measured m/z; the polynomial coefficients are then smoothed over retention time
- * (LOESS) so single-spectrum outliers and missing spectra are handled robustly.
+ * with a centered moving average (over a configurable number of lockmass spectra) so
+ * single-spectrum outliers and missing spectra are handled robustly.
  */
 public class LockmassCalibrationModule implements MzCalibrationMethod {
 
@@ -65,7 +68,7 @@ public class LockmassCalibrationModule implements MzCalibrationMethod {
   private final double[] lockmasses;
   private final MZTolerance mzTolerance;
   private final double minIntensity;
-  private final double bandwidth;
+  private final int movingAverageScans;
   private final int degreeOption;
   private final List<PlotXYDataProvider> additionalData = new ArrayList<>();
 
@@ -78,7 +81,7 @@ public class LockmassCalibrationModule implements MzCalibrationMethod {
     this.lockmasses = new double[0];
     this.mzTolerance = null;
     this.minIntensity = 0;
-    this.bandwidth = LoessInterpolator.DEFAULT_BANDWIDTH;
+    this.movingAverageScans = 5;
     this.degreeOption = PolynomialMzErrorFit.AUTO_DEGREE;
   }
 
@@ -88,7 +91,7 @@ public class LockmassCalibrationModule implements MzCalibrationMethod {
         parameters.getValue(LockmassCalibrationParameters.lockmass));
     this.mzTolerance = parameters.getValue(LockmassCalibrationParameters.mzTolerance);
     this.minIntensity = parameters.getValue(LockmassCalibrationParameters.minIntensity);
-    this.bandwidth = parameters.getValue(LockmassCalibrationParameters.loessBandwidth);
+    this.movingAverageScans = parameters.getValue(LockmassCalibrationParameters.movingAverageScans);
     this.degreeOption = PolynomialMzErrorFit.parseDegree(
         parameters.getValue(LockmassCalibrationParameters.polynomialDegree));
   }
@@ -173,10 +176,11 @@ public class LockmassCalibrationModule implements MzCalibrationMethod {
     final double minRt = rts[0];
     final double maxRt = rts[rts.length - 1];
 
-    // 4) build per-coefficient RT functions (LOESS-smoothed) or constant fallback
-    final LockmassCalibrationFunction function = buildFunction(fitDegree, merged, rts, minRt, maxRt);
+    // 4) build per-coefficient RT functions (moving-average-smoothed) or constant fallback
+    final LockmassCalibrationFunction function = buildFunction(fitDegree, merged, rts, minRt,
+        maxRt);
 
-    buildPreview(anchors, function);
+    buildPreview(anchors, function, fitDegree);
     return function;
   }
 
@@ -283,17 +287,21 @@ public class LockmassCalibrationModule implements MzCalibrationMethod {
       return new LockmassCalibrationFunction(degree, constant, minMz, maxMz, desc);
     }
 
+    // smooth each polynomial coefficient over retention time with a centered moving average, then
+    // interpolate linearly between anchors for lookup at arbitrary RT
     final PolynomialSplineFunction[] splines = new PolynomialSplineFunction[nCoeff];
-    final boolean useLoess = merged.size() >= 4;
-    double actualBandwidth = Math.max(bandwidth, 2d / rts.length);
+    int window = movingAverageScans;
+    if (window % 2 == 0) {
+      window++; // MovingAverage requires an odd window; normalize once to avoid repeated warnings
+    }
+    final boolean smooth = window > 1;
     for (int k = 0; k < nCoeff; k++) {
       final double[] coeff = new double[merged.size()];
       for (int i = 0; i < merged.size(); i++) {
         coeff[i] = merged.get(i)[k + 1];
       }
-      splines[k] = useLoess ? new LoessInterpolator(actualBandwidth,
-          LoessInterpolator.DEFAULT_ROBUSTNESS_ITERS).interpolate(rts, coeff)
-          : new LinearInterpolator().interpolate(rts, coeff);
+      final double[] smoothed = smooth ? MovingAverage.calculate(coeff, window) : coeff;
+      splines[k] = new LinearInterpolator().interpolate(rts, smoothed);
     }
     return new LockmassCalibrationFunction(degree, splines, minRt, maxRt, minMz, maxMz, desc);
   }
@@ -330,14 +338,17 @@ public class LockmassCalibrationModule implements MzCalibrationMethod {
     return merged;
   }
 
-  private void buildPreview(List<SpectrumAnchor> anchors, LockmassCalibrationFunction function) {
-    final double refMz = lockmasses[0];
-    // observed absolute m/z error at the reference lockmass per spectrum
+  private void buildPreview(List<SpectrumAnchor> anchors, LockmassCalibrationFunction function,
+      int fitDegree) {
+    // scatter: the absolute m/z error of every matched lockmass, but only from scans that had
+    // enough lockmasses for the polynomial degree (i.e. the scans that actually fed the fit)
     final List<double[]> observed = new ArrayList<>(); // [rt, deltaMz]
     for (SpectrumAnchor a : anchors) {
-      final double delta = a.deltaAtClosest(refMz);
-      if (!Double.isNaN(delta)) {
-        observed.add(new double[]{a.rt(), delta});
+      if (a.size() < fitDegree + 1) {
+        continue;
+      }
+      for (int i = 0; i < a.size(); i++) {
+        observed.add(new double[]{a.rt(), a.deltaMz()[i]});
       }
     }
     observed.sort((x, y) -> Double.compare(x[0], y[0]));
@@ -345,13 +356,18 @@ public class LockmassCalibrationModule implements MzCalibrationMethod {
     additionalData.add(new AnyXYProvider(Color.GRAY, "lockmass shift (m/z)", observed.size(),
         i -> observed.get(i)[0], i -> observed.get(i)[1]));
 
+    final SimpleColorPalette colors = ConfigService.getDefaultColorPalette().clone(true);
     if (!observed.isEmpty()) {
-      final double min = observed.get(0)[0];
-      final double max = observed.get(observed.size() - 1)[0];
+      final double min = observed.getFirst()[0];
+      final double max = observed.getLast()[0];
       final int steps = 200;
-      additionalData.add(new AnyXYProvider(Color.RED, "smoothed correction (m/z)", steps,
-          i -> min + (max - min) * i / (steps - 1),
-          i -> function.modeledDeltaMz(refMz, (float) (min + (max - min) * i / (steps - 1)))));
+      // one smoothed model line per lockmass so each calibrant's points have a matching curve
+      for (final double lockmass : lockmasses) {
+        additionalData.add(new AnyXYProvider(colors.getNextColorAWT(),
+            "smoothed correction (m/z) @%.4f".formatted(lockmass), steps,
+            i -> min + (max - min) * i / (steps - 1),
+            i -> function.modeledDeltaMz(lockmass, (float) (min + (max - min) * i / (steps - 1)))));
+      }
     }
   }
 
@@ -363,23 +379,6 @@ public class LockmassCalibrationModule implements MzCalibrationMethod {
 
     int size() {
       return mz.length;
-    }
-
-    /**
-     * @return the absolute m/z error of the lockmass whose m/z is closest to {@code targetMz}, or
-     * NaN if none.
-     */
-    double deltaAtClosest(double targetMz) {
-      double best = Double.NaN;
-      double bestDist = Double.POSITIVE_INFINITY;
-      for (int i = 0; i < mz.length; i++) {
-        final double dist = Math.abs(mz[i] - targetMz);
-        if (dist < bestDist) {
-          bestDist = dist;
-          best = deltaMz[i];
-        }
-      }
-      return best;
     }
   }
 }

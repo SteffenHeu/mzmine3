@@ -190,25 +190,28 @@ public class CalibrationSegmentModule implements MzCalibrationMethod {
 
     final String desc = "Calibration segment (degree %d, %d calibrant matches)".formatted(degree,
         mz.length);
-    buildPreview(mz, delta, poly);
-    return new SegmentCalibrationFunction(poly, minMz, maxMz, desc);
+    SegmentCalibrationFunction calibration = new SegmentCalibrationFunction(poly, minMz, maxMz,
+        desc);
+    buildPreview(mz, delta, calibration);
+    return calibration;
   }
 
-  private void buildPreview(double[] mz, double[] delta, PolynomialFunction poly) {
+  private void buildPreview(double[] mz, double[] delta, SegmentCalibrationFunction cali) {
     additionalData.add(
         new AnyXYProvider(java.awt.Color.GRAY, "calibrant error (m/z)", mz.length, i -> mz[i],
             i -> delta[i]));
 
-    double min = Double.POSITIVE_INFINITY;
     double max = Double.NEGATIVE_INFINITY;
     for (double m : mz) {
-      min = Math.min(min, m);
       max = Math.max(max, m);
     }
-    final double lo = min;
-    final double hi = max;
+    final double lo = 0;
+    final double hi = max * 1.3;
     final int steps = 200;
     additionalData.add(new AnyXYProvider(java.awt.Color.RED, "fit (m/z)", steps,
-        i -> lo + (hi - lo) * i / (steps - 1), i -> poly.value(lo + (hi - lo) * i / (steps - 1))));
+        i -> lo + (hi - lo) * i / (steps - 1), i -> {
+      final double x = lo + (hi - lo) * i / (steps - 1);
+      return x - cali.getCalibratedMz(x, 0);
+    }));
   }
 }

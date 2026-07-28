@@ -93,9 +93,13 @@ public class MassCalibrationPreviewPane extends AbstractPreviewPane<RawDataFile>
   @Override
   public void updateChart(@NotNull List<DatasetAndRenderer> datasets,
       @NotNull SimpleXYChart<? extends PlotXYDataProvider> chart) {
+
+    MzCalibrationMethods method = parameters.getParameter(
+        MassCalibrationParameters.calibrationMethod).getValue();
     chart.applyWithNotifyChanges(false, () -> {
       chart.removeAllDatasets();
       datasets.forEach(dsr -> chart.addDataset(dsr.dataset(), dsr.renderer()));
+      chart.setDomainAxisLabel(method.getDomainAxisLabel());
     });
   }
 

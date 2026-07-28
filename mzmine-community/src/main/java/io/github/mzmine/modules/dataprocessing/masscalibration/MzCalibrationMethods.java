@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.dataprocessing.masscalibration;
 
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.masscalibration.api.MzCalibrationMethod;
 import io.github.mzmine.modules.dataprocessing.masscalibration.methods.lockmass.LockmassCalibrationModule;
 import io.github.mzmine.modules.dataprocessing.masscalibration.methods.segment.CalibrationSegmentModule;
@@ -64,6 +65,13 @@ public enum MzCalibrationMethods implements ModuleOptionsEnum<MzCalibrationMetho
       case LOCKMASS -> "Lockmass";
       case CALIBRATION_SEGMENT -> "Calibration segment";
       case INTERNAL_STANDARDS -> "Internal standards / contaminants";
+    };
+  }
+
+  public String getDomainAxisLabel() {
+    return switch (this) {
+      case CALIBRATION_SEGMENT, INTERNAL_STANDARDS -> "m/z";
+      case LOCKMASS -> ConfigService.getGuiFormats().unit("Retention time", "min");
     };
   }
 }

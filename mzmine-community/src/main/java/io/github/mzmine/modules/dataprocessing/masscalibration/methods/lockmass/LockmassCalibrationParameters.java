@@ -29,6 +29,7 @@ import io.github.mzmine.modules.dataprocessing.masscalibration.api.PolynomialMzE
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
+import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.StringParameter;
 import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithStringInputParameter;
 import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithStringInputValue;
@@ -56,10 +57,11 @@ public class LockmassCalibrationParameters extends SimpleParameterSet {
       "Lockmass candidate peaks below this intensity are ignored.",
       NumberFormat.getNumberInstance(), 0.0, 0.0, null);
 
-  public static final DoubleParameter loessBandwidth = new DoubleParameter("RT smoothing bandwidth",
-      "LOESS bandwidth (fraction of spectra, 0-1) used to smooth the per-spectrum correction over "
-          + "retention time. Larger values are more robust to single-spectrum outliers.",
-      NumberFormat.getNumberInstance(), 0.3, 0.01, 1.0);
+  public static final IntegerParameter movingAverageScans = new IntegerParameter(
+      "RT smoothing (scans)",
+      "Number of lockmass spectra averaged (centered moving average) to smooth the per-spectrum "
+          + "correction over retention time. Larger values are more robust to single-spectrum "
+          + "outliers; 1 disables smoothing.", 5, 1, null);
 
   public static final ComboParameter<String> polynomialDegree = new ComboParameter<>(
       "Polynomial degree",
@@ -69,7 +71,7 @@ public class LockmassCalibrationParameters extends SimpleParameterSet {
       PolynomialMzErrorFit.AUTO_LABEL);
 
   public LockmassCalibrationParameters() {
-    super(lockmass, mzTolerance, minIntensity, loessBandwidth, polynomialDegree);
+    super(lockmass, mzTolerance, minIntensity, movingAverageScans, polynomialDegree);
   }
 
   /**
