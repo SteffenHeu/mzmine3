@@ -106,6 +106,10 @@ final class ShimadzuProtocol {
   // Request builders
   // -------------------------------------------------------------------------
 
+  static String preflightRequest() {
+    return "{\"op\":\"preflight\"}";
+  }
+
   static String openRequest(String absolutePath) {
     return "{\"op\":\"open\",\"path\":" + jsonString(absolutePath) + "}";
   }
@@ -117,6 +121,22 @@ final class ShimadzuProtocol {
 
   static String metadataRequest() {
     return "{\"op\":\"metadata\"}";
+  }
+
+  static String listMrmTracesRequest() {
+    return "{\"op\":\"listMrmTraces\"}";
+  }
+
+  static String mrmTraceRequest(String traceId) {
+    return "{\"op\":\"mrmTrace\",\"traceId\":" + jsonString(traceId) + "}";
+  }
+
+  static String listAnalogTracesRequest() {
+    return "{\"op\":\"listAnalogTraces\"}";
+  }
+
+  static String analogTraceRequest(String traceId) {
+    return "{\"op\":\"analogTrace\",\"traceId\":" + jsonString(traceId) + "}";
   }
 
   static String closeRequest() {

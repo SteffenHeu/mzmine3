@@ -56,7 +56,7 @@ public record FilesToImport(@NotNull List<String> filePaths,
       MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, 500d, 200d, null, ScanSelection.MS1, false);
   private static final VendorImportParameters defaultVendorParam = VendorImportParameters.createDefault();
   private static VendorImportParameters vendorParamNoCentroid = VendorImportParameters.create(false,
-      VendorImportParameters.DEFAULT_WATERS_OPTION,
+      VendorImportParameters.DEFAULT_WATERS_OPTION, VendorImportParameters.DEFAULT_SHIMADZU_OPTION,
       VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
       WatersLockmassParameters.createDefault(),
       VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS);

@@ -25,25 +25,19 @@
 
 package io.github.mzmine.modules.io.import_rawdata_shimadzu;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.MZmineProject;
-import io.github.mzmine.datamodel.MassSpectrumType;
-import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.RawDataImportTask;
-import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
-import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
-import io.github.mzmine.datamodel.impl.SimpleScan;
-import io.github.mzmine.datamodel.impl.builders.SimpleBuildingScan;
-import io.github.mzmine.datamodel.msms.ActivationMethod;
-import io.github.mzmine.datamodel.msms.DDAMsMsInfo;
+import io.github.mzmine.datamodel.otherdetectors.OtherDataFile;
+import io.github.mzmine.datamodel.otherdetectors.OtherDataFileImpl;
+import io.github.mzmine.datamodel.otherdetectors.OtherFeature;
+import io.github.mzmine.datamodel.otherdetectors.OtherTimeSeriesDataImpl;
 import io.github.mzmine.gui.preferences.VendorImportParameters;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.ScanImportProcessorConfig;
-import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.SimpleSpectralArrays;
+import io.github.mzmine.modules.io.import_rawdata_mzml.msdk.data.ChromatogramType;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.taskcontrol.AbstractTask;
@@ -52,15 +46,23 @@ import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Imports a Shimadzu LabSolutions {@code .lcd} (LC-MS) or {@code .qgd} (GC-MS) file via the
- * external {@code ShimadzuBridge.exe} child process.
+ * Imports a Shimadzu LabSolutions {@code .lcd} (LC-MS) or {@code .qgd} (GC-MS) file via the external
+ * {@code ShimadzuBridge.exe} child process.
+ * <p>
+ * A file can independently hold mass spectra, MRM/SIM transitions, and non-MS detector channels, so
+ * the three are imported through three separate passes driven by the capabilities the bridge reports
+ * from {@code open}. An MRM-only file yields no spectra at all — its vendor "scans" are acquisition
+ * cycles, and importing them as spectra would produce thousands of meaningless one-peak MS² scans.
  */
 public class ShimadzuImportTask extends AbstractTask implements RawDataImportTask {
 
@@ -77,8 +79,8 @@ public class ShimadzuImportTask extends AbstractTask implements RawDataImportTas
   private final ScanImportProcessorConfig processor;
   private final boolean centroid;
 
-  private int totalScans = 0;
-  private int loadedScans = 0;
+  private int totalItems = 0;
+  private int loadedItems = 0;
   private RawDataFileImpl dataFile;
 
   public ShimadzuImportTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
@@ -97,48 +99,59 @@ public class ShimadzuImportTask extends AbstractTask implements RawDataImportTas
 
   @Override
   public String getTaskDescription() {
-    return "Importing Shimadzu raw data file %s. Scan %d/%d".formatted(file.getName(), loadedScans,
-        totalScans);
+    return "Importing Shimadzu raw data file %s. Item %d/%d".formatted(file.getName(), loadedItems,
+        totalItems);
   }
 
   @Override
   public double getFinishedPercentage() {
-    return totalScans == 0 ? 0d : loadedScans / (double) totalScans;
+    return totalItems == 0 ? 0d : loadedItems / (double) totalItems;
   }
 
   @Override
   public void run() {
     setStatus(TaskStatus.PROCESSING);
 
-    try (ShimadzuBridgeProcess bridge = new ShimadzuBridgeProcess()) {
-      final ShimadzuProtocol p = bridge.protocol();
+    try (ShimadzuDataAccess access = new ShimadzuDataAccess(file, storage)) {
+      final ShimadzuCapabilities caps = access.capabilities();
+      totalItems = caps.expectedSpectra() + caps.mrmTraceCount() + caps.analogTraceCount();
 
-      // open
-      p.send(ShimadzuProtocol.openRequest(file.getAbsolutePath()));
-      final JsonNode openResp = p.readHeader();
-      if (!openResp.path("ok").asBoolean(false)) {
-        error("ShimadzuBridge open failed: " + openResp.path("error").asText("unknown"));
+      if (!caps.hasMassSpectra() && !caps.hasMrmTraces() && !caps.hasAnalogTraces()) {
+        // Nothing readable at all. Finish with an empty file rather than failing,
+        // matching the other vendor importers, but make the reason visible.
+        logger.warning(
+            "Shimadzu file %s reports no mass spectra, no transitions and no analog channels (%d vendor scans)".formatted(
+                file.getName(), caps.vendorScanCount()));
+      }
+
+      // The raw data file has to exist before any other-detector file can attach
+      // to it, so create it even when the file holds only traces.
+      dataFile = access.createDataFile();
+
+      if (caps.hasMassSpectra()) {
+        readScans(access, caps);
+      } else if (caps.vendorScanCount() > 0) {
+        logger.info(
+            "Skipping the spectrum pass for %s: its %d vendor scans are %s acquisition cycles, imported as transitions instead".formatted(
+                file.getName(), caps.vendorScanCount(), caps.mrmState()));
+      }
+
+      if (isCanceled()) {
         return;
       }
-      totalScans = openResp.path("scanCount").asInt(0);
-      if (totalScans <= 0) {
-        // No scans in the file; finish with an empty data file rather than
-        // failing — matches the behaviour of the other vendor importers.
-        logger.warning("Shimadzu file has zero scans: " + file.getAbsolutePath());
+
+      final List<OtherDataFile> otherFiles = new ArrayList<>();
+      if (caps.hasMrmTraces()) {
+        addIfPresent(otherFiles, readMrmTraces(access));
       }
-
-      dataFile = new RawDataFileImpl(file.getName(), file.getAbsolutePath(), storage);
-
-      if (totalScans > 0) {
-        readAllScans(p, dataFile, !centroid);
+      if (isCanceled()) {
+        return;
       }
-
-      // close + shutdown handled by try-with-resources -> bridge.close()
-      try {
-        p.send(ShimadzuProtocol.closeRequest());
-        p.readHeader();
-      } catch (IOException ignored) {
-        // bridge will be torn down anyway
+      if (caps.hasAnalogTraces()) {
+        otherFiles.addAll(readAnalogTraces(access));
+      }
+      if (!otherFiles.isEmpty()) {
+        dataFile.addOtherDataFiles(otherFiles);
       }
 
       if (isCanceled()) {
@@ -157,166 +170,172 @@ public class ShimadzuImportTask extends AbstractTask implements RawDataImportTas
     }
   }
 
-  private void readAllScans(ShimadzuProtocol p, RawDataFileImpl out, boolean profile)
+  // ---------------------------------------------------------------------------
+  // Mass spectra
+  // ---------------------------------------------------------------------------
+
+  private void readScans(@NotNull ShimadzuDataAccess access, @NotNull ShimadzuCapabilities caps)
       throws IOException {
-    // SDK scan numbers are 1-based; the wire mirrors that.
-    p.send(ShimadzuProtocol.scanRangeRequest(1, totalScans, profile));
-    final JsonNode outer = p.readHeader();
-    if (!outer.path("ok").asBoolean(false)) {
-      throw new IOException("scanRange failed: " + outer.path("error").asText("unknown"));
+    final var result = access.readAllScans(dataFile, processor, !centroid, dataFile::addScan,
+        () -> loadedItems++, this::isCanceled);
+
+    if (result.skippedTargeted() > 0) {
+      logger.info("Shimadzu %s: skipped %d MRM/SIM acquisition cycle(s) in the spectrum pass".formatted(
+          file.getName(), result.skippedTargeted()));
     }
-    final int count = outer.path("count").asInt(0);
-    if (count != totalScans) {
-      // Defensive — should never happen, but if it does we want to know rather
-      // than silently truncate or stall reading blobs.
-      logger.warning(
-          "ShimadzuBridge scanRange count (" + count + ") differs from open's scanCount ("
-              + totalScans + ")");
+    if (result.skippedFailed() > 0) {
+      logger.warning("Shimadzu %s: skipped %d scan(s) the SDK could not read".formatted(
+          file.getName(), result.skippedFailed()));
+    }
+    if (caps.spectraRequireFiltering()) {
+      logger.info(
+          "Shimadzu %s mixes spectral and targeted events; imported %d spectra of %d vendor scans".formatted(
+              file.getName(), result.imported(), caps.vendorScanCount()));
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // MRM / SIM transitions
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Import every transition as one trace in a single MRM/SRM other-data file. Returns null when
+   * nothing could be read.
+   */
+  private @Nullable OtherDataFile readMrmTraces(@NotNull ShimadzuDataAccess access)
+      throws IOException {
+    final var descriptors = access.listMrmTraces();
+    if (descriptors.isEmpty()) {
+      return null;
     }
 
-    int skippedFailedScans = 0;
+    final OtherDataFileImpl otherFile = new OtherDataFileImpl(dataFile);
+    otherFile.setDescription("MRM/SRM");
+    final OtherTimeSeriesDataImpl data = new OtherTimeSeriesDataImpl(otherFile);
+    data.setChromatogramType(ChromatogramType.MRM_SRM);
+    data.setTimeSeriesDomainLabel("RT");
+    data.setTimeSeriesDomainUnit("min");
+    data.setTimeSeriesRangeLabel("Intensity");
+    data.setTimeSeriesRangeUnit("a.u.");
+    otherFile.setOtherTimeSeriesData(data);
 
-    for (int i = 0; i < count; i++) {
+    int imported = 0;
+    for (var descriptor : descriptors) {
       if (isCanceled()) {
-        return;
+        return null;
       }
-
-      final JsonNode hdr = p.readHeader();
-      loadedScans++;
-
-      if (!hdr.path("ok").asBoolean(false)) {
-        // The bridge emits an {ok:false} header and NO binary blobs for an
-        // individual scan that failed to read (e.g. SDK returned E_FAIL for
-        // a corrupt frame). Skip it and keep importing — a single bad scan
-        // shouldn't kill a 10k-scan file.
-        skippedFailedScans++;
-        if (skippedFailedScans <= 5) {
-          logger.log(Level.WARNING, "Skipping scan #{0}: {1} ({2})",
-              new Object[]{i + 1, hdr.path("error").asText("unknown"),
-                  hdr.path("code").asText("?")});
-        }
-        continue;
+      final OtherFeature trace = access.readMrmTrace(descriptor, data);
+      loadedItems++;
+      if (trace != null) {
+        data.addRawTrace(trace);
+        imported++;
       }
-
-      final int nPeaks = hdr.path("nPeaks").asInt(0);
-      final double[] mz = p.readDoubles(nPeaks);
-      final double[] intensity = p.readDoubles(nPeaks);
-
-      // 'scanNo' on the wire is the SDK's 1-based scan number — same
-      // convention mzmine's SimpleScan uses, so pass through directly.
-      final int scanNumber = hdr.path("scanNo").asInt(0);
-      final int msLevel = hdr.path("msLevel").asInt(1);
-      final float rt = (float) hdr.path("rt").asDouble(0d);
-      final PolarityType polarity = parsePolarity(hdr.path("polarity").asText(""));
-      final boolean isProfile = hdr.path("profile").asBoolean(false);
-      final MassSpectrumType type =
-          isProfile ? MassSpectrumType.PROFILE : MassSpectrumType.CENTROIDED;
-
-      // The bridge zero-filters PrecursorMzList, so [0] is always a real
-      // precursor (or the array is omitted entirely for MS1).
-      final JsonNode precursors = hdr.path("precursorMz");
-      final double precursorMz =
-          (msLevel >= 2 && precursors.isArray() && precursors.size() > 0) ? precursors.get(0)
-                                                                            .asDouble(0d) : 0d;
-      final int charge = hdr.path("charge").asInt(0);
-
-      final SimpleBuildingScan metadataScan = new SimpleBuildingScan(scanNumber, msLevel, polarity,
-          type, rt, precursorMz, charge);
-
-      if (!processor.scanFilter().matches(metadataScan)) {
-        continue;
-      }
-
-      final SimpleSpectralArrays processed = processor.processor()
-          .processScan(metadataScan, new SimpleSpectralArrays(mz, intensity));
-
-      final MassSpectrumType finalType =
-          type == MassSpectrumType.CENTROIDED || processor.isMassDetectActive(msLevel)
-              ? MassSpectrumType.CENTROIDED : MassSpectrumType.PROFILE;
-
-      final DDAMsMsInfo msMs;
-      if (msLevel >= 2 && precursorMz > 0) {
-        // Bridge always emits collisionEnergy (primitive int on SDK side).
-        final float ce = (float) hdr.path("collisionEnergy").asDouble(0d);
-        final Range<Double> isolationWindow = buildIsolationWindow(hdr, precursorMz);
-        msMs = new DDAMsMsInfoImpl(precursorMz, charge > 0 ? charge : null, ce, null, null, msLevel,
-            ActivationMethod.UNKNOWN, isolationWindow);
-      } else {
-        msMs = null;
-      }
-
-      final String scanDefinition = buildScanDefinition(hdr);
-      final Scan scan = new SimpleScan(out, scanNumber, msLevel, rt, msMs, processed.mzs(),
-          processed.intensities(), finalType, polarity, scanDefinition, null);
-      out.addScan(scan);
     }
 
-    if (skippedFailedScans > 0) {
-      logger.warning("Shimadzu import: skipped " + skippedFailedScans
-          + " scan(s) the SDK could not read (first 5 logged above)");
+    if (imported == 0) {
+      logger.warning("Shimadzu %s declared %d transitions but none could be read".formatted(
+          file.getName(), descriptors.size()));
+      return null;
     }
+    logger.finest("Shimadzu %s: imported %d of %d transitions".formatted(file.getName(), imported,
+        descriptors.size()));
+    return otherFile;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Analog / non-MS channels
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Import analog channels grouped by unit, one other-data file per unit, mirroring how the Waters
+   * importer groups them. Values are stored exactly as the SDK reported them; no unit conversion is
+   * applied anywhere in this path.
+   */
+  private @NotNull List<OtherDataFile> readAnalogTraces(@NotNull ShimadzuDataAccess access)
+      throws IOException {
+    final var descriptors = access.listAnalogTraces();
+    if (descriptors.isEmpty()) {
+      return List.of();
+    }
+
+    // LinkedHashMap so the resulting other-files keep vendor enumeration order.
+    final Map<String, OtherTimeSeriesDataImpl> byUnit = new LinkedHashMap<>();
+    int imported = 0;
+
+    for (var descriptor : descriptors) {
+      if (isCanceled()) {
+        return List.of();
+      }
+
+      final String unit = descriptor.rawUnit() != null ? descriptor.rawUnit() : "";
+      final OtherTimeSeriesDataImpl data = byUnit.computeIfAbsent(unit,
+          u -> createAnalogData(descriptor, u));
+
+      final OtherFeature trace = access.readAnalogTrace(descriptor, data);
+      loadedItems++;
+      if (trace != null) {
+        data.addRawTrace(trace);
+        imported++;
+      }
+    }
+
+    logger.finest("Shimadzu %s: imported %d of %d analog channel(s) in %d unit group(s)".formatted(
+        file.getName(), imported, descriptors.size(), byUnit.size()));
+
+    return byUnit.values().stream().map(OtherTimeSeriesDataImpl::getOtherDataFile)
+        .filter(OtherDataFile::hasTimeSeries).map(OtherDataFile.class::cast).toList();
+  }
+
+  private @NotNull OtherTimeSeriesDataImpl createAnalogData(
+      @NotNull ShimadzuTraceDescriptors.Analog descriptor, @NotNull String unit) {
+    final OtherDataFileImpl otherFile = new OtherDataFileImpl(dataFile);
+    final OtherTimeSeriesDataImpl data = new OtherTimeSeriesDataImpl(otherFile);
+    otherFile.setOtherTimeSeriesData(data);
+    otherFile.setDescription(
+        unit.isEmpty() ? "Shimadzu analog" : "Shimadzu analog (%s)".formatted(unit));
+    data.setChromatogramType(chromatogramType(descriptor.signalType()));
+    data.setTimeSeriesDomainLabel("RT");
+    data.setTimeSeriesDomainUnit("min");
+    // The vendor's own unit string. The bridge applies no conversion, so this is
+    // the unit the stored values are labelled with — see the wrapper README on
+    // channels whose label and values disagree.
+    data.setTimeSeriesRangeUnit(unit);
+    data.setTimeSeriesRangeLabel(rangeLabel(descriptor.signalType()));
+    return data;
   }
 
   /**
-   * Build a useful {@code scanDefinition} string for {@link SimpleScan} from the bridge's per-scan
-   * header. mzmine uses scan definitions for sorting and display; combining
-   * segment/event/event-mode gives something descriptive for multi-segment Shimadzu acquisitions
-   * where many scans share the same retention time across different functions.
+   * Map the bridge's normalized signal class onto mzmine's chromatogram types. Classes mzmine has no
+   * equivalent for — temperature, pump composition — stay {@link ChromatogramType#UNKNOWN} rather
+   * than being forced into a wrong one; the description and unit still carry the vendor's meaning.
    */
-  /**
-   * Build the precursor isolation window from the bridge's {@code isolationWidth} (the full quad
-   * transmission width in m/z, centered on the precursor), or {@code null} when the bridge did not
-   * report a usable width for this scan.
-   */
-  @Nullable
-  private static Range<Double> buildIsolationWindow(@NotNull JsonNode hdr, double precursorMz) {
-    final JsonNode widthNode = hdr.path("isolationWidth");
-    if (widthNode.isMissingNode() || widthNode.isNull()) {
-      return null;
-    }
-    final double width = widthNode.asDouble(0d);
-    if (width <= 0) {
-      return null;
-    }
-    final double half = width / 2d;
-    return Range.closed(precursorMz - half, precursorMz + half);
+  private static @NotNull ChromatogramType chromatogramType(@NotNull String signalType) {
+    return switch (signalType) {
+      case "PRESSURE" -> ChromatogramType.PRESSURE;
+      case "FLOW" -> ChromatogramType.FLOW_RATE;
+      case "ABSORBANCE" -> ChromatogramType.ABSORPTION;
+      case "FLUORESCENCE" -> ChromatogramType.EMISSION;
+      default -> ChromatogramType.UNKNOWN;
+    };
   }
 
-  private static String buildScanDefinition(JsonNode hdr) {
-    final int seg = hdr.path("segmentNo").asInt(-1);
-    final int evt = hdr.path("eventNo").asInt(-1);
-    final String mode = hdr.path("eventMode").asText("");
-    final StringBuilder sb = new StringBuilder(32);
-    if (seg >= 0) {
-      sb.append("seg=").append(seg);
-    }
-    if (evt >= 0) {
-      if (sb.length() > 0) {
-        sb.append(' ');
-      }
-      sb.append("evt=").append(evt);
-    }
-    if (!mode.isEmpty()) {
-      if (sb.length() > 0) {
-        sb.append(' ');
-      }
-      sb.append("mode=").append(mode);
-    }
-    return sb.toString();
+  private static @NotNull String rangeLabel(@NotNull String signalType) {
+    return switch (signalType) {
+      case "PRESSURE" -> "Pressure";
+      case "FLOW" -> "Flow rate";
+      case "ABSORBANCE" -> "Absorbance";
+      case "FLUORESCENCE" -> "Intensity";
+      case "TEMPERATURE" -> "Temperature";
+      case "COMPOSITION" -> "Composition";
+      case "VOLTAGE" -> "Signal";
+      default -> "Value";
+    };
   }
 
-  private static PolarityType parsePolarity(String s) {
-    if (s == null || s.isEmpty()) {
-      return PolarityType.UNKNOWN;
+  private static void addIfPresent(@NotNull List<OtherDataFile> sink, @Nullable OtherDataFile f) {
+    if (f != null) {
+      sink.add(f);
     }
-    final String u = s.toUpperCase();
-    if (u.contains("POSITIVE") || u.equals("POS") || u.equals("+")) {
-      return PolarityType.POSITIVE;
-    }
-    if (u.contains("NEGATIVE") || u.equals("NEG") || u.equals("-")) {
-      return PolarityType.NEGATIVE;
-    }
-    return PolarityType.UNKNOWN;
   }
 
   @Override

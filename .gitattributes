@@ -13,3 +13,9 @@
 *.txt text
 *.bat text
 
+# Vendor raw data committed as test resources. These are OLE compound documents:
+# declaring them binary stops `* text=auto` from ever line-ending-normalizing
+# them, which would silently corrupt them in a fresh clone on another platform.
+*.lcd binary
+*.qgd binary
+

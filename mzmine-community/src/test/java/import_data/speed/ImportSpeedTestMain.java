@@ -138,7 +138,8 @@ public class ImportSpeedTestMain {
     }).toArray(File[]::new);
 
     ParameterSet paramDataImport = AllSpectralDataImportParameters.create(
-        VendorImportParameters.create(true, MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
+        VendorImportParameters.create(true, MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING,
+            VendorImportParameters.DEFAULT_SHIMADZU_OPTION, true,
             WatersLockmassParameters.createDefault(), true), files, null, null, advanced);
 
     logger.info("Testing data import of mzML and mzXML without advanced parameters");
