@@ -106,8 +106,9 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         .getValueWithParameters();
 
     minFragmentIntensity = switch (pregrouping.value()) {
-      case RT_CORRELATION -> parameters.getValue(DiaMs2RtCorrParameters.minMs2Intensity);
-      case NO_CORRELATION -> parameters.getValue(DiaMs2NoCorrParameters.minIntensity);
+      case RT_CORRELATION ->
+          pregrouping.parameters().getValue(DiaMs2RtCorrParameters.minMs2Intensity);
+      case NO_CORRELATION -> pregrouping.parameters().getValue(DiaMs2NoCorrParameters.minIntensity);
       case SLIDING_MZ -> throw new RuntimeException(
           "Select a valid pregrouping option, RT correlation or no correlation");
     };
