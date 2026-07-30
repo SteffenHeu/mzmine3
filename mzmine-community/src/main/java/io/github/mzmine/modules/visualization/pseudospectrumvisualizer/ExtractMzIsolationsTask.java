@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -75,8 +76,10 @@ public class ExtractMzIsolationsTask extends AbstractTaskSubSupplier<List<Datase
   public List<DatasetAndRenderer> get() {
 
     final boolean valid = switch (spectrum.getPseudoSpectrumType()) {
-      case LC_DIA, UNCORRELATED, MALDI_IMAGING, GC_EI -> false;
+      case UNCORRELATED, MALDI_IMAGING, GC_EI -> false;
       case SLIDING_MZ_NO_RT, SLIDING_MZ_RT_CORR -> true;
+      // todo - temporary workaround to also show q1 field for rt only decon in zt scan files
+      case LC_DIA -> spectrum.getDataFile().getName().toLowerCase().contains("zt");
     };
     if (!valid) {
       return List.of();
