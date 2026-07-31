@@ -142,6 +142,7 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
     }
 
     Map<@Nullable Range<Double>, List<Scan>> groupedByWindow = threeMs2Cycles.stream()
+        .filter(s -> s.getMsMsInfo() != null && s.getMsMsInfo().getIsolationWindow() != null)
         .collect(Collectors.groupingBy(s -> s.getMsMsInfo().getIsolationWindow()));
 
     var ms2Cycle = groupedByWindow.entrySet().stream().map(e -> {
