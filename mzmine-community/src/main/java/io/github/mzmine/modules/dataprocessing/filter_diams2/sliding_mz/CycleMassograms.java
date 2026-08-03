@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -37,9 +38,11 @@ import io.github.mzmine.datamodel.featuredata.impl.BuildingIonSeries;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.types.FeatureDataType;
+import io.github.mzmine.datamodel.impl.SimpleMergedMsMsSpectrum;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
+import io.github.mzmine.util.MathUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.RangeUtils;
 import io.github.mzmine.util.scans.ScanUtils;
@@ -48,6 +51,7 @@ import it.unimi.dsi.fastutil.doubles.Double2ObjectArrayMap;
 import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
@@ -71,7 +75,23 @@ public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float
 
 
   public CycleMassograms(@NotNull List<Scan> ms2Scans, ModularFeatureList dummyFlist) {
-
+    // after mzml conversion some isolation windows seem to be off. observed one 3 cycles where one cycle
+    // had 53 and two had 54 as isolation. afterwards all were the same. This algorithm needs data
+    // to be sorted in RT + isolation window
+    final int medianSourceSpectra = Math.toIntExact(Math.round(MathUtils.calcMedian(
+        ms2Scans.stream().filter(SimpleMergedMsMsSpectrum.class::isInstance)
+            .map(SimpleMergedMsMsSpectrum.class::cast).mapToDouble(s -> s.getSourceSpectra().size())
+            .toArray())));
+    // it should be safe to sort + drop since the cycles are not correlated to one another. each one is self-sufficient.
+    ms2Scans = ms2Scans.stream().sorted(
+            Comparator.comparingDouble(s -> s.getMsMsInfo().getIsolationWindow().lowerEndpoint()))
+        .filter(s -> {
+          if (s instanceof SimpleMergedMsMsSpectrum merged) {
+            return merged.getSourceSpectra().size() == medianSourceSpectra;
+          } else {
+            return true;
+          }
+        }).toList();
     final List<SimpleDoubleRange> isolationRanges = new ArrayList<>();
     final double[] isolationCenters = new double[ms2Scans.size()];
 
