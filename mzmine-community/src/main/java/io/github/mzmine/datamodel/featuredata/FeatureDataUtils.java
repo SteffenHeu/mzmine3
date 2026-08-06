@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -11,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -296,8 +298,8 @@ public class FeatureDataUtils {
       return 0f;
     }
     float area = 0f;
-    double lastIntensity = series.getIntensity(0);
-    float lastRT = series.getRetentionTime(0);
+    double lastIntensity = series.getIntensity(startInclusive);
+    float lastRT = series.getRetentionTime(startInclusive);
     for (int i = startInclusive + 1; i < endExclusive; i++) {
       final double thisIntensity = series.getIntensity(i);
       final float thisRT = series.getRetentionTime(i);
