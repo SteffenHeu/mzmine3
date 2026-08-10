@@ -67,10 +67,15 @@ import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.IntToDoubleFunction;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
@@ -79,6 +84,13 @@ import org.jetbrains.annotations.Nullable;
 public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
 
   private static final Logger logger = Logger.getLogger(DiaSlidingMzTask.class.getName());
+
+  // decision: use the validated 10 Da edge span for a 5 Da isolation window.
+  static final SlidingMzShapeAcceptanceMode SHAPE_ACCEPTANCE_MODE = SlidingMzShapeAcceptanceMode.TOP_TO_MAX_EDGE;
+  static final double SHAPE_EDGE_WINDOW_MULTIPLIER = 2d;
+  static final double MINIMUM_SHAPE_TOP_EDGE_RATIO = 2d;
+  static final int MINIMUM_SHAPE_CONSECUTIVE_POINTS = 5;
+  static final int SHAPE_ZERO_MARGIN_INDICES = 2;
 
   private final ModularFeatureList flist;
   private final DiaMs2CorrParameters mainParam;
@@ -91,10 +103,13 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
   private final MemoryMapStorage temp = MemoryMapStorage.forFeatureList();
   private final ModularFeatureList dummy;
   private final double minFragmentIntensity;
+  private final @NotNull String diagnosticConfiguration;
+  private final boolean logShapeMetrics;
   private int processed = 0;
 
-  protected DiaSlidingMzTask(ModularFeatureList flist, DiaMs2CorrParameters mainParam,
-      ParameterSet parameters, @NotNull DiaMs2CorrTask mainTask) {
+  protected DiaSlidingMzTask(@NotNull final ModularFeatureList flist,
+      @NotNull final DiaMs2CorrParameters mainParam, @NotNull final ParameterSet parameters,
+      @NotNull final DiaMs2CorrTask mainTask) {
     super(mainTask);
     this.flist = flist;
     this.mainParam = mainParam;
@@ -104,6 +119,9 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
     scanSelection = mainParam.getValue(DiaMs2CorrParameters.ms2ScanSelection);
     pregrouping = parameters.getParameter(DiaSlidingMzParameters.pregrouping)
         .getValueWithParameters();
+    diagnosticConfiguration = DiaSlidingMzDiagnostics.CONFIGURATION_LABELS.getOrDefault(
+        pregrouping.value(), "unassigned");
+    logShapeMetrics = DiaSlidingMzDiagnostics.LOG_SHAPE_METRICS;
 
     minFragmentIntensity = switch (pregrouping.value()) {
       case RT_CORRELATION ->
@@ -196,7 +214,8 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
         cycleMassograms = buffered;
       }
 
-      final double[] relevantMzs = getRelevantMzs(feature);
+      final ExpectedSpectrum expectedSpectrum = findExpectedSpectrum(feature);
+      final double[] relevantMzs = getRelevantMzs(feature, expectedSpectrum);
       if (relevantMzs.length < 1) {
         continue;
       }
@@ -220,9 +239,9 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
           isolationIndexRange.maxInclusive(),
           cycleMassograms.isolationRange(isolationIndexRange.maxInclusive()).lower(), maxToleranceWindow));*/
 
-      final Object2IntArrayMap<ModularFeature> massogramMaxIndices = getTraceMaxIndices(
+      final Object2IntArrayMap<ModularFeature> massogramMaxIndices = getTraceMaxIndices(feature,
           closestIsolationIndex, isolationIndexRange, maxToleranceWindow, cycleMassograms,
-          relevantMzs);
+          relevantMzs, expectedSpectrum);
 
       final DoubleArrayList mzs = new DoubleArrayList();
       final DoubleArrayList intensities = new DoubleArrayList();
@@ -271,24 +290,53 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
 
   }
 
-  private boolean checkMassogramShape(ModularFeature massogram, final int maxIndex) {
+  private static @Nullable ExpectedSpectrum findExpectedSpectrum(@NotNull final Feature feature) {
+    if (DiaSlidingMzDiagnostics.EXPECTED_SPECTRA.isEmpty()) {
+      return null;
+    }
+
+    final double precursorMz = feature.getMZ();
+    final double rt = feature.getRT();
+    return DiaSlidingMzDiagnostics.EXPECTED_SPECTRA.stream().filter(
+            expected -> expected.precursorMzRange().contains(precursorMz) && expected.rtRange()
+                .contains(rt))
+        // decision: precursor m/z identifies a target first; RT resolves overlapping m/z targets.
+        .min(Comparator.comparingDouble((ExpectedSpectrum expected) -> Math.abs(
+                RangeUtils.rangeCenter(expected.precursorMzRange()).doubleValue() - precursorMz))
+            .thenComparingDouble(expected -> Math.abs(
+                RangeUtils.rangeCenter(expected.rtRange()).doubleValue() - rt))).orElse(null);
+  }
+
+  private boolean checkMassogramShape(@NotNull final ModularFeature massogram, final int maxIndex,
+      @NotNull final Feature feature, final double requestedMz,
+      @Nullable final ExpectedSpectrum expectedSpectrum,
+      @Nullable final ExpectedFragment expectedFragment,
+      @NotNull final IntToDoubleFunction decisionIntensityAt,
+      @NotNull final CycleMassograms massograms, final int precursorCenterIndex) {
 
     final IonTimeSeries<? extends Scan> series = massogram.getFeatureData();
     final double maxIntensity = series.getIntensity(maxIndex);
     if (maxIntensity < minFragmentIntensity) {
+      logExpectedMzRejection(feature, expectedSpectrum, expectedFragment, requestedMz, massogram,
+          ExpectedFragmentRejectionReason.BELOW_MINIMUM_INTENSITY, String.format(Locale.ROOT,
+              "apex intensity %.3f at index %d is below the minimum fragment intensity %.3f",
+              maxIntensity, maxIndex, minFragmentIntensity));
       return false;
     }
 
-    boolean shapeCheck = true;
-    double prevIntensity = maxIntensity;
+    double prevIntensity = decisionIntensityAt.applyAsDouble(maxIndex);
     final int numDecreasing = 2;
     int numNonZero = 1;
+    ExpectedFragmentRejectionReason slopeRejectionReason = null;
+    String slopeRejectionDetails = null;
 
     for (int i = maxIndex - 1; i >= maxIndex - numDecreasing && i > 0; i--) {
-      final double currentIntensity = series.getIntensity(i);
-      if (currentIntensity > prevIntensity) {
-        shapeCheck = false;
-        break;
+      final double currentIntensity = decisionIntensityAt.applyAsDouble(i);
+      if (currentIntensity > prevIntensity && slopeRejectionReason == null) {
+        slopeRejectionReason = ExpectedFragmentRejectionReason.RISING_LEFT_OF_APEX;
+        slopeRejectionDetails = String.format(Locale.ROOT,
+            "massogram rises left of the proposed apex: intensity %.3f at index %d exceeds %.3f at index %d",
+            currentIntensity, i, prevIntensity, i + 1);
       }
       if (currentIntensity > 0) {
         numNonZero++;
@@ -296,17 +344,15 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       prevIntensity = currentIntensity;
     }
 
-    if (!shapeCheck) {
-      return false;
-    }
-
-    prevIntensity = maxIntensity;
+    prevIntensity = decisionIntensityAt.applyAsDouble(maxIndex);
     for (int i = maxIndex + 1; i <= maxIndex + numDecreasing && i < series.getNumberOfValues();
         i++) {
-      final double currentIntensity = series.getIntensity(i);
-      if (currentIntensity > prevIntensity) {
-        shapeCheck = false;
-        break;
+      final double currentIntensity = decisionIntensityAt.applyAsDouble(i);
+      if (currentIntensity > prevIntensity && slopeRejectionReason == null) {
+        slopeRejectionReason = ExpectedFragmentRejectionReason.RISING_RIGHT_OF_APEX;
+        slopeRejectionDetails = String.format(Locale.ROOT,
+            "massogram rises right of the proposed apex: intensity %.3f at index %d exceeds %.3f at index %d",
+            currentIntensity, i, prevIntensity, i - 1);
       }
       if (currentIntensity > 0) {
         numNonZero++;
@@ -314,10 +360,39 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       prevIntensity = currentIntensity;
     }
 
-    if (!shapeCheck || numNonZero < 3) {
+    if (numNonZero < 3) { // todo for final: move from hardcoded to minimumShapeConsecutivePoints?
+      logExpectedMzRejection(feature, expectedSpectrum, expectedFragment, requestedMz, massogram,
+          ExpectedFragmentRejectionReason.TOO_FEW_NON_ZERO_POINTS, String.format(Locale.ROOT,
+              "massogram contains only %d non-zero point(s) around the proposed apex; at least 3 are required",
+              numNonZero));
       return false;
     }
-    return true;
+
+    final double shapeIsolationWidth = massograms.isolationRange(precursorCenterIndex).length();
+    final SlidingMzShapeAcceptanceResult alternative =
+        slopeRejectionReason != null || logShapeMetrics ? SlidingMzShapeAcceptance.evaluate(
+            SHAPE_ACCEPTANCE_MODE, series, massograms.isolationCenters(), precursorCenterIndex,
+            maxIndex, shapeIsolationWidth, SHAPE_EDGE_WINDOW_MULTIPLIER,
+            MINIMUM_SHAPE_TOP_EDGE_RATIO, MINIMUM_SHAPE_CONSECUTIVE_POINTS,
+            SHAPE_ZERO_MARGIN_INDICES) : null;
+    if (logShapeMetrics) {
+      logExpectedMzShapeMetric(feature, expectedSpectrum, expectedFragment, requestedMz, massogram,
+          Objects.requireNonNull(alternative).details());
+    }
+    if (slopeRejectionReason == null) {
+      return true;
+    }
+
+    Objects.requireNonNull(alternative);
+    final String combinedDetails = slopeRejectionDetails + "; " + alternative.details();
+    if (alternative.accepted()) {
+      logExpectedMzAlternativeAcceptance(feature, expectedSpectrum, expectedFragment, requestedMz,
+          massogram, slopeRejectionReason, combinedDetails);
+      return true;
+    }
+    logExpectedMzRejection(feature, expectedSpectrum, expectedFragment, requestedMz, massogram,
+        slopeRejectionReason, combinedDetails);
+    return false;
 //    logger.finest(
 //        "Removing %d/%d peaks due to not matching mass isolation shapes.".formatted(toRemove.size(),
 //            traceMaxIndices.size()));
@@ -362,68 +437,56 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
 
 
   private @NotNull Object2IntArrayMap<ModularFeature> getTraceMaxIndices(
-      final int closestIsolationIndex, final IndexRange isolationIndexRange,
+      @NotNull final Feature feature, final int closestIsolationIndex,
+      @NotNull final IndexRange isolationIndexRange,
       final int maxToleranceWindow, @NotNull final CycleMassograms massograms,
-      final double @NotNull [] relevantMzs) {
+      final double @NotNull [] relevantMzs, @Nullable final ExpectedSpectrum expectedSpectrum) {
 
     final Object2IntArrayMap<ModularFeature> ms2FeaturesMaxIndices = new Object2IntArrayMap<>();
 
     final Double2ObjectMap<ModularFeature> massogramFeatures = massograms.getTraces(relevantMzs,
         mzTol, temp);
-    for (final ModularFeature massogramFeature : massogramFeatures.values()) {
+    for (final var massogramEntry : massogramFeatures.double2ObjectEntrySet()) {
+      final double requestedMz = massogramEntry.getDoubleKey();
+      final ModularFeature massogramFeature = massogramEntry.getValue();
+      final ExpectedFragment expectedFragment =
+          expectedSpectrum == null ? null : expectedSpectrum.fragments().get(requestedMz);
       final IonTimeSeries<?> trace = massogramFeature.getFeatureData();
-      // slope at current point
-      final double intensityAtClosestIsolation = trace.getIntensity(closestIsolationIndex);
-      final double leftSlope =
-          intensityAtClosestIsolation - trace.getIntensity(Math.max(closestIsolationIndex - 1, 0));
-      final double rightSlope =
-          trace.getIntensity(Math.min(closestIsolationIndex + 1, trace.getNumberOfValues() - 1))
-              - intensityAtClosestIsolation;
-
-      int searchDirection;
-      if (leftSlope > 0 && rightSlope > 0) {
-        // increasing, search right
-        searchDirection = 1;
-      } else if (leftSlope < 0 && rightSlope < 0) {
-        // decreasing, search left
-        searchDirection = -1;
-      } else if (leftSlope > 0 && rightSlope < 0) {
-        // at maximum
-        searchDirection = 0;
+      final SlidingMzTraceApexEvaluation apexEvaluation = HighIntensityDespikedSlidingMzTraceApexFinder.evaluate(
+          trace::getIntensity, trace.getNumberOfValues(), closestIsolationIndex,
+          isolationIndexRange, maxToleranceWindow, minFragmentIntensity);
+      final SlidingMzTraceApexResult apexResult = apexEvaluation.result();
+      final int apexIndex;
+      if (apexResult.isAccepted()) {
+        apexIndex = apexResult.apexIndex();
+      } else if (apexResult.rejectionReason()
+          == ExpectedFragmentRejectionReason.INVALID_LOCAL_SLOPE) {
+        final SlidingMzShapeAcceptanceResult alternative = SlidingMzShapeAcceptance.evaluate(
+            SHAPE_ACCEPTANCE_MODE, trace, massograms.isolationCenters(), closestIsolationIndex,
+            closestIsolationIndex, massograms.isolationRange(closestIsolationIndex).length(),
+            SHAPE_EDGE_WINDOW_MULTIPLIER, MINIMUM_SHAPE_TOP_EDGE_RATIO,
+            MINIMUM_SHAPE_CONSECUTIVE_POINTS, SHAPE_ZERO_MARGIN_INDICES);
+        final String combinedDetails = apexResult.details() + "; " + alternative.details();
+        if (!alternative.accepted()) {
+          logExpectedMzRejection(feature, expectedSpectrum, expectedFragment, requestedMz,
+              massogramFeature, Objects.requireNonNull(apexResult.rejectionReason()),
+              combinedDetails);
+          continue;
+        }
+        apexIndex = alternative.preferredApexIndex();
+        logExpectedMzAlternativeAcceptance(feature, expectedSpectrum, expectedFragment, requestedMz,
+            massogramFeature, Objects.requireNonNull(apexResult.rejectionReason()),
+            combinedDetails);
       } else {
-        // in local minimum, not valid
+        logExpectedMzRejection(feature, expectedSpectrum, expectedFragment, requestedMz,
+            massogramFeature, Objects.requireNonNull(apexResult.rejectionReason()),
+            apexResult.details());
         continue;
       }
-
-      if (searchDirection == 0) {
-        ms2FeaturesMaxIndices.put(massogramFeature, closestIsolationIndex);
-        continue;
-      }
-
-      // get maximum
-      double maxIntensity = intensityAtClosestIsolation;
-      int maxIndex = closestIsolationIndex;
-      for (int i = closestIsolationIndex;
-          i < isolationIndexRange.maxExclusive() && i >= isolationIndexRange.min();
-          i += searchDirection) {
-        final double intensity = trace.getIntensity(i);
-        if (intensity > maxIntensity) {
-          maxIntensity = intensity;
-          maxIndex = i;
-        } else {
-          break;
-        }
-      }
-
-      if (maxIndex <= isolationIndexRange.min() || maxIndex >= isolationIndexRange.maxInclusive()) {
-        // edge is maximum -> not valid
-        continue;
-      }
-
-      if (Math.abs(maxIndex - closestIsolationIndex) <= maxToleranceWindow) {
-        if (checkMassogramShape(massogramFeature, maxIndex)) {
-          ms2FeaturesMaxIndices.put(massogramFeature, maxIndex);
-        }
+      if (checkMassogramShape(massogramFeature, apexIndex, feature, requestedMz, expectedSpectrum,
+          expectedFragment, apexEvaluation.decisionIntensityAt(), massograms,
+          closestIsolationIndex)) {
+        ms2FeaturesMaxIndices.put(massogramFeature, apexIndex);
 //        if(shapeCheck2(massogramFeature, maxIndex, closestIsolationIndex, massograms, maxToleranceWindow)) {
 //          ms2FeaturesMaxIndices.put(massogramFeature, maxIndex);
 //        }
@@ -437,7 +500,8 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
     return ms2FeaturesMaxIndices;
   }
 
-  private double[] getRelevantMzs(Feature feature) {
+  private double @NotNull [] getRelevantMzs(@NotNull final Feature feature,
+      @Nullable final ExpectedSpectrum expectedSpectrum) {
     final List<Scan> ms2s = feature.getAllMS2FragmentScans();
     final double[] relevantMzs;
     if (ms2s.size() > 1) {
@@ -449,9 +513,112 @@ public class DiaSlidingMzTask extends AbstractTaskSubProcessor {
       relevantMzs = new double[ms2s.getFirst().getNumberOfDataPoints()];
       ms2s.getFirst().getMzValues(relevantMzs);
     } else {
-      return new double[0];
+      relevantMzs = new double[0];
     }
+    logExpectedMzCoverage(feature, relevantMzs, expectedSpectrum);
     return relevantMzs;
+  }
+
+  private void logExpectedMzCoverage(@NotNull final Feature feature,
+      final double @NotNull [] relevantMzs, @Nullable final ExpectedSpectrum expectedSpectrum) {
+    if (expectedSpectrum == null) {
+      return;
+    }
+
+    final List<ExpectedFragment> expectedFragments = expectedSpectrum.fragments().asMapOfRanges()
+        .values().stream().distinct().sorted(Comparator.comparingDouble(ExpectedFragment::mz))
+        .toList();
+    final Set<ExpectedFragment> containedFragments = Arrays.stream(relevantMzs)
+        .mapToObj(expectedSpectrum.fragments()::get).filter(Objects::nonNull)
+        .collect(Collectors.toSet());
+    final List<ExpectedFragment> missingFragments = expectedFragments.stream()
+        .filter(fragment -> !containedFragments.contains(fragment)).toList();
+    final int contained = expectedFragments.size() - missingFragments.size();
+    final String coverage = expectedFragments.isEmpty() ? "n/a"
+        : String.format(Locale.ROOT, "%.1f%%", contained * 100d / expectedFragments.size());
+    final String missingMzs = missingFragments.isEmpty() ? "none" : missingFragments.stream().map(
+        fragment -> String.format(Locale.ROOT, "%.6f", fragment.mz())).collect(
+        Collectors.joining(", "));
+
+    logger.warning(String.format(Locale.ROOT,
+        "Sliding-m/z diagnostics | configuration=%s | event=COVERAGE | target=%s"
+            + " | precursor_mz=%.6f | rt=%.4f"
+            + " | contained=%d | total=%d | missing=%s | details=relevant-mz coverage %s",
+        sanitizeLogValue(diagnosticConfiguration), sanitizeLogValue(expectedSpectrum.label()),
+        feature.getMZ(), feature.getRT(), contained, expectedFragments.size(), missingMzs,
+        coverage));
+    for (final ExpectedFragment missingFragment : missingFragments) {
+      logExpectedMzRejection(feature, expectedSpectrum, missingFragment, missingFragment.mz(), null,
+          ExpectedFragmentRejectionReason.NOT_IN_RELEVANT_MZS,
+          "expected fragment was absent from the returned relevant m/z values");
+    }
+  }
+
+  private void logExpectedMzRejection(@NotNull final Feature feature,
+      @Nullable final ExpectedSpectrum expectedSpectrum,
+      @Nullable final ExpectedFragment expectedFragment, final double requestedMz,
+      @Nullable final ModularFeature massogram,
+      @NotNull final ExpectedFragmentRejectionReason reason, @NotNull final String details) {
+    if (expectedSpectrum == null || expectedFragment == null) {
+      return;
+    }
+
+    final String expectedIntensity =
+        Double.isFinite(expectedFragment.intensity()) ? String.format(Locale.ROOT,
+            "; expected intensity %.3f", expectedFragment.intensity()) : "";
+    final String traceMz =
+        massogram == null ? "none" : String.format(Locale.ROOT, "%.6f", massogram.getMZ());
+    logger.warning(String.format(Locale.ROOT,
+        "Sliding-m/z diagnostics | configuration=%s | event=REJECTED | target=%s"
+            + " | precursor_mz=%.6f | rt=%.4f | expected_mz=%.6f | reason=%s"
+            + " | requested_mz=%.6f | trace_mz=%s | details=%s%s",
+        sanitizeLogValue(diagnosticConfiguration), sanitizeLogValue(expectedSpectrum.label()),
+        feature.getMZ(), feature.getRT(), expectedFragment.mz(), reason, requestedMz, traceMz,
+        sanitizeLogValue(details), expectedIntensity));
+  }
+
+  private void logExpectedMzAlternativeAcceptance(@NotNull final Feature feature,
+      @Nullable final ExpectedSpectrum expectedSpectrum,
+      @Nullable final ExpectedFragment expectedFragment, final double requestedMz,
+      @NotNull final ModularFeature massogram,
+      @NotNull final ExpectedFragmentRejectionReason originalReason,
+      @NotNull final String details) {
+    if (expectedSpectrum == null || expectedFragment == null) {
+      return;
+    }
+
+    final String expectedIntensity =
+        Double.isFinite(expectedFragment.intensity()) ? String.format(Locale.ROOT,
+            "; expected intensity %.3f", expectedFragment.intensity()) : "";
+    logger.warning(String.format(Locale.ROOT,
+        "Sliding-m/z diagnostics | configuration=%s | event=ACCEPTED_ALTERNATIVE | target=%s"
+            + " | precursor_mz=%.6f | rt=%.4f | expected_mz=%.6f | original_reason=%s"
+            + " | criterion=%s | requested_mz=%.6f | trace_mz=%.6f | details=%s%s",
+        sanitizeLogValue(diagnosticConfiguration), sanitizeLogValue(expectedSpectrum.label()),
+        feature.getMZ(), feature.getRT(), expectedFragment.mz(), originalReason,
+        SHAPE_ACCEPTANCE_MODE.name(), requestedMz, massogram.getMZ(), sanitizeLogValue(details),
+        expectedIntensity));
+  }
+
+  private void logExpectedMzShapeMetric(@NotNull final Feature feature,
+      @Nullable final ExpectedSpectrum expectedSpectrum,
+      @Nullable final ExpectedFragment expectedFragment, final double requestedMz,
+      @NotNull final ModularFeature massogram, @NotNull final String details) {
+    if (expectedSpectrum == null || expectedFragment == null) {
+      return;
+    }
+
+    logger.warning(String.format(Locale.ROOT,
+        "Sliding-m/z diagnostics | configuration=%s | event=SHAPE_METRIC | target=%s"
+            + " | precursor_mz=%.6f | rt=%.4f | expected_mz=%.6f"
+            + " | requested_mz=%.6f | trace_mz=%.6f | details=%s",
+        sanitizeLogValue(diagnosticConfiguration), sanitizeLogValue(expectedSpectrum.label()),
+        feature.getMZ(), feature.getRT(), expectedFragment.mz(), requestedMz, massogram.getMZ(),
+        sanitizeLogValue(details)));
+  }
+
+  private static @NotNull String sanitizeLogValue(@NotNull final String value) {
+    return value.replace('|', '/').replace('\r', ' ').replace('\n', ' ').trim();
   }
 
   @Override

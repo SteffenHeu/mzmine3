@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -26,8 +27,6 @@ package io.github.mzmine.modules.visualization.pseudospectrumvisualizer;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.Frame;
-import io.github.mzmine.datamodel.PseudoSpectrum;
-import io.github.mzmine.datamodel.PseudoSpectrumType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.data_access.EfficientDataAccess.ScanDataType;
@@ -36,7 +35,6 @@ import io.github.mzmine.datamodel.featuredata.impl.BuildingIonSeries;
 import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.ColoredXYDataset;
-import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.series.IonTimeSeriesToXYProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredAreaShapeRenderer;
@@ -50,12 +48,13 @@ import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.FeatureUtils;
 import io.github.mzmine.util.RangeUtils;
-import io.github.mzmine.util.scans.ScanUtils;
+import io.github.mzmine.util.color.SimpleColorPalette;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javafx.scene.paint.Color;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -69,12 +68,13 @@ class PseudoSpectrumFeatureDataSetCalculationTask extends AbstractTask {
   private final MZTolerance mzTolerance;
   @Nullable
   private final Color featureColor;
-  private final List<DatasetAndRenderer> datasets = new ArrayList<>();
+  private final List<MzDatasetAndRenderer> datasets = new ArrayList<>();
   private ExtractMzRangesIonSeriesFunction extractFunction;
 
 
-  PseudoSpectrumFeatureDataSetCalculationTask(RawDataFile dataFile, Scan pseudoScan,
-      Feature feature, MZTolerance mzTolerance, @Nullable Color featureColor) {
+  PseudoSpectrumFeatureDataSetCalculationTask(@NotNull RawDataFile dataFile,
+      @NotNull Scan pseudoScan, @NotNull Feature feature, @NotNull MZTolerance mzTolerance,
+      @Nullable Color featureColor) {
     super(null, Instant.now());
     this.dataFile = dataFile;
     this.pseudoScan = pseudoScan;
@@ -98,19 +98,22 @@ class PseudoSpectrumFeatureDataSetCalculationTask extends AbstractTask {
   public void run() {
     setStatus(TaskStatus.PROCESSING);
 
-    if (!(pseudoScan instanceof PseudoSpectrum pseudo)
+    /*if (!(pseudoScan instanceof PseudoSpectrum pseudo)
         || pseudo.getPseudoSpectrumType() == PseudoSpectrumType.UNCORRELATED) {
       error(
           "Pseudo scan %s is not correlation based. Use All MS/MS or most intense fragment scan visualizers.".formatted(
               ScanUtils.scanToString(pseudoScan)));
       return;
-    }
+    }*/
 
     if (getStatus() == TaskStatus.CANCELED) {
       return;
     }
 
     Range<Float> featureRtRange = feature.getRawDataPointsRTRange();
+    featureRtRange = RangeUtils.rangeAround(feature.getRT(),
+        RangeUtils.rangeLength(featureRtRange) * 3);
+
     final ScanSelection selection = new ScanSelection(pseudoScan.getMSLevel(), featureRtRange,
         feature.getRepresentativePolarity());
 
@@ -167,7 +170,7 @@ class PseudoSpectrumFeatureDataSetCalculationTask extends AbstractTask {
 
     var nextColor = featureColor != null ? featureColor
         : (feature.getRawDataFile() != null && feature.getRawDataFile().getColor() != null)
-            ? feature.getRawDataFile().getColor()
+          ? feature.getRawDataFile().getColor()
             : ConfigService.getConfiguration().getDefaultColorPalette().getNextColor();
 
     //Build feature dataset
@@ -175,24 +178,28 @@ class PseudoSpectrumFeatureDataSetCalculationTask extends AbstractTask {
     ColoredXYDataset featureDataSet = new ColoredXYDataset(
         new IonTimeSeriesToXYProvider(featureData, format.mz(feature.getMZ()), nextColor),
         RunOption.THIS_THREAD);
-    datasets.add(new DatasetAndRenderer(featureDataSet, new ColoredAreaShapeRenderer()));
+    datasets.add(
+        new MzDatasetAndRenderer(feature.getMZ(), featureDataSet, new ColoredAreaShapeRenderer()));
 
+    // test debug only
+    SimpleColorPalette colors = ConfigService.getDefaultColorPalette().clone(true);
     for (int i = 0; i < ionSeries.length; i++) {
       var builder = ionSeries[i];
       double mz = RangeUtils.rangeCenter(mzRangesSorted.get(i));
 
       IonTimeSeries<? extends Scan> series = builder.toFullIonTimeSeries(null, scans);
       final ColoredXYDataset dataset = new ColoredXYDataset(
-          new IonTimeSeriesToXYProvider(series, format.mz(mz), nextColor), RunOption.THIS_THREAD);
+          new IonTimeSeriesToXYProvider(series, format.mz(mz), colors.getNextColor()),
+          RunOption.THIS_THREAD);
 
       // add other EICs
-      datasets.add(new DatasetAndRenderer(dataset, new ColoredXYLineRenderer()));
+      datasets.add(new MzDatasetAndRenderer(mz, dataset, new ColoredXYLineRenderer()));
     }
 
     setStatus(TaskStatus.FINISHED);
   }
 
-  public List<DatasetAndRenderer> getDatasets() {
+  public @NotNull List<MzDatasetAndRenderer> getDatasets() {
     return datasets;
   }
 }

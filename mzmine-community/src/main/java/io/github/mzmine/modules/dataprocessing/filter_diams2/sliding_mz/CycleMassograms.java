@@ -41,6 +41,7 @@ import io.github.mzmine.datamodel.features.types.FeatureDataType;
 import io.github.mzmine.datamodel.impl.SimpleMergedMsMsSpectrum;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
+import io.github.mzmine.modules.dataprocessing.featdet_smoothing.savitzkygolay.SavitzkyGolayFilter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.MathUtils;
 import io.github.mzmine.util.MemoryMapStorage;
@@ -72,6 +73,7 @@ public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float
   private static final Logger logger = Logger.getLogger(CycleMassograms.class.getName());
   public static AtomicLong allRequest = new AtomicLong();
   public static AtomicLong cachedRequests = new AtomicLong();
+  private static final double[] weights = SavitzkyGolayFilter.getNormalizedWeights(5);
 
 
   public CycleMassograms(@NotNull List<Scan> ms2Scans, ModularFeatureList dummyFlist) {
@@ -143,7 +145,8 @@ public record CycleMassograms(@NotNull List<Scan> ms2Scans, @NotNull Range<Float
       @NotNull BuildingIonSeries[] buildingIonSeries = extract.get();
       List<? extends IonTimeSeries<? extends Scan>> result = Arrays.stream(buildingIonSeries)
           // important to use full ion time series, so we can refer to the same index all the time
-          .map(b -> b.toFullIonTimeSeries(storage, ms2Scans)).toList();
+          .map(b -> b.toFullIonTimeSeries(storage,
+              ms2Scans/*, d -> SavitzkyGolayFilter.convolve((double[])d, weights)*/)).toList();
       for (int i = 0; i < result.size(); i++) {
         ModularFeature massogram = massograms.get(RangeUtils.rangeCenter(toExtract.get(i)));
         massogram.set(FeatureDataType.class, result.get(i));

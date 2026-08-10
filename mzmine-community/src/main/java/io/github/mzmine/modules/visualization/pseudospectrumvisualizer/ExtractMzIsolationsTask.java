@@ -25,38 +25,38 @@
 
 package io.github.mzmine.modules.visualization.pseudospectrumvisualizer;
 
-import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.PseudoSpectrum;
 import io.github.mzmine.datamodel.Scan;
-import io.github.mzmine.datamodel.data_access.EfficientDataAccess.ScanDataType;
 import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
-import io.github.mzmine.datamodel.featuredata.impl.BuildingIonSeries;
 import io.github.mzmine.datamodel.features.Feature;
+import io.github.mzmine.datamodel.features.FeatureList;
+import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.ColoredXYDataset;
-import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.impl.AnyXYProvider;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYLineRenderer;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.modules.dataprocessing.featdet_extract_mz_ranges.ExtractMzRangesIonSeriesFunction;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.rt_corr.DiaMs2RtCorrTask;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.sliding_mz.CycleMassograms;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.sliding_mz.DiaSlidingMzTask;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.operations.AbstractTaskSubSupplier;
 import io.github.mzmine.util.RangeUtils;
+import io.github.mzmine.util.color.SimpleColorPalette;
 import io.github.mzmine.util.scans.SpectraMerging;
+import it.unimi.dsi.fastutil.doubles.Double2ObjectMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
-public class ExtractMzIsolationsTask extends AbstractTaskSubSupplier<List<DatasetAndRenderer>> {
+public class ExtractMzIsolationsTask extends AbstractTaskSubSupplier<List<MzDatasetAndRenderer>> {
 
   private final Feature feature;
   private final PseudoSpectrum spectrum;
   private final MZTolerance mzTolerance = SpectraMerging.defaultMs2MergeTol;
 
-  public ExtractMzIsolationsTask(Feature feature, PseudoSpectrum spectrum) {
+  public ExtractMzIsolationsTask(@NotNull Feature feature, @NotNull PseudoSpectrum spectrum) {
     this.feature = feature;
     this.spectrum = spectrum;
   }
@@ -73,13 +73,14 @@ public class ExtractMzIsolationsTask extends AbstractTaskSubSupplier<List<Datase
   }
 
   @Override
-  public List<DatasetAndRenderer> get() {
+  public @NotNull List<MzDatasetAndRenderer> get() {
 
     final boolean valid = switch (spectrum.getPseudoSpectrumType()) {
-      case UNCORRELATED, MALDI_IMAGING, GC_EI -> false;
+      case MALDI_IMAGING, GC_EI -> false;
       case SLIDING_MZ_NO_RT, SLIDING_MZ_RT_CORR -> true;
-      // todo - temporary workaround to also show q1 field for rt only decon in zt scan files
-      case LC_DIA -> spectrum.getDataFile().getName().toLowerCase().contains("zt");
+      // option to also show q1 field for rt only or no decon in zt scan files
+      case LC_DIA, UNCORRELATED ->
+          DiaMs2RtCorrTask.isSlidingQuadWindow(spectrum.getDataFile(), null);
     };
     if (!valid) {
       return List.of();
@@ -96,6 +97,7 @@ public class ExtractMzIsolationsTask extends AbstractTaskSubSupplier<List<Datase
     final List<Scan> ms2Cycle = DiaSlidingMzTask.getMs2CycleForRt(feature.getRT(),
         feature.getFeatureData().getSpectra(),
         ms2Scans.getMatchingScans(feature.getRawDataFile().getScans()), null);
+    CycleMassograms m = new CycleMassograms(ms2Cycle, FeatureList.createDummy());
 //    final double isolationWidth =
 //        RangeUtils.rangeLength(fullMs2Cycle.getFirst().getMsMsInfo().getIsolationWindow())
 //            * CycleMassograms.isolationWidthFactor * 3; // dont divide by 2 to capture a bit more
@@ -104,7 +106,7 @@ public class ExtractMzIsolationsTask extends AbstractTaskSubSupplier<List<Datase
 //      return RangeUtils.rangeAround(isolationCenter, isolationWidth).contains(feature.getMZ());
 //    }).toList();
 
-    List<Range<Double>> mzRanges = new ArrayList<>();
+   /* List<Range<Double>> mzRanges = new ArrayList<>();
     for (int i = 0; i < spectrum.getNumberOfDataPoints(); i++) {
       mzRanges.add(mzTolerance.getToleranceRange(spectrum.getMzValue(i)));
     }
@@ -113,17 +115,26 @@ public class ExtractMzIsolationsTask extends AbstractTaskSubSupplier<List<Datase
         feature.getRawDataFile(), ms2Cycle, mzRanges, ScanDataType.MASS_LIST, null);
     @NotNull BuildingIonSeries[] buildingIonSeries = extract.get();
     final List<? extends IonTimeSeries<? extends Scan>> extracted = Arrays.stream(buildingIonSeries)
-        .map(series -> series.toFullIonTimeSeries(null, ms2Cycle)).toList();
-    final List<DatasetAndRenderer> datasets = new ArrayList<>(extracted.size());
-    for (int i = 0; i < extracted.size(); i++) {
-      IonTimeSeries<? extends Scan> series = extracted.get(i);
-      AnyXYProvider provider = new AnyXYProvider(
-          ConfigService.getDefaultColorPalette().getNextColorAWT(),
-          ConfigService.getGuiFormats().mz(spectrum.getMzValue(i)), series.getNumberOfValues(),
+        .map(series -> series.toFullIonTimeSeries(null, ms2Cycle)).toList();*/
+
+    double[] mzs = new double[spectrum.getNumberOfDataPoints()];
+    for (int i = 0; i < spectrum.getNumberOfDataPoints(); i++) {
+      mzs[i] = spectrum.getMzValue(i);
+    }
+    Double2ObjectMap<ModularFeature> traces = m.getTraces(mzs, mzTolerance, null);
+
+    final List<MzDatasetAndRenderer> datasets = new ArrayList<>(traces.size());
+    SimpleColorPalette palette = ConfigService.getDefaultColorPalette().clone(true);
+    for (var feature : traces.values()) {
+      IonTimeSeries<? extends Scan> series = feature.getFeatureData();
+      AnyXYProvider provider = new AnyXYProvider(palette.getNextColorAWT(),
+          ConfigService.getGuiFormats().mz(feature.getMZ()), series.getNumberOfValues(),
           j -> RangeUtils.rangeCenter(series.getSpectrum(j).getMsMsInfo().getIsolationWindow())
               .doubleValue(), j -> series.getIntensity(j));
-      datasets.add(new DatasetAndRenderer(new ColoredXYDataset(provider, RunOption.THIS_THREAD),
-          new ColoredXYLineRenderer()));
+      ColoredXYLineRenderer renderer = new ColoredXYLineRenderer();
+      renderer.setDefaultItemLabelsVisible(true);
+      datasets.add(new MzDatasetAndRenderer(feature.getMZ(),
+          new ColoredXYDataset(provider, RunOption.THIS_THREAD), renderer));
     }
 
     return datasets;

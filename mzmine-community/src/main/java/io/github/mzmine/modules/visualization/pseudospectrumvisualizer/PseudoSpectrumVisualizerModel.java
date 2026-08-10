@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -28,7 +29,6 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import io.github.mzmine.javafx.properties.PropertyUtils;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.List;
@@ -37,6 +37,8 @@ import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.paint.Color;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class PseudoSpectrumVisualizerModel {
 
@@ -55,8 +57,9 @@ public class PseudoSpectrumVisualizerModel {
 
   // the final data to be shown
   private final Property<Scan> pseudoSpec = new SimpleObjectProperty<>();
-  private final ObjectProperty<List<DatasetAndRenderer>> ticDatasets = new SimpleObjectProperty<>();
-  private final ObjectProperty<List<DatasetAndRenderer>> mzDatasets = new SimpleObjectProperty<>();
+  private final ObjectProperty<List<MzDatasetAndRenderer>> ticDatasets = new SimpleObjectProperty<>();
+  private final ObjectProperty<List<MzDatasetAndRenderer>> mzDatasets = new SimpleObjectProperty<>();
+  private final ObjectProperty<Double> selectedMz = new SimpleObjectProperty<>();
 
 
   public PseudoSpectrumVisualizerModel() {
@@ -109,15 +112,15 @@ public class PseudoSpectrumVisualizerModel {
     return featureList;
   }
 
-  public List<DatasetAndRenderer> getTicDatasets() {
+  public @Nullable List<MzDatasetAndRenderer> getTicDatasets() {
     return ticDatasets.get();
   }
 
-  public ObjectProperty<List<DatasetAndRenderer>> ticDatasetsProperty() {
+  public @NotNull ObjectProperty<List<MzDatasetAndRenderer>> ticDatasetsProperty() {
     return ticDatasets;
   }
 
-  public void setTicDatasets(List<DatasetAndRenderer> datasets) {
+  public void setTicDatasets(@Nullable List<MzDatasetAndRenderer> datasets) {
     ticDatasets.set(datasets);
   }
 
@@ -153,11 +156,23 @@ public class PseudoSpectrumVisualizerModel {
     return selectedFiles;
   }
 
-  public List<DatasetAndRenderer> getMzDatasets() {
+  public @Nullable List<MzDatasetAndRenderer> getMzDatasets() {
     return mzDatasets.get();
   }
 
-  public ObjectProperty<List<DatasetAndRenderer>> mzDatasetsProperty() {
+  public @NotNull ObjectProperty<List<MzDatasetAndRenderer>> mzDatasetsProperty() {
     return mzDatasets;
+  }
+
+  public @Nullable Double getSelectedMz() {
+    return selectedMz.get();
+  }
+
+  public @NotNull ObjectProperty<Double> selectedMzProperty() {
+    return selectedMz;
+  }
+
+  public void setSelectedMz(@Nullable Double mz) {
+    selectedMz.set(mz);
   }
 }

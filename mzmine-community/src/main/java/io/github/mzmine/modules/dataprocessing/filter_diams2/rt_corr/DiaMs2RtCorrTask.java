@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@ import com.google.common.collect.TreeRangeMap;
 import io.github.mzmine.datamodel.FeatureStatus;
 import io.github.mzmine.datamodel.Frame;
 import io.github.mzmine.datamodel.IMSRawDataFile;
+import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.MergedMassSpectrum;
 import io.github.mzmine.datamodel.MergedMassSpectrum.MergingType;
 import io.github.mzmine.datamodel.MobilityScan;
@@ -50,9 +51,11 @@ import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.impl.DDAMsMsInfoImpl;
 import io.github.mzmine.datamodel.impl.SimpleFrame;
 import io.github.mzmine.datamodel.impl.SimplePseudoSpectrum;
+import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.datamodel.impl.masslist.ScanPointerMassList;
 import io.github.mzmine.datamodel.msms.ActivationMethod;
 import io.github.mzmine.datamodel.msms.DDAMsMsInfo;
+import io.github.mzmine.datamodel.msms.DIAMsMsInfoImpl;
 import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.main.MZmineCore;
@@ -61,6 +64,7 @@ import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.M
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderTask;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrTask;
+import io.github.mzmine.modules.dataprocessing.filter_diams2.rt_corr.SlidingCycleGroups.WindowScans;
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.correlation.FeatureCorrelationUtil.DIA;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
@@ -72,6 +76,8 @@ import io.github.mzmine.project.impl.MZmineProjectImpl;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.taskcontrol.operations.AbstractTaskSubProcessor;
 import io.github.mzmine.util.IonMobilityUtils;
+import io.github.mzmine.util.MathUtils;
+import io.github.mzmine.util.RangeUtils;
 import io.github.mzmine.util.collections.BinarySearch;
 import io.github.mzmine.util.collections.BinarySearch.DefaultTo;
 import io.github.mzmine.util.collections.IndexRange;
@@ -93,8 +99,11 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
 
@@ -114,6 +123,7 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
   private final int numRows;
   @NotNull
   private final DiaMs2CorrTask mainTask;
+  private final Integer minPointsPerEdge;
   private int currentRow = 0;
 
   private String description = "";
@@ -137,6 +147,9 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
     correlationThreshold = parameters.getParameter(DiaMs2RtCorrParameters.advanced)
         .getValueOrDefault(DiaMs2RtCorrAdvancedParameters.correlationThreshold,
             DiaMs2RtCorrAdvancedParameters.DEFAULT_CORR_THRESHOLD);
+    minPointsPerEdge = parameters.getParameter(DiaMs2RtCorrParameters.advanced)
+        .getEmbeddedParameters().getParameter(DiaMs2RtCorrAdvancedParameters.pointsPerEdge)
+        .resolveValue();
     numRows = flist.getNumberOfRows();
     this.mainTask = mainTask;
 
@@ -147,12 +160,11 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
     adapFiles.setSpecificFiles(flist.getRawDataFiles().toArray(new RawDataFile[0]));
     adapParameters.setParameter(ADAPChromatogramBuilderParameters.dataFiles, adapFiles);
     adapParameters.setParameter(ADAPChromatogramBuilderParameters.scanSelection, ms2ScanSelection);
-    adapParameters.setParameter(ADAPChromatogramBuilderParameters.minimumConsecutiveScans,
-        minCorrPoints);
+    adapParameters.setParameter(ADAPChromatogramBuilderParameters.minimumConsecutiveScans, 3);
     adapParameters.setParameter(ADAPChromatogramBuilderParameters.mzTolerance, mzTolerance);
     adapParameters.setParameter(ADAPChromatogramBuilderParameters.suffix, "chroms");
     adapParameters.setParameter(ADAPChromatogramBuilderParameters.minGroupIntensity,
-        minMs2Intensity / 5);
+        minMs2Intensity / 10);
     adapParameters.setParameter(ADAPChromatogramBuilderParameters.minHighestPoint, minMs2Intensity);
   }
 
@@ -392,7 +404,7 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
           .toArray(ValueLayout.JAVA_DOUBLE);
 
       final CorrelationData correlationData = DIA.corrFeatureShape(ms1Rts, ms1Intensities, rts,
-          ms2Intensity, minCorrPoints, 2, minMs2Intensity / 5);
+          ms2Intensity, minCorrPoints, minPointsPerEdge, minMs2Intensity / 5);
       if (correlationData == null || !correlationData.isValid()
           || correlationData.getPearsonR() < minPearson) {
         continue;
@@ -617,17 +629,57 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
       }
 
     } else {
-      // just append to new file
-      for (Entry<IsolationWindow, List<Scan>> entry : isolationWindowScanMap.entrySet()) {
-        final RawDataFileImpl windowFile = new RawDataFileImpl(
-            file.getName() + " %s".formatted(entry.getKey().toString()), null,
-            mainTask.getMemoryMapStorage());
-        entry.getValue().forEach(windowFile::addScan);
-        result.put(entry.getKey(), windowFile);
-      }
-      isolationWindowMergingProgress = 1d; // nothing to calculate
-    }
 
+      if (isSlidingQuadWindow(file, ms2ScanSelection)) {
+        // depending on conversion, some windows have less scans.
+        final SlidingCycleGroups cycleGroups = new SlidingCycleGroups(file, isolationWindowScanMap);
+        final Set<IsolationWindow> allWindows = cycleGroups.getWindowsIndex();
+        isolationWindowScanMap.clear();
+        int i = 0;
+        for (final IsolationWindow window : allWindows) {
+          final WindowScans ms2sAroundIsolation = cycleGroups.getMs2sAroundIsolation(window);
+          final IsolationWindow newWindow = ms2sAroundIsolation.window();
+          final RawDataFileImpl windowFile = new RawDataFileImpl(
+              file.getName() + " %s".formatted(newWindow.toString()), null,
+              mainTask.getMemoryMapStorage());
+//          logger.finest(() -> "Merging isolation window %s".formatted(newWindowWindow));
+          for (List<Scan> scanPackage : ms2sAroundIsolation.scans()) {
+            if (scanPackage.isEmpty()) {
+              // funky mzml conversion dropping scans...
+              continue;
+            }
+
+            final double[][] mzIntensities = SpectraMerging.calculatedMergedMzsAndIntensities(
+                scanPackage.stream().map(Scan::getMassList).toList(), mzTolerance,
+                IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, 1);
+            final DIAMsMsInfoImpl msmsInfo = new DIAMsMsInfoImpl(newWindow.collisionEnergy(), null,
+                2, scanPackage.getFirst().getMsMsInfo().getActivationMethod(),
+                newWindow.mzIsolation());
+            final SimpleScan scan = new SimpleScan(windowFile, i + 1, 2,
+                (float) scanPackage.stream().mapToDouble(Scan::getRetentionTime).average()
+                    .orElseThrow(), msmsInfo, mzIntensities[0], mzIntensities[1],
+                MassSpectrumType.CENTROIDED, scanPackage.getFirst().getPolarity(), null, null);
+            scan.addMassList(new ScanPointerMassList(scan));
+            windowFile.addScan(scan);
+
+          }
+          isolationWindowMergingProgress = (double) (++i) / allWindows.size();
+          result.put(newWindow, windowFile);
+          isolationWindowScanMap.put(newWindow,
+              windowFile.getScans()); // need to update the map, otherwise we work with different isolationWindow instances.
+        }
+      } else {
+        // just append to new file
+        for (Entry<IsolationWindow, List<Scan>> entry : isolationWindowScanMap.entrySet()) {
+          final RawDataFileImpl windowFile = new RawDataFileImpl(
+              file.getName() + " %s".formatted(entry.getKey().toString()), null,
+              mainTask.getMemoryMapStorage());
+          entry.getValue().forEach(windowFile::addScan);
+          result.put(entry.getKey(), windowFile);
+        }
+        isolationWindowMergingProgress = 1d; // nothing to calculate
+      }
+    }
     return result;
   }
 
@@ -733,6 +785,7 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
     if (numberOfCEs < 5 && !(file instanceof IMSRawDataFile)) {
       // if we can find multiple collision energies in a non ims file, the likelyhood is that there
       // were multiple CEs acquired and we must discriminate by CEs.
+      // but if there are too many CEs, it is likely that they were ramped.
       discriminateByCE = true;
     } else {
       discriminateByCE = false;
@@ -765,16 +818,19 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
       }
     }
 
-    if (windowScanMap.isEmpty()) {
-      // in case no isolation window was found, use one single isolation window that encloses everything
-      windowScanMap.put(new IsolationWindow(Range.closed(0d, Double.MAX_VALUE), null, null),
-          ms2ScanSelection.getMatchingScans(file.getScans()));
-    }
-
     logger.finest(() -> "%s: Extracted %d raw isolation windows.".formatted(file.getName(),
         windowScanMap.size()));
 
-    // now merge some isolation windows, if they are largely overlapping (e.g. MSConvert converted Agilent AllIons files.)
+    return mergeAllIonsIsolationWindows(file, windowScanMap);
+  }
+
+  /**
+   * Agilent AllIons files converted by msconvert report the observed ion mz values as isolation
+   * windows. We need to merge those together to a single isolation window.
+   *
+   */
+  private static @NotNull Map<IsolationWindow, List<Scan>> mergeAllIonsIsolationWindows(
+      @NonNull RawDataFile file, Map<IsolationWindow, List<Scan>> windowScanMap) {
     final List<Entry<IsolationWindow, List<Scan>>> sortedWindowEntries = new ArrayList<>(
         windowScanMap.entrySet().stream().sorted(Comparator.comparingDouble(
             iw -> Objects.requireNonNullElse(iw.getKey().mzIsolation(), Range.singleton(0d))
@@ -799,14 +855,9 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
       }
     }
 
-    logger.finest(
-        () -> "%s: %d isolation windows remained after merging. (%s)".formatted(file.getName(),
-            mergingWindows.size(), mergingWindows.toString()));
-    windowScanMap.clear();
-    mergingWindows.forEach(mw -> windowScanMap.put(mw.window(),
-        mw.scans().stream().sorted(Comparator.comparingDouble(Scan::getRetentionTime)).toList()));
-
-    return windowScanMap;
+    return mergingWindows.stream().collect(Collectors.toMap(mw -> mw.window(),
+        mw -> mw.scans().stream().sorted(Comparator.comparingDouble(Scan::getRetentionTime))
+            .toList()));
   }
 
   private @Nullable List<IsolationWindow> getIsolationWindows(Feature feature,
@@ -818,5 +869,64 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
       }
     }
     return result;
+  }
+
+  public static boolean isSlidingQuadWindow(@NotNull final RawDataFile file,
+      @Nullable ScanSelection ms2ScanSelection) {
+    ms2ScanSelection = Objects.requireNonNullElse(ms2ScanSelection, new ScanSelection(2));
+    Range<Float> dataRTRange = file.getDataRTRange(1);
+    if (dataRTRange.isEmpty()) {
+      return false;
+    }
+    final float center = RangeUtils.rangeCenter(dataRTRange);
+    final List<Scan> ms1Scans = new ScanSelection(1).getMatchingScans(file.getScans());
+    final int startIndex = BinarySearch.binarySearch(center, DefaultTo.CLOSEST_VALUE,
+        ms1Scans.size(), i -> ms1Scans.get(i).getRetentionTime());
+    final int endIndex = startIndex + 1;
+    final List<Scan> ms2Scans = ms2ScanSelection.getMatchingScans(file.getScans());
+    final IndexRange ms2CycleRange = BinarySearch.indexRange(
+        ms1Scans.get(startIndex).getRetentionTime(), ms1Scans.get(endIndex).getRetentionTime(),
+        ms2Scans, Scan::getRetentionTime);
+    final List<Scan> ms2Cycle = ms2CycleRange.sublist(ms2Scans);
+
+    if (ms2Cycle.size() < 30) {
+      return false;
+    }
+
+    final DoubleArrayList gaps = new DoubleArrayList();
+    final SimpleRegression centers = new SimpleRegression(true);
+    for (int i = 0; i < ms2Cycle.size() - 1; i++) {
+      final Scan thisScan = ms2Cycle.get(i);
+      final Scan nextScan = ms2Cycle.get(i + 1);
+
+      final MsMsInfo thisInfo = thisScan.getMsMsInfo();
+      final MsMsInfo nextInfo = nextScan.getMsMsInfo();
+
+      if (thisInfo == null || nextInfo == null) {
+        continue;
+      }
+
+      Range<Double> thisWindow = thisInfo.getIsolationWindow();
+      Range<Double> nextWindow = nextInfo.getIsolationWindow();
+      if (nextWindow == null || thisWindow == null) {
+        continue;
+      }
+      gaps.add(nextWindow.lowerEndpoint() - thisWindow.upperEndpoint());
+      centers.addData(i, RangeUtils.rangeCenter(thisWindow));
+    }
+
+    if (gaps.size() < 30) {
+      return false;
+    }
+    double gapMedian = MathUtils.calcMedian(gaps.toDoubleArray());
+    if (gapMedian > 0.5) {
+      return false;
+    }
+    if (Math.abs(centers.getSlope()) > 15 || centers.getRSquare() < 0.9) {
+      // since we plotted against index we can use this to look at the average change between two scans
+      return false;
+    }
+
+    return true;
   }
 }
