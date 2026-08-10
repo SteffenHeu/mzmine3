@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -139,7 +140,7 @@ public final class AcademicWorkspace extends AbstractWorkspace {
     addModuleMenuItems(menu, "Spectra processing", MassDetectionModule.class,
         MobilityScanMergerModule.class, ShoulderPeaksFilterModule.class,
         ScanSignalRemovalModule.class, MassCalibrationModule.class,
-        io.github.mzmine.modules.dataprocessing.masscalibration.MassCalibrationModule.class);
+        io.github.mzmine.modules.dataprocessing.featdet_masscalibration2.MassCalibrationModule.class);
 
     addModuleMenuItems(menu, "Raw data filtering", ScanFiltersModule.class, CropFilterModule.class,
         AlignScansModule.class, ScanSmoothingModule.class,

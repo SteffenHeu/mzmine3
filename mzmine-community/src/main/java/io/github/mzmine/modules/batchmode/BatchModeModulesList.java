@@ -255,7 +255,7 @@ public class BatchModeModulesList {
           MassDetectionModule.class, //
           MassCalibrationModule.class, //
           // unified mass calibration module (lockmass / calibration segment / internal standards)
-          io.github.mzmine.modules.dataprocessing.masscalibration.MassCalibrationModule.class, //
+          io.github.mzmine.modules.dataprocessing.featdet_masscalibration2.MassCalibrationModule.class, //
           MobilityScanMergerModule.class, //
           RawFileMergeModule.class, //
 
