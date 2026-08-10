@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,12 +30,13 @@ import io.github.mzmine.datamodel.featuredata.IonSeries;
 import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
 import io.github.mzmine.modules.visualization.chromatogram.TICPlotType;
 import io.github.mzmine.util.MemoryMapStorage;
+import it.unimi.dsi.fastutil.Function;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import java.lang.foreign.MemorySegment;
-import java.nio.DoubleBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -145,6 +146,19 @@ public class BuildingIonSeries implements IonSeries {
       final List<? extends Scan> scans) {
     return new SimpleIonTimeSeries(storage, mzs, intensities, scans);
   }
+
+  /**
+   * @param scans                   the original full list of scans that was used to create this
+   *                                chromatogram
+   * @param intensityTransformation a transformation to apply to the intensities
+   * @return an ion time series that spans all scans
+   */
+  public IonTimeSeries<? extends Scan> toFullIonTimeSeries(@Nullable MemoryMapStorage storage,
+      final List<? extends Scan> scans,
+      @NotNull Function<double @NotNull [], double @NotNull []> intensityTransformation) {
+    return new SimpleIonTimeSeries(storage, mzs, intensityTransformation.apply(intensities), scans);
+  }
+
 
   /**
    * Add value and directly compute the new value
