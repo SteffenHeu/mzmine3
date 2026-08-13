@@ -32,8 +32,7 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Source of a calibrant list: either one of the bundled (shipped) lists or a {@link #CUSTOM_FILE}
- * that the user browses to. Used as the combo options of a
- * {@link ComboWithFileInputParameter}.
+ * that the user browses to. Used as the combo options of a {@link ComboWithFileInputParameter}.
  * <p>
  * Bundled lists are packaged CSV resources with an {@code mz} column (and optional {@code rt}); add
  * new presets by shipping a resource under {@code mzcalibration/} and adding an enum constant.
@@ -43,12 +42,9 @@ public enum CalibrantListSource implements UniqueIdSupplier {
   /**
    * Browse to a custom calibrant CSV/TSV file (the combo's input trigger).
    */
-  CUSTOM_FILE,
-  // ---- calibration-segment lists (tab-separated tables with an "mz" column) ----
-  NaFormPos, NaFormNeg, NaFormPosNeg, AgilentTuneMix,
-  // ---- internal-standard / contaminant lists shipped by the old module (universal calibrants) ----
-  UNIVERSAL_1_POSITIVE, UNIVERSAL_1_NEGATIVE, UNIVERSAL_2_POSITIVE, UNIVERSAL_2_NEGATIVE,
-  UNIVERSAL_MERGED_POSITIVE, UNIVERSAL_MERGED_NEGATIVE;
+  CUSTOM_FILE, // ---- calibration-segment lists (tab-separated tables with an "mz" (and optionally rt) column) ----
+  NaFormPos, NaFormNeg, NaFormPosNeg, AgilentTuneMix, PolymerFactoryPrototype, // ---- internal-standard / contaminant lists shipped by the old module (universal calibrants) ----
+  UNIVERSAL_1_POSITIVE, UNIVERSAL_1_NEGATIVE, UNIVERSAL_2_POSITIVE, UNIVERSAL_2_NEGATIVE, UNIVERSAL_MERGED_POSITIVE, UNIVERSAL_MERGED_NEGATIVE;
 
   /**
    * The file format of a bundled list, which determines how it is read.
@@ -69,7 +65,8 @@ public enum CalibrantListSource implements UniqueIdSupplier {
    * Options offered by the calibration-segment method (its specific lists + custom file).
    */
   public static CalibrantListSource[] segmentOptions() {
-    return new CalibrantListSource[]{CUSTOM_FILE, NaFormPos, NaFormNeg, NaFormPosNeg, AgilentTuneMix};
+    return new CalibrantListSource[]{CUSTOM_FILE, NaFormPos, NaFormNeg, NaFormPosNeg,
+        AgilentTuneMix, PolymerFactoryPrototype};
   }
 
   /**
@@ -79,7 +76,7 @@ public enum CalibrantListSource implements UniqueIdSupplier {
   public static CalibrantListSource[] internalStandardOptions() {
     return new CalibrantListSource[]{CUSTOM_FILE, UNIVERSAL_1_POSITIVE, UNIVERSAL_1_NEGATIVE,
         UNIVERSAL_2_POSITIVE, UNIVERSAL_2_NEGATIVE, UNIVERSAL_MERGED_POSITIVE,
-        UNIVERSAL_MERGED_NEGATIVE};
+        UNIVERSAL_MERGED_NEGATIVE, PolymerFactoryPrototype};
   }
 
   /**
@@ -88,7 +85,8 @@ public enum CalibrantListSource implements UniqueIdSupplier {
    */
   public Format format() {
     return switch (this) {
-      case CUSTOM_FILE, NaFormPos, NaFormNeg, NaFormPosNeg, AgilentTuneMix -> Format.MZ_TABLE;
+      case CUSTOM_FILE, NaFormPos, NaFormNeg, NaFormPosNeg, AgilentTuneMix,
+           PolymerFactoryPrototype -> Format.MZ_TABLE;
       case UNIVERSAL_1_POSITIVE, UNIVERSAL_1_NEGATIVE, UNIVERSAL_2_POSITIVE, UNIVERSAL_2_NEGATIVE,
            UNIVERSAL_MERGED_POSITIVE, UNIVERSAL_MERGED_NEGATIVE -> Format.UNIVERSAL_CALIBRANTS;
     };
@@ -110,6 +108,7 @@ public enum CalibrantListSource implements UniqueIdSupplier {
       case UNIVERSAL_2_NEGATIVE -> "universal_calibrants_2_negative_mode.csv";
       case UNIVERSAL_MERGED_POSITIVE -> "universal_calibrants_merged_positive_mode.csv";
       case UNIVERSAL_MERGED_NEGATIVE -> "universal_calibrants_merged_negative_mode.csv";
+      case PolymerFactoryPrototype -> "mzcalibration_segments/polymer_factory_lc.txt";
     };
   }
 
@@ -127,6 +126,7 @@ public enum CalibrantListSource implements UniqueIdSupplier {
       case UNIVERSAL_2_NEGATIVE -> "universal_2_negative";
       case UNIVERSAL_MERGED_POSITIVE -> "universal_merged_positive";
       case UNIVERSAL_MERGED_NEGATIVE -> "universal_merged_negative";
+      case PolymerFactoryPrototype -> "polymer_factory_prototype";
     };
   }
 
@@ -138,6 +138,7 @@ public enum CalibrantListSource implements UniqueIdSupplier {
       case NaFormNeg -> "Sodium Formate (-)";
       case NaFormPosNeg -> "Sodium formate (+/-)";
       case AgilentTuneMix -> "Agilent Tune Mix (Stow et al.) (+/-)";
+      case PolymerFactoryPrototype -> "Polymer factory (prototype)";
       case UNIVERSAL_1_POSITIVE -> "Universal calibrants (Keller) (+)";
       case UNIVERSAL_1_NEGATIVE -> "Universal calibrants (Keller) (-)";
       case UNIVERSAL_2_POSITIVE -> "Universal calibrants (Hawkes) (+)";
