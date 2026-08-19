@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -23,43 +23,30 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-
-package io.github.mzmine.datamodel.features.types;
-
-import io.github.mzmine.datamodel.features.correlation.RowGroup;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import org.jetbrains.annotations.NotNull;
+package io.github.mzmine.modules.visualization.projectmetadata.extract;
 
 /**
- * Level of feature grouping
+ * How a mapping turns the extracted regex value into the stored metadata value.
  */
-public class FeatureGroupType extends DataType<RowGroup> {
+public enum ValueHandlingMode {
 
-  @NotNull
-  @Override
-  public final String getUniqueID() {
-    // Never change the ID for compatibility during saving/loading of type
-    return "feature_group";
+  /**
+   * Store the extracted value directly (no value mappings applied).
+   */
+  EXTRACT_VALUES("Extract values"),
+  /**
+   * Map extracted values to other values (case-insensitive), e.g. media → blank.
+   */
+  VALUE_MAPPINGS("Value mappings");
+
+  private final String label;
+
+  ValueHandlingMode(final String label) {
+    this.label = label;
   }
 
   @Override
-  @NotNull
-  public String getHeaderString() {
-    return "Group";
-  }
-
-  @Override
-  public ObjectProperty<RowGroup> createProperty() {
-    return new SimpleObjectProperty<>();
-  }
-
-  @Override
-  public Class<RowGroup> getValueClass() {
-    return RowGroup.class;
-  }
-
-  public enum GroupType {
-    CORRELATED, ISOTOPES, ION_ADDUCTS
+  public String toString() {
+    return label;
   }
 }
