@@ -41,8 +41,8 @@ import javafx.scene.paint.Color;
 
 /**
  * Model of the intensity-of-selected-feature plot (QC dashboard Plot 1). Bound inputs mirror the
- * main dashboard model; {@code datasets} is the computed output and {@code showRsdInterval} is the
- * plot-exclusive SD/RSD overlay toggle.
+ * main dashboard model; {@code datasets} is the computed output and {@code showMeanSdInterval} is
+ * the plot-exclusive mean ± SD overlay toggle.
  */
 public class IntensityPlotModel {
 
@@ -59,7 +59,7 @@ public class IntensityPlotModel {
   // outputs / plot-exclusive
   private final ObjectProperty<List<DatasetAndRenderer>> datasets = new SimpleObjectProperty<>(
       List.of());
-  private final BooleanProperty showRsdInterval = new SimpleBooleanProperty(true);
+  private final BooleanProperty showMeanSdInterval = new SimpleBooleanProperty(true);
   // mean / standard deviation of the displayed intensities (NaN when not available)
   private final DoubleProperty mean = new SimpleDoubleProperty(Double.NaN);
   private final DoubleProperty sd = new SimpleDoubleProperty(Double.NaN);
@@ -108,12 +108,12 @@ public class IntensityPlotModel {
     return datasets;
   }
 
-  public boolean isShowRsdInterval() {
-    return showRsdInterval.get();
+  public boolean isShowMeanSdInterval() {
+    return showMeanSdInterval.get();
   }
 
-  public BooleanProperty showRsdIntervalProperty() {
-    return showRsdInterval;
+  public BooleanProperty showMeanSdIntervalProperty() {
+    return showMeanSdInterval;
   }
 
   public double getMean() {

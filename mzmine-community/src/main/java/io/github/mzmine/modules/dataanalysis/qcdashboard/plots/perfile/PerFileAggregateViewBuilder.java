@@ -58,7 +58,7 @@ public class PerFileAggregateViewBuilder extends FxViewBuilder<PerFileAggregateM
   }
 
   private void redrawOverlay() {
-    QcPlotDatasets.drawMeanSdOverlay(chart, model.isShowMeanSdInterval(), model.getMean(),
+    QcPlotDatasets.drawMeanRsdOverlay(chart, model.isShowMeanSdInterval(), model.getMean(),
         model.getSd());
   }
 }

@@ -27,10 +27,12 @@ package io.github.mzmine.modules.dataanalysis.qcdashboard.plots.deviation;
 
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import io.github.mzmine.gui.framework.fx.SelectedRowsBinding;
 import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.modules.dataanalysis.qcdashboard.plots.QcPlotDatasets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javafx.beans.property.ObjectProperty;
@@ -66,10 +68,19 @@ public class DeviationPlotController extends FxController<DeviationPlotModel> im
       }
       final FeatureListRow row = rows.getFirst();
       final DeviationKind kind = model.getKind();
-      model.setDatasets(
+      final String primaryLabel =
+          kind == DeviationKind.RT ? "Uncorrected Δ RT" : kind.rangeAxisLabel();
+      final List<DatasetAndRenderer> datasets = new ArrayList<>(
           QcPlotDatasets.perFile(files, model.getFileColors(), file -> kind.deviation(row, file),
-              kind.rangeAxisLabel(), kind.numberFormat()));
+              primaryLabel, kind.numberFormat()));
+      if (kind == DeviationKind.RT) {
+        datasets.addAll(QcPlotDatasets.perFile(files, model.getFileColors(),
+            file -> kind.correctedDeviation(row, file), "Corrected Δ RT", kind.numberFormat(),
+            true));
+      }
+      model.setDatasets(datasets);
 
+      // decision: Mean / SD remains tied to the uncorrected RT or m/z dataset.
       final double[] stats = QcPlotDatasets.meanSd(
           files.stream().mapToDouble(file -> kind.deviation(row, file)).toArray());
       model.setMean(stats[0]);

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -54,6 +55,19 @@ public enum AbundanceMeasure implements UniqueIdSupplier {
 
   public static @NotNull AbundanceMeasure[] rawValues() {
     return new AbundanceMeasure[]{Height, Area};
+  }
+
+  /**
+   * @return the normalized counterpart of this abundance measure, or this measure if it is already
+   * normalized
+   */
+  public @NotNull AbundanceMeasure normalizedValue() {
+    return switch (this) {
+      case Height -> NORMALIZED_HEIGHT;
+      case Area -> NORMALIZED_AREA;
+      case NORMALIZED_HEIGHT -> NORMALIZED_HEIGHT;
+      case NORMALIZED_AREA -> NORMALIZED_AREA;
+    };
   }
 
   public Class<? extends DataType<Float>> type() {

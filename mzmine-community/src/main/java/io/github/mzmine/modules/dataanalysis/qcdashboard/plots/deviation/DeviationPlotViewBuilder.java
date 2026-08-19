@@ -61,6 +61,6 @@ public class DeviationPlotViewBuilder extends FxViewBuilder<DeviationPlotModel> 
 
   private void redrawOverlay() {
     QcPlotDatasets.drawMeanSdOverlay(chart, model.isShowMeanSdInterval(), model.getMean(),
-        model.getSd());
+        model.getSd(), model.getKind().numberFormat());
   }
 }

@@ -75,7 +75,7 @@ public class QcDashboardControlsBuilder {
     final VBox box = new VBox(8, new Label("Controls"), buildAbundanceBox(), buildSampleTypeBox(),
         buildBatchBox(), meanSd, buildThresholdSpinner("Good quality (fraction of features)",
             model.getGoodQualityFraction(), model.goodQualityFractionProperty()::set),
-        buildThresholdSpinner("Warwick (fraction of QCs)", model.getWarwickFraction(),
+        buildThresholdSpinner("Detected in (fraction of QCs)", model.getWarwickFraction(),
             model.warwickFractionProperty()::set), buildFilterBox());
     box.setPadding(new Insets(6));
     final ScrollPane scroll = new ScrollPane(box);
@@ -85,7 +85,7 @@ public class QcDashboardControlsBuilder {
 
   private Region buildAbundanceBox() {
     return FxComboBox.createLabeledComboBox("Abundance",
-        FXCollections.observableArrayList(AbundanceMeasure.values()), model.abundanceProperty());
+        FXCollections.observableArrayList(AbundanceMeasure.rawValues()), model.abundanceProperty());
   }
 
   private Region buildSampleTypeBox() {

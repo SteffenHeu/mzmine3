@@ -34,6 +34,7 @@ import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYShapeRenderer;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.util.MathUtils;
+import java.awt.Font;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,7 +59,8 @@ import org.jfree.chart.ui.TextAnchor;
 public final class QcPlotDatasets {
 
   /**
-   * Show the chart legend only up to this many datasets; beyond it the legend is just noise.
+   * Show the chart legend only up to this many legend-contributing datasets; beyond it the legend
+   * is just noise. Paired normalized/corrected datasets do not contribute legend entries.
    */
   public static final int MAX_LEGEND_DATASETS = 10;
 
@@ -66,18 +68,21 @@ public final class QcPlotDatasets {
   }
 
   /**
-   * Replaces the chart's datasets and toggles the legend based on {@link #MAX_LEGEND_DATASETS}.
-   * Must be called on the FX thread.
+   * Replaces the chart's datasets and toggles the legend based on the number of datasets whose
+   * renderer contributes a legend entry and {@link #MAX_LEGEND_DATASETS}. Must be called on the FX
+   * thread.
    */
   public static void applyTo(@NotNull SimpleXYChart<?> chart,
       @org.jetbrains.annotations.Nullable List<DatasetAndRenderer> datasets) {
     chart.applyWithNotifyChanges(false, () -> {
       chart.removeAllDatasets();
-      final int count = datasets == null ? 0 : datasets.size();
+      final long legendDatasetCount = datasets == null ? 0
+          : datasets.stream().filter(dataset -> dataset.renderer().isSeriesVisibleInLegend(0))
+            .count();
       if (datasets != null) {
         datasets.forEach(dr -> chart.addDataset(dr.dataset(), dr.renderer()));
       }
-      chart.setLegendItemsVisible(count <= MAX_LEGEND_DATASETS);
+      chart.setLegendItemsVisible(legendDatasetCount <= MAX_LEGEND_DATASETS);
     });
   }
 
@@ -91,6 +96,19 @@ public final class QcPlotDatasets {
   public static @NotNull List<DatasetAndRenderer> perFile(@NotNull List<RawDataFile> orderedFiles,
       @NotNull Map<RawDataFile, Color> fileColors, @NotNull ToDoubleFunction<RawDataFile> valueFn,
       @NotNull String yLabel, @NotNull NumberFormat valueFormat) {
+    return perFile(orderedFiles, fileColors, valueFn, yLabel, valueFormat, false);
+  }
+
+  /**
+   * Builds per-file points with either filled or outlined markers. Outlined markers distinguish a
+   * paired normalized abundance measure from its raw counterpart while retaining each file's
+   * color.
+   */
+  public static @NotNull List<DatasetAndRenderer> perFile(
+      final @NotNull List<RawDataFile> orderedFiles,
+      final @NotNull Map<RawDataFile, Color> fileColors,
+      final @NotNull ToDoubleFunction<RawDataFile> valueFn, final @NotNull String yLabel,
+      final @NotNull NumberFormat valueFormat, final boolean drawOutlinesOnly) {
 
     final List<DatasetAndRenderer> datasets = new ArrayList<>(orderedFiles.size());
     for (int i = 0; i < orderedFiles.size(); i++) {
@@ -101,10 +119,15 @@ public final class QcPlotDatasets {
       }
       final Color color = fileColors.getOrDefault(file, file.getColor());
       final String tooltip = file.getName() + "\n" + yLabel + ": " + valueFormat.format(value);
-      final QcFilePointsProvider provider = new QcFilePointsProvider(file.getName(), color,
+      final String seriesKey =
+          drawOutlinesOnly ? file.getName() + " (" + yLabel + ")" : file.getName();
+      final QcFilePointsProvider provider = new QcFilePointsProvider(seriesKey, color,
           new double[]{i}, new double[]{value}, List.of(file), new String[]{tooltip});
+      final ColoredXYShapeRenderer renderer = new ColoredXYShapeRenderer(drawOutlinesOnly);
+      // decision: Paired normalized/corrected datasets must not duplicate the per-file legend.
+      renderer.setSeriesVisibleInLegend(0, !drawOutlinesOnly);
       datasets.add(new DatasetAndRenderer(new ColoredXYDataset(provider, RunOption.THIS_THREAD),
-          new ColoredXYShapeRenderer()));
+          renderer));
     }
     return datasets;
   }
@@ -121,25 +144,40 @@ public final class QcPlotDatasets {
   }
 
   /**
-   * Draws horizontal mean and mean ± SD range markers on a per-file plot. The mean marker is
-   * labelled with the %RSD; labels are right-anchored so they don't collide with the y-axis. Clears
-   * existing range markers first (per-file plots use range markers only for this overlay). FX
-   * thread.
+   * Draws mean and mean ± SD markers with an RSD label.
    */
-  public static void drawMeanSdOverlay(@NotNull SimpleXYChart<?> chart, boolean show, double mean,
-      double sd) {
+  public static void drawMeanRsdOverlay(final @NotNull SimpleXYChart<?> chart, final boolean show,
+      final double mean, final double sd) {
+    final double rsdPercent = mean != 0 ? sd / mean * 100 : 0;
+    drawMeanSdOverlay(chart, show, mean, sd, "Mean (RSD %.1f%%)".formatted(rsdPercent));
+  }
+
+  /**
+   * Draws mean and mean ± SD markers with an absolute SD label.
+   */
+  public static void drawMeanSdOverlay(final @NotNull SimpleXYChart<?> chart, final boolean show,
+      final double mean, final double sd, final @NotNull NumberFormat valueFormat) {
+    drawMeanSdOverlay(chart, show, mean, sd, "Mean (SD %s)".formatted(valueFormat.format(sd)));
+  }
+
+  /**
+   * Draws horizontal mean and mean ± SD range markers on a per-file plot. Labels are right-anchored
+   * so they do not collide with the y-axis. Existing range markers are cleared first.
+   */
+  private static void drawMeanSdOverlay(final @NotNull SimpleXYChart<?> chart, final boolean show,
+      final double mean, final double sd, final @NotNull String label) {
     chart.getXYPlot().clearRangeMarkers();
     if (!show || Double.isNaN(mean)) {
       return;
     }
     final java.awt.Color color = ConfigService.getConfiguration().getDefaultColorPalette()
         .getNeutralColorAWT();
-    final double rsdPercent = mean != 0 ? sd / mean * 100 : 0;
     final ValueMarker meanMarker = new ValueMarker(mean, color,
         EStandardChartTheme.DEFAULT_MARKER_STROKE);
-    meanMarker.setLabel(String.format("Mean (RSD %.1f%%)", rsdPercent));
+    meanMarker.setLabel(label);
     meanMarker.setLabelAnchor(RectangleAnchor.TOP_RIGHT);
     meanMarker.setLabelTextAnchor(TextAnchor.TOP_RIGHT);
+    meanMarker.setLabelFont(new Font("Arial", Font.PLAIN, 14));
     chart.getXYPlot().addRangeMarker(0, meanMarker, Layer.FOREGROUND);
 
     if (!Double.isNaN(sd) && sd > 0) {

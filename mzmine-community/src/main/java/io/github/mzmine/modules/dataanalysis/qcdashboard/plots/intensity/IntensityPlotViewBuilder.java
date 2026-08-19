@@ -52,14 +52,14 @@ public class IntensityPlotViewBuilder extends FxViewBuilder<IntensityPlotModel> 
       redrawOverlay();
     });
     // overlay depends on the global toggle and the computed mean/SD
-    model.showRsdIntervalProperty().addListener((_, _, _) -> redrawOverlay());
+    model.showMeanSdIntervalProperty().addListener((_, _, _) -> redrawOverlay());
     model.meanProperty().addListener((_, _, _) -> redrawOverlay());
     model.sdProperty().addListener((_, _, _) -> redrawOverlay());
     return chart;
   }
 
   private void redrawOverlay() {
-    QcPlotDatasets.drawMeanSdOverlay(chart, model.isShowRsdInterval(), model.getMean(),
-        model.getSd());
+    QcPlotDatasets.drawMeanSdOverlay(chart, model.isShowMeanSdInterval(), model.getMean(),
+        model.getSd(), MZmineCore.getConfiguration().getIntensityFormat());
   }
 }

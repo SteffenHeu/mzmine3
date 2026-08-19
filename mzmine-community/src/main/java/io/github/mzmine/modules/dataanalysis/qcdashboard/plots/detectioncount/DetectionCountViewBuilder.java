@@ -25,15 +25,16 @@
 
 package io.github.mzmine.modules.dataanalysis.qcdashboard.plots.detectioncount;
 
+import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.gui.chartbasics.chartthemes.EStandardChartTheme;
 import io.github.mzmine.gui.chartbasics.simplechart.SimpleXYChart;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.PlotXYDataProvider;
-import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYShapeRenderer;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataanalysis.qcdashboard.plots.QcPlotDatasets;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Stroke;
 import java.text.NumberFormat;
 import javafx.scene.layout.Region;
@@ -92,6 +93,7 @@ public class DetectionCountViewBuilder extends FxViewBuilder<DetectionCountModel
       good.setLabelAnchor(RectangleAnchor.TOP_LEFT);
       good.setLabelTextAnchor(TextAnchor.TOP_LEFT);
       good.setLabelOffset(new RectangleInsets(6, 6, 0, 0));
+      good.setLabelFont(new Font("Arial", Font.PLAIN, 14));
       chart.getXYPlot().addDomainMarker(0, good, Layer.FOREGROUND);
     }
 
@@ -99,11 +101,12 @@ public class DetectionCountViewBuilder extends FxViewBuilder<DetectionCountModel
     if (qcCount > 0) {
       final ValueMarker warwick = new ValueMarker(model.getWarwickFraction() * qcCount, color,
           markerStroke);
-      warwick.setLabel("Warwick: " + percent(model.getWarwickFraction()));
+      warwick.setLabel("Detected in >" + percent(model.getWarwickFraction()));
       // right-anchor so the label sits at the right edge, not behind the y-axis
       warwick.setLabelAnchor(RectangleAnchor.TOP_RIGHT);
       warwick.setLabelTextAnchor(TextAnchor.TOP_RIGHT);
       warwick.setLabelOffset(new RectangleInsets(2, 0, 0, 8));
+      warwick.setLabelFont(new Font("Arial", Font.PLAIN, 14));
       chart.getXYPlot().addRangeMarker(0, warwick, Layer.FOREGROUND);
     }
   }

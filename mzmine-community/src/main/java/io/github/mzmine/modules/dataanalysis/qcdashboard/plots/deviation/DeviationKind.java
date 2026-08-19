@@ -28,8 +28,10 @@ package io.github.mzmine.modules.dataanalysis.qcdashboard.plots.deviation;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.main.MZmineCore;
 import java.text.NumberFormat;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * The two deviation plots of the QC dashboard (Plots 5 &amp; 6): a feature's m/z or RT in each file
@@ -71,7 +73,7 @@ public enum DeviationKind {
    * @return the (signed) deviation of the feature's value in {@code file} from the row average, or
    * {@link Double#NaN} if not available.
    */
-  public double deviation(FeatureListRow row, RawDataFile file) {
+  public double deviation(final @NotNull FeatureListRow row, final @NotNull RawDataFile file) {
     final Feature f = row.getFeature(file);
     if (f == null) {
       return Double.NaN;
@@ -82,11 +84,35 @@ public enum DeviationKind {
         final Double avg = row.getAverageMZ();
         yield mz == null || avg == null ? Double.NaN : mz - avg;
       }
+      case RT -> rtDeviation(row, f, false);
+    };
+  }
+
+  /**
+   * @return the deviation based on the corrected retention time of the representative scan, or
+   * {@link Double#NaN} for m/z deviations and unavailable corrected retention times
+   */
+  public double correctedDeviation(final @NotNull FeatureListRow row,
+      final @NotNull RawDataFile file) {
+    return switch (this) {
+      case MZ -> Double.NaN;
       case RT -> {
-        final Float rt = f.getRT();
-        final Float avg = row.getAverageRT();
-        yield rt == null || avg == null ? Double.NaN : rt - avg;
+        final Feature feature = row.getFeature(file);
+        yield feature == null ? Double.NaN : rtDeviation(row, feature, true);
       }
     };
+  }
+
+  private static double rtDeviation(final @NotNull FeatureListRow row,
+      final @NotNull Feature feature, final boolean corrected) {
+    final Float averageRt = row.getAverageRT();
+    if (averageRt == null || !(feature.getRepresentativeScan() instanceof SimpleScan scan)) {
+      return Double.NaN;
+    }
+    if (!corrected) {
+      return scan.getUncorrectedRetentionTime() - averageRt;
+    }
+    final Float correctedRt = scan.getCorrectedRetentionTime();
+    return correctedRt == null ? Double.NaN : correctedRt - averageRt;
   }
 }

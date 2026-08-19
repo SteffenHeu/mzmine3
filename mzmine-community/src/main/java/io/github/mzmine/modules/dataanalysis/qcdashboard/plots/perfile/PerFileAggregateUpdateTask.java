@@ -31,6 +31,7 @@ import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import io.github.mzmine.modules.dataanalysis.qcdashboard.plots.QcPlotDatasets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javafx.scene.paint.Color;
@@ -72,8 +73,21 @@ class PerFileAggregateUpdateTask extends FxUpdateTask<PerFileAggregateModel> {
       return;
     }
     final Map<RawDataFile, Double> perFile = kind.computePerFile(flist, orderedFiles, abundance);
-    result = QcPlotDatasets.perFile(orderedFiles, fileColors,
-        file -> perFile.getOrDefault(file, Double.NaN), kind.rangeAxisLabel(), kind.numberFormat());
+    final String valueLabel =
+        kind == FileAggregateKind.SUM_INTENSITY ? abundance.toString() : kind.rangeAxisLabel();
+    result = new ArrayList<>(QcPlotDatasets.perFile(orderedFiles, fileColors,
+        file -> perFile.getOrDefault(file, Double.NaN), valueLabel, kind.numberFormat()));
+
+    final AbundanceMeasure normalizedAbundance = abundance.normalizedValue();
+    // decision: Only intensity sums have a paired normalized dataset.
+    if (kind == FileAggregateKind.SUM_INTENSITY && normalizedAbundance != abundance
+        && flist.hasFeatureType(normalizedAbundance.type())) {
+      final Map<RawDataFile, Double> normalizedPerFile = kind.computePerFile(flist, orderedFiles,
+          normalizedAbundance);
+      result.addAll(QcPlotDatasets.perFile(orderedFiles, fileColors,
+          file -> normalizedPerFile.getOrDefault(file, Double.NaN), normalizedAbundance.toString(),
+          kind.numberFormat(), true));
+    }
 
     final double[] stats = QcPlotDatasets.meanSd(
         perFile.values().stream().mapToDouble(Double::doubleValue).toArray());

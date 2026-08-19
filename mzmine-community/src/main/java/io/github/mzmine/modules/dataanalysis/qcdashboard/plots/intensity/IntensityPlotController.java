@@ -29,6 +29,7 @@ import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
+import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
 import io.github.mzmine.gui.framework.fx.SelectedAbundanceMeasureBinding;
 import io.github.mzmine.gui.framework.fx.SelectedRowsBinding;
 import io.github.mzmine.javafx.mvci.FxController;
@@ -36,6 +37,7 @@ import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataanalysis.qcdashboard.plots.QcPlotDatasets;
 import io.github.mzmine.util.MathUtils;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javafx.beans.property.ObjectProperty;
@@ -72,13 +74,24 @@ public class IntensityPlotController extends FxController<IntensityPlotModel> im
       }
       final FeatureListRow row = rows.getFirst();
       final AbundanceMeasure measure = model.getAbundanceMeasure();
+      final AbundanceMeasure normalizedMeasure = measure.normalizedValue();
       final Map<RawDataFile, Color> colors = model.getFileColors();
+      final var format = MZmineCore.getConfiguration().getIntensityFormat();
 
-      model.setDatasets(QcPlotDatasets.perFile(files, colors,
-          file -> measure.getOrNaN((ModularFeature) row.getFeature(file)), measure.toString(),
-          MZmineCore.getConfiguration().getIntensityFormat()));
+      final List<DatasetAndRenderer> datasets = new ArrayList<>(
+          QcPlotDatasets.perFile(files, colors,
+              file -> measure.getOrNaN((ModularFeature) row.getFeature(file)), measure.toString(),
+              format));
+      // decision: Only plot the paired normalized measure when that feature data type is present.
+      if (normalizedMeasure != measure && row.getFeatureList()
+          .hasFeatureType(normalizedMeasure.type())) {
+        datasets.addAll(QcPlotDatasets.perFile(files, colors,
+            file -> normalizedMeasure.getOrNaN((ModularFeature) row.getFeature(file)),
+            normalizedMeasure.toString(), format, true));
+      }
+      model.setDatasets(datasets);
 
-      // mean / SD over the displayed (non-NaN) intensities for the mean ± SD overlay
+      // Mean / SD remains tied to the raw measure selected in the control.
       final double[] values = files.stream()
           .mapToDouble(file -> measure.getOrNaN((ModularFeature) row.getFeature(file)))
           .filter(v -> !Double.isNaN(v)).toArray();
@@ -116,6 +129,6 @@ public class IntensityPlotController extends FxController<IntensityPlotModel> im
   }
 
   public javafx.beans.property.BooleanProperty showMeanSdIntervalProperty() {
-    return model.showRsdIntervalProperty();
+    return model.showMeanSdIntervalProperty();
   }
 }
