@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -141,71 +141,75 @@ public class TSFImportTask extends AbstractTask implements RawDataImportTask {
     tsf_bin = files[1];
 
     setDescription("Importing " + rawDataFileName + ": Initialising tsf reader.");
-    final TSFUtils tsfUtils;
-    try {
-      tsfUtils = new TSFUtils();
-    } catch (IOException e) {
-      error("Could not initialise tsf reader.", e);
-      return;
-    }
+    try (final TSFUtils tsfUtils = new TSFUtils()) {
 
-    setDescription("Importing " + rawDataFileName + ": Opening " + tsf.getAbsolutePath());
-    final long handle = tsfUtils.openFile(tsf_bin);
-    if (handle == 0L) {
-      setErrorMessage("Could not open " + tsf_bin.getAbsolutePath());
-      setStatus(TaskStatus.ERROR);
-      return;
-    }
+      setDescription("Importing " + rawDataFileName + ": Opening " + tsf.getAbsolutePath());
+      final long handle = tsfUtils.openFile(tsf_bin);
+      if (handle == 0L) {
+        setErrorMessage("Could not open " + tsf_bin.getAbsolutePath());
+        setStatus(TaskStatus.ERROR);
+        return;
+      }
 
-    setDescription("Importing " + rawDataFileName + ": Reading metadata");
-    readMetadata();
+      setDescription("Importing " + rawDataFileName + ": Reading metadata");
+      readMetadata();
 
-    try {
-      if (isMaldi) {
-        newMZmineFile = MZmineCore.createNewImagingFile(rawDataFileName, dirPath.getAbsolutePath(),
-            getMemoryMapStorage());
-      } else {
-        newMZmineFile = MZmineCore.createNewFile(rawDataFileName, dirPath.getAbsolutePath(),
+      try {
+        if (isMaldi) {
+          newMZmineFile = MZmineCore.createNewImagingFile(rawDataFileName,
+              dirPath.getAbsolutePath(), getMemoryMapStorage());
+        } else {
+          newMZmineFile = MZmineCore.createNewFile(rawDataFileName, dirPath.getAbsolutePath(),
+              getMemoryMapStorage());
+        }
+      } catch (IOException e) {
+        setErrorMessage("Error creating raw data file.");
+        logger.log(Level.SEVERE, e.getMessage(), e);
+        setStatus(TaskStatus.ERROR);
+        return;
+      }
+
+      synchronized (org.sqlite.JDBC.class) {
+        BrukerUvReader.loadAndAddForFile(dirPath, (RawDataFileImpl) newMZmineFile,
             getMemoryMapStorage());
       }
-    } catch (IOException e) {
-      setErrorMessage("Error creating raw data file.");
-      logger.log(Level.SEVERE, e.getMessage(), e);
-      setStatus(TaskStatus.ERROR);
-      return;
+
+      newMZmineFile.setStartTimeStamp(metaDataTable.getAcquisitionDateTime());
+
+      final int numScans = frameTable.getFrameIdColumn().size();
+      totalScans = numScans;
+      final boolean tryProfile = !parameters.getEmbeddedParameterValue(
+              AllSpectralDataImportParameters.vendorOptions)
+          .getValue(VendorImportParameters.applyVendorCentroiding);
+      final MassSpectrumType importSpectrumType =
+          tryProfile && metaDataTable.hasProfileSpectra() ? MassSpectrumType.PROFILE
+              : MassSpectrumType.CENTROIDED;
+
+      if (!importTSF(tsfUtils, numScans, newMZmineFile, importSpectrumType)) {
+        return;
+      }
+      addMsMsInfo(newMZmineFile);
+      assignBbCidMsMsInfo(newMZmineFile, frameTable, frameMsMsInfoTable, metaDataTable);
+
+      newMZmineFile.getAppliedMethods()
+          .add(new SimpleFeatureListAppliedMethod(module, parameters, getModuleCallDate()));
+
+      project.addFile(newMZmineFile);
+      setStatus(TaskStatus.FINISHED);
+    } catch (Exception e) {
+      error("Could not initialise or use the TSF reader.", e);
+    } catch (LinkageError e) {
+      // The native Bruker library failed to load or link. Static initialization of TSFLib wraps
+      // such failures in an ExceptionInInitializerError (a LinkageError), which is not an Exception
+      // and would otherwise escape uncaught, leaving the task without an ERROR status.
+      error("Could not load the native Bruker TSF library. TSF is not supported on macOS. On "
+          + "Windows, please ensure the VC++ 2017 redistributable is installed.", new Exception(e));
     }
-
-    synchronized (org.sqlite.JDBC.class) {
-      BrukerUvReader.loadAndAddForFile(dirPath, (RawDataFileImpl) newMZmineFile,
-          getMemoryMapStorage());
-    }
-
-    newMZmineFile.setStartTimeStamp(metaDataTable.getAcquisitionDateTime());
-
-    final int numScans = frameTable.getFrameIdColumn().size();
-    totalScans = numScans;
-    final boolean tryProfile = !parameters.getEmbeddedParameterValue(
-            AllSpectralDataImportParameters.vendorOptions)
-        .getValue(VendorImportParameters.applyVendorCentroiding);
-    final MassSpectrumType importSpectrumType =
-        tryProfile && metaDataTable.hasProfileSpectra() ? MassSpectrumType.PROFILE
-            : MassSpectrumType.CENTROIDED;
-
-    if (!importTSF(tsfUtils, handle, numScans, newMZmineFile, importSpectrumType)) {
-      return;
-    }
-    addMsMsInfo(newMZmineFile);
-    assignBbCidMsMsInfo(newMZmineFile, frameTable, frameMsMsInfoTable, metaDataTable);
-
-    newMZmineFile.getAppliedMethods()
-        .add(new SimpleFeatureListAppliedMethod(module, parameters, getModuleCallDate()));
-
-    project.addFile(newMZmineFile);
-    setStatus(TaskStatus.FINISHED);
   }
 
-  private boolean importTSF(TSFUtils tsfUtils, long handle, int numScans, RawDataFile newMZmineFile,
-      MassSpectrumType importSpectrumType) {
+  private boolean importTSF(@NotNull final TSFUtils tsfUtils, final int numScans,
+      @NotNull final RawDataFile newMZmineFile,
+      @NotNull final MassSpectrumType importSpectrumType) {
     for (int i = 0; i < numScans; i++) {
       final long frameId = frameTable.getFrameIdColumn().get(i);
 
@@ -213,7 +217,7 @@ public class TSFImportTask extends AbstractTask implements RawDataImportTask {
 
       final Scan scan;
       try {
-        scan = tsfUtils.loadScan(newMZmineFile, handle, frameId, metaDataTable,
+        scan = tsfUtils.loadScan(newMZmineFile, frameId, metaDataTable,
             frameTable, frameMsMsInfoTable, maldiFrameInfoTable, importSpectrumType, config);
       } catch (Exception e) {
         error("Error while loading scan %d in of file %s".formatted(frameId, rawDataFileName), e);
