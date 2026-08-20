@@ -27,7 +27,6 @@ package resolver_tests;
 
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.gui.preferences.AgilentImportOptions;
 import io.github.mzmine.gui.preferences.VendorImportParameters;
 import io.github.mzmine.gui.preferences.WatersLockmassParameters;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectors;
@@ -62,7 +61,8 @@ public record FilesToImport(@NotNull List<String> filePaths,
       VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
       WatersLockmassParameters.createDefault(),
       VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
-      VendorImportParameters.DEFAULT_AGILENT_OPTION);
+      VendorImportParameters.DEFAULT_AGILENT_OPTION,
+      VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
 
   public static FilesToImport factor5(@NotNull String fileName) {
     return factor5(List.of(fileName));

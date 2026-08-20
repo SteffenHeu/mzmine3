@@ -29,6 +29,8 @@ import io.github.mzmine.javafx.components.factories.FxButtons;
 import io.github.mzmine.javafx.util.FxIcons;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.filter_scan_signals.ScanSignalRemovalModule;
+import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.datamodel.TdfPressureCompensation;
+import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
@@ -37,6 +39,7 @@ import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithComboI
 import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithComboInputValue;
 import io.github.mzmine.parameters.parametertypes.submodules.OptionalModuleParameter;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import javafx.scene.Node;
 import org.jetbrains.annotations.NotNull;
@@ -49,15 +52,6 @@ public class VendorImportParameters extends SimpleParameterSet {
           Specify which path you want to use for Thermo raw data import.
           """, ThermoImportOptions.getOptionsForOs(), DEFAULT_THERMO_IMPORT),
       createJumpToPrefButton(VendorImportParameters.thermoImportChoice.getName()));*/
-  // disabled, but moved from preferences. Disabled due to downstream bugs.
-   /*public static final BooleanParameter applyTimsPressureCompensation = new BooleanParameter(
-      "Use MALDI-TIMS pressure compensation", """
-      Specifies if mobility values from Bruker timsTOF fleX MALDI raw data shall be recalibrated using a Bruker algorithm.
-      This compensation is applied during file import and cannot be applied afterwards.
-      Will cause additional memory consumption, because every pixel might have it's own mobility calibration (in theory).
-      In practical cases, this memory consumption is mostly negligible.
-      """, false);*/
-
   public static final MassLynxImportOptions DEFAULT_WATERS_OPTION = MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING;
   public static final AgilentImportOptions DEFAULT_AGILENT_READER = AgilentImportOptions.AGILENT_READER_AUTO_CENTROID;
   public static final AgilentCentroidingOption DEFAULT_AGILENT_CENTROIDING = AgilentCentroidingOption.PREFER_STORED;
@@ -66,6 +60,7 @@ public class VendorImportParameters extends SimpleParameterSet {
   public static final boolean DEFAULT_VENDOR_CENTROIDING = true;
   public static final boolean DEFAULT_WATERS_LOCKMASS_ENABLED = true;
   public static final boolean DEFAULT_THERMO_EXCEPTION_SIGNALS = true;
+  public static final TdfPressureCompensation DEFAULT_PRESSURE_COMPENSATION = TdfPressureCompensation.NONE;
 
   private static final String JUMP_TO_PREFERENCE_TOOLTIP = """
       Open the preference dialog, which controls this parameter for the drag & drop import and the mzwizard.
@@ -123,9 +118,20 @@ public class VendorImportParameters extends SimpleParameterSet {
           """.formatted(ScanSignalRemovalModule.MODULE_NAME), DEFAULT_THERMO_EXCEPTION_SIGNALS),
       createJumpToPrefButton("Remove calibrant signals (Thermo)"));
 
+  public static final ComponentWrapperParameter<TdfPressureCompensation, ComboParameter<TdfPressureCompensation>> applyTimsPressureCompensation = new ComponentWrapperParameter<>(
+      new ComboParameter<>("Pressure compensation (Bruker IMS)", """
+          Specifies if mobility values from Bruker timsTOF raw data shall be compensated for pressure changes on import using a Bruker algorithm.
+          This compensation is applied during file import and cannot be applied afterwards.
+          Will cause additional memory consumption, because every frame might have it's own mobility calibration (in theory).
+          In practical cases, this memory consumption is mostly negligible.
+          Usually not required in LC-IMS-MS, especially if the file was already recalibrated.
+          May lead to more stable mobility values in MALDI-IMS mode.
+          """, TdfPressureCompensation.values(), DEFAULT_PRESSURE_COMPENSATION),
+      createJumpToPrefButton("Pressure compensation (Bruker IMS)"));
+
   public VendorImportParameters() {
     super(applyVendorCentroiding, excludeThermoExceptionMasses, watersLockmass,
-        massLynxImportChoice, agilentImportChoice);
+        massLynxImportChoice, agilentImportChoice, applyTimsPressureCompensation);
   }
 
   private static @NotNull Supplier<Node> createJumpToPrefButton(String preferenceParameterName) {
@@ -134,9 +140,10 @@ public class VendorImportParameters extends SimpleParameterSet {
   }
 
   public static VendorImportParameters create(boolean applyCentroiding,
-      MassLynxImportOptions massLynxOption, boolean watersLockmassEnabled,
-      WatersLockmassParameters lockmassParam, boolean removeThermoExceptionMasses,
-      ComboWithComboInputValue<AgilentImportOptions, AgilentCentroidingOption> agilentSettings) {
+      @NotNull MassLynxImportOptions massLynxOption, boolean watersLockmassEnabled,
+      @NotNull WatersLockmassParameters lockmassParam, boolean removeThermoExceptionMasses,
+      @NotNull ComboWithComboInputValue<AgilentImportOptions, AgilentCentroidingOption> agilentSettings,
+      @NotNull TdfPressureCompensation brukerPressureComp) {
     final VendorImportParameters param = (VendorImportParameters) new VendorImportParameters().cloneParameterSet();
 
     param.setParameter(applyVendorCentroiding, applyCentroiding);
@@ -145,13 +152,14 @@ public class VendorImportParameters extends SimpleParameterSet {
     param.getParameter(watersLockmass).setValue(watersLockmassEnabled);
     param.getParameter(watersLockmass).getEmbeddedParameter().setEmbeddedParameters(lockmassParam);
     param.setParameter(excludeThermoExceptionMasses, removeThermoExceptionMasses);
+    param.setParameter(applyTimsPressureCompensation, brukerPressureComp);
     return param;
   }
 
   public static VendorImportParameters createDefault() {
     return create(DEFAULT_VENDOR_CENTROIDING, DEFAULT_WATERS_OPTION,
         DEFAULT_WATERS_LOCKMASS_ENABLED, WatersLockmassParameters.createDefault(),
-        DEFAULT_THERMO_EXCEPTION_SIGNALS, DEFAULT_AGILENT_OPTION);
+        DEFAULT_THERMO_EXCEPTION_SIGNALS, DEFAULT_AGILENT_OPTION, DEFAULT_PRESSURE_COMPENSATION);
   }
 
   /**
@@ -167,7 +175,20 @@ public class VendorImportParameters extends SimpleParameterSet {
         preferences.getValue(MZminePreferences.watersLockmass),
         preferences.getParameter(MZminePreferences.watersLockmass).getEmbeddedParameters(),
         preferences.getValue(MZminePreferences.excludeThermoExceptionMasses),
-        preferences.getValue(MZminePreferences.agilentImportChoice));
-    return param;
+        preferences.getValue(MZminePreferences.agilentImportChoice),
+        preferences.getValue(MZminePreferences.brukerPressureComp));
+  }
+
+  @Override
+  public void handleLoadedParameters(Map<String, Parameter<?>> loadedParams, int loadedVersion) {
+    super.handleLoadedParameters(loadedParams, loadedVersion);
+
+    if (!loadedParams.containsKey(applyTimsPressureCompensation.getName())) {
+      getParameter(applyTimsPressureCompensation).getEmbeddedParameter()
+          .setValue(DEFAULT_PRESSURE_COMPENSATION);
+    }
+    if (!loadedParams.containsKey(agilentImportChoice.getName())) {
+      getParameter(agilentImportChoice).getEmbeddedParameter().setValue(DEFAULT_AGILENT_OPTION);
+    }
   }
 }

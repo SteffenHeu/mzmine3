@@ -62,7 +62,8 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(true,
         MassLynxImportOptions.NATIVE_WATERS_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        VendorImportParameters.DEFAULT_AGILENT_OPTION);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION,
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
     return (AllSpectralDataImportParameters) AllSpectralDataImportParameters.create(vendorParam,
         new File[]{file}, null, null);
   }
@@ -71,7 +72,8 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(true,
         MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        VendorImportParameters.DEFAULT_AGILENT_OPTION);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION,
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
     return (AllSpectralDataImportParameters) AllSpectralDataImportParameters.create(vendorParam,
         new File[]{file}, null, null);
   }
@@ -80,7 +82,8 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(false,
         MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        VendorImportParameters.DEFAULT_AGILENT_OPTION);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION,
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
     return (AllSpectralDataImportParameters) AllSpectralDataImportParameters.create(vendorParam,
         new File[]{file}, null, null);
   }
@@ -89,7 +92,8 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(false,
         MassLynxImportOptions.NATIVE_WATERS_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        VendorImportParameters.DEFAULT_AGILENT_OPTION);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION,
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
     return (AllSpectralDataImportParameters) AllSpectralDataImportParameters.create(vendorParam,
         new File[]{file}, null, null);
   }
@@ -98,7 +102,8 @@ public class MassLynxImportTest {
     VendorImportParameters vendorParam = VendorImportParameters.create(false,
         MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        VendorImportParameters.DEFAULT_AGILENT_OPTION);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION,
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
 
     final var param = (ExactMassDetectorParameters) new ExactMassDetectorParameters().cloneParameterSet();
     param.setParameter(ExactMassDetectorParameters.noiseLevel, 0d);
