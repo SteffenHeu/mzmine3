@@ -108,8 +108,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import org.controlsfx.control.ToggleSwitch;
 import javafx.util.Subscription;
+import org.controlsfx.control.ToggleSwitch;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -488,12 +488,12 @@ public class BatchWizardTab extends SimpleTab {
     final @NotNull File[] allFiles = importParam.getParameter(DataImportWizardParameters.fileNames)
         .getValue();
     List<File> qcFiles = CollectionUtils.selectRandomElements(
-        Arrays.stream(allFiles).filter(f -> SampleType.ofString(f.getName()) == SampleType.QC)
+        Arrays.stream(allFiles).filter(f -> SampleType.guessFromName(f.getName()) == SampleType.QC)
             .limit(10).toList(), 10);
 
     if (qcFiles.size() < 3) {
       File[] nonBlanks = Arrays.stream(allFiles)
-          .filter(f -> SampleType.ofString(f.getName()) != SampleType.BLANK).limit(10)
+          .filter(f -> SampleType.guessFromName(f.getName()) != SampleType.BLANK).limit(10)
           .toArray(File[]::new);
       qcFiles = CollectionUtils.selectRandomElements(
           List.of(nonBlanks.length > 3 ? nonBlanks : allFiles), 10);
