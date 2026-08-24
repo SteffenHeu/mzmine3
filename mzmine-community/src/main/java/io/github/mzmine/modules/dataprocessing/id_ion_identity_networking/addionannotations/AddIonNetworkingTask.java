@@ -44,6 +44,7 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
+import io.github.mzmine.util.CorrelationGroupingUtils;
 import io.github.mzmine.util.SortingDirection;
 import io.github.mzmine.util.SortingProperty;
 import java.time.Instant;
@@ -124,8 +125,8 @@ public class AddIonNetworkingTask extends AbstractTask {
 
   private void annotateGroups(SearchableIonLibrary library) {
     LOG.info("Starting adduct detection on groups of peaklist " + featureList.getName());
-    // get groups
-    List<RowGroup> groups = featureList.getGroups();
+    // generate correlation groups (connected components) on demand from the MS1 correlation map
+    List<RowGroup> groups = CorrelationGroupingUtils.createCorrGroups(featureList);
 
     if (groups == null || groups.isEmpty()) {
       throw new MSDKRuntimeException(
@@ -135,12 +136,15 @@ public class AddIonNetworkingTask extends AbstractTask {
     AtomicInteger compared = new AtomicInteger(0);
     AtomicInteger annotPairs = new AtomicInteger(0);
     // for all groups
-    groups.parallelStream().forEach(g -> {
+    // parallelstream with map instead of forEach to block the calling thread until finished
+    final int ignored = groups.parallelStream().mapToInt(g -> {
       if (!this.isCanceled()) {
         annotateGroup(library, g, compared, annotPairs);
         stageProgress.addAndGet(1d / groups.size());
+        return 1;
       }
-    });
+      return 0;
+    }).sum();
     LOG.info("Corr: A total of " + compared.get() + " row2row adduct comparisons with "
         + annotPairs.get() + " annotation pairs");
 
@@ -238,6 +242,6 @@ public class AddIonNetworkingTask extends AbstractTask {
 
     // show all annotations with the highest count of links
     LOG.info("Corr: show most likely annotations");
-    IonNetworkLogic.sortIonIdentities(featureList, true);
+    IonNetworkLogic.sortIonIdentities(featureList);
   }
 }

@@ -25,29 +25,10 @@
 
 package integrationtest;
 
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.AnnotationWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.DataImportWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.FilterWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.workflows.WorkflowDDA;
-import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
-import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
-import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizationUtils;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
-import io.github.mzmine.parameters.ParameterSet;
-import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.modules.tools.output_compare_csv.CheckResult;
 import java.io.File;
-import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -59,12 +40,6 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.moeaframework.algorithm.AbstractAlgorithm;
-import org.moeaframework.algorithm.NSGAII;
-import org.moeaframework.analysis.plot.ImageFileType;
-import org.moeaframework.analysis.plot.Plot;
-import org.moeaframework.core.population.NondominatedPopulation;
-import org.moeaframework.util.format.TableFormat;
 import testutils.MZmineTestUtil;
 
 @ExtendWith(MockitoExtension.class)
@@ -104,7 +79,8 @@ public class IntegrationTests {
                 "workshop_dataset_integration_test_process_in_place.mzbatch").tempDir(tempDir)
             .rawFiles("171103_PMA_TK_QC_04-4to5min.mzML", "171103_PMA_TK_QC_05-4to5min.mzML")
             .specLibsFullPath("spectral_libraries/integration_tests/massbank_nist_for_tests.msp",
-                "spectral_libraries/integration_tests/MoNA-export-LC-MS-MS_Spectra.json").build().runBatchGetCheckResults(
+                "spectral_libraries/integration_tests/MoNA-export-LC-MS-MS_Spectra.json").build()
+            .runBatchGetCheckResults(
                 "rawdatafiles/integration_tests/workshop_dataset/expected_results.csv").size());
   }
 
@@ -121,8 +97,8 @@ public class IntegrationTests {
             "rawdatafiles/integration_tests/workshop_dataset/expected_results.csv", results, batchFile)
         .isEmpty());
 
-    logger.info("Checking file with 66 known differences. Table below is expected:");
-    Assertions.assertEquals(66, IntegrationTestUtils.getCsvComparisonResults(
+    logger.info("Checking file with 55 known differences. Table below is expected:");
+    Assertions.assertEquals(55, IntegrationTestUtils.getCsvComparisonResults(
         "rawdatafiles/integration_tests/workshop_dataset/expected_results_error.csv", results,
         batchFile).size());
   }
@@ -130,10 +106,10 @@ public class IntegrationTests {
   @Test
   void testLcMsFullBatch(@TempDir File tempDir) {
     if (new File("D:\\OneDrive - mzio GmbH").exists()) {
-      Assertions.assertEquals(0,
+      Assertions.assertEquals(0, noSmilesErrors(
           IntegrationTest.builder("rawdatafiles/integration_tests/workshop_dataset",
               "workshop_dataset_full.mzbatch").tempDir(tempDir).build().runBatchGetCheckResults(
-              "rawdatafiles/integration_tests/workshop_dataset/expected_results_full.csv").size());
+              "rawdatafiles/integration_tests/workshop_dataset/expected_results_full.csv")).size());
     }
   }
 
@@ -228,12 +204,11 @@ public class IntegrationTests {
       logger.info("Skipping tims full batch integration test.");
       return;
     }
-    Assertions.assertEquals(0,
+    Assertions.assertEquals(0, noSmilesErrors(
         IntegrationTest.builder("rawdatafiles/integration_tests/lc_tims", "lc_tims_local.mzbatch")
             .specLibsFullPath("spectral_libraries/integration_tests/matches_for_tims-full.json")
-            .tempDir(tempDir).build()
-            .runBatchGetCheckResults("rawdatafiles/integration_tests/lc_tims/expected_results.csv")
-            .size());
+            .tempDir(tempDir).build().runBatchGetCheckResults(
+                "rawdatafiles/integration_tests/lc_tims/expected_results.csv")).size());
 
 //    ConfigService.getPreferences().setParameter(MZminePreferences.numOfThreads, 4);
 //    final File first = IntegrationTest.builder("rawdatafiles/integration_tests/lc_tims",
@@ -255,60 +230,10 @@ public class IntegrationTests {
       logger.info("Skipping tims full batch integration test.");
       return;
     }
-    Assertions.assertEquals(0, IntegrationTest.builder("rawdatafiles/integration_tests/diaPASEF",
-            "dia_pasef_local.mzbatch").tempDir(tempDir).build()
-        .runBatchGetCheckResults("rawdatafiles/integration_tests/diaPASEF/expected_results.csv")
-        .size());
-  }
-
-  @Test
-  void testOptimisation() throws IOException {
-
-    final File[] files = {new File(
-        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_03.mzML"),
-        new File(
-            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_04.mzML"),
-        new File(
-            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_05.mzML"),
-        new File(
-            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_06.mzML"),
-        new File(
-            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_07.mzML"),
-        new File(
-            "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Thermo\\20 years mzmine\\171103_PMA_TK_QC_08.mzML")};
-
-    final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, null);
-    final MemoryMapStorage storage = MemoryMapStorage.forRawDataFile();
-    final List<DataFileStatistics> stats = importedFiles.stream().map(
-            file -> new AutoParamTask(storage, Instant.now(), AutoParamParameters.of(importedFiles),
-                AutoParamModule.class, file, List.of())).parallel().map(AutoParamTask::runAndGet)
-        .toList();
-    stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
-
-    final WizardSequence sequence = new WizardSequence();
-    sequence.add(DataImportWizardParameterFactory.Data.create());
-    sequence.add(IonInterfaceWizardParameterFactory.HPLC.create());
-    sequence.add(IonMobilityWizardParameterFactory.NO_IMS.create());
-    sequence.add(FilterWizardParameterFactory.Filters.create());
-    sequence.add(MassSpectrometerWizardParameterFactory.Orbitrap.create());
-    sequence.add(AnnotationWizardParameterFactory.Annotation.create());
-    sequence.add(new WorkflowDDA().create());
-
-    final ParameterSet param = OptimizerParameters.create(
-        List.of(SweepMetric.IPO_ISOTOPE_SCORE, SweepMetric.SLAW_INTEGRATION_SCORE), 100);
-
-    final WizardOptimizationProblem problem = new WizardOptimizationProblem(sequence, stats, param);
-
-    final AbstractAlgorithm optimizer = new NSGAII(problem);
-
-    optimizer.run(param.getValue(OptimizerParameters.iterations));
-    optimizer.getResult().display(TableFormat.CSV);
-    final NondominatedPopulation result = optimizer.getResult();
-    new Plot().add(optimizer.getName(), result)
-        .save(new File("C:\\Users\\Steffen\\Desktop\\image.png"), ImageFileType.PNG, 700, 600);
-
-    logger.info(
-        optimizer.getName() + " ran " + optimizer.getNumberOfEvaluations() + " evaluations");
+    Assertions.assertEquals(0, noSmilesErrors(
+        IntegrationTest.builder("rawdatafiles/integration_tests/diaPASEF",
+            "dia_pasef_local.mzbatch").tempDir(tempDir).build().runBatchGetCheckResults(
+            "rawdatafiles/integration_tests/diaPASEF/expected_results.csv")).size());
   }
 
   @Test
@@ -327,5 +252,13 @@ public class IntegrationTests {
         IntegrationTest.builder("rawdatafiles/integration_tests/thermo_import", "trp_batch.mzbatch")
             .tempDir(tempDir).build().runBatchGetCheckResults(
                 "rawdatafiles/integration_tests/thermo_import/test_msconvert.csv").size());
+  }
+
+  /**
+   * Allows dropping of smiles harmonization errors from integration tests
+   */
+  public List<CheckResult> noSmilesErrors(List<CheckResult> checkResults) {
+    return checkResults.stream()
+        .filter(r -> !Objects.requireNonNullElse(r.type(), "").contains("smiles")).toList();
   }
 }

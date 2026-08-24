@@ -90,6 +90,20 @@ public class FeatureNetworkGenerator {
    */
   public static final String ANALOG_GROUP_ATTR = "analog_compound_group";
 
+  /**
+   * GraphStream node attribute holding the pie-slice fractions (a {@code double[]} summing to 1)
+   * read by the {@code pie-chart} node shape. Populated by {@link NetworkPieChartStyler} when
+   * metadata grouping is active, one slice per sample group.
+   */
+  public static final String PIE_VALUES_ATTR = "ui.pie-values";
+
+  /**
+   * {@code ui.class} assigned to feature nodes while pie-chart grouping is active. The matching
+   * {@code node.PIE} style block (shape, stroke, size) lives in
+   * {@code themes/graph_network_style.css}; the per-group fill-color list is injected at runtime.
+   */
+  public static final String PIE_UI_CLASS = "PIE";
+
   private final NumberFormat mzForm = MZmineCore.getConfiguration().getMZFormat();
   private final NumberFormat rtForm = MZmineCore.getConfiguration().getRTFormat();
   private final NumberFormat scoreForm = MZmineCore.getConfiguration().getScoreFormat();
@@ -376,7 +390,7 @@ public class FeatureNetworkGenerator {
     setEdgeWeightQuadraticScore(edge, score);
 
     switch (type) {
-      case MS2_MODIFIED_COSINE, GNPS_MODIFIED_COSINE, MS2Deepscore, DREAMS ->
+      case MS2_MODIFIED_COSINE, GNPS_MODIFIED_COSINE, MS2Deepscore, DREAMS, STRUCTURE_TANIMOTO ->
           edge.setAttribute("ui.size", (float) Math.max(1, Math.min(5, 5 * score * score)));
       case FEATURE_SHAPE_CORRELATION ->
           edge.setAttribute("ui.size", (float) Math.max(1, Math.min(5, 5 * score * score)));

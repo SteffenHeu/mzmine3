@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,7 +27,7 @@ package io.github.mzmine.javafx.util;
 
 public enum FxIcons implements IconCodeSupplier {
   // status
-  CHECK_CIRCLE, X, X_CIRCLE, EXCLAMATION_TRIANGLE, EXCLAMATION_CIRCLE, INFO_CIRCLE, QUESTION_CIRCLE,
+  CHECK_CIRCLE, CHECK_ALL, X, X_CIRCLE, EXCLAMATION_TRIANGLE, EXCLAMATION_CIRCLE, INFO_CIRCLE, QUESTION_CIRCLE,
 
   // filled, for example for overlays
   X_CIRCLE_FILL, EXCLAMATION_CIRCLE_FILL, INFO_CIRCLE_FILL,
@@ -42,11 +42,11 @@ public enum FxIcons implements IconCodeSupplier {
   DARK_MODE_SWITCH, BATCH,
 
   //
-  USER, DOCUMENTATION, BUG, WEBSITE, GEAR_PREFERENCES, TOOL, RELOAD, YOUTUBE, DEVELOPMENT, BOOK, //
+  USER, DOCUMENTATION, BUG, WEBSITE, GEAR_PREFERENCES, TOOL, RELOAD, TOGGLE_SWITCH, YOUTUBE, DEVELOPMENT, BOOK, //
   ROCKET, LIGHTBULB, METADATA_TABLE, TABLE, SPREADSHEET, GRAPH_UP,
 
   // ACTIONS
-  SAVE, LOAD, CANCEL, FILTER, CLEAR, START, STOP, DRAW_REGION, DOWNLOAD, SEARCH;
+  SAVE, LOAD, CANCEL, FILTER, CLEAR, START, STOP, DRAW_REGION, DOWNLOAD, SEARCH, COLLAPSE, EXPAND;
 
 
   @Override
@@ -54,6 +54,7 @@ public enum FxIcons implements IconCodeSupplier {
     return switch (this) {
       case QUESTION_CIRCLE -> "bi-question-circle";
       case CHECK_CIRCLE -> "bi-check2-circle";
+      case CHECK_ALL -> "bi-check-all";
       case X -> "bi-x";
       case X_CIRCLE -> "bi-x-circle";
       case X_CIRCLE_FILL -> "bi-x-circle-fill";
@@ -76,6 +77,7 @@ public enum FxIcons implements IconCodeSupplier {
       case ARROW_UP -> "bi-arrow-up";
       case ARROW_DOWN -> "bi-arrow-down";
       case RELOAD -> "bi-arrow-repeat";
+      case TOGGLE_SWITCH -> "bi-arrow-repeat";
       case YOUTUBE -> "bi-youtube";
       case DEVELOPMENT -> "bi-code-slash";
       case BOOK -> "bi-book";
@@ -110,6 +112,8 @@ public enum FxIcons implements IconCodeSupplier {
       case FOLDER -> "bi-folder";
       case FOLDER_FILL -> "bi-folder-fill";
       case SEARCH -> "bi-search";
+      case COLLAPSE -> "bi-arrows-collapse";
+      case EXPAND -> "bi-arrows-expand";
       case FEATURE_LIST -> "bi-file-spreadsheet";
       case ALIGNED_FEATURE_LIST -> "bi-file-spreadsheet-fill";
     };

@@ -184,6 +184,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSp
 import io.github.mzmine.modules.tools.fraggraphdashboard.fraggraph.FragmentUtils;
 import io.github.mzmine.modules.tools.isotopepatternscore.IsotopePatternScoreParameters;
 import io.github.mzmine.modules.tools.msmsscore.MSMSScoreParameters;
+import io.github.mzmine.modules.visualization.projectmetadata.extract.SampleMetadataExtractionParameters;
 import io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataExportModule;
 import io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataExportParameters;
 import io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataExportParameters.MetadataFileFormat;
@@ -246,6 +247,7 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
   // input
   protected final File[] dataFiles;
   protected final OptionalValue<File> metadataFile;
+  protected final @Nullable SampleMetadataExtractionParameters extractMetadataParams;
   // annotation
   protected final File[] libraries;
   //filter
@@ -289,6 +291,8 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
     Optional<? extends WizardStepParameters> params = steps.get(WizardPart.DATA_IMPORT);
     dataFiles = getValue(params, DataImportWizardParameters.fileNames);
     metadataFile = getOptional(params, DataImportWizardParameters.metadataFile);
+    extractMetadataParams = getOptionalParameters(params,
+        DataImportWizardParameters.extractMetadata).orElse(null);
 
     // annotation
     params = steps.get(WizardPart.ANNOTATION);
@@ -1074,7 +1078,8 @@ public abstract class BaseWizardBatchBuilder extends WizardBatchBuilder {
 
     final var param = AllSpectralDataImportParameters.create(
         ConfigService.getPreferences().getVendorImportParameters(), dataFiles,
-        metadataFile.active() ? metadataFile.value() : null, libraries, advancedParameters);
+        metadataFile.active() ? metadataFile.value() : null, extractMetadataParams, libraries,
+        advancedParameters);
 
     param.setParameter(AllSpectralDataImportParameters.advancedImport, false);
 
