@@ -34,7 +34,9 @@ import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterS
 import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
@@ -47,6 +49,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.variable.BinaryIntegerVariable;
@@ -54,6 +57,9 @@ import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
 
 public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationResultModel> {
+
+  private static final String SOURCE_ESTIMATE = "Raw data estimate";
+  private static final String SOURCE_OPTIMIZER = "Optimizer";
 
   private final NumberFormat threeDecimals = new DecimalFormat("0.###");
   private final NumberFormat noDecimals = new DecimalFormat("0");
@@ -78,67 +84,10 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
   @Override
   public Region build() {
     final TableView<Solution> solutionTable = new TableView<>();
-    model.resultProperty().subscribe(result -> {
-      if (solutionTable.getColumns().isEmpty()) {
-        TableColumn<Solution, Number> indexCol = TableColumns.createColumn("Index", 50,
-            s -> new ReadOnlyIntegerWrapper(model.resultProperty().get().asList().indexOf(s)));
-        solutionTable.getColumns().add(indexCol);
-
-        final Solution solution = result.get(0);
-        for (int i = 0; i < solution.getNumberOfVariables(); i++) {
-          final Variable variable = solution.getVariable(i);
-          final int finalI = i;
-          switch (variable) {
-            case RealVariable v -> {
-              final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
-                  threeDecimals, ColumnAlignment.RIGHT, s -> new ReadOnlyDoubleWrapper(
-                      ((RealVariable) s.getVariable(finalI)).getValue()));
-              solutionTable.getColumns().add(col);
-            }
-            case BinaryIntegerVariable v -> {
-              if (v.getName().equals("MZ tolerance option")) {
-                final TableColumn<Solution, String> col = TableColumns.createColumn(v.getName(),
-                    120, 200, ColumnAlignment.RIGHT, String::compareTo,
-                    s -> new ReadOnlyStringWrapper(
-                        WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[((BinaryIntegerVariable) s.getVariable(
-                            finalI)).getValue()].toString()));
-                solutionTable.getColumns().add(col);
-              } else {
-                final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(),
-                    120, noDecimals, ColumnAlignment.RIGHT, s -> new ReadOnlyIntegerWrapper(
-                        ((BinaryIntegerVariable) s.getVariable(finalI)).getValue()));
-                solutionTable.getColumns().add(col);
-              }
-            }
-            default -> {
-
-            }
-          }
-        }
-
-        final List<ObjectiveWrapper> wrappers = ObjectiveWrapper.extract(result);
-        for (ObjectiveWrapper wrapper : wrappers) {
-          final TableColumn<Solution, Number> col =
-              wrapper.isHarmonic() ? wrapper.createNormalizedHarmonicColumn(result)
-                  : wrapper.createColumn();
-          solutionTable.getColumns().add(col);
-        }
-
-        for (Entry<String, Serializable> attributeEntry : solution.getAttributes().entrySet()) {
-          final String attribute = attributeEntry.getKey();
-          // Skip internal attributes (prefixed with '_') and the MOEA penalty attribute
-          if (attribute.startsWith("_") || attribute.equalsIgnoreCase("penalty")) {
-            continue;
-          }
-          final TableColumn<Solution, String> col = TableColumns.createColumn(attribute, 120,
-              s -> new ReadOnlyStringWrapper(
-                  Objects.requireNonNullElse(s.getAttribute(attribute), "").toString()));
-          solutionTable.getColumns().add(col);
-        }
-      }
-
-      solutionTable.getItems().setAll(result.asList());
-    });
+    // decision: bind the model's single observable list instead of replacing the items list, so
+    // listeners and bindings on it are not discarded
+    solutionTable.setItems(model.getDisplayedSolutions());
+    createColumns(solutionTable);
 
     solutionTable.getSelectionModel().selectedItemProperty()
         .subscribe(s -> model.selectedSolutionProperty().set(s));
@@ -152,8 +101,8 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
         openInBatch);
     final Button exportButton = FxButtons.createButton("Export to .csv", FxIcons.FILE, null,
         onExportPressed);
-    final Button quickRunButton = FxButtons.createButton("Quick run & annotate", FxIcons.BATCH, null,
-        quickRun);
+    final Button quickRunButton = FxButtons.createButton("Quick run & annotate", FxIcons.BATCH,
+        null, quickRun);
 
     ButtonBar buttonBar = new ButtonBar();
     buttonBar.getButtons().addAll(exportButton, batchButton, quickRunButton, acceptButton);
@@ -165,5 +114,83 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     }
 
     return borderPane;
+  }
+
+  /**
+   * Derives the table columns from the first displayed solution. The raw data estimate is always
+   * the first row, so it remains a valid template even when the optimizer returned no solutions,
+   * for example after an early cancel.
+   */
+  private void createColumns(@NotNull TableView<Solution> solutionTable) {
+    final List<Solution> solutions = model.getDisplayedSolutions();
+    if (solutions.isEmpty()) {
+      return;
+    }
+    final Solution template = solutions.getFirst();
+
+    final TableColumn<Solution, String> sourceCol = TableColumns.createColumn("Source", 130,
+        s -> new ReadOnlyStringWrapper(
+            s == model.getSinglePassSolution() ? SOURCE_ESTIMATE : SOURCE_OPTIMIZER));
+    solutionTable.getColumns().add(sourceCol);
+
+    // assumption: the table sorts its items list in place, so the original row order is captured
+    // here instead of being looked up in the live list
+    final Map<Solution, Integer> originalOrder = new IdentityHashMap<>(solutions.size());
+    for (int i = 0; i < solutions.size(); i++) {
+      originalOrder.put(solutions.get(i), i);
+    }
+    final TableColumn<Solution, Number> indexCol = TableColumns.createColumn("Index", 50,
+        s -> new ReadOnlyIntegerWrapper(originalOrder.getOrDefault(s, -1)));
+    solutionTable.getColumns().add(indexCol);
+
+    for (int i = 0; i < template.getNumberOfVariables(); i++) {
+      final Variable variable = template.getVariable(i);
+      final int finalI = i;
+      switch (variable) {
+        case RealVariable v -> {
+          final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
+              threeDecimals, ColumnAlignment.RIGHT,
+              s -> new ReadOnlyDoubleWrapper(((RealVariable) s.getVariable(finalI)).getValue()));
+          solutionTable.getColumns().add(col);
+        }
+        case BinaryIntegerVariable v -> {
+          if (v.getName().equals("MZ tolerance option")) {
+            final TableColumn<Solution, String> col = TableColumns.createColumn(v.getName(), 120,
+                200, ColumnAlignment.RIGHT, String::compareTo, s -> new ReadOnlyStringWrapper(
+                    WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[((BinaryIntegerVariable) s.getVariable(
+                        finalI)).getValue()].toString()));
+            solutionTable.getColumns().add(col);
+          } else {
+            final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
+                noDecimals, ColumnAlignment.RIGHT, s -> new ReadOnlyIntegerWrapper(
+                    ((BinaryIntegerVariable) s.getVariable(finalI)).getValue()));
+            solutionTable.getColumns().add(col);
+          }
+        }
+        default -> {
+
+        }
+      }
+    }
+
+    final List<ObjectiveWrapper> wrappers = ObjectiveWrapper.extract(solutions);
+    for (ObjectiveWrapper wrapper : wrappers) {
+      final TableColumn<Solution, Number> col =
+          wrapper.isHarmonic() ? wrapper.createNormalizedHarmonicColumn(solutions)
+              : wrapper.createColumn();
+      solutionTable.getColumns().add(col);
+    }
+
+    for (Entry<String, Serializable> attributeEntry : template.getAttributes().entrySet()) {
+      final String attribute = attributeEntry.getKey();
+      // Skip internal attributes (prefixed with '_') and the MOEA penalty attribute
+      if (attribute.startsWith("_") || attribute.equalsIgnoreCase("penalty")) {
+        continue;
+      }
+      final TableColumn<Solution, String> col = TableColumns.createColumn(attribute, 120,
+          s -> new ReadOnlyStringWrapper(
+              Objects.requireNonNullElse(s.getAttribute(attribute), "").toString()));
+      solutionTable.getColumns().add(col);
+    }
   }
 }

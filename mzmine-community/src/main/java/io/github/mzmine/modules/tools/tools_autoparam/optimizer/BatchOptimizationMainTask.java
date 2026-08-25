@@ -57,24 +57,34 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.moeaframework.algorithm.AGEMOEAII;
 import org.moeaframework.algorithm.AbstractAlgorithm;
-import org.moeaframework.algorithm.EpsilonMOEA;
-import org.moeaframework.algorithm.GDE3;
-import org.moeaframework.algorithm.IBEA;
+import org.moeaframework.algorithm.AbstractEvolutionaryAlgorithm;
 import org.moeaframework.algorithm.MOEAD;
-import org.moeaframework.algorithm.NSGAII;
-import org.moeaframework.algorithm.RVEA;
-import org.moeaframework.algorithm.SMSEMOA;
-import org.moeaframework.algorithm.SPEA2;
+import org.moeaframework.algorithm.sa.AbstractSimulatedAnnealingAlgorithm;
 import org.moeaframework.core.PRNG;
 import org.moeaframework.core.Solution;
+import org.moeaframework.core.TypedProperties;
+import org.moeaframework.core.configuration.Configurable;
+import org.moeaframework.core.initialization.Initialization;
 import org.moeaframework.core.initialization.InjectedInitialization;
 import org.moeaframework.core.population.NondominatedPopulation;
 
 public class BatchOptimizationMainTask extends AbstractTask {
 
   private static final Logger logger = Logger.getLogger(BatchOptimizationMainTask.class.getName());
+
+  /**
+   * Initial population size applied to every optimizer. One evaluation is a full batch run, so the
+   * MOEA Framework default of 100 would spend the entire evaluation budget on initialization and
+   * leave no generations for the actual search.
+   */
+  private static final int POPULATION_SIZE = 20;
+
+  /**
+   * Number of initial solutions derived from raw data statistics. The remaining population slots
+   * are filled with random solutions by {@link InjectedInitialization}.
+   */
+  private static final int NUM_GUESS_SOLUTIONS = 10;
 
   private final File[] files;
   @Nullable
@@ -157,10 +167,6 @@ public class BatchOptimizationMainTask extends AbstractTask {
     optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
     totalIterations = Math.max(params.getValue(OptimizerParameters.iterations), 30);
 
-    // Initial population is the number of evaluations before the actual evolutionary algorithm starts.
-    // warm-start for MOEAD: inject pre-built solutions via InjectedInitialization and reduce
-    // evaluation count since we start closer to good solutions
-    final int numGuesstimatedPopulations = 10;
     final boolean initWithGuesses = params.getValue(
         OptimizerParameters.initializeWithRawDataGuesses);
 
@@ -168,68 +174,34 @@ public class BatchOptimizationMainTask extends AbstractTask {
         problem.getBuilder());
     final Solution singlePassSolution = problem.newSolution();
 
-    if (initWithGuesses) {
-      // single-pass parameter estimation: derive best-guess values and evaluate once
-      SinglePassParameterEstimation.applyToSolution(singlePassSolution, singlePassEstimates);
-      problem.evaluate(singlePassSolution);
+    // decision: always derive and evaluate the raw data estimate, also when it is not used to
+    // warm-start the optimizer, so the results table can always show it next to the optimized
+    // solutions and the logged comparison is meaningful in both cases
+    SinglePassParameterEstimation.applyToSolution(singlePassSolution, singlePassEstimates);
+    problem.evaluate(singlePassSolution);
 
-      final List<Solution> injected = SinglePassParameterEstimation.createWarmStartSolutions(
-          problem, singlePassEstimates, numGuesstimatedPopulations);
+    final List<Solution> injected;
+    if (initWithGuesses) {
+      injected = SinglePassParameterEstimation.createWarmStartSolutions(problem,
+          singlePassEstimates, NUM_GUESS_SOLUTIONS);
       logger.info(
           "Warm-start enabled for %s: injected %d solutions, total evaluations %d".formatted(
               optimizer.getName(), injected.size(), totalIterations));
 
-      final int initialPopulationSize = Math.clamp(numGuesstimatedPopulations + 5, 20, 30);
       NotificationService.show(NotificationType.INFO, "Starting optimizer", """
           Using %d attempts around raw-data based estimations, %d random guesses and %d total optimization iterations.
           Estimates:
-          %s""".formatted(numGuesstimatedPopulations,
-          initialPopulationSize - numGuesstimatedPopulations, totalIterations,
+          %s""".formatted(injected.size(), POPULATION_SIZE - injected.size(), totalIterations,
           singlePassEstimates.entrySet().stream()
               .map(e -> "%s: %.2f".formatted(e.getKey(), e.getValue()))
               .collect(Collectors.joining("\n"))));
-
-      switch (optimizer) {
-        case MOEAD m -> {
-          m.setInitialization(new InjectedInitialization(problem, injected));
-          m.setInitialPopulationSize(initialPopulationSize);
-        }
-        case NSGAII n -> {
-          n.setInitialization(new InjectedInitialization(problem, injected));
-          n.setInitialPopulationSize(initialPopulationSize);
-        }
-        case AGEMOEAII a -> {
-          a.setInitialization(new InjectedInitialization(problem, injected));
-          a.setInitialPopulationSize(initialPopulationSize);
-        }
-        case GDE3 g -> {
-          g.setInitialization(new InjectedInitialization(problem, injected));
-          g.setInitialPopulationSize(initialPopulationSize);
-        }
-        case RVEA r -> {
-          r.setInitialization(new InjectedInitialization(problem, injected));
-          r.setInitialPopulationSize(initialPopulationSize);
-        }
-        case SMSEMOA s -> {
-          s.setInitialization(new InjectedInitialization(problem, injected));
-          s.setInitialPopulationSize(initialPopulationSize);
-        }
-        case SPEA2 s -> {
-          s.setInitialization(new InjectedInitialization(problem, injected));
-          s.setInitialPopulationSize(initialPopulationSize);
-        }
-        case EpsilonMOEA e -> {
-          e.setInitialization(new InjectedInitialization(problem, injected));
-          e.setInitialPopulationSize(initialPopulationSize);
-        }
-        case IBEA e -> {
-          e.setInitialization(new InjectedInitialization(problem, injected));
-          e.setInitialPopulationSize(initialPopulationSize);
-        }
-        default -> {
-        }
-      }
+    } else {
+      injected = List.of();
     }
+
+    // decision: size the population explicitly in both cases. Without this the optimizer keeps the
+    // MOEA Framework default of 100, which equals or exceeds the whole evaluation budget.
+    configureInitialPopulation(optimizer, problem, injected);
 
     try {
       optimizer.run(new TaskStatusTerminationCondition(totalIterations, this::getStatus));
@@ -248,7 +220,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
     FxThread.runLater(() -> {
       Stage stage = new Stage();
       final OptimizationResultsController controller = new OptimizationResultsController(tab,
-          problem, result, stage);
+          problem, result, singlePassSolution, stage);
       final Region region = controller.buildView();
       stage.setTitle("Optimization Results");
       stage.initOwner(MZmineCore.getDesktop().getMainWindow());
@@ -261,5 +233,43 @@ public class BatchOptimizationMainTask extends AbstractTask {
     });
 
     setStatus(TaskStatus.FINISHED);
+  }
+
+  /**
+   * Sets the initial population size and, where the algorithm supports it, injects the raw
+   * data-derived warm-start solutions.
+   *
+   * @param injected solutions to seed the initial population with. May be empty, in which case
+   *                 {@link InjectedInitialization} falls back to a fully random population.
+   */
+  private void configureInitialPopulation(@NotNull AbstractAlgorithm algorithm,
+      @NotNull WizardOptimizationProblem problem, @NotNull List<Solution> injected) {
+
+    // decision: populationSize is an annotated @Property on every algorithm that exposes it, so it
+    // can be set uniformly instead of per class. Algorithms without the property (CMAES, OMOPSO,
+    // SMPSO) ignore the key rather than failing.
+    if (algorithm instanceof Configurable configurable) {
+      final TypedProperties config = new TypedProperties();
+      config.setInt("populationSize", POPULATION_SIZE);
+      configurable.applyConfiguration(config);
+    }
+
+    // the initialization is not a scalar property, so it still needs a type check
+    final Initialization initialization = new InjectedInitialization(problem, injected);
+    switch (algorithm) {
+      case MOEAD moead -> {
+        moead.setInitialization(initialization);
+        // at the MOEA/D default of 20 the neighborhood equals the population, so mating draws from
+        // the whole population and the decomposition loses the locality it relies on
+        moead.setNeighborhoodSize(Math.max(2, POPULATION_SIZE / 5));
+      }
+      // covers NSGA-II/III, U-NSGA-III, eps-NSGA-II, AGE-MOEA-II, GDE3, IBEA, RVEA, SMS-EMOA,
+      // SPEA2, eps-MOEA, DBEA and PAES
+      case AbstractEvolutionaryAlgorithm ea -> ea.setInitialization(initialization);
+      case AbstractSimulatedAnnealingAlgorithm sa -> sa.setInitialization(initialization);
+      // OMOPSO, SMPSO and CMAES do not expose the initialization and start from their own defaults
+      default -> logger.warning(
+          "%s cannot be warm-started and will initialize randomly.".formatted(algorithm.getName()));
+    }
   }
 }

@@ -63,13 +63,16 @@ import io.github.mzmine.util.files.ExtensionFilters;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.moeaframework.core.Solution;
 import org.moeaframework.core.population.NondominatedPopulation;
+import org.moeaframework.core.population.Population;
 import org.moeaframework.util.format.TableFormat;
 
 public class OptimizationResultsController extends FxController<OptimizationResultModel> {
@@ -79,14 +82,30 @@ public class OptimizationResultsController extends FxController<OptimizationResu
   @Nullable
   private final Stage stage;
 
+  /**
+   * @param singlePassSolution the evaluated raw data estimate. Shown as the first row of the
+   *                           results table so it can always be compared against the optimized
+   *                           solutions, regardless of whether it was used to warm-start the
+   *                           optimizer.
+   */
   public OptimizationResultsController(@NotNull BatchWizardTab wizardTab,
       @NotNull WizardOptimizationProblem optimization, final NondominatedPopulation result,
-      @Nullable final Stage stage) {
+      @Nullable final Solution singlePassSolution, @Nullable final Stage stage) {
     super(new OptimizationResultModel());
     this.wizardTab = wizardTab;
     this.optimization = optimization;
     this.stage = stage;
     model.resultProperty().set(result);
+    model.singlePassSolutionProperty().set(singlePassSolution);
+
+    // the raw data estimate is intentionally kept outside the non-dominated population, which
+    // would reject it whenever an optimized solution dominates it
+    final List<Solution> displayed = new ArrayList<>(result.size() + 1);
+    if (singlePassSolution != null) {
+      displayed.add(singlePassSolution);
+    }
+    displayed.addAll(result.asList());
+    model.getDisplayedSolutions().setAll(displayed);
   }
 
   @Override
@@ -210,8 +229,9 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
   private void exportSolutions() {
 
-    final NondominatedPopulation result = model.getResult();
-    if (result == null) {
+    // export exactly what the table shows, which includes the raw data estimate row
+    final List<Solution> solutions = List.copyOf(model.getDisplayedSolutions());
+    if (solutions.isEmpty()) {
       return;
     }
 
@@ -222,7 +242,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
         return;
       }
       try {
-        result.asTabularData().save(TableFormat.CSV, file);
+        new Population(solutions).asTabularData().save(TableFormat.CSV, file);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

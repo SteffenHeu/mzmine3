@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -35,7 +36,6 @@ import org.moeaframework.algorithm.IBEA;
 import org.moeaframework.algorithm.MOEAD;
 import org.moeaframework.algorithm.NSGAII;
 import org.moeaframework.algorithm.NSGAIII;
-import org.moeaframework.algorithm.PAES;
 import org.moeaframework.algorithm.RVEA;
 import org.moeaframework.algorithm.SMSEMOA;
 import org.moeaframework.algorithm.SPEA2;
@@ -46,7 +46,7 @@ import org.moeaframework.algorithm.sa.AMOSA;
 import org.moeaframework.problem.AbstractProblem;
 
 public enum OptimizerOptions {
-  MOEAD, NSGA_II, NSGA_III, AGEMOEA_II, AMOSA, DBEA, CMAES, GDE3, PAES, OMOPSO, RVEA, SMPSO, SMSEMOA, SPEA2, UNSGAIII, EpsilonMOEA, EpsilonNSGAII, IBEA;
+  MOEAD, NSGA_II, NSGA_III, AGEMOEA_II, AMOSA, DBEA, CMAES, GDE3, OMOPSO, RVEA, SMPSO, SMSEMOA, SPEA2, UNSGAIII, EpsilonMOEA, EpsilonNSGAII, IBEA;
 
   public AbstractAlgorithm getOptimizer(AbstractProblem problem) {
     return switch (this) {
@@ -58,7 +58,6 @@ public enum OptimizerOptions {
       case DBEA -> new DBEA(problem);
       case CMAES -> new CMAES(problem);
       case GDE3 -> new GDE3(problem);
-      case PAES -> new PAES(problem);
       case OMOPSO -> new OMOPSO(problem);
       case RVEA -> new RVEA(problem);
       case SMPSO -> new SMPSO(problem);

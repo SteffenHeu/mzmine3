@@ -50,7 +50,7 @@ public class TaskStatusTerminationCondition extends MaxFunctionEvaluations {
   @Override
   public boolean shouldTerminate(Algorithm algorithm) {
     boolean superCheck = super.shouldTerminate(algorithm);
-    return superCheck && statusSupplier.get() != TaskStatus.CANCELED
-        && statusSupplier.get() != TaskStatus.ERROR;
+    return superCheck || statusSupplier.get() == TaskStatus.CANCELED
+        || statusSupplier.get() == TaskStatus.ERROR;
   }
 }

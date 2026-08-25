@@ -43,14 +43,13 @@ import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.objective.Minimize;
 import org.moeaframework.core.objective.Objective;
-import org.moeaframework.core.population.NondominatedPopulation;
 
 public record ObjectiveWrapper(String name, int index, Color color) {
 
   private static final String HARMONIC_OBJECTIVE_NAME = SweepMetric.HARMONIC_SLAW_ISOTOPES.name();
 
-  public static List<ObjectiveWrapper> extract(NondominatedPopulation result) {
-    final Solution solution = result.get(0);
+  public static List<ObjectiveWrapper> extract(@NotNull List<Solution> solutions) {
+    final Solution solution = solutions.getFirst();
     final List<ObjectiveWrapper> objectives = new ArrayList<>();
     for (int i = 0; i < solution.getNumberOfObjectives(); i++) {
       Objective obj = solution.getObjective(i);
@@ -82,15 +81,16 @@ public record ObjectiveWrapper(String name, int index, Color color) {
 
   /**
    * Creates a column for the harmonic objective that displays scores normalised to [0, 1] across
-   * the full population. The raw slaw and iso component values stored as solution attributes
+   * all displayed solutions. The raw slaw and iso component values stored as solution attributes
    * ({@link HarmonicSlawIsotopes#ATTR_HARMONIC_SLAW} /
-   * {@link HarmonicSlawIsotopes#ATTR_HARMONIC_ISO}) are min-max normalised across the
-   * population before the harmonic mean is computed.
+   * {@link HarmonicSlawIsotopes#ATTR_HARMONIC_ISO}) are min-max normalised across those solutions
+   * before the harmonic mean is computed.
+   *
+   * @param solutions every solution shown in the table, including the raw data estimate, so that
+   *                  the estimate is normalised on the same scale as the optimized solutions
    */
   public @NotNull TableColumn<Solution, Number> createNormalizedHarmonicColumn(
-      @NotNull NondominatedPopulation population) {
-    final List<Solution> solutions = population.asList();
-
+      @NotNull List<Solution> solutions) {
     final double[] slawRaw = solutions.stream()
         .mapToDouble(s -> attributeAsDouble(s, HarmonicSlawIsotopes.ATTR_HARMONIC_SLAW))
         .toArray();
