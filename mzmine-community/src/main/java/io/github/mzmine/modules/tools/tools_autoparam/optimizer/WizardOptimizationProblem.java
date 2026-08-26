@@ -49,7 +49,6 @@ import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.Spectra
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.CustomizationWizardParameters;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
@@ -77,8 +76,12 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
@@ -86,6 +89,9 @@ import javafx.beans.property.SimpleStringProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
+import org.moeaframework.core.constraint.LessThanOrEqual;
+import org.moeaframework.core.variable.RealVariable;
+import org.moeaframework.core.variable.Variable;
 import org.moeaframework.problem.AbstractProblem;
 
 public class WizardOptimizationProblem extends AbstractProblem {
@@ -111,13 +117,63 @@ public class WizardOptimizationProblem extends AbstractProblem {
   private final int numBatchParam;
   private final @Nullable List<FeatureRecord> fileOnlyBenchmarkFeatures;
 
+  /**
+   * Upper limit for the share of features the strict shape filter would reject, in percent.
+   * Permissive until {@link #setShapeRejectionLimitPercent(double)} is called, so the raw data
+   * estimate itself is never marked infeasible.
+   */
+  private double shapeRejectionLimitPercent = Double.MAX_VALUE;
+
+  /**
+   * Position of a solution in the evaluation order, so the results table can show convergence.
+   */
+  private static final String ATTR_EVALUATION = "Evaluation";
+
+  /**
+   * Whether the result was taken from {@link #evaluationCache} instead of running a batch. Kept
+   * visible because it is the only honest way to read the runtime column: a hit carries the runtime
+   * of the original evaluation, not of itself.
+   */
+  private static final String ATTR_CACHE_HIT = "Cache hit";
+
+  /**
+   * Attributes describing an individual evaluation instead of its parameter vector, so they must
+   * never be taken from a cached result.
+   */
+  private static final Set<String> OWN_ATTRIBUTES = Set.of(ATTR_EVALUATION, ATTR_CACHE_HIT,
+      SolutionOrigin.ATTRIBUTE);
+
+  /**
+   * Every solution that went through {@link #evaluate(Solution)}, in evaluation order. Each one
+   * cost a full batch run, so keeping them lets the results table show the whole search instead of
+   * only the non-dominated front — which is what makes the feasible fraction, the convergence and
+   * the metric correlations readable without a separate counter.
+   * <p>
+   * decision: synchronized because evaluation is sequential today but is a candidate for
+   * parallelisation. Only the solutions are retained, never their feature lists.
+   */
+  private final List<Solution> evaluatedSolutions = Collections.synchronizedList(new ArrayList<>());
+
+  /**
+   * Results of already evaluated parameter vectors, keyed by the effective values the batch is run
+   * with. Differential evolution leaves a vector untouched whenever its crossover rate does not
+   * fire, and a converged population produces the same offspring repeatedly, so a noticeable share
+   * of a run is spent re-running batches whose result is already known — around 30 % in the
+   * single-objective runs.
+   * <p>
+   * decision: this saves wall-clock, not budget. MOEA counts the call either way, so the optimizer
+   * still stops after the configured number of evaluations and explores exactly the same parameter
+   * sets in exactly the same order. The run is faster; the search is unchanged.
+   */
+  private final Map<List<Double>, Solution> evaluationCache = new ConcurrentHashMap<>();
+
   public WizardOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param,
       @NotNull AtomicReference<TaskStatus> externalStatus) {
 
     // decision: super() must be first — use static helper for objective count before enabledMetrics field is assigned
     super(param.getValue(OptimizerParameters.paramToOptimize).size(),
-        calculateNumberOfObjectives(param, stats));
+        calculateNumberOfObjectives(param, stats), calculateNumberOfConstraints(param));
 
     fileOnlyBenchmarkFeatures = WizardOptimizationProblem.extractFeatureRecordsFromFile(null,
         param);
@@ -258,6 +314,14 @@ public class WizardOptimizationProblem extends AbstractProblem {
     return List.copyOf(metrics);
   }
 
+  /**
+   * One constraint when the shape rejection limit is enabled, none otherwise. Must be static
+   * because it is needed inside the {@code super(...)} call.
+   */
+  static int calculateNumberOfConstraints(@NotNull ParameterSet param) {
+    return param.getValue(OptimizerParameters.maxShapeRejectionFactor) ? 1 : 0;
+  }
+
   static int calculateNumberOfObjectives(@NotNull ParameterSet param,
       @Nullable List<DataFileStatistics> stats) {
     final List<SweepMetric> selected = param.getValue(OptimizerParameters.metricsToOptimize);
@@ -297,6 +361,19 @@ public class WizardOptimizationProblem extends AbstractProblem {
   @Override
   public void evaluate(@NotNull Solution solution) {
 
+    // untagged means the variation operators built it, see SolutionOrigin#applyIfAbsent
+    SolutionOrigin.EVOLUTION.applyIfAbsent(solution);
+
+    final List<Double> cacheKey = cacheKey(solution);
+    final Solution cached = evaluationCache.get(cacheKey);
+    if (cached != null) {
+      copyResult(cached, solution);
+      solution.setAttribute(ATTR_CACHE_HIT, true);
+      solution.setAttribute(ATTR_EVALUATION, evaluatedSolutions.size() + 1);
+      evaluatedSolutions.add(solution);
+      return;
+    }
+
     final WizardSequence wizardSequence = createWizardSequenceFromSolution(solution);
 
     final BatchQueue optimizedQueue = ((WorkflowWizardParameterFactory) wizardSequence.get(
@@ -334,8 +411,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
       throw new RuntimeException("Batch optimization task was canceled");
     }
 
-    final FeatureList newest = project.getCurrentFeatureLists().stream()
-        .max(Comparator.comparing(f -> f.getName().length())).get();
+    final FeatureList newest = batchTask.getLatestCreatedFeatureLists().getFirst();
 
     int objectiveIndex = 0;
     for (SweepMetric metric : enabledMetrics) {
@@ -355,7 +431,71 @@ public class WizardOptimizationProblem extends AbstractProblem {
     solution.setAttribute("Rows (incl. isotopes)", newest.getRows().size());
     solution.setAttribute("Runtime / s", fullBatchTime);
 
+    // decision: diagnostic only, never an objective. With strict shape filtering enabled the
+    // rejected features never reach the metrics, so a parameter set that produces mostly noise can
+    // score like one that produces clean peaks. Running with the filter off makes this count the
+    // real amount of junk the parameters produced.
+    final long shapeStart = System.nanoTime();
+    final ShapeScoreDiagnostic.Result shape = ShapeScoreDiagnostic.evaluate(newest,
+        ShapeScoreDiagnostic.STRICT_SHAPE_SCORE);
+    solution.setAttribute(ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT, shape.wouldRemovePercent());
+    if (getNumberOfConstraints() > 0) {
+      // decision: a constraint rather than a penalty term, so no score changes meaning and the
+      // algorithm's own constraint domination keeps the search out of the noisy region
+      solution.setConstraintValue(0, shape.wouldRemovePercent());
+    }
+    // decision: only the total and the double peak share get a column. Unfittable and sign changes
+    // stay rejection reasons and remain in the logged breakdown, but across the reference runs they
+    // contributed a few tenths of a percent and only widened the table.
+    solution.setAttribute(ShapeScoreDiagnostic.ATTR_DOUBLE_PEAK_PERCENT, shape.doublePeakPercent());
+    solution.setAttribute("Shape score sample", shape.inspected());
+    logger.finest("Shape diagnostic: %s (took %.1f s)".formatted(shape,
+        (System.nanoTime() - shapeStart) / 1e9));
+
+    solution.setAttribute(ATTR_CACHE_HIT, false);
+    solution.setAttribute(ATTR_EVALUATION, evaluatedSolutions.size() + 1);
+    evaluatedSolutions.add(solution);
+    evaluationCache.put(cacheKey, solution);
+
     project.removeFeatureLists(batchTask.getLatestCreatedFeatureLists());
+  }
+
+  /**
+   * Identifies a parameter vector by the values the batch is actually run with.
+   * <p>
+   * decision: the effective value, not the raw one. {@link OrdinalIntegerVariable} is backed by a
+   * real value that is rounded when read, so two vectors differing only in the discarded fraction
+   * build an identical batch queue and must share a key.
+   */
+  private @NotNull List<Double> cacheKey(@NotNull Solution solution) {
+    final List<Double> key = new ArrayList<>(solution.getNumberOfVariables());
+    for (int i = 0; i < solution.getNumberOfVariables(); i++) {
+      final Variable variable = solution.getVariable(i);
+      key.add(variable instanceof OrdinalIntegerVariable ? (double) OrdinalIntegerVariable.getInt(
+          solution, i) : RealVariable.getReal(variable));
+    }
+    return List.copyOf(key);
+  }
+
+  /**
+   * Copies everything the algorithm and the results table read from an evaluated solution:
+   * objectives drive selection, constraints drive feasibility, attributes drive the table.
+   * <p>
+   * {@link #OWN_ATTRIBUTES} are excluded, because they describe this evaluation rather than the
+   * parameter vector - a cache hit is its own position in the search and keeps its own origin.
+   */
+  private void copyResult(@NotNull Solution from, @NotNull Solution to) {
+    for (int i = 0; i < to.getNumberOfObjectives(); i++) {
+      to.setObjectiveValue(i, from.getObjectiveValue(i));
+    }
+    for (int i = 0; i < to.getNumberOfConstraints(); i++) {
+      to.setConstraintValue(i, from.getConstraintValue(i));
+    }
+    from.getAttributes().forEach((key, value) -> {
+      if (!OWN_ATTRIBUTES.contains(key)) {
+        to.setAttribute(key, value);
+      }
+    });
   }
 
   public void applyBatchOverridesToSequence(@NotNull Solution solution,
@@ -390,7 +530,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
         .createDefaultParameterPreset().getFactory().create();
     final WizardStepParameters filterParam = initialSequence.get(WizardPart.FILTER).get()
         .createDefaultParameterPreset().getFactory().create();
-    filterParam.setParameter(FilterWizardParameters.goodPeaksOnly, true);
+//    filterParam.setParameter(FilterWizardParameters.goodPeaksOnly, true);
     final WizardStepParameters imsParam = initialSequence.get(WizardPart.IMS).get()
         .createDefaultParameterPreset().getFactory().create();
     final WizardStepParameters msParam = initialSequence.get(WizardPart.MS).get()
@@ -440,7 +580,13 @@ public class WizardOptimizationProblem extends AbstractProblem {
   @Override
   public Solution newSolution() {
 
-    final Solution solution = new Solution(getNumberOfVariables(), getNumberOfObjectives());
+    final Solution solution = new Solution(getNumberOfVariables(), getNumberOfObjectives(),
+        getNumberOfConstraints());
+
+    if (getNumberOfConstraints() > 0) {
+      solution.setConstraint(0, new LessThanOrEqual(ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT,
+          shapeRejectionLimitPercent));
+    }
 
     for (WizardParameterSolution parameter : createWizardParameters()) {
       parameter.applyToSolution(solution);
@@ -456,6 +602,25 @@ public class WizardOptimizationProblem extends AbstractProblem {
     }
 
     return solution;
+  }
+
+  /**
+   * Sets the shape rejection limit used by the constraint. Call after the raw data estimate has
+   * been evaluated, so the limit can be derived from a measured baseline rather than guessed.
+   */
+  public void setShapeRejectionLimitPercent(double limitPercent) {
+    this.shapeRejectionLimitPercent = limitPercent;
+    logger.info("Shape rejection limit set to %.1f %%".formatted(limitPercent));
+  }
+
+  /**
+   * Every evaluated solution in evaluation order, including infeasible ones and the raw data
+   * estimate.
+   */
+  public @NotNull List<Solution> getEvaluatedSolutions() {
+    synchronized (evaluatedSolutions) {
+      return List.copyOf(evaluatedSolutions);
+    }
   }
 
   public @Nullable List<FeatureRecord> getAllTargets() {

@@ -35,6 +35,7 @@ import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
@@ -46,6 +47,7 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
+import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.ImportTypeParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
@@ -104,6 +106,15 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static final BooleanParameter initializeWithRawDataGuesses = new BooleanParameter(
       "Initialize with raw data-based defaults", "", true);
 
+  public static final OptionalParameter<DoubleParameter> maxShapeRejectionFactor = new OptionalParameter<>(
+      new DoubleParameter("Max shape rejection factor", """
+          Rejects parameter sets that produce badly shaped peaks, as a multiple of the rate measured \
+          for the raw data estimate.
+          Sensitivity metrics reward detecting more signals, which can be satisfied by picking up \
+          noise. This limits how much worse than the estimate a solution's chromatographic shape \
+          quality may get, without changing any score.""",
+          ConfigService.getGuiFormats().scoreFormat(), 2.0, 1.0, 100.0), true);
+
   public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
       "Optimizer", "", OptimizerOptions.values(), OptimizerOptions.MOEAD);
 
@@ -124,7 +135,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public OptimizerParameters() {
     super(metricsToOptimize, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
-        initializeWithRawDataGuesses, paramToOptimize);
+        initializeWithRawDataGuesses, maxShapeRejectionFactor, paramToOptimize);
   }
 
   /**
@@ -197,6 +208,7 @@ public class OptimizerParameters extends SimpleParameterSet {
     param.setParameter(benchmarkFeatureTypes, DEFAULT_IMPORT_TYPES);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
+    param.setParameter(maxShapeRejectionFactor, false);
     param.setParameter(paramToOptimize, new ArrayList<>(ALL_SOLUTIONS));
     return param;
   }

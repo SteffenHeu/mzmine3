@@ -35,7 +35,6 @@ import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnumCo
 import java.util.Arrays;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
 
 /**
@@ -67,7 +66,7 @@ public class WaveletBatchParameterSolutionBuilder {
    */
   public static @NotNull BatchParameterSolution buildWaveletSnr(int index) {
     return new FunctionalBatchParameterSolution(index,
-        () -> new RealVariable("Wavelet SNR threshold", 2, 20), solution -> {
+        () -> new RealVariable("Wavelet SNR threshold", 3, 20), solution -> {
       try {
         final double value = ((RealVariable) solution.getVariable(index)).getValue();
         return makeTopLevelDoubleOverride("snr", value);
@@ -83,9 +82,9 @@ public class WaveletBatchParameterSolutionBuilder {
   public static @NotNull BatchParameterSolution buildWaveletNoiseCalculation(int index) {
     return new FunctionalBatchParameterSolution(index,
         // assumption: NoiseCalculation has exactly 2 values (STANDARD_DEVIATION, MEDIAN_ABSOLUTE_DEVIATION)
-        () -> new BinaryIntegerVariable("Wavelet noise calculation", 0, 1), solution -> {
+        () -> new OrdinalIntegerVariable("Wavelet noise calculation", 0, 1), solution -> {
       try {
-        final int idx = BinaryIntegerVariable.getInt(solution.getVariable(index));
+        final int idx = OrdinalIntegerVariable.getInt(solution, index);
         final Object value = getEnumValue(NOISE_CALCULATION_CLASS, idx);
         return makeTopLevelEnumOverride("noiseCalculation", value);
       } catch (Exception e) {
@@ -100,9 +99,9 @@ public class WaveletBatchParameterSolutionBuilder {
   public static @NotNull BatchParameterSolution buildWaveletBaselineMethod(int index) {
     return new FunctionalBatchParameterSolution(index,
         // assumption: BaselineEstimation has exactly 3 values (EDGE_AVERAGE, MEDIAN, AVERAGE)
-        () -> new BinaryIntegerVariable("Wavelet baseline method", 0, 2), solution -> {
+        () -> new OrdinalIntegerVariable("Wavelet baseline method", 0, 2), solution -> {
       try {
-        final int idx = BinaryIntegerVariable.getInt(solution.getVariable(index));
+        final int idx = OrdinalIntegerVariable.getInt(solution, index);
         final Object value = getEnumValue(BASELINE_ESTIMATION_CLASS, idx);
         return makeTopLevelEnumOverride("baselineMethod", value);
       } catch (Exception e) {
@@ -116,10 +115,10 @@ public class WaveletBatchParameterSolutionBuilder {
    */
   public static @NotNull BatchParameterSolution buildWaveletDipFilter(int index) {
     return new FunctionalBatchParameterSolution(index,
-        () -> new BinaryIntegerVariable("Wavelet dip filter", 0, 1), // 0=false, 1=true
+        () -> new OrdinalIntegerVariable("Wavelet dip filter", 0, 1), // 0=false, 1=true
         solution -> {
           try {
-            final boolean value = BinaryIntegerVariable.getInt(solution.getVariable(index)) > 0;
+            final boolean value = OrdinalIntegerVariable.getInt(solution, index) > 0;
             return makeTopLevelEnumOverride("dipFilter", value);
           } catch (Exception e) {
             throw new RuntimeException("Failed to build wavelet dip filter override", e);
@@ -135,9 +134,9 @@ public class WaveletBatchParameterSolutionBuilder {
   public static @NotNull BatchParameterSolution buildWaveletEdgeDetector(int index) {
     return new FunctionalBatchParameterSolution(index,
         // assumption: EdgeDetectors has exactly 8 values
-        () -> new BinaryIntegerVariable("Wavelet edge detector", 0, 7), solution -> {
+        () -> new OrdinalIntegerVariable("Wavelet edge detector", 0, 7), solution -> {
       try {
-        final int idx = BinaryIntegerVariable.getInt(solution.getVariable(index));
+        final int idx = OrdinalIntegerVariable.getInt(solution, index);
 
         // Resolve the selected EdgeDetectors enum value and its default sub-parameters
         final Class<?> edgeDetectorsClass = Class.forName(EDGE_DETECTORS_CLASS);

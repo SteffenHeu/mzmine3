@@ -25,6 +25,9 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
@@ -48,6 +51,12 @@ public class OptimizationResultModel {
    * listeners registered on it are not discarded.
    */
   private final ObservableList<Solution> displayedSolutions = FXCollections.observableArrayList();
+
+  /**
+   * decision: identity based, because {@link Solution} does not define value equality and two
+   * distinct candidates can carry identical numbers.
+   */
+  private final Set<Solution> frontSolutions = Collections.newSetFromMap(new IdentityHashMap<>());
 
   @Nullable
   public NondominatedPopulation getResult() {
@@ -80,5 +89,17 @@ public class OptimizationResultModel {
 
   public @NotNull ObservableList<Solution> getDisplayedSolutions() {
     return displayedSolutions;
+  }
+
+  /**
+   * Identity set of the solutions on the non-dominated front, so the table can tell them apart from
+   * the other evaluated solutions.
+   */
+  public @NotNull Set<Solution> getFrontSolutions() {
+    return frontSolutions;
+  }
+
+  public boolean isOnFront(@Nullable Solution solution) {
+    return solution != null && frontSolutions.contains(solution);
   }
 }

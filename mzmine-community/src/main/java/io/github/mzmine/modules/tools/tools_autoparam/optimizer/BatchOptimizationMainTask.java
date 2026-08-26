@@ -66,7 +66,6 @@ import org.moeaframework.core.Solution;
 import org.moeaframework.core.TypedProperties;
 import org.moeaframework.core.configuration.Configurable;
 import org.moeaframework.core.initialization.Initialization;
-import org.moeaframework.core.initialization.InjectedInitialization;
 import org.moeaframework.core.population.NondominatedPopulation;
 
 public class BatchOptimizationMainTask extends AbstractTask {
@@ -81,10 +80,10 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private static final int POPULATION_SIZE = 20;
 
   /**
-   * Number of initial solutions derived from raw data statistics. The remaining population slots
-   * are filled with random solutions by {@link InjectedInitialization}.
+   * Lowest shape rejection limit in percent. Without a floor a dataset whose estimate rejects almost
+   * nothing would make every candidate infeasible.
    */
-  private static final int NUM_GUESS_SOLUTIONS = 10;
+  private static final double MIN_SHAPE_REJECTION_LIMIT = 5d;
 
   private final File[] files;
   @Nullable
@@ -178,20 +177,37 @@ public class BatchOptimizationMainTask extends AbstractTask {
     // warm-start the optimizer, so the results table can always show it next to the optimized
     // solutions and the logged comparison is meaningful in both cases
     SinglePassParameterEstimation.applyToSolution(singlePassSolution, singlePassEstimates);
+    SolutionOrigin.ESTIMATE.applyTo(singlePassSolution);
     problem.evaluate(singlePassSolution);
+
+    // decision: derive the shape rejection limit from the estimate's own measured rate, so the
+    // limit adapts to the dataset instead of being an absolute guess
+    if (params.getValue(OptimizerParameters.maxShapeRejectionFactor)) {
+      final double factor = params.getEmbeddedParameterValue(
+          OptimizerParameters.maxShapeRejectionFactor);
+      final Object measured = singlePassSolution.getAttribute(
+          ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT);
+      final double baseline = measured instanceof Number n ? n.doubleValue() : 0d;
+      // assumption: a floor keeps a near-perfect baseline from making everything infeasible
+      problem.setShapeRejectionLimitPercent(Math.max(baseline * factor, MIN_SHAPE_REJECTION_LIMIT));
+    }
 
     final List<Solution> injected;
     if (initWithGuesses) {
+      // decision: the whole population, not a fraction of it. Uniform random samples score far
+      // below the estimate on real data - in the 200 evaluation reference runs the best of ten was
+      // 55 % worse than the estimate itself, while the winner was always a perturbation of it. So
+      // the slots are worth more as further perturbations than as random draws.
       injected = SinglePassParameterEstimation.createWarmStartSolutions(problem,
-          singlePassEstimates, NUM_GUESS_SOLUTIONS);
+          singlePassEstimates, POPULATION_SIZE);
       logger.info(
           "Warm-start enabled for %s: injected %d solutions, total evaluations %d".formatted(
               optimizer.getName(), injected.size(), totalIterations));
 
       NotificationService.show(NotificationType.INFO, "Starting optimizer", """
-          Using %d attempts around raw-data based estimations, %d random guesses and %d total optimization iterations.
+          Using %d attempts around raw-data based estimations and %d total optimization iterations.
           Estimates:
-          %s""".formatted(injected.size(), POPULATION_SIZE - injected.size(), totalIterations,
+          %s""".formatted(injected.size(), totalIterations,
           singlePassEstimates.entrySet().stream()
               .map(e -> "%s: %.2f".formatted(e.getKey(), e.getValue()))
               .collect(Collectors.joining("\n"))));
@@ -240,7 +256,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
    * data-derived warm-start solutions.
    *
    * @param injected solutions to seed the initial population with. May be empty, in which case
-   *                 {@link InjectedInitialization} falls back to a fully random population.
+   *                 {@link OriginTaggingInitialization} falls back to a fully random population.
    */
   private void configureInitialPopulation(@NotNull AbstractAlgorithm algorithm,
       @NotNull WizardOptimizationProblem problem, @NotNull List<Solution> injected) {
@@ -255,13 +271,20 @@ public class BatchOptimizationMainTask extends AbstractTask {
     }
 
     // the initialization is not a scalar property, so it still needs a type check
-    final Initialization initialization = new InjectedInitialization(problem, injected);
+    final Initialization initialization = new OriginTaggingInitialization(problem, injected);
     switch (algorithm) {
       case MOEAD moead -> {
         moead.setInitialization(initialization);
-        // at the MOEA/D default of 20 the neighborhood equals the population, so mating draws from
-        // the whole population and the decomposition loses the locality it relies on
-        moead.setNeighborhoodSize(Math.max(2, POPULATION_SIZE / 5));
+        // at the MOEA/D default of 20 the neighborhood equals the population, so mating draws
+        // from the whole population and the decomposition loses the locality it relies on.
+        // assumption: the floor of 4 keeps the neighborhood above the differential evolution arity
+        // of 4 minus 1, which MOEA/D requires now that the solution vector is all real-valued
+        moead.setNeighborhoodSize(Math.max(4, POPULATION_SIZE / 5));
+        // the variation operator is chosen in the MOEAD constructor from whether every variable is
+        // real-valued, so log it - "de+pm" confirms MOEA/D-DE, "sbx+pm+hux+bf" means the vector
+        // still contains a non-real variable and the decomposition fell back to SBX
+        logger.info("MOEA/D using variation %s, neighborhood %d, population %d".formatted(
+            moead.getVariation().getName(), moead.getNeighborhoodSize(), POPULATION_SIZE));
       }
       // covers NSGA-II/III, U-NSGA-III, eps-NSGA-II, AGE-MOEA-II, GDE3, IBEA, RVEA, SMS-EMOA,
       // SPEA2, eps-MOEA, DBEA and PAES

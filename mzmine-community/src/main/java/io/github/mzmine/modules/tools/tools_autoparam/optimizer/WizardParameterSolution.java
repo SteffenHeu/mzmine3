@@ -32,7 +32,6 @@ import java.util.function.Supplier;
 import org.apache.commons.lang3.function.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.Solution;
-import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
 
@@ -65,13 +64,13 @@ public sealed interface WizardParameterSolution {
 
   record IntegerWizardParameterSolution(int index, WizardPart part,
                                         TriConsumer<WizardStepParameters, Solution, Integer> setToParameters,
-                                        Supplier<BinaryIntegerVariable> variable) implements
+                                        Supplier<OrdinalIntegerVariable> variable) implements
       WizardParameterSolution {
 
     public IntegerWizardParameterSolution(int index, WizardPart part, UserParameter param,
-        Supplier<BinaryIntegerVariable> variable) {
+        Supplier<OrdinalIntegerVariable> variable) {
       this(index, part, (set, solution, id) -> set.setParameter(param,
-          BinaryIntegerVariable.getInt(solution.getVariable(id))), variable);
+          OrdinalIntegerVariable.getInt(solution, id)), variable);
     }
   }
 

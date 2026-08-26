@@ -27,9 +27,11 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 
 import static io.github.mzmine.modules.tools.batchwizard.WizardPart.WORKFLOW;
 
+import com.opencsv.ICSVWriter;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.compoundannotations.SimpleCompoundDBAnnotation;
 import io.github.mzmine.datamodel.features.types.annotations.CompoundNameType;
 import io.github.mzmine.gui.DesktopService;
@@ -52,28 +54,35 @@ import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.FeatureRecord;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OrdinalIntegerVariable;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SolutionOrigin;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.AllTasksFinishedListener;
 import io.github.mzmine.taskcontrol.TaskService;
+import io.github.mzmine.util.CSVParsingUtils;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.FeatureListRowSorter;
 import io.github.mzmine.util.FeatureListUtils;
 import io.github.mzmine.util.files.ExtensionFilters;
+import io.github.mzmine.util.io.WriterOptions;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.population.NondominatedPopulation;
-import org.moeaframework.core.population.Population;
-import org.moeaframework.util.format.TableFormat;
+import org.moeaframework.core.variable.RealVariable;
 
 public class OptimizationResultsController extends FxController<OptimizationResultModel> {
 
@@ -100,11 +109,25 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
     // the raw data estimate is intentionally kept outside the non-dominated population, which
     // would reject it whenever an optimized solution dominates it
-    final List<Solution> displayed = new ArrayList<>(result.size() + 1);
+    model.getFrontSolutions().addAll(result.asList());
+
+    final List<Solution> displayed = new ArrayList<>();
     if (singlePassSolution != null) {
       displayed.add(singlePassSolution);
     }
     displayed.addAll(result.asList());
+
+    // every remaining evaluated solution, so the table shows the whole search and not just the
+    // front - dominated and infeasible candidates each cost a full batch run and carry the
+    // diagnostics needed to judge where the budget went
+    final Set<Solution> alreadyShown = Collections.newSetFromMap(new IdentityHashMap<>());
+    alreadyShown.addAll(displayed);
+    for (final Solution evaluated : optimization.getEvaluatedSolutions()) {
+      if (alreadyShown.add(evaluated)) {
+        displayed.add(evaluated);
+      }
+    }
+
     model.getDisplayedSolutions().setAll(displayed);
   }
 
@@ -206,6 +229,9 @@ public class OptimizationResultsController extends FxController<OptimizationResu
         }
       }
 
+      final ModularFeatureList copy = FeatureListUtils.createCopy(flist, null, " target", null,
+          false, flist.getRawDataFiles(), false, null, null);
+      final List<FeatureListRow> annotated = new ArrayList<>();
       if (optimization.getAllTargets() != null) {
         for (FeatureRecord target : optimization.getAllTargets()) {
           final FeatureListRow bestMatch = target.getBestMatch(mzSortedRows);
@@ -214,15 +240,12 @@ public class OptimizationResultsController extends FxController<OptimizationResu
           }
           final SimpleCompoundDBAnnotation a = new SimpleCompoundDBAnnotation();
           a.put(CompoundNameType.class, "benchmark feature");
-          bestMatch.addCompoundAnnotation(a);
+          ModularFeatureListRow annotatedRow = new ModularFeatureListRow(copy,
+              (ModularFeatureListRow) bestMatch, true);
+          annotatedRow.addCompoundAnnotation(a);
+          copy.addRow(annotatedRow);
         }
       }
-      final List<FeatureListRow> annotated = flist.stream().filter(FeatureListRow::isIdentified)
-          .toList();
-      final ModularFeatureList copy = FeatureListUtils.createCopy(flist, null, " target", null,
-          false, flist.getRawDataFiles(), false, annotated.size(),
-          annotated.stream().mapToInt(FeatureListRow::getNumberOfFeatures).sum());
-      annotated.forEach(copy::addRow);
       FxThread.runLater(() -> ProjectService.getProject().addFeatureList(copy));
     });
   }
@@ -241,12 +264,65 @@ public class OptimizationResultsController extends FxController<OptimizationResu
       if (file == null) {
         return;
       }
-      try {
-        new Population(solutions).asTabularData().save(TableFormat.CSV, file);
+      try (final ICSVWriter writer = CSVParsingUtils.createDefaultWriter(file, ',',
+          WriterOptions.REPLACE)) {
+        writeSolutions(writer, solutions);
       } catch (IOException e) {
         throw new RuntimeException(e);
       }
     });
 
+  }
+
+  /**
+   * Writes the displayed solutions as csv.
+   * <p>
+   * decision: written column by column instead of via {@code Population.asTabularData()}, which
+   * emits the raw variable values. {@link OrdinalIntegerVariable} is backed by a real value, so the
+   * raw export would show e.g. {@code 1.514916} for an m/z tolerance index that the batch actually
+   * ran as {@code 2}, and would not match the results table.
+   */
+  private void writeSolutions(@NotNull ICSVWriter writer, @NotNull List<Solution> solutions) {
+    final Solution template = solutions.getFirst();
+
+    final List<String> header = new ArrayList<>();
+    header.add("Source");
+    // kept next to Source and out of the sorted attribute block below, so the two columns that
+    // classify a row stay side by side, exactly as in the results table
+    header.add(SolutionOrigin.ATTRIBUTE);
+    for (int i = 0; i < template.getNumberOfVariables(); i++) {
+      header.add(template.getVariable(i).getName());
+    }
+    for (int i = 0; i < template.getNumberOfObjectives(); i++) {
+      header.add(template.getObjective(i).getName());
+    }
+    // the diagnostic values live in attributes, so the csv has to carry them too - the results
+    // table shows them and an export without them cannot be analysed
+    final List<String> attributes = template.getAttributes().keySet().stream().filter(
+        a -> !a.startsWith("_") && !a.equalsIgnoreCase("penalty") && !a.equals(
+            SolutionOrigin.ATTRIBUTE)).sorted().toList();
+    header.addAll(attributes);
+    writer.writeNext(header.toArray(String[]::new));
+
+    final Solution singlePass = model.getSinglePassSolution();
+    for (final Solution solution : solutions) {
+      final List<String> row = new ArrayList<>(header.size());
+      row.add(solution == singlePass ? "Raw data estimate"
+          : model.isOnFront(solution) ? "Front" : "Evaluated");
+      row.add(Objects.toString(solution.getAttribute(SolutionOrigin.ATTRIBUTE), ""));
+      for (int i = 0; i < solution.getNumberOfVariables(); i++) {
+        // the effective value, so the csv matches what the batch was actually run with
+        row.add(solution.getVariable(i) instanceof OrdinalIntegerVariable ? Integer.toString(
+            OrdinalIntegerVariable.getInt(solution, i))
+            : Double.toString(RealVariable.getReal(solution.getVariable(i))));
+      }
+      for (int i = 0; i < solution.getNumberOfObjectives(); i++) {
+        row.add(Double.toString(solution.getObjectiveValue(i)));
+      }
+      for (final String attribute : attributes) {
+        row.add(Objects.toString(solution.getAttribute(attribute), ""));
+      }
+      writer.writeNext(row.toArray(String[]::new));
+    }
   }
 }

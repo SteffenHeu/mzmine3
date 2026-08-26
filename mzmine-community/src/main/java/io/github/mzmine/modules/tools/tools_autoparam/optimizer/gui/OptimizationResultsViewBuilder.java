@@ -30,6 +30,8 @@ import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.util.FxIcons;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OrdinalIntegerVariable;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SolutionOrigin;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import java.io.Serializable;
 import java.text.DecimalFormat;
@@ -52,14 +54,14 @@ import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
-import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
 
 public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationResultModel> {
 
   private static final String SOURCE_ESTIMATE = "Raw data estimate";
-  private static final String SOURCE_OPTIMIZER = "Optimizer";
+  private static final String SOURCE_FRONT = "Front";
+  private static final String SOURCE_EVALUATED = "Evaluated";
 
   private final NumberFormat threeDecimals = new DecimalFormat("0.###");
   private final NumberFormat noDecimals = new DecimalFormat("0");
@@ -128,17 +130,26 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     }
     final Solution template = solutions.getFirst();
 
-    final TableColumn<Solution, String> sourceCol = TableColumns.createColumn("Source", 130,
-        s -> new ReadOnlyStringWrapper(
-            s == model.getSinglePassSolution() ? SOURCE_ESTIMATE : SOURCE_OPTIMIZER));
-    solutionTable.getColumns().add(sourceCol);
-
     // assumption: the table sorts its items list in place, so the original row order is captured
     // here instead of being looked up in the live list
     final Map<Solution, Integer> originalOrder = new IdentityHashMap<>(solutions.size());
     for (int i = 0; i < solutions.size(); i++) {
       originalOrder.put(solutions.get(i), i);
     }
+
+    final TableColumn<Solution, String> sourceCol = TableColumns.createColumn("Source", 130,
+        s -> new ReadOnlyStringWrapper(s == model.getSinglePassSolution() ? SOURCE_ESTIMATE
+            : model.isOnFront(s) ? SOURCE_FRONT : SOURCE_EVALUATED));
+    solutionTable.getColumns().add(sourceCol);
+
+    // decision: pinned next to Source instead of left to the generic attribute loop below, which
+    // would scatter it among the diagnostics. Source says how a row got into the table, Origin says
+    // which phase of the run produced its parameters.
+    final TableColumn<Solution, String> originCol = TableColumns.createColumn(
+        SolutionOrigin.ATTRIBUTE, 100, s -> new ReadOnlyStringWrapper(
+            Objects.requireNonNullElse(s.getAttribute(SolutionOrigin.ATTRIBUTE), "").toString()));
+    solutionTable.getColumns().add(originCol);
+
     final TableColumn<Solution, Number> indexCol = TableColumns.createColumn("Index", 50,
         s -> new ReadOnlyIntegerWrapper(originalOrder.getOrDefault(s, -1)));
     solutionTable.getColumns().add(indexCol);
@@ -147,25 +158,26 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
       final Variable variable = template.getVariable(i);
       final int finalI = i;
       switch (variable) {
+        // decision: the ordinal case must precede RealVariable, which it extends
+        case OrdinalIntegerVariable v -> {
+          if (v.getName().equals("MZ tolerance option")) {
+            final TableColumn<Solution, String> col = TableColumns.createColumn(v.getName(), 120,
+                200, ColumnAlignment.RIGHT, String::compareTo, s -> new ReadOnlyStringWrapper(
+                    WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[OrdinalIntegerVariable.getInt(
+                        s, finalI)].toString()));
+            solutionTable.getColumns().add(col);
+          } else {
+            final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
+                noDecimals, ColumnAlignment.RIGHT,
+                s -> new ReadOnlyIntegerWrapper(OrdinalIntegerVariable.getInt(s, finalI)));
+            solutionTable.getColumns().add(col);
+          }
+        }
         case RealVariable v -> {
           final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
               threeDecimals, ColumnAlignment.RIGHT,
               s -> new ReadOnlyDoubleWrapper(((RealVariable) s.getVariable(finalI)).getValue()));
           solutionTable.getColumns().add(col);
-        }
-        case BinaryIntegerVariable v -> {
-          if (v.getName().equals("MZ tolerance option")) {
-            final TableColumn<Solution, String> col = TableColumns.createColumn(v.getName(), 120,
-                200, ColumnAlignment.RIGHT, String::compareTo, s -> new ReadOnlyStringWrapper(
-                    WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[((BinaryIntegerVariable) s.getVariable(
-                        finalI)).getValue()].toString()));
-            solutionTable.getColumns().add(col);
-          } else {
-            final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,
-                noDecimals, ColumnAlignment.RIGHT, s -> new ReadOnlyIntegerWrapper(
-                    ((BinaryIntegerVariable) s.getVariable(finalI)).getValue()));
-            solutionTable.getColumns().add(col);
-          }
         }
         default -> {
 
@@ -183,8 +195,10 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
 
     for (Entry<String, Serializable> attributeEntry : template.getAttributes().entrySet()) {
       final String attribute = attributeEntry.getKey();
-      // Skip internal attributes (prefixed with '_') and the MOEA penalty attribute
-      if (attribute.startsWith("_") || attribute.equalsIgnoreCase("penalty")) {
+      // Skip internal attributes (prefixed with '_'), the MOEA penalty attribute and the origin,
+      // which already has its own column next to Source
+      if (attribute.startsWith("_") || attribute.equalsIgnoreCase("penalty") || attribute.equals(
+          SolutionOrigin.ATTRIBUTE)) {
         continue;
       }
       final TableColumn<Solution, String> col = TableColumns.createColumn(attribute, 120,

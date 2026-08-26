@@ -48,7 +48,6 @@ import java.util.function.Supplier;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
 
 public class WizardParameterSolutionBuilder {
@@ -141,7 +140,7 @@ public class WizardParameterSolutionBuilder {
       minRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
           (int) (stats.size() * 0.8), 0.0f).getTolerance();
       maxRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
-          (int) (stats.size() * 0.8), 1f).getTolerance();
+          (int) (stats.size() * 0.8), 1).getTolerance();
 
     } else {
 
@@ -194,8 +193,8 @@ public class WizardParameterSolutionBuilder {
     WizardParameterSolution scanToScanTolerance = new IntegerWizardParameterSolution(index,
         WizardPart.MS, (stepParam, sol, id) -> stepParam.setParameter(
         MassSpectrometerWizardParameters.scanToScanMzTolerance,
-        ALL_TOLERANCE_OPTIONS[BinaryIntegerVariable.getInt(sol.getVariable(id))]),
-        () -> new BinaryIntegerVariable("MZ tolerance option", availableTolerances.lowerBound(),
+        ALL_TOLERANCE_OPTIONS[OrdinalIntegerVariable.getInt(sol, id)]),
+        () -> new OrdinalIntegerVariable("MZ tolerance option", availableTolerances.lowerBound(),
             availableTolerances.upperBound()));
     return scanToScanTolerance;
   }
@@ -211,14 +210,14 @@ public class WizardParameterSolutionBuilder {
   public @NotNull WizardParameterSolution buildMaxPeaksSolution(int index) {
     WizardParameterSolution maxPeaks = new IntegerWizardParameterSolution(index,
         WizardPart.ION_INTERFACE, IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram,
-        () -> new BinaryIntegerVariable("Max peaks", 5, 100));
+        () -> new OrdinalIntegerVariable("Max peaks", 5, 100));
     return maxPeaks;
   }
 
   public @NotNull WizardParameterSolution buildMinConsecutiveSolution(int index) {
     return new IntegerWizardParameterSolution(index, WizardPart.ION_INTERFACE,
         IonInterfaceHplcWizardParameters.minNumberOfDataPoints,
-        () -> new BinaryIntegerVariable("Min consecutive", (int) minMinDp, (int) maxMinDp));
+        () -> new OrdinalIntegerVariable("Min consecutive", (int) minMinDp, (int) maxMinDp));
   }
 
 //  public @NotNull WizardParameterSolution buildTopToEdgeSolution(int index) {

@@ -44,7 +44,6 @@ import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.PRNG;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.population.NondominatedPopulation;
-import org.moeaframework.core.variable.BinaryIntegerVariable;
 import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
 import org.moeaframework.problem.AbstractProblem;
@@ -117,12 +116,12 @@ public final class SinglePassParameterEstimation {
         0, WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS.length - 1));
 
     // Inter sample RT tolerance: midpoint of the range derived from aligned benchmarks
-    final double rtMid =
-        (builder.getMinRtSampleToSampleTol() + builder.getMaxRtSampleToSampleTol()) / 2.0;
+    final double rtMid = Math.max(builder.getMinRtSampleToSampleTol(),
+        builder.getMaxRtSampleToSampleTol() * 0.8);
     estimates.put("Inter sample RT tolerance", rtMid);
 
     // Batch parameters: midpoints of their defined ranges
-    estimates.put("Top-to-edge ratio", 2.0);
+    estimates.put("Top-to-edge ratio", 1.7);
     estimates.put("Chrom. Threshold", 0.85);
     estimates.put("Wavelet SNR threshold", 5d);
 
@@ -149,7 +148,7 @@ public final class SinglePassParameterEstimation {
   /**
    * Standard deviation for warm-start perturbation as a fraction of each variable's range.
    */
-  private static final double WARM_START_PERTURBATION = 0.15;
+  private static final double WARM_START_PERTURBATION = 0.20;
 
   /**
    * Creates a list of pre-built solutions for warm-starting the MOEA via
@@ -174,11 +173,12 @@ public final class SinglePassParameterEstimation {
       if (i == 0) {
         // first solution: exact center values
         applyToSolution(solution, estimates);
+        SolutionOrigin.ESTIMATE.applyTo(solution);
       } else {
         // subsequent: center with perturbation
         applyWithPerturbation(solution, estimates, WARM_START_PERTURBATION);
+        SolutionOrigin.PERTURBED.applyTo(solution);
       }
-      solution.setAttribute("Guesstimated", "true");
       solutions.add(solution);
     }
 
@@ -202,9 +202,10 @@ public final class SinglePassParameterEstimation {
   }
 
   /**
-   * Applies center values with Gaussian perturbation for warm-starting. Each real variable is
-   * perturbed by Gaussian noise with sigma = perturbationFraction * range. Integer variables get a
-   * uniform offset in [-1, +1].
+   * Applies center values with Gaussian perturbation for warm-starting. Each variable is perturbed
+   * by Gaussian noise with sigma = perturbationFraction * range. {@link OrdinalIntegerVariable} is
+   * a {@link RealVariable}, so integer parameters are perturbed on the same scale and only rounded
+   * when they are read.
    *
    * @param perturbationFraction fraction of the variable range used as standard deviation
    */
@@ -220,13 +221,6 @@ public final class SinglePassParameterEstimation {
           center = (rv.getLowerBound() + rv.getUpperBound()) / 2;
         }
         rv.setValue(Math.clamp(center + noise, rv.getLowerBound(), rv.getUpperBound()));
-      } else if (var instanceof BinaryIntegerVariable biv) {
-        if (center == null) {
-          center = (double) ((biv.getLowerBound() + biv.getUpperBound()) / 2);
-        }
-        final int intCenter = (int) Math.round(center);
-        final int offset = PRNG.nextInt(3) - 1;
-        biv.setValue(Math.clamp(intCenter + offset, biv.getLowerBound(), biv.getUpperBound()));
       }
     }
   }
@@ -310,10 +304,6 @@ public final class SinglePassParameterEstimation {
   private static void applyValueToVariable(@NotNull Variable var, double value) {
     if (var instanceof RealVariable rv) {
       rv.setValue(Math.clamp(value, rv.getLowerBound(), rv.getUpperBound()));
-    } else if (var instanceof BinaryIntegerVariable biv) {
-      final int clamped = Math.clamp((int) Math.round(value), biv.getLowerBound(),
-          biv.getUpperBound());
-      biv.setValue(clamped);
     }
   }
 }
