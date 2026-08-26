@@ -36,13 +36,12 @@ public class BatchParameterSolutionBuilder {
   public static BatchParameterSolution buildTopToEdgeRatio(int index) {
     return new DoubleBatchParameterSolution(MinimumSearchFeatureResolverModule.class,
         MinimumSearchFeatureResolverParameters.MIN_RATIO, index, ApplicationScope.FIRST,
-        () -> new RealVariable("Top-to-edge ratio", 1.3, 3));
+        () -> new RealVariable("Top-to-edge ratio", 1.5, 3));
   }
 
   public static BatchParameterSolution buildChromThreshold(int index) {
     return new DoubleBatchParameterSolution(MinimumSearchFeatureResolverModule.class,
         MinimumSearchFeatureResolverParameters.CHROMATOGRAPHIC_THRESHOLD_LEVEL, index,
-        ApplicationScope.FIRST,
-        () -> new RealVariable("Chrom. Threshold", 0.7, 0.97));
+        ApplicationScope.FIRST, () -> new RealVariable("Chrom. Threshold", 0.5, 0.97));
   }
 }
