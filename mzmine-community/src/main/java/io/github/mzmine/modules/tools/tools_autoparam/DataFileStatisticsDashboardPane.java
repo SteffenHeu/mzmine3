@@ -446,7 +446,7 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
     plot.addDomainMarker(meanMarker);
     // median marker (solid green)
     ValueMarker medianMarker = new ValueMarker(median, MEDIAN_COLOR, SOLID_STROKE);
-    medianMarker.setLabel("Median: %.4f".formatted(mean));
+    medianMarker.setLabel("Median: %.4f".formatted(median));
     plot.addDomainMarker(medianMarker);
 
     // sigma markers (dashed magenta, decreasing opacity)
