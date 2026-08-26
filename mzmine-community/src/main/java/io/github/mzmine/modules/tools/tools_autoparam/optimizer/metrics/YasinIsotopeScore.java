@@ -97,8 +97,8 @@ public final class YasinIsotopeScore implements SweepMetric {
             MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA.getToleranceRange(bestIso.getMzValue(i)), rowsByMz,
             FeatureListRow::getAverageMZ);
         // todo: also check for noise?
-        eligibleMzs.sublist(rowsByMz, false).stream()
-            .min(Comparator.comparingDouble(r -> Math.abs(r.getAverageRT() - row.getAverageRT())))
+        eligibleMzs.sublist(rowsByMz, false).stream()/*.filter(r -> r.getMaxHeight() > noise)*/.min(
+                Comparator.comparingDouble(r -> Math.abs(r.getAverageRT() - row.getAverageRT())))
             .ifPresent(isotopeRows::add);
       }
 
@@ -119,6 +119,7 @@ public final class YasinIsotopeScore implements SweepMetric {
         }
       }
 
+      final int foundCount[] = new int[isotopeRows.size()];
       for (final RawDataFile file : row.getRawDataFiles()) {
         final Feature feature = row.getFeature(file);
         if (feature == null || feature == bestFeature || feature.getHeight() < noise) {
@@ -134,8 +135,14 @@ public final class YasinIsotopeScore implements SweepMetric {
           // todo check for noise here?
           if (areaTolerance.matches(benchmarkRatios.getFloat(i),
               feature.getArea() / isotopeFeature.getArea())) {
-            correctlyIntegrated++;
+            foundCount[i]++;
           }
+        }
+      }
+
+      for (int i = 0; i < foundCount.length; i++) {
+        if (foundCount[i] >= row.getRawDataFiles().size() * 0.5) {
+          correctlyIntegrated += foundCount[i];
         }
       }
     }
