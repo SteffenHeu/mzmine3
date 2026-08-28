@@ -78,6 +78,20 @@ public class OrdinalIntegerVariable extends RealVariable {
   }
 
   /**
+   * The value a solution's variable is actually applied with: rounded for an
+   * {@link OrdinalIntegerVariable}, unchanged for a plain {@link RealVariable}.
+   * <p>
+   * decision: kept here rather than at the call sites, because every caller that reads a solution -
+   * the batch queue, the evaluation cache key, the results table, the csv export - has to agree on
+   * this or they describe different runs.
+   */
+  public static double effectiveValue(@NotNull Solution solution, int index) {
+    final Variable variable = solution.getVariable(index);
+    return variable instanceof OrdinalIntegerVariable ? getInt(solution, index)
+        : RealVariable.getReal(variable);
+  }
+
+  /**
    * The rounded value. Clamped because both the padded bounds and the variation operators can leave
    * the value just outside the integer range.
    */

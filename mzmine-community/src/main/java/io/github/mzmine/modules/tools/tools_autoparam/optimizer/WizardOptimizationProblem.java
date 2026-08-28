@@ -431,26 +431,36 @@ public class WizardOptimizationProblem extends AbstractProblem {
     solution.setAttribute("Rows (incl. isotopes)", newest.getRows().size());
     solution.setAttribute("Runtime / s", fullBatchTime);
 
-    // decision: diagnostic only, never an objective. With strict shape filtering enabled the
-    // rejected features never reach the metrics, so a parameter set that produces mostly noise can
-    // score like one that produces clean peaks. Running with the filter off makes this count the
-    // real amount of junk the parameters produced.
-    final long shapeStart = System.nanoTime();
-    final ShapeScoreDiagnostic.Result shape = ShapeScoreDiagnostic.evaluate(newest,
-        ShapeScoreDiagnostic.STRICT_SHAPE_SCORE);
-    solution.setAttribute(ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT, shape.wouldRemovePercent());
+    // decision: computed only when the constraint reads it. Fitting peak models is by far the most
+    // expensive diagnostic - it dominated an evaluation once the sample size was raised - and with
+    // the constraint off nothing consumes the result, so it is pure cost.
     if (getNumberOfConstraints() > 0) {
+      final long shapeStart = System.nanoTime();
+      final ShapeScoreDiagnostic.Result shape = ShapeScoreDiagnostic.evaluate(newest,
+          ShapeScoreDiagnostic.STRICT_SHAPE_SCORE);
+      solution.setAttribute(ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT, shape.wouldRemovePercent());
       // decision: a constraint rather than a penalty term, so no score changes meaning and the
       // algorithm's own constraint domination keeps the search out of the noisy region
       solution.setConstraintValue(0, shape.wouldRemovePercent());
+      solution.setAttribute(ShapeScoreDiagnostic.ATTR_DOUBLE_PEAK_PERCENT,
+          shape.doublePeakPercent());
+      solution.setAttribute("Shape score sample", shape.inspected());
+      logger.finest("Shape diagnostic: %s (took %.1f s)".formatted(shape,
+          (System.nanoTime() - shapeStart) / 1e9));
     }
-    // decision: only the total and the double peak share get a column. Unfittable and sign changes
-    // stay rejection reasons and remain in the logged breakdown, but across the reference runs they
-    // contributed a few tenths of a percent and only widened the table.
-    solution.setAttribute(ShapeScoreDiagnostic.ATTR_DOUBLE_PEAK_PERCENT, shape.doublePeakPercent());
-    solution.setAttribute("Shape score sample", shape.inspected());
-    logger.finest("Shape diagnostic: %s (took %.1f s)".formatted(shape,
-        (System.nanoTime() - shapeStart) / 1e9));
+
+    // decision: always computed, because it is cheap and because it measures the failure mode the
+    // shape diagnostic is blind to - marginal detections that fit a peak model perfectly well
+    final long precisionStart = System.nanoTime();
+    final PrecisionDiagnostic.Result precision = PrecisionDiagnostic.evaluate(newest);
+    solution.setAttribute(PrecisionDiagnostic.ATTR_SINGLE_FILE_PERCENT,
+        precision.singleFilePercent());
+    solution.setAttribute(PrecisionDiagnostic.ATTR_NO_ISOTOPE_PERCENT,
+        precision.withoutIsotopesPercent());
+    solution.setAttribute(PrecisionDiagnostic.ATTR_MEDIAN_HEIGHT, precision.medianHeight());
+    solution.setAttribute(PrecisionDiagnostic.ATTR_LOW_HEIGHT, precision.lowHeight());
+    logger.finest("Precision diagnostic: %s (took %.2f s)".formatted(precision,
+        (System.nanoTime() - precisionStart) / 1e9));
 
     solution.setAttribute(ATTR_CACHE_HIT, false);
     solution.setAttribute(ATTR_EVALUATION, evaluatedSolutions.size() + 1);
@@ -471,7 +481,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
     final List<Double> key = new ArrayList<>(solution.getNumberOfVariables());
     for (int i = 0; i < solution.getNumberOfVariables(); i++) {
       final Variable variable = solution.getVariable(i);
-      key.add(variable instanceof OrdinalIntegerVariable ? (double) OrdinalIntegerVariable.getInt(
+      key.add(variable instanceof OrdinalIntegerVariable ? OrdinalIntegerVariable.effectiveValue(
           solution, i) : RealVariable.getReal(variable));
     }
     return List.copyOf(key);

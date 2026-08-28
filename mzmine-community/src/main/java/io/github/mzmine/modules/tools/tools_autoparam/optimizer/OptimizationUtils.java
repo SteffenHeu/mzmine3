@@ -43,6 +43,9 @@ import io.github.mzmine.modules.dataprocessing.align_join.JoinAlignerParameters;
 import io.github.mzmine.modules.dataprocessing.align_join.JoinRowAlignScorer;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
+import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
@@ -79,6 +82,22 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class OptimizationUtils {
+
+  /**
+   * Derives the per file statistics the estimator and the variable ranges are both built from. This
+   * is the cheap half of an optimization - one pass over each file, no batch runs - so a caller
+   * that only wants to inspect or re-derive estimates can stop here.
+   *
+   * @param benchmarkFeatures additional target features, or null
+   */
+  public static @NotNull List<DataFileStatistics> computeFileStatistics(
+      @NotNull List<RawDataFile> importedFiles, @Nullable List<FeatureRecord> benchmarkFeatures,
+      @Nullable MemoryMapStorage storage) {
+    return importedFiles.stream().map(
+            file -> new AutoParamTask(storage, Instant.now(), AutoParamParameters.of(importedFiles),
+                AutoParamModule.class, file, benchmarkFeatures, false)).parallel()
+        .map(AutoParamTask::runAndGet).toList();
+  }
 
   public static List<RawDataFile> importFilesBlocking(File[] filesToImport,
       @Nullable File metadata) {
@@ -193,13 +212,32 @@ public class OptimizationUtils {
 
   public static RTTolerance extractSampleToSampleRtTolerances(@NotNull ModularFeatureList flist,
       int minDetections, float coverageQuantile) {
+    final double[] values = extractSampleToSampleRtDeviations(flist, minDetections);
+    return new RTTolerance((float) MathUtils.calcQuantileSorted(values, coverageQuantile),
+        Unit.MINUTES);
+  }
+
+  /**
+   * Every feature's absolute retention time deviation from the mean of its row, sorted.
+   * <p>
+   * decision: exposed rather than kept inside
+   * {@link #extractSampleToSampleRtTolerances(ModularFeatureList, int, float)}, because both the
+   * inter sample retention time estimate and its search bounds are quantiles of this one
+   * distribution, and picking those quantiles well needs the distribution itself rather than two
+   * numbers taken from it.
+   *
+   * @param minDetections rows detected in fewer files are skipped, so a deviation is only counted
+   *                      where there was something to align against
+   */
+  public static double[] extractSampleToSampleRtDeviations(@NotNull ModularFeatureList flist,
+      int minDetections) {
     if (minDetections > flist.getNumberOfRawDataFiles()) {
       throw new IllegalStateException(
           "Minimum detections (%d) larger than number of raw data files (%d)".formatted(
               minDetections, flist.getNumberOfRawDataFiles()));
     }
 
-    DoubleArrayList differences = new DoubleArrayList();
+    final DoubleArrayList differences = new DoubleArrayList();
     for (final FeatureListRow row : flist.getRows()) {
       if (row.getNumberOfFeatures() < minDetections) {
         continue;
@@ -210,8 +248,6 @@ public class OptimizationUtils {
           .map(featureRt -> (double) Math.abs(featureRt - rt)).toList());
     }
 
-    final double[] values = differences.doubleStream().sorted().toArray();
-    return new RTTolerance((float) MathUtils.calcQuantileSorted(values, coverageQuantile),
-        Unit.MINUTES);
+    return differences.doubleStream().sorted().toArray();
   }
 }

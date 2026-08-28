@@ -35,9 +35,7 @@ import io.github.mzmine.javafx.dialogs.NotificationService.NotificationType;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardTab;
-import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
-import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
+import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatisticsDashboardPane;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui.OptimizationResultsController;
@@ -85,11 +83,34 @@ public class BatchOptimizationMainTask extends AbstractTask {
    */
   private static final double MIN_SHAPE_REJECTION_LIMIT = 5d;
 
+  /**
+   * Seed every run uses unless a caller asks for another one. Fixed on purpose: the same data and
+   * the same settings have to give the same result for every user on every machine, without anyone
+   * having to configure anything. Only a programmatic caller that deliberately wants to vary the
+   * random draws - a benchmark measuring how much of a result is chance - passes its own.
+   */
+  public static final long DEFAULT_RANDOM_SEED = 42;
+
   private final File[] files;
   @Nullable
   private final File metadata;
-  private final BatchWizardTab tab;
+  /**
+   * Source of the parameter presets. Captured up front instead of read from the tab inside
+   * {@link #run()}, so the task does not touch a GUI object from its own thread.
+   */
+  private final @NotNull WizardSequence sequence;
+  /**
+   * Null when there is no wizard to return to, i.e. when the optimization is driven headlessly. The
+   * results window is then skipped and the outcome is read through {@link #getOutcome()}.
+   */
+  private final @Nullable BatchWizardTab tab;
   private final OptimizerParameters params;
+  /**
+   * Set once the optimization finished, so a headless caller can read the estimate, the front and
+   * every evaluated solution back.
+   */
+  private @Nullable OptimizationOutcome outcome;
+  private final long randomSeed;
   private final AtomicReference<TaskStatus> externalStatus = new AtomicReference<>(
       TaskStatus.PROCESSING);
   /**
@@ -104,17 +125,62 @@ public class BatchOptimizationMainTask extends AbstractTask {
   public BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
       @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata,
       @NotNull BatchWizardTab tab, @NotNull OptimizerParameters params) {
+    this(storage, moduleCallDate, files, metadata, tab.getSequence(), tab, params);
+  }
+
+  /**
+   * Runs an optimization without a wizard tab, for tests and scripted comparisons. No results
+   * window is opened; read the result through {@link #getOutcome()} once the task finished.
+   */
+  public BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
+      @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata,
+      @NotNull WizardSequence sequence, @NotNull OptimizerParameters params) {
+    this(storage, moduleCallDate, files, metadata, sequence, params, DEFAULT_RANDOM_SEED);
+  }
+
+  /**
+   * Runs headlessly with an explicit random seed, so a caller can measure how much of a result
+   * comes from the data and how much from the draw. Use {@link #DEFAULT_RANDOM_SEED} to reproduce
+   * what a user would get.
+   */
+  public BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
+      @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata,
+      @NotNull WizardSequence sequence, @NotNull OptimizerParameters params, long randomSeed) {
+    this(storage, moduleCallDate, files, metadata, sequence, null, params, randomSeed);
+  }
+
+  private BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
+      @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata,
+      @NotNull WizardSequence sequence, @Nullable BatchWizardTab tab,
+      @NotNull OptimizerParameters params) {
+    this(storage, moduleCallDate, files, metadata, sequence, tab, params, DEFAULT_RANDOM_SEED);
+  }
+
+  private BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
+      @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata,
+      @NotNull WizardSequence sequence, @Nullable BatchWizardTab tab,
+      @NotNull OptimizerParameters params, long randomSeed) {
     super(storage, moduleCallDate);
     this.files = files;
     this.metadata = metadata;
+    this.sequence = sequence;
     this.tab = tab;
     this.params = params;
+    this.randomSeed = randomSeed;
 
     addTaskStatusListener((_, newStatus, _) -> {
       if (newStatus == TaskStatus.CANCELED && optimizer != null) {
         optimizer.terminate();
       }
     });
+  }
+
+  /**
+   * @return the finished optimization's estimate, front and evaluated solutions, or null while the
+   * task has not completed.
+   */
+  public @Nullable OptimizationOutcome getOutcome() {
+    return outcome;
   }
 
   @Override
@@ -140,10 +206,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
     final List<FeatureRecord> benchmarkFeatures = WizardOptimizationProblem.extractFeatureRecordsFromFile(
         null, params);
 
-    final List<DataFileStatistics> stats = importedFiles.stream().map(
-        file -> new AutoParamTask(getMemoryMapStorage(), Instant.now(),
-            AutoParamParameters.of(importedFiles), AutoParamModule.class, file, benchmarkFeatures,
-            false)).parallel().map(AutoParamTask::runAndGet).toList();
+    final List<DataFileStatistics> stats = OptimizationUtils.computeFileStatistics(importedFiles,
+        benchmarkFeatures, getMemoryMapStorage());
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
     if (DesktopService.isGUI()) {
@@ -152,16 +216,16 @@ public class BatchOptimizationMainTask extends AbstractTask {
           new DataFileStatisticsDashboardPane(dashboardStats))));
     }
 
-    // set a specific seed to make the results deterministic.
-    PRNG.setSeed(42);
+    // set a specific seed to make the results deterministic, see DEFAULT_RANDOM_SEED
+    PRNG.setSeed(randomSeed);
 
     // store all in ram while optimizing
     addTaskStatusListener((_, _, _) -> ConfigService.getPreference(MZminePreferences.memoryOption)
         .enforceToMemoryMapping());
     MemoryMapStorage.setStoreAllInRam(true);
 
-    final WizardOptimizationProblem problem = new WizardOptimizationProblem(tab.getSequence(),
-        stats, params, externalStatus);
+    final WizardOptimizationProblem problem = new WizardOptimizationProblem(sequence, stats, params,
+        externalStatus);
 
     optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
     totalIterations = Math.max(params.getValue(OptimizerParameters.iterations), 30);
@@ -199,7 +263,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
       // 55 % worse than the estimate itself, while the winner was always a perturbation of it. So
       // the slots are worth more as further perturbations than as random draws.
       injected = SinglePassParameterEstimation.createWarmStartSolutions(problem,
-          singlePassEstimates, POPULATION_SIZE);
+          singlePassEstimates, POPULATION_SIZE,
+          params.getValue(OptimizerParameters.warmStartSampling));
       logger.info(
           "Warm-start enabled for %s: injected %d solutions, total evaluations %d".formatted(
               optimizer.getName(), injected.size(), totalIterations));
@@ -233,9 +298,19 @@ public class BatchOptimizationMainTask extends AbstractTask {
     SinglePassParameterEstimation.logComparison(singlePassSolution, result,
         problem.getEnabledMetrics());
 
+    outcome = new OptimizationOutcome(singlePassEstimates, singlePassSolution, result, problem);
+
+    // decision: the results window needs a wizard to apply its selection to, so a headless run only
+    // records the outcome
+    if (tab == null) {
+      setStatus(TaskStatus.FINISHED);
+      return;
+    }
+
+    final BatchWizardTab resultTab = tab;
     FxThread.runLater(() -> {
       Stage stage = new Stage();
-      final OptimizationResultsController controller = new OptimizationResultsController(tab,
+      final OptimizationResultsController controller = new OptimizationResultsController(resultTab,
           problem, result, singlePassSolution, stage);
       final Region region = controller.buildView();
       stage.setTitle("Optimization Results");

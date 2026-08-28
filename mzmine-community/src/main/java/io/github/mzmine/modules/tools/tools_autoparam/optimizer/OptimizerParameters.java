@@ -118,6 +118,14 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
       "Optimizer", "", OptimizerOptions.values(), OptimizerOptions.MOEAD);
 
+  public static final ComboParameter<WarmStartSampling> warmStartSampling = new ComboParameter<>(
+      "Warm start sampling", """
+      How the initial attempts are spread around the raw data estimate.
+      The initial attempts decide most of the result, and independent draws leave their coverage \
+      to chance - the same data can score up to twice as differently depending only on the random \
+      seed. A space-filling sequence covers the same neighbourhood the same way every run.""",
+      WarmStartSampling.values(), WarmStartSampling.GAUSSIAN);
+
   /**
    * All available optimization targets as {@link ParameterSolutionPrototype} prototypes. Wizard
    * entries use a default-range dummy builder solely for display/XML. Batch entries wrap
@@ -135,7 +143,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public OptimizerParameters() {
     super(metricsToOptimize, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
-        initializeWithRawDataGuesses, maxShapeRejectionFactor, paramToOptimize);
+        initializeWithRawDataGuesses, warmStartSampling, maxShapeRejectionFactor, paramToOptimize);
   }
 
   /**

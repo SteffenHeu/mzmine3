@@ -73,6 +73,19 @@ public class WizardParameterSolutionBuilder {
   private final @Nullable List<DataFileStatistics> stats;
   private final double minFwhm;
   private final double maxFwhm;
+  /**
+   * Quantile of the sample to sample retention time deviations used as the starting value. Measured
+   * against the one reference dataset whose optimum was not clipped by the old bound, this predicts
+   * it to within 4 %; the previous rule overshot by 51 %.
+   */
+  private static final float RT_ESTIMATE_QUANTILE = 0.98f;
+
+  /**
+   * Multiple of the widest observed deviation used as the upper bound, so the search can express an
+   * optimum above the observed spread instead of reporting the bound.
+   */
+  private static final double RT_RANGE_HEADROOM = 3d;
+
   private final double minMinDp;
   private final double maxMinDp;
   private final double minNoiseLevel;
@@ -81,6 +94,7 @@ public class WizardParameterSolutionBuilder {
   private final double maxMinHeight;
   private final double minRtSampleToSampleTol;
   private final double maxRtSampleToSampleTol;
+  private final double estimatedRtSampleToSampleTol;
   private @NotNull
   final MassDetectorWizardOptions massDetectorType;
 
@@ -114,7 +128,11 @@ public class WizardParameterSolutionBuilder {
 
       array = stats.stream().map(DataFileStatistics::getNumberOfLowestIsotopeDataPoints)
           .flatMapToInt(Arrays::stream).mapToDouble(i -> i).sorted().toArray();
-      minMinDp = 3; //MathUtils.calcQuantileSorted(array, 0.02);
+      // assumption: three points is the physical minimum for a peak to have a shape at all, so a
+      // dataset whose optimum is exactly 3 is a real result and not a clipped one.
+      // OrdinalIntegerVariable pads the real interval by half a step at each end, so 3 covers
+      // [2.5, 3.5) and is drawn as often as any interior value.
+      minMinDp = 3;
       // some peaks may be super long, so use a lower quantile
       maxMinDp = Math.max(minMinDp * 3, MathUtils.calcQuantileSorted(array, 0.8));
 
@@ -137,10 +155,21 @@ public class WizardParameterSolutionBuilder {
       final ModularFeatureList aligned = OptimizationUtils.alignBenchmarkFeatures(stats, null,
           new SimpleRunnableTask(() -> {
           }));
+      final int minDetections = (int) (stats.size() * 0.8);
       minRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
-          (int) (stats.size() * 0.8), 0.0f).getTolerance();
+          minDetections, 0.0f).getTolerance();
+      // decision: headroom above the widest deviation observed. Anchored at the widest deviation
+      // itself, every reference dataset but one optimized to exactly that value, so the measurement
+      // only ever reported the bound.
       maxRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
-          (int) (stats.size() * 0.8), 1).getTolerance();
+          minDetections, 1).getTolerance() * RT_RANGE_HEADROOM;
+      // decision: a quantile of the deviations rather than a fraction of their maximum. The old
+      // rule, 0.8 x the widest deviation, landed above the 99.6th percentile on all seven reference
+      // datasets - it tolerated more misalignment than 99.8 % of features actually showed, set by a
+      // handful of badly aligned rows - and being a fraction of the bound it also moved whenever the
+      // bound was tuned.
+      estimatedRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
+          minDetections, RT_ESTIMATE_QUANTILE).getTolerance();
 
     } else {
 
@@ -160,6 +189,7 @@ public class WizardParameterSolutionBuilder {
       maxMinHeight = 1E8;
       minRtSampleToSampleTol = 0.01;
       maxRtSampleToSampleTol = 0.2;
+      estimatedRtSampleToSampleTol = 0.05;
     }
 
     if (!isLowRes) {
@@ -177,7 +207,8 @@ public class WizardParameterSolutionBuilder {
     logger.info("Minimum data points range: " + minMinDp + ", " + maxMinDp);
     logger.info("FWHM range: " + minFwhm + ", " + maxFwhm);
     logger.info(
-        "Rt inter sample tol range: " + minRtSampleToSampleTol + ", " + maxRtSampleToSampleTol);
+        "Rt inter sample tol range: " + minRtSampleToSampleTol + ", " + maxRtSampleToSampleTol
+            + " estimate: " + estimatedRtSampleToSampleTol);
     logger.info("mz tolerance: " + ALL_TOLERANCE_OPTIONS[availableTolerances.lower()] + " - "
         + ALL_TOLERANCE_OPTIONS[availableTolerances.upper()]);
   }
@@ -256,6 +287,14 @@ public class WizardParameterSolutionBuilder {
 
   public double getMaxRtSampleToSampleTol() {
     return maxRtSampleToSampleTol;
+  }
+
+  /**
+   * Starting value for the inter sample retention time tolerance, the
+   * {@value #RT_ESTIMATE_QUANTILE} quantile of the observed deviations.
+   */
+  public double getEstimatedRtSampleToSampleTol() {
+    return estimatedRtSampleToSampleTol;
   }
 
   public @NotNull WizardParameterSolution buildSampleToSampleRtTolSolution(int index) {
