@@ -101,7 +101,8 @@ public class OptimizerParameters extends SimpleParameterSet {
           FileSelectionType.OPEN));
 
   public static final IntegerParameter iterations = new IntegerParameter("Iterations",
-      "Number of iterations during optimization.", 100, 30, 10_000);
+      "Maximum number of uncached full batch executions, including the raw-data estimate. Cached "
+          + "duplicate proposals do not consume this budget.", 100, 30, 10_000);
 
   public static final BooleanParameter initializeWithRawDataGuesses = new BooleanParameter(
       "Initialize with raw data-based defaults", "", true);
@@ -116,7 +117,8 @@ public class OptimizerParameters extends SimpleParameterSet {
           ConfigService.getGuiFormats().scoreFormat(), 2.0, 1.0, 100.0), true);
 
   public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
-      "Optimizer", "", OptimizerOptions.values(), OptimizerOptions.MOEAD);
+      "Optimizer", "Pattern search supports one selected metric; evolutionary optimizers also "
+      + "support multiple objectives.", OptimizerOptions.values(), OptimizerOptions.MOEAD);
 
   public static final ComboParameter<WarmStartSampling> warmStartSampling = new ComboParameter<>(
       "Warm start sampling", """
@@ -222,13 +224,13 @@ public class OptimizerParameters extends SimpleParameterSet {
   }
 
   @Override
-  public boolean checkParameterValues(final Collection<String> errorMessages,
+  public boolean checkParameterValues(@NotNull final Collection<String> errorMessages,
       final boolean skipRawDataAndFeatureListParameters) {
     final boolean superCheck = super.checkParameterValues(errorMessages,
         skipRawDataAndFeatureListParameters);
 
     final boolean benchmarkFileSelected = getValue(benchmarkFeaturesFile);
-    List<ImportType<?>> value = getValue(benchmarkFeatureTypes).stream()
+    final List<ImportType<?>> value = getValue(benchmarkFeatureTypes).stream()
         .filter(ImportType::isSelected)
         .filter(i -> i.getDataType().equals(new MZType()) || i.getDataType().equals(new RTType()))
         .toList();
@@ -237,6 +239,11 @@ public class OptimizerParameters extends SimpleParameterSet {
       errorMessages.add(
           "If %s is selected, RT and MZ values must be imported from the csv file.".formatted(
               benchmarkFeaturesFile.getName()));
+    }
+
+    if (getValue(optimizers) == OptimizerOptions.PATTERN_SEARCH
+        && getValue(metricsToOptimize).size() != 1) {
+      errorMessages.add("Pattern search requires exactly one optimization metric.");
     }
 
     return superCheck && errorMessages.isEmpty();

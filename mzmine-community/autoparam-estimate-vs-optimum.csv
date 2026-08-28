@@ -11,6 +11,30 @@ thermo-20y-qc,42,parameter,Min consecutive,5.0,3.0,4.0
 thermo-20y-qc,42,parameter,Min height,434925.40625,369336.25315625797,231598.4721392313
 thermo-20y-qc,42,parameter,Chrom. Threshold,0.85,0.915067331305756,0.915067331305756
 thermo-20y-qc,42,parameter,Top-to-edge ratio,1.7,1.5,1.5
+thermo-20y-qc,7,metric,Yasin isotope score,3014.3277211944846,3601.1253516723978,5095.2640417457305
+thermo-20y-qc,7,diagnostic,Total features,28866.0,25592.0,31620.0
+thermo-20y-qc,7,diagnostic,Shape filter would remove / %,,,
+thermo-20y-qc,7,parameter,FWHM,0.030181679874658585,0.03267787029113412,0.04047073318468192
+thermo-20y-qc,7,parameter,Inter sample RT tolerance,0.04613828659057617,0.17199100747961088,0.07326037576208916
+thermo-20y-qc,7,parameter,MS1 noise level,5.0,3.0,3.0
+thermo-20y-qc,7,parameter,MZ tolerance / m/z,0.003,0.003,0.003
+thermo-20y-qc,7,parameter,MZ tolerance / ppm,7.0,7.0,7.0
+thermo-20y-qc,7,parameter,Min consecutive,5.0,3.0,3.0
+thermo-20y-qc,7,parameter,Min height,434925.40625,656448.0382762541,505402.1665697193
+thermo-20y-qc,7,parameter,Chrom. Threshold,0.85,0.97,0.9548325155380051
+thermo-20y-qc,7,parameter,Top-to-edge ratio,1.7,1.5,1.5
+thermo-20y-qc,101,metric,Yasin isotope score,3014.3277211944846,3302.4786572607163,5318.168522914004
+thermo-20y-qc,101,diagnostic,Total features,28866.0,33454.0,49293.0
+thermo-20y-qc,101,diagnostic,Shape filter would remove / %,,,
+thermo-20y-qc,101,parameter,FWHM,0.030181679874658585,0.025362722785308524,0.03134475386904812
+thermo-20y-qc,101,parameter,Inter sample RT tolerance,0.04613828659057617,0.04686916112727526,0.07390845380736119
+thermo-20y-qc,101,parameter,MS1 noise level,5.0,3.0,3.0680975357830675
+thermo-20y-qc,101,parameter,MZ tolerance / m/z,0.003,0.001,0.005
+thermo-20y-qc,101,parameter,MZ tolerance / ppm,7.0,5.0,15.0
+thermo-20y-qc,101,parameter,Min consecutive,5.0,4.0,4.0
+thermo-20y-qc,101,parameter,Min height,434925.40625,409818.24630879774,256156.00519261687
+thermo-20y-qc,101,parameter,Chrom. Threshold,0.85,0.8439254253696605,0.8865742589352783
+thermo-20y-qc,101,parameter,Top-to-edge ratio,1.7,1.6857476791825063,1.5273342509549819
 zenotof-feces-pos,42,metric,Yasin isotope score,15420.158015124638,27724.1422058639,34369.15816597952
 zenotof-feces-pos,42,diagnostic,Total features,21422.0,23909.0,30076.0
 zenotof-feces-pos,42,diagnostic,Shape filter would remove / %,,,

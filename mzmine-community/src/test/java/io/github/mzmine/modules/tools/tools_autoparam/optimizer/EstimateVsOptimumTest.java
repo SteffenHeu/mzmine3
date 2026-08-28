@@ -69,8 +69,8 @@ import testutils.MZmineTestUtil;
  * what the optimization found, so the estimator's bias can be compared across datasets.
  * <p>
  * This is a measurement harness, not a regression test: it asserts only that a run completed, and
- * its output is the printed table plus {@value #CSV_NAME}. Every dataset costs a full optimization,
- * so it is minutes to hours depending on {@link #ITERATIONS_PROPERTY}.
+ * its output is the printed table plus configuration-specific csv files. Every dataset costs a full
+ * optimization, so it is minutes to hours depending on {@link #ITERATIONS_PROPERTY}.
  * <p>
  * Point it at data with {@code -Dmzmine.test.autoparam.dataRoot=<folder>} and extend
  * {@link #DATASETS}. The test skips when no configured dataset is present, so it is inert on
@@ -191,27 +191,38 @@ public class EstimateVsOptimumTest {
    */
   private static final SweepMetric METRIC = SweepMetric.YASIN_ISOTOPE_SCORE;
 
+  private static final String OPTIMIZER_PROPERTY = "mzmine.test.autoparam.optimizer";
+
   /**
-   * Evaluation budget. The floor of 30 gives one estimate plus the 20 warm-start solutions plus one
-   * generation, which is enough to see the estimate against its own neighbourhood.
+   * Full-batch budget. The floor of 30 gives one estimate plus the 20 warm-start solutions and room
+   * for part of the first generation, which is enough to see the estimate against its neighbourhood.
    */
   private static final String ITERATIONS_PROPERTY = "mzmine.test.autoparam.iterations";
   private static final int DEFAULT_ITERATIONS = 30;
 
-  private static final String CSV_NAME = "autoparam-estimate-vs-optimum.csv";
+  private static final String SUMMARY_CSV_STEM = "autoparam-estimate-vs-optimum";
 
   /**
-   * Every evaluation of every run, in full: the parameters it ran, every metric, and every
-   * diagnostic attribute. The same content the results window exports, with the dataset, the seed
-   * and the evaluation index in front of it, so the whole sweep can be inspected in one table.
+   * Every proposal of every run, in full: the parameters it ran, every metric, and every diagnostic
+   * attribute. The same content the results window exports, with the dataset, seed, proposal index
+   * and full-batch index in front of it, so the whole sweep can be inspected in one table.
    */
-  private static final String TRAJECTORY_CSV = "autoparam-all-evaluations.csv";
+  private static final String TRAJECTORY_CSV_STEM = "autoparam-all-evaluations";
+
+  /**
+   * Optional short filename suffix. Without it, the relevant settings form the campaign id.
+   */
+  private static final String CAMPAIGN_PROPERTY = "mzmine.test.autoparam.campaign";
 
   /**
    * Attributes the results window also hides: MOEA internals and its penalty bookkeeping.
    */
   private static boolean isReportableAttribute(@NotNull String name) {
-    return !name.startsWith("_") && !name.equalsIgnoreCase("penalty");
+    return !name.startsWith("_") && !name.equalsIgnoreCase("penalty") && !name.equals(
+        WizardOptimizationProblem.ATTR_PROPOSAL_INDEX) && !name.equals(
+        WizardOptimizationProblem.ATTR_BATCH_EXECUTION_INDEX) && !name.equals(
+        WizardOptimizationProblem.ATTR_ELAPSED_OPTIMIZATION_SECONDS) && !name.equals(
+        SolutionOrigin.ATTRIBUTE);
   }
 
   /**
@@ -240,6 +251,12 @@ public class EstimateVsOptimumTest {
         : WarmStartSampling.valueOf(configured.trim().toUpperCase(java.util.Locale.ROOT));
   }
 
+  private static @NotNull OptimizerOptions optimizer() {
+    final String configured = System.getProperty(OPTIMIZER_PROPERTY);
+    return configured == null || configured.isBlank() ? OptimizerOptions.MOEAD
+        : OptimizerOptions.valueOf(configured.trim().toUpperCase(Locale.ROOT));
+  }
+
   private static @NotNull List<Long> seeds() {
     final String configured = System.getProperty(SEEDS_PROPERTY);
     if (configured == null || configured.isBlank()) {
@@ -247,6 +264,12 @@ public class EstimateVsOptimumTest {
     }
     return java.util.Arrays.stream(configured.split(",")).map(String::trim)
         .filter(s -> !s.isEmpty()).map(Long::parseLong).toList();
+  }
+
+  private static @NotNull BenchmarkCampaign campaign() {
+    return BenchmarkCampaign.create(optimizer().name(), METRIC.name(), warmStartSampling().name(),
+        Integer.getInteger(ITERATIONS_PROPERTY, DEFAULT_ITERATIONS), seeds(),
+        System.getProperty(ONLY_PROPERTY), System.getProperty(CAMPAIGN_PROPERTY));
   }
 
   static boolean isSelected(@NotNull BenchmarkDataset dataset) {
@@ -378,10 +401,11 @@ public class EstimateVsOptimumTest {
     final File[] files = dataset.rawFiles();
     final WizardSequence sequence = createSequence(dataset);
     final OptimizerParameters params = createParameters(sequence);
-    final int iterations = params.getValue(OptimizerParameters.iterations);
+    final int batchBudget = params.getValue(OptimizerParameters.iterations);
 
-    logger.info("Optimizing %s: %d files, %d iterations, seed %d, %s sampling, metric %s".formatted(
-        dataset.name(), files.length, iterations, seed, warmStartSampling(), METRIC.name()));
+    logger.info(
+        "Optimizing %s: %d files, %d full batches, seed %d, %s sampling, metric %s".formatted(
+            dataset.name(), files.length, batchBudget, seed, warmStartSampling(), METRIC.name()));
 
     final BatchOptimizationMainTask task = new BatchOptimizationMainTask(
         MemoryMapStorage.forRawDataFile(), Instant.now(), files, dataset.metadataFile(), sequence,
@@ -416,10 +440,10 @@ public class EstimateVsOptimumTest {
         attributeAsDouble(perturbed, ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT),
         attributeAsDouble(front, ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT)));
 
-    // the list is in evaluation order, so the index is the evaluation number
+    // the list is in proposal order; the solution also records the independent batch-cost index
     final List<Solution> evaluated = outcome.evaluatedSolutions();
-    for (int i = 0; i < evaluated.size(); i++) {
-      trajectory.add(describeEvaluation(dataset, seed, i + 1, evaluated.get(i)));
+    for (final Solution solution : evaluated) {
+      trajectory.add(describeEvaluation(dataset, seed, solution));
     }
 
     final Map<String, Double> estimateValues = OptimizationOutcome.parameterValues(estimate);
@@ -442,7 +466,7 @@ public class EstimateVsOptimumTest {
               perturbedValues.get(entry.getKey()), frontValues.get(entry.getKey())));
     }
 
-    printDatasetTable(dataset, seed, files.length, iterations, outcome, rows);
+    printDatasetTable(dataset, seed, files.length, batchBudget, outcome, rows);
     return rows;
   }
 
@@ -535,7 +559,7 @@ public class EstimateVsOptimumTest {
   private @NotNull OptimizerParameters createParameters(@NotNull WizardSequence sequence) {
     final OptimizerParameters params = new OptimizerParameters();
     params.setParameter(OptimizerParameters.metricsToOptimize, List.of(METRIC));
-    params.setParameter(OptimizerParameters.optimizers, OptimizerOptions.MOEAD);
+    params.setParameter(OptimizerParameters.optimizers, optimizer());
     params.setParameter(OptimizerParameters.iterations,
         Integer.getInteger(ITERATIONS_PROPERTY, DEFAULT_ITERATIONS));
     params.setParameter(OptimizerParameters.initializeWithRawDataGuesses, true);
@@ -553,12 +577,13 @@ public class EstimateVsOptimumTest {
   // ---------------------------------------------------------------------------- output
 
   private void printDatasetTable(@NotNull BenchmarkDataset dataset, long seed, int fileCount,
-      int iterations, @NotNull OptimizationOutcome outcome, @NotNull List<ComparisonRow> rows) {
+      int batchBudget, @NotNull OptimizationOutcome outcome, @NotNull List<ComparisonRow> rows) {
     final StringBuilder sb = new StringBuilder("\n");
     sb.append("=".repeat(104)).append('\n');
     sb.append(
-        "%s   seed %d   %d files   %d iterations   %d evaluations%n".formatted(dataset.name(), seed,
-            fileCount, iterations, outcome.evaluatedSolutions().size()));
+        "%s   seed %d   %d files   budget %d batches   %d proposals   %d batches run%n".formatted(
+            dataset.name(), seed, fileCount, batchBudget, outcome.evaluatedSolutions().size(),
+            outcome.problem().getBatchExecutionCount()));
     sb.append("-".repeat(104)).append('\n');
     sb.append(
         "%-30s %14s %16s %14s %11s %11s%n".formatted("", "estimate", "best perturbed", "front",
@@ -609,7 +634,7 @@ public class EstimateVsOptimumTest {
   }
 
   private void writeCsv(@NotNull List<ComparisonRow> rows) {
-    final File csv = new File(CSV_NAME).getAbsoluteFile();
+    final File csv = campaign().outputFile(SUMMARY_CSV_STEM);
     try (final PrintWriter writer = new PrintWriter(
         Files.newBufferedWriter(csv.toPath(), StandardCharsets.UTF_8))) {
       writer.println("dataset,seed,kind,name,estimate,bestPerturbed,front");
@@ -628,11 +653,16 @@ public class EstimateVsOptimumTest {
    * ran with, every metric, and every diagnostic the problem recorded.
    */
   private @NotNull Map<String, String> describeEvaluation(@NotNull BenchmarkDataset dataset,
-      long seed, int evaluation, @NotNull Solution solution) {
+      long seed, @NotNull Solution solution) {
     final Map<String, String> row = new LinkedHashMap<>();
     row.put("dataset", dataset.name());
     row.put("seed", Long.toString(seed));
-    row.put("evaluation", Integer.toString(evaluation));
+    row.put("proposal",
+        Objects.toString(solution.getAttribute(WizardOptimizationProblem.ATTR_PROPOSAL_INDEX), ""));
+    row.put("batchExecution", Objects.toString(
+        solution.getAttribute(WizardOptimizationProblem.ATTR_BATCH_EXECUTION_INDEX), ""));
+    row.put("elapsedSeconds", Objects.toString(
+        solution.getAttribute(WizardOptimizationProblem.ATTR_ELAPSED_OPTIMIZATION_SECONDS), ""));
     row.put("sampling", warmStartSampling().name());
     row.put("origin", Objects.toString(SolutionOrigin.of(solution), ""));
     row.put("feasible", Boolean.toString(solution.isFeasible()));
@@ -674,7 +704,7 @@ public class EstimateVsOptimumTest {
       });
     }
 
-    final File csv = new File(TRAJECTORY_CSV).getAbsoluteFile();
+    final File csv = campaign().outputFile(TRAJECTORY_CSV_STEM);
     try (final PrintWriter writer = new PrintWriter(
         Files.newBufferedWriter(csv.toPath(), StandardCharsets.UTF_8))) {
       writer.println(String.join(",", header));
@@ -686,6 +716,7 @@ public class EstimateVsOptimumTest {
     } catch (IOException e) {
       throw new RuntimeException("cannot write " + csv, e);
     }
+    logger.info("wrote %s".formatted(csv));
   }
 
   /**

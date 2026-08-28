@@ -118,8 +118,8 @@ public class OptimizationResultsController extends FxController<OptimizationResu
     displayed.addAll(result.asList());
 
     // every remaining evaluated solution, so the table shows the whole search and not just the
-    // front - dominated and infeasible candidates each cost a full batch run and carry the
-    // diagnostics needed to judge where the budget went
+    // front - dominated and infeasible candidates carry the diagnostics needed to judge where the
+    // batch budget went, while cache hits remain visible as cheap proposals
     final Set<Solution> alreadyShown = Collections.newSetFromMap(new IdentityHashMap<>());
     alreadyShown.addAll(displayed);
     for (final Solution evaluated : optimization.getEvaluatedSolutions()) {

@@ -116,6 +116,8 @@ public class WizardOptimizationProblem extends AbstractProblem {
   private final int numWizardParam;
   private final int numBatchParam;
   private final @Nullable List<FeatureRecord> fileOnlyBenchmarkFeatures;
+  private final @NotNull BatchExecutionBudget batchExecutionBudget;
+  private final @NotNull ElapsedTimeTracker elapsedTimeTracker = new ElapsedTimeTracker();
 
   /**
    * Upper limit for the share of features the strict shape filter would reject, in percent.
@@ -127,7 +129,23 @@ public class WizardOptimizationProblem extends AbstractProblem {
   /**
    * Position of a solution in the evaluation order, so the results table can show convergence.
    */
-  private static final String ATTR_EVALUATION = "Evaluation";
+  public static final String ATTR_PROPOSAL_INDEX = "Proposal";
+
+  /**
+   * Number of uncached full batches launched up to and including this proposal. Cache hits retain
+   * the current value without incrementing it.
+   */
+  public static final String ATTR_BATCH_EXECUTION_INDEX = "Batch execution";
+
+  /**
+   * Seconds from problem construction until this proposal's result became available.
+   */
+  public static final String ATTR_ELAPSED_OPTIMIZATION_SECONDS = "Optimization elapsed / s";
+
+  /**
+   * Wall-clock time of this proposal's batch queue. Zero when no batch ran because of a cache hit.
+   */
+  public static final String ATTR_BATCH_RUNTIME_SECONDS = "Runtime / s";
 
   /**
    * Whether the result was taken from {@link #evaluationCache} instead of running a batch. Kept
@@ -140,14 +158,14 @@ public class WizardOptimizationProblem extends AbstractProblem {
    * Attributes describing an individual evaluation instead of its parameter vector, so they must
    * never be taken from a cached result.
    */
-  private static final Set<String> OWN_ATTRIBUTES = Set.of(ATTR_EVALUATION, ATTR_CACHE_HIT,
-      SolutionOrigin.ATTRIBUTE);
+  private static final Set<String> OWN_ATTRIBUTES = Set.of(ATTR_PROPOSAL_INDEX,
+      ATTR_BATCH_EXECUTION_INDEX, ATTR_ELAPSED_OPTIMIZATION_SECONDS, ATTR_BATCH_RUNTIME_SECONDS,
+      ATTR_CACHE_HIT, SolutionOrigin.ATTRIBUTE);
 
   /**
-   * Every solution that went through {@link #evaluate(Solution)}, in evaluation order. Each one
-   * cost a full batch run, so keeping them lets the results table show the whole search instead of
-   * only the non-dominated front — which is what makes the feasible fraction, the convergence and
-   * the metric correlations readable without a separate counter.
+   * Every completed proposal in evaluation order, including cache hits. Keeping them lets the
+   * results table show the whole search instead of only the non-dominated front, while the separate
+   * batch-execution attribute supplies the true cost axis.
    * <p>
    * decision: synchronized because evaluation is sequential today but is a candidate for
    * parallelisation. Only the solutions are retained, never their feature lists.
@@ -161,15 +179,15 @@ public class WizardOptimizationProblem extends AbstractProblem {
    * of a run is spent re-running batches whose result is already known — around 30 % in the
    * single-objective runs.
    * <p>
-   * decision: this saves wall-clock, not budget. MOEA counts the call either way, so the optimizer
-   * still stops after the configured number of evaluations and explores exactly the same parameter
-   * sets in exactly the same order. The run is faster; the search is unchanged.
+   * decision: a hit consumes a proposal but not a batch execution. Search termination uses both a
+   * real-batch budget and a generous proposal cap, so duplicates do not spend the expensive budget
+   * and a converged algorithm still cannot loop forever.
    */
   private final Map<List<Double>, Solution> evaluationCache = new ConcurrentHashMap<>();
 
   public WizardOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param,
-      @NotNull AtomicReference<TaskStatus> externalStatus) {
+      @NotNull AtomicReference<TaskStatus> externalStatus, int maxBatchExecutions) {
 
     // decision: super() must be first — use static helper for objective count before enabledMetrics field is assigned
     super(param.getValue(OptimizerParameters.paramToOptimize).size(),
@@ -177,6 +195,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
 
     fileOnlyBenchmarkFeatures = WizardOptimizationProblem.extractFeatureRecordsFromFile(null,
         param);
+    batchExecutionBudget = new BatchExecutionBudget(maxBatchExecutions);
     target = statsToTargetList(stats);
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
     this.externalStatus = externalStatus;
@@ -369,7 +388,10 @@ public class WizardOptimizationProblem extends AbstractProblem {
     if (cached != null) {
       copyResult(cached, solution);
       solution.setAttribute(ATTR_CACHE_HIT, true);
-      solution.setAttribute(ATTR_EVALUATION, evaluatedSolutions.size() + 1);
+      solution.setAttribute(ATTR_BATCH_RUNTIME_SECONDS, 0d);
+      solution.setAttribute(ATTR_PROPOSAL_INDEX, evaluatedSolutions.size() + 1);
+      solution.setAttribute(ATTR_BATCH_EXECUTION_INDEX, batchExecutionBudget.count());
+      solution.setAttribute(ATTR_ELAPSED_OPTIMIZATION_SECONDS, elapsedTimeTracker.elapsedSeconds());
       evaluatedSolutions.add(solution);
       return;
     }
@@ -393,6 +415,9 @@ public class WizardOptimizationProblem extends AbstractProblem {
 
     // use the current project, so we dont import files on every iteration
     final MZmineProject project = ProjectService.getProject();
+    // decision: reserve immediately before launch so a generational algorithm cannot overshoot the
+    // full-batch budget between termination checks.
+    final int batchExecutionIndex = batchExecutionBudget.reserve();
     final BatchTask batchTask = BatchModeModule.runBatchQueue(optimizedQueue, project, files, null,
         null, null, Instant.now(), null, null);
     final double fullBatchTime = batchTask.getStepTimes().getLast().secondsToFinish();
@@ -429,7 +454,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
     }
     solution.setAttribute("Total features", newest.streamFeatures().count());
     solution.setAttribute("Rows (incl. isotopes)", newest.getRows().size());
-    solution.setAttribute("Runtime / s", fullBatchTime);
+    solution.setAttribute(ATTR_BATCH_RUNTIME_SECONDS, fullBatchTime);
 
     // decision: computed only when the constraint reads it. Fitting peak models is by far the most
     // expensive diagnostic - it dominated an evaluation once the sample size was raised - and with
@@ -463,7 +488,9 @@ public class WizardOptimizationProblem extends AbstractProblem {
         (System.nanoTime() - precisionStart) / 1e9));
 
     solution.setAttribute(ATTR_CACHE_HIT, false);
-    solution.setAttribute(ATTR_EVALUATION, evaluatedSolutions.size() + 1);
+    solution.setAttribute(ATTR_PROPOSAL_INDEX, evaluatedSolutions.size() + 1);
+    solution.setAttribute(ATTR_BATCH_EXECUTION_INDEX, batchExecutionIndex);
+    solution.setAttribute(ATTR_ELAPSED_OPTIMIZATION_SECONDS, elapsedTimeTracker.elapsedSeconds());
     evaluatedSolutions.add(solution);
     evaluationCache.put(cacheKey, solution);
 
@@ -631,6 +658,13 @@ public class WizardOptimizationProblem extends AbstractProblem {
     synchronized (evaluatedSolutions) {
       return List.copyOf(evaluatedSolutions);
     }
+  }
+
+  /**
+   * Number of uncached full batches reserved for execution, including the raw-data estimate.
+   */
+  public int getBatchExecutionCount() {
+    return batchExecutionBudget.count();
   }
 
   public @Nullable List<FeatureRecord> getAllTargets() {

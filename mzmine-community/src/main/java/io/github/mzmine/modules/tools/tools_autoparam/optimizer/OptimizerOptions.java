@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import org.jetbrains.annotations.NotNull;
 import org.moeaframework.algorithm.AGEMOEAII;
 import org.moeaframework.algorithm.AbstractAlgorithm;
 import org.moeaframework.algorithm.CMAES;
@@ -46,10 +47,11 @@ import org.moeaframework.algorithm.sa.AMOSA;
 import org.moeaframework.problem.AbstractProblem;
 
 public enum OptimizerOptions {
-  MOEAD, NSGA_II, NSGA_III, AGEMOEA_II, AMOSA, DBEA, CMAES, GDE3, OMOPSO, RVEA, SMPSO, SMSEMOA, SPEA2, UNSGAIII, EpsilonMOEA, EpsilonNSGAII, IBEA;
+  PATTERN_SEARCH, MOEAD, NSGA_II, NSGA_III, AGEMOEA_II, AMOSA, DBEA, CMAES, GDE3, OMOPSO, RVEA, SMPSO, SMSEMOA, SPEA2, UNSGAIII, EpsilonMOEA, EpsilonNSGAII, IBEA;
 
-  public AbstractAlgorithm getOptimizer(AbstractProblem problem) {
+  public @NotNull AbstractAlgorithm getOptimizer(@NotNull AbstractProblem problem) {
     return switch (this) {
+      case PATTERN_SEARCH -> new PatternSearchAlgorithm(problem);
       case MOEAD -> new MOEAD(problem);
       case NSGA_II -> new NSGAII(problem);
       case NSGA_III -> new NSGAIII(problem);

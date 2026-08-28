@@ -71,11 +71,16 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private static final Logger logger = Logger.getLogger(BatchOptimizationMainTask.class.getName());
 
   /**
-   * Initial population size applied to every optimizer. One evaluation is a full batch run, so the
-   * MOEA Framework default of 100 would spend the entire evaluation budget on initialization and
-   * leave no generations for the actual search.
+   * Initial population size for population-based MOEA algorithms. One evaluation is a full batch
+   * run, so the MOEA Framework default of 100 would spend the entire batch budget on initialization
+   * and leave no generations for the actual search.
    */
-  private static final int POPULATION_SIZE = 20;
+  private static final int EVOLUTIONARY_POPULATION_SIZE = 20;
+
+  /**
+   * Safety limit for cheap duplicate proposals per expensive batch execution.
+   */
+  private static final int PROPOSAL_BUDGET_MULTIPLIER = 10;
 
   /**
    * Lowest shape rejection limit in percent. Without a floor a dataset whose estimate rejects almost
@@ -114,13 +119,14 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private final AtomicReference<TaskStatus> externalStatus = new AtomicReference<>(
       TaskStatus.PROCESSING);
   /**
-   * Actual number of evaluations for this run. Set during {@link #run()} — may be reduced from the
-   * user-configured iterations when warm-starting.
+   * Maximum number of uncached full batch executions, including the raw-data estimate.
    */
-  private int totalIterations;
+  private int totalBatchExecutions;
 
   @Nullable
   private AbstractAlgorithm optimizer;
+  @Nullable
+  private WizardOptimizationProblem problem;
 
   public BatchOptimizationMainTask(@Nullable MemoryMapStorage storage,
       @NotNull Instant moduleCallDate, @NotNull File[] files, @Nullable File metadata,
@@ -185,15 +191,18 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
   @Override
   public String getTaskDescription() {
-    final int max = totalIterations > 0 ? totalIterations : 100;
-    return "Performing batch optimization. Run %d/%d".formatted(
-        (optimizer != null ? optimizer.getNumberOfEvaluations() : 0), max);
+    final int max = totalBatchExecutions > 0 ? totalBatchExecutions : 100;
+    final WizardOptimizationProblem currentProblem = problem;
+    final int completed = currentProblem != null ? currentProblem.getBatchExecutionCount() : 0;
+    return "Performing batch optimization. Full batch %d/%d".formatted(completed, max);
   }
 
   @Override
   public double getFinishedPercentage() {
-    final int max = totalIterations > 0 ? totalIterations : 100;
-    return optimizer != null ? (double) optimizer.getNumberOfEvaluations() / max : 0;
+    final int max = totalBatchExecutions > 0 ? totalBatchExecutions : 100;
+    final WizardOptimizationProblem currentProblem = problem;
+    return currentProblem != null ? Math.min(1d,
+        (double) currentProblem.getBatchExecutionCount() / max) : 0d;
   }
 
   @Override
@@ -224,25 +233,26 @@ public class BatchOptimizationMainTask extends AbstractTask {
         .enforceToMemoryMapping());
     MemoryMapStorage.setStoreAllInRam(true);
 
-    final WizardOptimizationProblem problem = new WizardOptimizationProblem(sequence, stats, params,
-        externalStatus);
+    totalBatchExecutions = Math.max(params.getValue(OptimizerParameters.iterations), 30);
+    final WizardOptimizationProblem optimizationProblem = new WizardOptimizationProblem(sequence,
+        stats, params, externalStatus, totalBatchExecutions);
+    problem = optimizationProblem;
 
-    optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(problem);
-    totalIterations = Math.max(params.getValue(OptimizerParameters.iterations), 30);
+    optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(optimizationProblem);
 
     final boolean initWithGuesses = params.getValue(
         OptimizerParameters.initializeWithRawDataGuesses);
 
     final Map<String, Double> singlePassEstimates = SinglePassParameterEstimation.estimate(stats,
-        problem.getBuilder());
-    final Solution singlePassSolution = problem.newSolution();
+        optimizationProblem.getBuilder());
+    final Solution singlePassSolution = optimizationProblem.newSolution();
 
     // decision: always derive and evaluate the raw data estimate, also when it is not used to
     // warm-start the optimizer, so the results table can always show it next to the optimized
     // solutions and the logged comparison is meaningful in both cases
     SinglePassParameterEstimation.applyToSolution(singlePassSolution, singlePassEstimates);
     SolutionOrigin.ESTIMATE.applyTo(singlePassSolution);
-    problem.evaluate(singlePassSolution);
+    optimizationProblem.evaluate(singlePassSolution);
 
     // decision: derive the shape rejection limit from the estimate's own measured rate, so the
     // limit adapts to the dataset instead of being an absolute guess
@@ -253,26 +263,26 @@ public class BatchOptimizationMainTask extends AbstractTask {
           ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT);
       final double baseline = measured instanceof Number n ? n.doubleValue() : 0d;
       // assumption: a floor keeps a near-perfect baseline from making everything infeasible
-      problem.setShapeRejectionLimitPercent(Math.max(baseline * factor, MIN_SHAPE_REJECTION_LIMIT));
+      optimizationProblem.setShapeRejectionLimitPercent(
+          Math.max(baseline * factor, MIN_SHAPE_REJECTION_LIMIT));
     }
 
     final List<Solution> injected;
     if (initWithGuesses) {
-      // decision: the whole population, not a fraction of it. Uniform random samples score far
-      // below the estimate on real data - in the 200 evaluation reference runs the best of ten was
-      // 55 % worse than the estimate itself, while the winner was always a perturbation of it. So
-      // the slots are worth more as further perturbations than as random draws.
-      injected = SinglePassParameterEstimation.createWarmStartSolutions(problem,
-          singlePassEstimates, POPULATION_SIZE,
+      // decision: fill the whole evolutionary population from the estimate because uniform random
+      // samples measured far worse. Sequential pattern search consumes only the exact estimate and
+      // creates its coordinate polls itself.
+      final int initialDesignSize = initialDesignSize(optimizer);
+      injected = SinglePassParameterEstimation.createWarmStartSolutions(optimizationProblem,
+          singlePassEstimates, initialDesignSize,
           params.getValue(OptimizerParameters.warmStartSampling));
-      logger.info(
-          "Warm-start enabled for %s: injected %d solutions, total evaluations %d".formatted(
-              optimizer.getName(), injected.size(), totalIterations));
+      logger.info("Warm-start enabled for %s: injected %d solutions, batch budget %d".formatted(
+          optimizer.getName(), injected.size(), totalBatchExecutions));
 
       NotificationService.show(NotificationType.INFO, "Starting optimizer", """
-          Using %d attempts around raw-data based estimations and %d total optimization iterations.
+          Using %d attempts around raw-data based estimations and %d full batch executions.
           Estimates:
-          %s""".formatted(injected.size(), totalIterations,
+          %s""".formatted(injected.size(), totalBatchExecutions,
           singlePassEstimates.entrySet().stream()
               .map(e -> "%s: %.2f".formatted(e.getKey(), e.getValue()))
               .collect(Collectors.joining("\n"))));
@@ -280,25 +290,40 @@ public class BatchOptimizationMainTask extends AbstractTask {
       injected = List.of();
     }
 
-    // decision: size the population explicitly in both cases. Without this the optimizer keeps the
-    // MOEA Framework default of 100, which equals or exceeds the whole evaluation budget.
-    configureInitialPopulation(optimizer, problem, injected);
+    // decision: size population-based algorithms explicitly. Without this the optimizer keeps the
+    // MOEA Framework default of 100, which equals or exceeds the whole batch budget.
+    configureInitialPopulation(optimizer, optimizationProblem, injected);
 
     try {
-      optimizer.run(new TaskStatusTerminationCondition(totalIterations, this::getStatus));
+      final int maxProposals = Math.multiplyExact(totalBatchExecutions, PROPOSAL_BUDGET_MULTIPLIER);
+      optimizer.run(new TaskStatusTerminationCondition(totalBatchExecutions, maxProposals,
+          optimizationProblem::getBatchExecutionCount, this::getStatus));
+    } catch (BatchExecutionLimitReachedException e) {
+      // MOEA checks termination between generations, so the problem stops a partial generation at
+      // the exact full-batch boundary.
+      logger.fine(e.getMessage());
+      optimizer.terminate();
     } catch (RuntimeException e) {
-      // we throw an exception to cancel the optimization if the user wants to stop. Termination condition is not checked continuously
+      if (getStatus() != TaskStatus.CANCELED && getStatus() != TaskStatus.ERROR) {
+        throw e;
+      }
     }
 
-    final NondominatedPopulation result = optimizer.getResult();
+    // A hard budget stop can interrupt a generation after some offspring were evaluated but before
+    // the algorithm incorporated them. Build the result from every completed observation so those
+    // expensive final batches cannot be lost.
+    final NondominatedPopulation result = new NondominatedPopulation();
+    result.addAll(optimizer.getResult());
+    result.addAll(optimizationProblem.getEvaluatedSolutions());
 
     // log comparison: single-pass vs best MOEA result
     SinglePassParameterEstimation.logResults(singlePassSolution, singlePassEstimates,
-        problem.getEnabledMetrics());
+        optimizationProblem.getEnabledMetrics());
     SinglePassParameterEstimation.logComparison(singlePassSolution, result,
-        problem.getEnabledMetrics());
+        optimizationProblem.getEnabledMetrics());
 
-    outcome = new OptimizationOutcome(singlePassEstimates, singlePassSolution, result, problem);
+    outcome = new OptimizationOutcome(singlePassEstimates, singlePassSolution, result,
+        optimizationProblem);
 
     // decision: the results window needs a wizard to apply its selection to, so a headless run only
     // records the outcome
@@ -311,7 +336,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
     FxThread.runLater(() -> {
       Stage stage = new Stage();
       final OptimizationResultsController controller = new OptimizationResultsController(resultTab,
-          problem, result, singlePassSolution, stage);
+          optimizationProblem, result, singlePassSolution, stage);
       final Region region = controller.buildView();
       stage.setTitle("Optimization Results");
       stage.initOwner(MZmineCore.getDesktop().getMainWindow());
@@ -327,11 +352,11 @@ public class BatchOptimizationMainTask extends AbstractTask {
   }
 
   /**
-   * Sets the initial population size and, where the algorithm supports it, injects the raw
-   * data-derived warm-start solutions.
+   * Sets the initial population size and injects the raw data-derived warm-start solutions through
+   * the channel supported by the concrete algorithm.
    *
-   * @param injected solutions to seed the initial population with. May be empty, in which case
-   *                 {@link OriginTaggingInitialization} falls back to a fully random population.
+   * @param injected solutions to seed the search with. May be empty, in which case population-based
+   *                 algorithms initialize randomly and pattern search starts at the box center.
    */
   private void configureInitialPopulation(@NotNull AbstractAlgorithm algorithm,
       @NotNull WizardOptimizationProblem problem, @NotNull List<Solution> injected) {
@@ -341,7 +366,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
     // SMPSO) ignore the key rather than failing.
     if (algorithm instanceof Configurable configurable) {
       final TypedProperties config = new TypedProperties();
-      config.setInt("populationSize", POPULATION_SIZE);
+      config.setInt("populationSize", EVOLUTIONARY_POPULATION_SIZE);
       configurable.applyConfiguration(config);
     }
 
@@ -354,20 +379,29 @@ public class BatchOptimizationMainTask extends AbstractTask {
         // from the whole population and the decomposition loses the locality it relies on.
         // assumption: the floor of 4 keeps the neighborhood above the differential evolution arity
         // of 4 minus 1, which MOEA/D requires now that the solution vector is all real-valued
-        moead.setNeighborhoodSize(Math.max(4, POPULATION_SIZE / 5));
+        moead.setNeighborhoodSize(Math.max(4, EVOLUTIONARY_POPULATION_SIZE / 5));
         // the variation operator is chosen in the MOEAD constructor from whether every variable is
         // real-valued, so log it - "de+pm" confirms MOEA/D-DE, "sbx+pm+hux+bf" means the vector
         // still contains a non-real variable and the decomposition fell back to SBX
         logger.info("MOEA/D using variation %s, neighborhood %d, population %d".formatted(
-            moead.getVariation().getName(), moead.getNeighborhoodSize(), POPULATION_SIZE));
+            moead.getVariation().getName(), moead.getNeighborhoodSize(),
+            EVOLUTIONARY_POPULATION_SIZE));
       }
       // covers NSGA-II/III, U-NSGA-III, eps-NSGA-II, AGE-MOEA-II, GDE3, IBEA, RVEA, SMS-EMOA,
       // SPEA2, eps-MOEA, DBEA and PAES
       case AbstractEvolutionaryAlgorithm ea -> ea.setInitialization(initialization);
       case AbstractSimulatedAnnealingAlgorithm sa -> sa.setInitialization(initialization);
+      case PatternSearchAlgorithm patternSearch -> patternSearch.setInitialSolutions(injected);
       // OMOPSO, SMPSO and CMAES do not expose the initialization and start from their own defaults
       default -> logger.warning(
           "%s cannot be warm-started and will initialize randomly.".formatted(algorithm.getName()));
     }
+  }
+
+  private int initialDesignSize(@NotNull AbstractAlgorithm algorithm) {
+    return switch (algorithm) {
+      case PatternSearchAlgorithm _ -> PatternSearchAlgorithm.INITIAL_DESIGN_SIZE;
+      default -> EVOLUTIONARY_POPULATION_SIZE;
+    };
   }
 }

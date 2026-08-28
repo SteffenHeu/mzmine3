@@ -30,10 +30,10 @@ import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
 
 /**
- * Where a candidate's parameter vector came from. Every evaluation costs a full batch run, so the
- * results table has to show which phase of the run spent it: the raw data estimate, the perturbed
- * variants around it, the random samples that fill the rest of the initial population, or the
- * offspring the variation operators produced during evolution.
+ * Where a candidate's parameter vector came from. Every uncached proposal costs a full batch run,
+ * so the results table has to show which phase of the run spent it: the raw data estimate, the
+ * perturbed variants around it, the random samples that fill the rest of the initial population,
+ * or the offspring the variation operators produced during evolution.
  * <p>
  * Without this the phases can only be told apart by evaluation index, which silently breaks as soon
  * as the population size, the number of guesses or the warm-start setting changes.
@@ -58,7 +58,12 @@ public enum SolutionOrigin {
   /**
    * Offspring of the algorithm's variation operators, i.e. everything the search itself produced.
    */
-  EVOLUTION("Evolution");
+  EVOLUTION("Evolution"),
+
+  /**
+   * A coordinate poll or deterministic restart proposed by adaptive pattern search.
+   */
+  PATTERN_SEARCH("Pattern search");
 
   /**
    * Attribute key the origin is stored under. Also the results table column header and the csv

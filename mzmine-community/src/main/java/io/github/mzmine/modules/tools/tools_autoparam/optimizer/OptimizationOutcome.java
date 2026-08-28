@@ -42,7 +42,7 @@ import org.moeaframework.core.population.NondominatedPopulation;
  * @param estimates        the single-pass estimate per parameter name, before any optimization
  * @param estimateSolution the evaluated estimate, so its scores can be compared against the
  *                         optimized solutions
- * @param front            the optimizer's non-dominated result
+ * @param front            non-dominated result across every completed observation
  * @param problem          the problem, which holds every evaluated solution in evaluation order
  */
 public record OptimizationOutcome(@NotNull Map<String, Double> estimates,

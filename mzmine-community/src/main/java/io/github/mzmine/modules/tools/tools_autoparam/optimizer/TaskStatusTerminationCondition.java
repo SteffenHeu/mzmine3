@@ -26,6 +26,7 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.taskcontrol.TaskStatus;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.algorithm.Algorithm;
@@ -33,24 +34,42 @@ import org.moeaframework.core.termination.MaxFunctionEvaluations;
 
 public class TaskStatusTerminationCondition extends MaxFunctionEvaluations {
 
-  @NotNull
-  private final Supplier<TaskStatus> statusSupplier;
+  private final int maxBatchExecutions;
+  private final @NotNull IntSupplier batchExecutionSupplier;
+  private final @NotNull Supplier<TaskStatus> statusSupplier;
 
   /**
-   * Constructs a new termination condition based on the maximum number of function evaluations.
+   * Stops at the real batch budget, a proposal safety cap, cancellation, or task failure.
    *
-   * @param maxEvaluations the maximum number of function evaluations
+   * @param maxBatchExecutions     maximum number of uncached full batch executions
+   * @param maxProposals           maximum number of calls accepted by the algorithm
+   * @param batchExecutionSupplier current number of full batch executions
+   * @param statusSupplier         current task status
    */
-  public TaskStatusTerminationCondition(int maxEvaluations,
+  public TaskStatusTerminationCondition(int maxBatchExecutions, int maxProposals,
+      @NotNull IntSupplier batchExecutionSupplier,
       @NotNull Supplier<TaskStatus> statusSupplier) {
-    super(maxEvaluations);
+    super(maxProposals);
+    if (maxBatchExecutions <= 0) {
+      throw new IllegalArgumentException("maxBatchExecutions must be positive");
+    }
+    if (maxProposals < maxBatchExecutions) {
+      throw new IllegalArgumentException("maxProposals must not be lower than maxBatchExecutions");
+    }
+    this.maxBatchExecutions = maxBatchExecutions;
+    this.batchExecutionSupplier = batchExecutionSupplier;
     this.statusSupplier = statusSupplier;
   }
 
   @Override
-  public boolean shouldTerminate(Algorithm algorithm) {
-    boolean superCheck = super.shouldTerminate(algorithm);
-    return superCheck || statusSupplier.get() == TaskStatus.CANCELED
-        || statusSupplier.get() == TaskStatus.ERROR;
+  public boolean shouldTerminate(@NotNull Algorithm algorithm) {
+    final TaskStatus status = statusSupplier.get();
+    return batchExecutionSupplier.getAsInt() >= maxBatchExecutions || super.shouldTerminate(
+        algorithm) || status == TaskStatus.CANCELED || status == TaskStatus.ERROR;
+  }
+
+  @Override
+  public double getPercentComplete(@NotNull Algorithm algorithm) {
+    return Math.min(100d, 100d * batchExecutionSupplier.getAsInt() / (double) maxBatchExecutions);
   }
 }

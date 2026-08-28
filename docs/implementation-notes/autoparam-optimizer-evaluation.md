@@ -14,22 +14,26 @@ of the search, not its structure.
 ## How the evidence was produced
 
 `EstimateVsOptimumTest` runs the real `BatchOptimizationMainTask` headlessly over a list of datasets
-and seeds, writing two csv files next to the module:
+and seeds, writing two configuration-suffixed csv files next to the module:
 
-- `autoparam-all-evaluations.csv` — every evaluation of every run, with the effective parameter
-  values, the metrics, and all diagnostics.
-- `autoparam-estimate-vs-optimum.csv` — one summary row per run per quantity.
+- `autoparam-all-evaluations-<campaign>.csv` — every proposal of every run, with elapsed time,
+  effective parameter values, metrics, and diagnostics.
+- `autoparam-estimate-vs-optimum-<campaign>.csv` — one summary row per run per quantity.
+
+The generated campaign suffix encodes the optimizer, metric, sampling, batch ceiling, seeds and
+dataset selection. Set `-Dmzmine.test.autoparam.campaign=<short-name>` to use an explicit suffix.
 
 `EstimatorStatisticsDumpTest` runs only the statistics pass (~30 s for all datasets, no batches) and
 dumps the raw distributions the estimator takes its quantiles from, so candidate derivations can be
 evaluated offline instead of by rerunning optimizations.
 
 ```
-gradlew :mzmine-community:test --tests "*EstimateVsOptimumTest" \
-  -Dmzmine.test.maxHeap=40g \
-  -Dmzmine.test.autoparam.iterations=30 \
-  -Dmzmine.test.autoparam.seeds=42,7,101 \
-  -Dmzmine.test.autoparam.only=thermo-20y-qc,agilent6550-lipidmix
+.\gradlew.bat "-Dmzmine.test.maxHeap=40g" \
+  "-Dmzmine.test.autoparam.optimizer=PATTERN_SEARCH" \
+  "-Dmzmine.test.autoparam.iterations=30" \
+  "-Dmzmine.test.autoparam.seeds=42,7,101" \
+  "-Dmzmine.test.autoparam.only=thermo-20y-qc,agilent6550-lipidmix" \
+  :mzmine-community:test --tests "*EstimateVsOptimumTest"
 ```
 
 Only `mzmine.test.*` system properties reach the test JVM in this build. The heap guard fails fast
@@ -212,6 +216,39 @@ reaches the same answer for fewer evaluations, which matters because 401 evaluat
 **3. Keep MOEA/D for genuine multi-objective runs.** For a single objective it is a plain
 (mu+lambda) search wearing a decomposition that does nothing; that is not a reason to remove it, but
 it is a reason not to expect the decomposition's benefits.
+
+### Pattern-search pilot
+
+A deterministic adaptive pattern search was implemented after the main evaluation. The pilot was
+intentionally stopped after the fourth completed dataset. Each run made 81 proposals: 80 real batch
+executions and one cache hit for the already evaluated estimate.
+
+| dataset            | estimate | best score | best / estimate | best batch | best time | finish time |
+|--------------------|---------:|-----------:|----------------:|-----------:|----------:|------------:|
+| thermo-20y-qc      |     3014 |       5766 |           1.91× |         78 |     250 s |       258 s |
+| zenotof-plasma-pos |     7030 |      10974 |           1.56× |         75 |     117 s |       125 s |
+| zenotof-plasma-neg |     3195 |       5007 |           1.57× |         68 |     164 s |       207 s |
+| zenotof-feces-pos  |    15420 |      41330 |           2.68× |         66 |     393 s |       479 s |
+
+Pattern search therefore improved the estimator on all four datasets, by 56–168 %. The best result
+did not appear until batch 66–78, so the runs do not demonstrate convergence within 80 batches.
+
+For the two datasets with matched controls, pattern search was also compared at each MOEA/D run's
+elapsed finish time against seeds 42, 7 and 101:
+
+| dataset           | median common time | pattern score | median MOEA/D score | difference |
+|-------------------|-------------------:|--------------:|--------------------:|-----------:|
+| thermo-20y-qc     |              125 s |          5412 |                4612 |    +17.3 % |
+| zenotof-feces-pos |              319 s |         38226 |               30593 |    +25.0 % |
+
+Pattern search won all six matched comparisons. Its final scores on those datasets also exceeded
+the historical 401-evaluation MOEA/D scores: by 1.3 % on Thermo and 20.3 % on ZenoTOF feces.
+
+This establishes pattern search as a strong, deterministic baseline. It does **not** establish it as
+the preferred optimizer: the pilot covers only four datasets, direct time-matched controls exist for
+two, and the late best batches leave open whether a more global method can find equal or better
+solutions sooner. GP Bayesian optimization should therefore be evaluated under the same real-batch
+ceiling and elapsed-time reporting before choosing a default.
 
 ## A note on reading this evidence
 
