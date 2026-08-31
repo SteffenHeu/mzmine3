@@ -55,6 +55,8 @@ import io.github.mzmine.modules.tools.tools_autoparam.optimizer.FeatureRecord;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OrdinalIntegerVariable;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SolutionOrigin;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.IsotopeRatioConsistencyScore;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.AllTasksFinishedListener;
 import io.github.mzmine.taskcontrol.TaskService;
@@ -74,6 +76,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
@@ -111,6 +114,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
     this.optimization = optimization;
     this.stage = stage;
     this.stopSearchAction = stopSearchAction;
+    model.preferredSortObjectiveIndexProperty().set(preferredSortObjectiveIndex());
     model.singlePassSolutionProperty().set(singlePassSolution);
     rebuildDisplayedSolutions();
   }
@@ -146,11 +150,31 @@ public class OptimizationResultsController extends FxController<OptimizationResu
     model.getFrontSolutions().clear();
     model.getFrontSolutions().addAll(result.asList());
     model.stopSearchRequestedProperty().set(false);
-    model.optimizationRunningProperty().set(false);
     rebuildDisplayedSolutions();
+    final Solution preferred = FrontSolutionRanker.selectBestAverageRank(result.asList(),
+        model.getPreferredSortObjectiveIndex());
+    model.preferredFrontSolutionProperty().set(preferred);
+    model.selectedSolutionProperty().set(preferred);
+    model.optimizationRunningProperty().set(false);
     if (stage != null) {
       stage.setTitle("Optimization Results");
+      final String selectionMessage = preferred == null ? "" : preferred.getNumberOfObjectives() > 1
+                                                               ? " The solution with the best average rank across all scores was selected."
+          : " The highest ranked solution was selected.";
+      DialogLoggerUtil.showDialog(AlertType.INFORMATION, stage, "Optimization finished",
+          "Parameter optimization has finished." + selectionMessage, true);
+      stage.requestFocus();
     }
+  }
+
+  private int preferredSortObjectiveIndex() {
+    final List<SweepMetric> metrics = optimization.getEnabledMetrics();
+    for (int i = 0; i < metrics.size(); i++) {
+      if (metrics.get(i) instanceof IsotopeRatioConsistencyScore) {
+        return i;
+      }
+    }
+    return 0;
   }
 
   private void rebuildDisplayedSolutions() {

@@ -29,8 +29,10 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -43,7 +45,9 @@ public class OptimizationResultModel {
 
   private final ObjectProperty<@Nullable NondominatedPopulation> result = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable Solution> selectedSolution = new SimpleObjectProperty<>();
+  private final ObjectProperty<@Nullable Solution> preferredFrontSolution = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable Solution> singlePassSolution = new SimpleObjectProperty<>();
+  private final IntegerProperty preferredSortObjectiveIndex = new SimpleIntegerProperty(0);
   private final BooleanProperty optimizationRunning = new SimpleBooleanProperty(true);
   private final BooleanProperty stopSearchRequested = new SimpleBooleanProperty(false);
 
@@ -77,6 +81,22 @@ public class OptimizationResultModel {
 
   public ObjectProperty<@Nullable Solution> selectedSolutionProperty() {
     return selectedSolution;
+  }
+
+  public @Nullable Solution getPreferredFrontSolution() {
+    return preferredFrontSolution.get();
+  }
+
+  public ObjectProperty<@Nullable Solution> preferredFrontSolutionProperty() {
+    return preferredFrontSolution;
+  }
+
+  public int getPreferredSortObjectiveIndex() {
+    return preferredSortObjectiveIndex.get();
+  }
+
+  public @NotNull IntegerProperty preferredSortObjectiveIndexProperty() {
+    return preferredSortObjectiveIndex;
   }
 
   /**

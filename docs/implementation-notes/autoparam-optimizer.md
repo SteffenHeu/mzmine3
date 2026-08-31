@@ -46,6 +46,10 @@ Detailed measurements and rejected algorithm pilots are recorded in
   diagnostic runs only when the constraint is enabled; the cheap precision diagnostic always runs.
 - GUI runs publish completed solutions to one observable table and a score/best-so-far chart. Stop
   search finishes the current batch, prevents the next proposal, and returns all completed results.
+  On completion the table sorts by isotope-ratio consistency when available, otherwise by the first
+  objective. The selected, bold front row is the best objective for a single-objective run or the
+  lowest mean rank across all objectives for a multi-objective front; objective direction is taken
+  from the MOEA objective definition.
   Headless runs create no JavaFX state and expose the same result through `OptimizationOutcome`.
 - The statistics dashboard shows the cross-file absolute RT-deviation distribution together with
   the inter-sample RT estimate and search bounds. Because it is inherently a cross-file statistic,

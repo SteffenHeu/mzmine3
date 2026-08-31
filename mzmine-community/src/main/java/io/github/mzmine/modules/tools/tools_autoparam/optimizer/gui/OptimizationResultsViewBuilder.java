@@ -74,6 +74,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.axis.NumberAxis;
 import org.moeaframework.core.Solution;
+import org.moeaframework.core.objective.Minimize;
 import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
 
@@ -111,6 +112,7 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
   @Override
   public @NotNull Region build() {
     final TableView<Solution> solutionTable = new TableView<>();
+    solutionTable.setRowFactory(_ -> new OptimizationSolutionTableRow(model));
     // decision: bind the model's single observable list instead of replacing the items list, so
     // listeners and bindings on it are not discarded
     solutionTable.setItems(model.getDisplayedSolutions());
@@ -118,6 +120,11 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
 
     solutionTable.getSelectionModel().selectedItemProperty()
         .subscribe(s -> model.selectedSolutionProperty().set(s));
+    model.preferredFrontSolutionProperty().subscribe(preferred -> {
+      solutionTable.refresh();
+      focusSolution(solutionTable, preferred);
+    });
+    focusSolution(solutionTable, model.getPreferredFrontSolution());
 
     final SimpleXYChart<PlotXYDataProvider> progressChart = createProgressChart();
     model.getDisplayedSolutions()
@@ -167,6 +174,21 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     }
 
     return borderPane;
+  }
+
+  private void focusSolution(@NotNull TableView<Solution> solutionTable,
+      @Nullable Solution solution) {
+    if (solution == null) {
+      return;
+    }
+    final int row = solutionTable.getItems().indexOf(solution);
+    if (row < 0) {
+      return;
+    }
+    solutionTable.getSelectionModel().select(row);
+    solutionTable.getFocusModel().focus(row);
+    solutionTable.scrollTo(row);
+    solutionTable.requestFocus();
   }
 
   private @NotNull SimpleXYChart<PlotXYDataProvider> createProgressChart() {
@@ -295,9 +317,20 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     }
 
     final List<ObjectiveWrapper> wrappers = ObjectiveWrapper.extract(solutions);
+    TableColumn<Solution, Number> preferredSortColumn = null;
     for (ObjectiveWrapper wrapper : wrappers) {
       final TableColumn<Solution, Number> col = wrapper.createColumn();
       solutionTable.getColumns().add(col);
+      if (wrapper.index() == model.getPreferredSortObjectiveIndex()) {
+        preferredSortColumn = col;
+      }
+    }
+    if (preferredSortColumn != null) {
+      final int objectiveIndex = model.getPreferredSortObjectiveIndex();
+      preferredSortColumn.setSortType(
+          template.getObjective(objectiveIndex) instanceof Minimize ? TableColumn.SortType.ASCENDING
+              : TableColumn.SortType.DESCENDING);
+      solutionTable.getSortOrder().setAll(preferredSortColumn);
     }
 
     for (Entry<String, Serializable> attributeEntry : template.getAttributes().entrySet()) {
