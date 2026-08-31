@@ -33,7 +33,8 @@ class BenchmarkCampaignTest {
 
   @Test
   void generatedIdIdentifiesTheRelevantConfiguration() {
-    final BenchmarkCampaign campaign = BenchmarkCampaign.create("MOEAD", "Yasin isotope score",
+    final BenchmarkCampaign campaign = BenchmarkCampaign.create("MOEAD",
+        "Isotope ratio consistency score",
         "SOBOL", 80, List.of(42L, 7L), "thermo-20y-qc, zenotof-feces-pos", null);
 
     Assertions.assertEquals(

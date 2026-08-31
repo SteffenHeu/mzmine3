@@ -46,14 +46,16 @@ import org.jetbrains.annotations.NotNull;
 /**
  * Checks the ratios of isotopic signals in a feature list across samples. This approach should
  * perfom similar to the SLAW-integration score but not rely on QC samples.
+ *<br>
+ * Initial idea for this score: Yasin El Abiedad
  */
-public final class YasinIsotopeScore implements SweepMetric {
+public final class IsotopeRatioConsistencyScore implements SweepMetric {
 
   private final PercentTolerance areaTolerance = new PercentTolerance(0.2);
 
   @Override
   public @NotNull String name() {
-    return "Yasin isotope score";
+    return "Isotope ratio consistency score";
   }
 
   @Override

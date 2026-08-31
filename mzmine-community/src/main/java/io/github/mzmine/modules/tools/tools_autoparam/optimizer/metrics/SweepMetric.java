@@ -51,8 +51,7 @@ import org.moeaframework.core.objective.Objective;
  * }</pre>
  */
 public sealed interface SweepMetric permits BenchmarkTargetCount, DoublePeakRatio, FillRatio,
-    GcEiFragmentQuality, IpoIsotopeScore, SlawIntegrationScore,
-    YasinIsotopeScore {
+    GcEiFragmentQuality, IpoIsotopeScore, SlawIntegrationScore, IsotopeRatioConsistencyScore {
 
   // --- Singleton constants for parameterless metrics ---
   DoublePeakRatio DOUBLE_PEAK_RATIO = new DoublePeakRatio();
@@ -60,7 +59,7 @@ public sealed interface SweepMetric permits BenchmarkTargetCount, DoublePeakRati
   GcEiFragmentQuality GC_EI_FRAGMENT_QUALITY = new GcEiFragmentQuality();
   IpoIsotopeScore IPO_ISOTOPE_SCORE = new IpoIsotopeScore();
   SlawIntegrationScore SLAW_INTEGRATION_SCORE = new SlawIntegrationScore();
-  YasinIsotopeScore YASIN_ISOTOPE_SCORE = new YasinIsotopeScore();
+  IsotopeRatioConsistencyScore ISOTOPE_RATIO_CONSISTENCY_SCORE = new IsotopeRatioConsistencyScore();
 
   // --- Interface contract ---
 

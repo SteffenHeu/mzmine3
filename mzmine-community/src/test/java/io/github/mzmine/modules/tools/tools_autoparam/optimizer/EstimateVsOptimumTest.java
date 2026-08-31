@@ -194,7 +194,7 @@ public class EstimateVsOptimumTest {
    * front is a trade-off set and there is no single "the optimization found this" value to compare
    * the estimate against.
    */
-  private static final SweepMetric METRIC = SweepMetric.YASIN_ISOTOPE_SCORE;
+  private static final SweepMetric METRIC = SweepMetric.ISOTOPE_RATIO_CONSISTENCY_SCORE;
 
   private static final String OPTIMIZER_PROPERTY = "mzmine.test.autoparam.optimizer";
 

@@ -33,7 +33,7 @@ public class PatternSearchOptimizerParameters extends SimpleParameterSet {
 
   public static final ComboParameter<SweepMetric> optimizationTarget = new ComboParameter<>(
       "Optimization target", "Quality metric that pattern search maximizes.",
-      OptimizationMetrics.ALL, SweepMetric.YASIN_ISOTOPE_SCORE);
+      OptimizationMetrics.ALL, SweepMetric.ISOTOPE_RATIO_CONSISTENCY_SCORE);
 
   public PatternSearchOptimizerParameters() {
     super(optimizationTarget);

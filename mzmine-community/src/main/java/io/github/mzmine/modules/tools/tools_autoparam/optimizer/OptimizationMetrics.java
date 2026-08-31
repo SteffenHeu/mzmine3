@@ -32,11 +32,11 @@ import java.util.List;
 final class OptimizationMetrics {
 
   static final List<SweepMetric> ALL = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
-      SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.YASIN_ISOTOPE_SCORE,
+      SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.ISOTOPE_RATIO_CONSISTENCY_SCORE,
       SweepMetric.DOUBLE_PEAK_RATIO, SweepMetric.FILL_RATIO, SweepMetric.GC_EI_FRAGMENT_QUALITY,
       new BenchmarkTargetCount(List.of()));
 
-  static final List<SweepMetric> DEFAULT = List.of(SweepMetric.YASIN_ISOTOPE_SCORE);
+  static final List<SweepMetric> DEFAULT = List.of(SweepMetric.ISOTOPE_RATIO_CONSISTENCY_SCORE);
 
   private OptimizationMetrics() {
   }

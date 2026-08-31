@@ -31,8 +31,8 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.IonMobilityWizar
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.IsotopeRatioConsistencyScore;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.YasinIsotopeScore;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.ArrayUtils;
 import io.github.mzmine.util.MathUtils;
@@ -339,7 +339,7 @@ public final class SinglePassParameterEstimation {
 
   /**
    * Logs comparison between single-pass results and the best MOEA solution (by
-   * {@link YasinIsotopeScore} score, or first metric if harmonic is not enabled).
+   * {@link IsotopeRatioConsistencyScore} score, or first metric if harmonic is not enabled).
    */
   public static void logComparison(@NotNull Solution singlePass,
       @NotNull NondominatedPopulation moeaResult, @NotNull List<SweepMetric> enabledMetrics) {
@@ -381,7 +381,7 @@ public final class SinglePassParameterEstimation {
   private static int findComparisonMetricIndex(@NotNull List<SweepMetric> enabledMetrics) {
     // prefer YasinIsotopeScore
     for (int i = 0; i < enabledMetrics.size(); i++) {
-      if (enabledMetrics.get(i) instanceof YasinIsotopeScore) {
+      if (enabledMetrics.get(i) instanceof IsotopeRatioConsistencyScore) {
         return i;
       }
     }
