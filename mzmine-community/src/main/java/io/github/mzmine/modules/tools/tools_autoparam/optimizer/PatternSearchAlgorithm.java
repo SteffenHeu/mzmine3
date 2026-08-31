@@ -67,6 +67,7 @@ public final class PatternSearchAlgorithm extends AbstractAlgorithm {
   private @Nullable Solution coordinateBest;
   private int sweepStart;
   private int coordinatesVisited;
+  private int activeCoordinate = -1;
   private int restartIndex;
   private boolean sweepImproved;
   private boolean evaluatingRestart;
@@ -176,8 +177,7 @@ public final class PatternSearchAlgorithm extends AbstractAlgorithm {
         continue;
       }
 
-      final boolean stepsChanged = finishSweep();
-      if (!stepsChanged && !sweepImproved) {
+      if (!sweepImproved && allStepsAtMinimum()) {
         evaluatingRestart = true;
         return nextRestartCandidate();
       }
@@ -193,12 +193,16 @@ public final class PatternSearchAlgorithm extends AbstractAlgorithm {
     }
     final int dimension = (sweepStart + coordinatesVisited) % parameterSpace.dimensions();
     coordinatesVisited++;
+    activeCoordinate = dimension;
     final double[] center = parameterSpace.encode(current);
     addDirection(center, dimension, steps[dimension]);
     addDirection(center, dimension, -steps[dimension]);
-    if (!pendingDirections.isEmpty()) {
-      coordinateBest = current;
+    if (pendingDirections.isEmpty()) {
+      reduceStep(dimension);
+      activeCoordinate = -1;
+      return;
     }
+    coordinateBest = current;
   }
 
   private void addDirection(@NotNull double[] center, int dimension, double offset) {
@@ -214,22 +218,24 @@ public final class PatternSearchAlgorithm extends AbstractAlgorithm {
     if (isBetter(coordinateBest, incumbent)) {
       incumbent = coordinateBest;
       sweepImproved = true;
+    } else if (activeCoordinate >= 0) {
+      reduceStep(activeCoordinate);
     }
+    activeCoordinate = -1;
     coordinateBest = null;
   }
 
-  private boolean finishSweep() {
-    if (sweepImproved) {
-      return false;
-    }
-    boolean changed = false;
+  private boolean allStepsAtMinimum() {
     for (int i = 0; i < steps.length; i++) {
-      final double minimum = minimumStep(i);
-      final double smaller = Math.max(minimum, steps[i] / 2d);
-      changed |= smaller < steps[i];
-      steps[i] = smaller;
+      if (steps[i] > minimumStep(i)) {
+        return false;
+      }
     }
-    return changed;
+    return true;
+  }
+
+  private void reduceStep(int dimension) {
+    steps[dimension] = Math.max(minimumStep(dimension), steps[dimension] / 2d);
   }
 
   private void resetSweep() {
@@ -237,6 +243,7 @@ public final class PatternSearchAlgorithm extends AbstractAlgorithm {
     coordinatesVisited = 0;
     sweepImproved = false;
     coordinateBest = null;
+    activeCoordinate = -1;
     pendingDirections.clear();
   }
 

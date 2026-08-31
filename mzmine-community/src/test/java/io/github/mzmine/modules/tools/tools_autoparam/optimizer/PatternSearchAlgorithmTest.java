@@ -60,6 +60,21 @@ class PatternSearchAlgorithmTest {
   }
 
   @Test
+  void contractsOnlyFailedCoordinatesAndKeepsSuccessfulSteps() {
+    final QuadraticProblem problem = new QuadraticProblem(Double.NaN, 0.8d);
+    final PatternSearchAlgorithm algorithm = initializedAt(problem, 0.5d, 0.2d);
+
+    algorithm.run(8);
+
+    final List<List<Double>> evaluations = problem.evaluations();
+    // The second coordinate improved from 0.2 to 0.4, so its next move remains 0.2.
+    Assertions.assertEquals(0.6d, evaluations.get(5).get(1), 1e-12);
+    // The flat first coordinate failed in both directions, so its next move halves to 0.1.
+    Assertions.assertEquals(0.6d, evaluations.get(6).get(0), 1e-12);
+    Assertions.assertEquals(0.4d, evaluations.get(7).get(0), 1e-12);
+  }
+
+  @Test
   void proposalSequenceIsDeterministicAndCandidatesAreTagged() {
     final QuadraticProblem firstProblem = new QuadraticProblem(0.7d, Double.NaN);
     final QuadraticProblem secondProblem = new QuadraticProblem(0.7d, Double.NaN);
@@ -123,11 +138,12 @@ class PatternSearchAlgorithmTest {
     final QuadraticProblem problem = new QuadraticProblem(Double.NaN);
     final PatternSearchAlgorithm algorithm = initializedAt(problem, 0.5d);
 
-    algorithm.run(14);
+    algorithm.run(20);
 
-    Assertions.assertEquals(14, algorithm.getNumberOfEvaluations());
-    Assertions.assertEquals(0.25d, problem.evaluations().getLast().getFirst(), 1e-12);
-    Assertions.assertEquals(14, problem.evaluations().stream().distinct().count());
+    Assertions.assertEquals(20, algorithm.getNumberOfEvaluations());
+    Assertions.assertTrue(problem.evaluations().stream()
+        .anyMatch(values -> Math.abs(values.getFirst() - 0.25d) < 1e-12));
+    Assertions.assertEquals(20, problem.evaluations().stream().distinct().count());
   }
 
   private static @NotNull PatternSearchAlgorithm initializedAt(@NotNull QuadraticProblem problem,

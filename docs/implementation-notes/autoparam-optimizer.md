@@ -28,6 +28,10 @@ Detailed measurements and rejected algorithm pilots are recorded in
   its warm-start sampling setting controls how that population is distributed around the estimate.
   All random behavior uses the seeded MOEA Framework PRNG. Pattern search and Sobol designs are
   deterministic.
+- Pattern-search step sizes adapt independently per parameter. If neither direction improves the
+  incumbent, only that parameter's step is halved; an improving direction retains its current step.
+  There is no full-sweep contraction. A restart is attempted only after a complete sweep without
+  improvement once every parameter has reached its minimum step.
 - The optimizer selector is a `ModuleOptionsEnum`: pattern search embeds one optimization target,
   while MOEA/D embeds its multi-target checklist and optional raw-data initialization. This keeps
   multiple objectives and warm-start sampling out of algorithms that cannot use them.
