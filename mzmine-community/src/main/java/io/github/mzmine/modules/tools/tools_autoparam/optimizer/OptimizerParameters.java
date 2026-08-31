@@ -71,7 +71,7 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   public static final IntegerParameter iterations = new IntegerParameter("Iterations",
       "Maximum number of uncached full batch executions, including the raw-data estimate. Cached "
-          + "duplicate proposals do not consume this budget.", 100, 30, 10_000);
+          + "duplicate proposals do not consume this budget.", 70, 30, 10_000);
 
   public static final OptionalParameter<DoubleParameter> maxShapeRejectionFactor = new OptionalParameter<>(
       new DoubleParameter("Max shape rejection factor", """
