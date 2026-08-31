@@ -27,8 +27,10 @@ Add its builder method to `BatchParameterSolutionBuilder` or a resolver-specific
 
 Register either kind in `OptimizationParameterRegistry`:
 
-- `WizardParameterSolutionPrototype` pairs a display-variable supplier with the runtime builder.
-- `BatchParameterSolutionPrototype` wraps an index-aware batch-parameter builder.
+- `WizardParameterSolutionPrototype` pairs a display-variable supplier, explicit `SearchScale`, and
+  the runtime builder.
+- `BatchParameterSolutionPrototype` wraps an index-aware batch-parameter builder and explicit
+  `SearchScale`.
 - Add it only to the wizard presets whose generated batch queue contains the target parameter.
 - Keep optional-module parameters out of `defaultSolutions()`.
 

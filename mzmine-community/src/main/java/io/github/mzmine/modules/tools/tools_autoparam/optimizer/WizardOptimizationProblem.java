@@ -68,12 +68,13 @@ import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
 import org.moeaframework.problem.AbstractProblem;
 
-public class WizardOptimizationProblem extends AbstractProblem {
+public class WizardOptimizationProblem extends AbstractProblem implements SearchScaleProvider {
 
   private static final Logger logger = Logger.getLogger(WizardOptimizationProblem.class.getName());
 
   private final int NUM_PARAM;
   private final List<ParameterSolutionPrototype> paramToOptimize;
+  private final Map<String, SearchScale> searchScales;
   private final @NotNull BooleanSupplier stopSearchRequestedSupplier;
   private final @NotNull List<SweepMetric> enabledMetrics;
 
@@ -181,6 +182,9 @@ public class WizardOptimizationProblem extends AbstractProblem {
     batchExecutionBudget = new BatchExecutionBudget(maxBatchExecutions);
     target = Objects.requireNonNull(BenchmarkFeatureLoader.fromStatistics(stats));
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
+    searchScales = paramToOptimize.stream().collect(
+        java.util.stream.Collectors.toUnmodifiableMap(ParameterSolutionPrototype::name,
+            ParameterSolutionPrototype::searchScale));
     this.stopSearchRequestedSupplier = stopSearchRequestedSupplier;
     enabledMetrics = buildEnabledMetrics(param, stats);
 
@@ -321,6 +325,16 @@ public class WizardOptimizationProblem extends AbstractProblem {
     evaluatedSolutions.add(solution);
     evaluationCache.put(cacheKey, solution);
     notifyEvaluationCompleted(solution);
+  }
+
+  @Override
+  public @NotNull SearchScale searchScale(@NotNull String parameterName) {
+    final SearchScale scale = searchScales.get(parameterName);
+    if (scale == null) {
+      throw new IllegalArgumentException(
+          "No search scale declared for optimization parameter " + parameterName);
+    }
+    return scale;
   }
 
   private void notifyEvaluationCompleted(@NotNull Solution solution) {

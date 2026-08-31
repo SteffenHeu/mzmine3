@@ -61,7 +61,7 @@ public class WarmStartPerturbationTest {
   }
 
   @Test
-  @DisplayName("a wide range variable gets the same relative jitter whatever its upper bound")
+  @DisplayName("a logarithmic variable gets the same relative jitter whatever its upper bound")
   void wideRangeJitterIsIndependentOfBoxWidth() {
     // same estimate, boxes differing by a factor of 1000. Under absolute scaling the second would
     // be perturbed 1000x harder.
@@ -96,8 +96,8 @@ public class WarmStartPerturbationTest {
   @Test
   @DisplayName("a narrow range variable keeps its absolute, range proportional jitter")
   void narrowRangeStaysAdditive() {
-    // bounds ratio 3, below the log scale threshold, so sigma is a fraction of the range and two
-    // different estimates in the same box must scatter by the same absolute amount
+    // an explicitly linear scale makes sigma a fraction of the range, so two different estimates
+    // in the same box must scatter by the same absolute amount
     final double spreadHigh = absoluteSpread(new RealVariable("narrow", 0.5d, 1.5d), 1.2d);
     final double spreadLow = absoluteSpread(new RealVariable("narrow", 0.5d, 1.5d), 0.7d);
 
@@ -108,7 +108,7 @@ public class WarmStartPerturbationTest {
   @Test
   @DisplayName("ordinal variables are never log scaled")
   void ordinalsStayAdditive() {
-    // bounds ratio 20, well above the log scale threshold, but one step is the natural unit here
+    // one ordinal step is the natural unit, irrespective of the declared continuous scale
     final RealVariable ordinal = new OrdinalIntegerVariable("ordinal", 2, 40);
     final double spread = absoluteSpread(ordinal, 5d);
 
@@ -140,9 +140,11 @@ public class WarmStartPerturbationTest {
     final Solution solution = new Solution(1, 1);
     solution.setVariable(0, variable.copy());
     final Map<String, Double> estimates = Map.of(variable.getName(), estimate);
+    final SearchScale scale =
+        "wide".equals(variable.getName()) ? SearchScale.LOGARITHMIC : SearchScale.LINEAR;
 
     return java.util.stream.IntStream.range(0, DRAWS).mapToObj(_ -> {
-      SinglePassParameterEstimation.applyWithPerturbation(solution, estimates, 0.20);
+      SinglePassParameterEstimation.applyWithPerturbation(solution, estimates, 0.20, _ -> scale);
       return RealVariable.getReal(solution.getVariable(0));
     }).toList();
   }

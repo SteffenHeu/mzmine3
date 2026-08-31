@@ -31,7 +31,7 @@ import org.moeaframework.core.constraint.LessThanOrEqual;
 import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.problem.AbstractProblem;
 
-final class MixedVariableProblem extends AbstractProblem {
+final class MixedVariableProblem extends AbstractProblem implements SearchScaleProvider {
 
   MixedVariableProblem() {
     super(3, 1, 1);
@@ -46,10 +46,19 @@ final class MixedVariableProblem extends AbstractProblem {
   @Override
   public @NotNull Solution newSolution() {
     final Solution solution = new Solution(3, 1, 1);
-    solution.setVariable(0, new RealVariable("linear", 0d, 10d));
-    solution.setVariable(1, new RealVariable("logarithmic", 1d, 100d));
+    solution.setVariable(0, new RealVariable("linear", 1d, 101d));
+    solution.setVariable(1, new RealVariable("logarithmic", 1d, 9d));
     solution.setVariable(2, new OrdinalIntegerVariable("ordinal", 1, 4));
     solution.setConstraint(0, new LessThanOrEqual("constraint", 0d));
     return solution;
+  }
+
+  @Override
+  public @NotNull SearchScale searchScale(@NotNull String parameterName) {
+    return switch (parameterName) {
+      case "logarithmic" -> SearchScale.LOGARITHMIC;
+      case "linear", "ordinal" -> SearchScale.LINEAR;
+      default -> throw new IllegalArgumentException("Unknown parameter " + parameterName);
+    };
   }
 }

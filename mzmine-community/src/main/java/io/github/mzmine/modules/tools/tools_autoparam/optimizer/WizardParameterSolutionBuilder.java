@@ -35,6 +35,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWiza
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.custom_parameters.WizardMassDetectorNoiseLevels;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
+import io.github.mzmine.modules.tools.tools_autoparam.InterSampleRtStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolution.DoubleWizardParameterSolution;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolution.IntegerWizardParameterSolution;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -84,7 +85,7 @@ public class WizardParameterSolutionBuilder {
    * Multiple of the widest observed deviation used as the upper bound, so the search can express an
    * optimum above the observed spread instead of reporting the bound.
    */
-  private static final double RT_RANGE_HEADROOM = 3d;
+  private static final double RT_RANGE_HEADROOM = 2d;
 
   private final double minMinDp;
   private final double maxMinDp;
@@ -95,6 +96,7 @@ public class WizardParameterSolutionBuilder {
   private final double minRtSampleToSampleTol;
   private final double maxRtSampleToSampleTol;
   private final double estimatedRtSampleToSampleTol;
+  private final @NotNull InterSampleRtStatistics interSampleRtStatistics;
   private @NotNull
   final MassDetectorWizardOptions massDetectorType;
 
@@ -156,20 +158,23 @@ public class WizardParameterSolutionBuilder {
           new SimpleRunnableTask(() -> {
           }));
       final int minDetections = (int) (stats.size() * 0.8);
-      minRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
-          minDetections, 0.0f).getTolerance();
+      final double[] rtDeviations = OptimizationUtils.extractSampleToSampleRtDeviations(aligned,
+          minDetections);
+      minRtSampleToSampleTol = (float) MathUtils.calcQuantileSorted(rtDeviations, 0.0f);
       // decision: headroom above the widest deviation observed. Anchored at the widest deviation
       // itself, every reference dataset but one optimized to exactly that value, so the measurement
       // only ever reported the bound.
-      maxRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
-          minDetections, 1).getTolerance() * RT_RANGE_HEADROOM;
+      maxRtSampleToSampleTol =
+          (float) MathUtils.calcQuantileSorted(rtDeviations, 1f) * RT_RANGE_HEADROOM;
       // decision: a quantile of the deviations rather than a fraction of their maximum. The old
       // rule, 0.8 x the widest deviation, landed above the 99.6th percentile on all seven reference
       // datasets - it tolerated more misalignment than 99.8 % of features actually showed, set by a
       // handful of badly aligned rows - and being a fraction of the bound it also moved whenever the
       // bound was tuned.
-      estimatedRtSampleToSampleTol = OptimizationUtils.extractSampleToSampleRtTolerances(aligned,
-          minDetections, RT_ESTIMATE_QUANTILE).getTolerance();
+      estimatedRtSampleToSampleTol = (float) MathUtils.calcQuantileSorted(rtDeviations,
+          RT_ESTIMATE_QUANTILE);
+      interSampleRtStatistics = new InterSampleRtStatistics(rtDeviations,
+          estimatedRtSampleToSampleTol, minRtSampleToSampleTol, maxRtSampleToSampleTol);
 
     } else {
 
@@ -190,6 +195,8 @@ public class WizardParameterSolutionBuilder {
       minRtSampleToSampleTol = 0.01;
       maxRtSampleToSampleTol = 0.2;
       estimatedRtSampleToSampleTol = 0.05;
+      interSampleRtStatistics = new InterSampleRtStatistics(new double[0],
+          estimatedRtSampleToSampleTol, minRtSampleToSampleTol, maxRtSampleToSampleTol);
     }
 
     if (!isLowRes) {
@@ -282,6 +289,10 @@ public class WizardParameterSolutionBuilder {
    */
   public double getEstimatedRtSampleToSampleTol() {
     return estimatedRtSampleToSampleTol;
+  }
+
+  public @NotNull InterSampleRtStatistics getInterSampleRtStatistics() {
+    return interSampleRtStatistics;
   }
 
   public @NotNull WizardParameterSolution buildSampleToSampleRtTolSolution(int index) {

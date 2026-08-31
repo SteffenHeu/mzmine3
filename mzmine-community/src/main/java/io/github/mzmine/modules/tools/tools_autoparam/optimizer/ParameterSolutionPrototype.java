@@ -55,6 +55,11 @@ public sealed interface ParameterSolutionPrototype {
    */
   Supplier<? extends Variable> variable();
 
+  /**
+   * Transformation used by searches operating in normalized parameter space.
+   */
+  @NotNull SearchScale searchScale();
+
   default String name() {
     return variable().get().getName();
   }
@@ -64,11 +69,14 @@ public sealed interface ParameterSolutionPrototype {
    * {@link #toRealSolution(WizardParameterSolutionBuilder, int)} to obtain the actual
    * {@link WizardParameterSolution} with real data ranges and a correct solution-vector index.
    *
-   * @param variable dummy variable supplier from a default-range builder, used for {@link #name()}
-   * @param factory  builds the real {@link WizardParameterSolution} given a builder and index
+   * @param variable    dummy variable supplier from a default-range builder, used for
+   *                    {@link #name()}
+   * @param searchScale explicit transformation between the physical and normalized search spaces
+   * @param factory     builds the real {@link WizardParameterSolution} given a builder and index
    */
-  record WizardParameterSolutionPrototype(Supplier<? extends Variable> variable,
-                                          BiFunction<WizardParameterSolutionBuilder, Integer, WizardParameterSolution> factory) implements
+  record WizardParameterSolutionPrototype(@NotNull Supplier<? extends Variable> variable,
+                                          @NotNull SearchScale searchScale,
+                                          @NotNull BiFunction<WizardParameterSolutionBuilder, Integer, WizardParameterSolution> factory) implements
       ParameterSolutionPrototype {
 
     /**
@@ -98,9 +106,11 @@ public sealed interface ParameterSolutionPrototype {
    * Prototype for a batch-queue optimization parameter. Call {@link #toBatchParameterSolution(int)}
    * to obtain the actual {@link BatchParameterSolution} with the correct solution-vector index.
    *
-   * @param factory builds the {@link BatchParameterSolution} for a given solution-vector index
+   * @param factory     builds the {@link BatchParameterSolution} for a given solution-vector index
+   * @param searchScale explicit transformation between the physical and normalized search spaces
    */
-  record BatchParameterSolutionPrototype(IntFunction<BatchParameterSolution> factory) implements
+  record BatchParameterSolutionPrototype(@NotNull IntFunction<BatchParameterSolution> factory,
+                                         @NotNull SearchScale searchScale) implements
       ParameterSolutionPrototype {
 
     @Override

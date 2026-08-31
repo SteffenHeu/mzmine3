@@ -86,21 +86,26 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
   private static final Color SIGMA_1_COLOR = new Color(200, 0, 200);
   private static final Color SIGMA_2_COLOR = new Color(200, 0, 200, 140);
   private static final Color SIGMA_3_COLOR = new Color(200, 0, 200, 80);
+  private static final Color RT_DISTRIBUTION_COLOR = new Color(70, 120, 200);
+  private static final Color RT_BOUND_COLOR = new Color(190, 50, 50);
   private static final BasicStroke SOLID_STROKE = new BasicStroke(1.5f);
   private static final BasicStroke DASHED_STROKE = new BasicStroke(1.0f, BasicStroke.CAP_BUTT,
       BasicStroke.JOIN_MITER, 1, new float[]{5f, 3f}, 0);
 
   private final List<DataFileStatistics> statistics;
   private final Map<DataFileStatistics, Color> fileColors;
+  private final @NotNull InterSampleRtStatistics interSampleRtStatistics;
 
   private final ComboBox<StatisticsDisplayMode> modeCombo = new ComboBox<>();
   private final ComboBox<DataFileStatistics> fileCombo = new ComboBox<>();
   private final ObservableList<DataFileStatistics> fileItems = FXCollections.observableArrayList();
   private final GridPane chartGrid = new GridPane();
 
-  public DataFileStatisticsDashboardPane(@NotNull List<DataFileStatistics> statistics) {
+  public DataFileStatisticsDashboardPane(@NotNull List<DataFileStatistics> statistics,
+      @NotNull InterSampleRtStatistics interSampleRtStatistics) {
     this.statistics = List.copyOf(statistics);
     this.fileColors = assignColors(this.statistics);
+    this.interSampleRtStatistics = interSampleRtStatistics;
 
     initControls();
     initGrid();
@@ -187,6 +192,18 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
         chartGrid.add(chart, col, row);
       }
 
+      col++;
+      if (col >= GRID_COLUMNS) {
+        col = 0;
+        row++;
+      }
+    }
+
+    final Node rtToleranceChart = createRtToleranceChart();
+    if (rtToleranceChart != null) {
+      GridPane.setHgrow(rtToleranceChart, Priority.ALWAYS);
+      GridPane.setVgrow(rtToleranceChart, Priority.ALWAYS);
+      chartGrid.add(rtToleranceChart, col, row);
       col++;
       if (col >= GRID_COLUMNS) {
         col = 0;
@@ -340,6 +357,54 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
       }
     }
 
+    return new EChartViewer(chart, true, true, true, true, true);
+  }
+
+  /**
+   * Shows the cross-file RT deviations used to derive the initial tolerance and its search bounds.
+   * This statistic necessarily combines files, so it is unchanged by the per-file display mode.
+   */
+  private @Nullable Node createRtToleranceChart() {
+    if (interSampleRtStatistics.isEmpty()) {
+      return null;
+    }
+
+    final double[] deviations = interSampleRtStatistics.deviations();
+    final double observedMin = HistogramChartFactory.getMin(deviations);
+    final double observedMax = HistogramChartFactory.getMax(deviations);
+    final double observedRange = observedMax - observedMin;
+    final double binWidth = observedRange > 0d ? observedRange / 30d : 0.001d;
+    final XYSeries series = HistogramChartFactory.createHistoSeries(deviations, binWidth,
+        observedMin, observedMax, null);
+    series.setKey("All files");
+
+    final XYSeriesCollection collection = new XYSeriesCollection(series);
+    final XYBarDataset dataset = new XYBarDataset(collection, binWidth);
+    final JFreeChart chart = FxChartFactory.createXYBarChart("Inter-sample RT tolerance",
+        "Absolute RT deviation / min", false, "Frequency", dataset, PlotOrientation.VERTICAL, false,
+        true, false);
+    styleXYBarChart(chart, List.of(RT_DISTRIBUTION_COLOR));
+
+    final XYPlot plot = chart.getXYPlot();
+    final ValueMarker estimate = new ValueMarker(interSampleRtStatistics.estimatedTolerance(),
+        MEDIAN_COLOR, SOLID_STROKE);
+    estimate.setLabel("Estimate: %.4g min".formatted(interSampleRtStatistics.estimatedTolerance()));
+    plot.addDomainMarker(estimate);
+
+    final ValueMarker lowerBound = new ValueMarker(interSampleRtStatistics.lowerSearchBound(),
+        RT_BOUND_COLOR, DASHED_STROKE);
+    lowerBound.setLabel("Search min: %.4g".formatted(interSampleRtStatistics.lowerSearchBound()));
+    plot.addDomainMarker(lowerBound);
+
+    final ValueMarker upperBound = new ValueMarker(interSampleRtStatistics.upperSearchBound(),
+        RT_BOUND_COLOR, DASHED_STROKE);
+    upperBound.setLabel("Search max: %.4g".formatted(interSampleRtStatistics.upperSearchBound()));
+    plot.addDomainMarker(upperBound);
+
+    final double displayUpper = Math.max(observedMax, interSampleRtStatistics.upperSearchBound());
+    if (displayUpper > 0d) {
+      plot.getDomainAxis().setRange(0d, displayUpper * 1.03d);
+    }
     return new EChartViewer(chart, true, true, true, true, true);
   }
 

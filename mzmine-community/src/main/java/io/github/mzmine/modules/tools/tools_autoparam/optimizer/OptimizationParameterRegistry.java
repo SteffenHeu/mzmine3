@@ -79,7 +79,10 @@ final class OptimizationParameterRegistry {
   }
 
   private static @NotNull List<ParameterSolutionPrototype> createAllSolutions() {
-    final Set<ParameterSolutionPrototype> solutions = new HashSet<>(massSpectrometerSolutions());
+    final Set<ParameterSolutionPrototype> solutions = new HashSet<>();
+    for (final MassSpectrometerWizardParameterFactory factory : MassSpectrometerWizardParameterFactory.values()) {
+      solutions.addAll(massSpectrometerSolutions(factory));
+    }
     for (final IonInterfaceWizardParameterFactory factory : IonInterfaceWizardParameterFactory.values()) {
       solutions.addAll(interfaceSolutions(factory));
     }
@@ -92,8 +95,8 @@ final class OptimizationParameterRegistry {
 
   private static @NotNull List<ParameterSolutionPrototype> forFactory(
       @NotNull WizardParameterFactory factory) {
-    if (factory instanceof MassSpectrometerWizardParameterFactory) {
-      return massSpectrometerSolutions();
+    if (factory instanceof MassSpectrometerWizardParameterFactory ms) {
+      return massSpectrometerSolutions(ms);
     }
     if (factory instanceof IonInterfaceWizardParameterFactory ionInterface) {
       return interfaceSolutions(ionInterface);
@@ -104,15 +107,19 @@ final class OptimizationParameterRegistry {
     return List.of();
   }
 
-  private static @NotNull List<ParameterSolutionPrototype> massSpectrometerSolutions() {
+  private static @NotNull List<ParameterSolutionPrototype> massSpectrometerSolutions(
+      MassSpectrometerWizardParameterFactory ms) {
     return List.of(
         new WizardParameterSolutionPrototype(DUMMY_BUILDER.buildMs1NoiseSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildMs1NoiseSolution),
+            switch (ms) {
+              case QTOF, LOW_RES -> SearchScale.LOGARITHMIC;
+              case Orbitrap_Astral, Orbitrap, FTICR -> SearchScale.LINEAR;
+            }, WizardParameterSolutionBuilder::buildMs1NoiseSolution),
         new WizardParameterSolutionPrototype(
-            DUMMY_BUILDER.buildScanToScanToleranceSolution(-1).variable(),
+            DUMMY_BUILDER.buildScanToScanToleranceSolution(-1).variable(), SearchScale.LINEAR,
             WizardParameterSolutionBuilder::buildScanToScanToleranceSolution),
         new WizardParameterSolutionPrototype(DUMMY_BUILDER.buildMinHeightSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildMinHeightSolution));
+            SearchScale.LOGARITHMIC, WizardParameterSolutionBuilder::buildMinHeightSolution));
   }
 
   private static @NotNull List<ParameterSolutionPrototype> interfaceSolutions(
@@ -120,34 +127,36 @@ final class OptimizationParameterRegistry {
     return switch (factory) {
       case HPLC, UHPLC, HILIC, GC_CI -> List.of(
           new WizardParameterSolutionPrototype(DUMMY_BUILDER.buildFwhmSolution(-1).variable(),
-              WizardParameterSolutionBuilder::buildFwhmSolution),
+              SearchScale.LINEAR, WizardParameterSolutionBuilder::buildFwhmSolution),
           new WizardParameterSolutionPrototype(
-              DUMMY_BUILDER.buildMinConsecutiveSolution(-1).variable(),
+              DUMMY_BUILDER.buildMinConsecutiveSolution(-1).variable(), SearchScale.LINEAR,
               WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
           new WizardParameterSolutionPrototype(
-              DUMMY_BUILDER.buildSampleToSampleRtTolSolution(-1).variable(),
+              DUMMY_BUILDER.buildSampleToSampleRtTolSolution(-1).variable(), SearchScale.LINEAR,
               WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution),
-          new BatchParameterSolutionPrototype(BatchParameterSolutionBuilder::buildTopToEdgeRatio),
-          new BatchParameterSolutionPrototype(BatchParameterSolutionBuilder::buildChromThreshold));
+          new BatchParameterSolutionPrototype(BatchParameterSolutionBuilder::buildTopToEdgeRatio,
+              SearchScale.LINEAR),
+          new BatchParameterSolutionPrototype(BatchParameterSolutionBuilder::buildChromThreshold,
+              SearchScale.LINEAR));
       case LC_WAVELET -> {
         final List<ParameterSolutionPrototype> solutions = new ArrayList<>(List.of(
             new WizardParameterSolutionPrototype(
-                DUMMY_BUILDER.buildMinConsecutiveSolution(-1).variable(),
+                DUMMY_BUILDER.buildMinConsecutiveSolution(-1).variable(), SearchScale.LINEAR,
                 WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
             new WizardParameterSolutionPrototype(
-                DUMMY_BUILDER.buildSampleToSampleRtTolSolution(-1).variable(),
+                DUMMY_BUILDER.buildSampleToSampleRtTolSolution(-1).variable(), SearchScale.LINEAR,
                 WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution)));
         solutions.addAll(OPTIONAL_WAVELET_SOLUTIONS);
         yield List.copyOf(solutions);
       }
       case GC_EI -> List.of(
           new WizardParameterSolutionPrototype(DUMMY_BUILDER.buildFwhmSolution(-1).variable(),
-              WizardParameterSolutionBuilder::buildFwhmSolution),
+              SearchScale.LINEAR, WizardParameterSolutionBuilder::buildFwhmSolution),
           new WizardParameterSolutionPrototype(
-              DUMMY_BUILDER.buildMinConsecutiveSolution(-1).variable(),
+              DUMMY_BUILDER.buildMinConsecutiveSolution(-1).variable(), SearchScale.LINEAR,
               WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
           new WizardParameterSolutionPrototype(
-              DUMMY_BUILDER.buildSampleToSampleRtTolSolution(-1).variable(),
+              DUMMY_BUILDER.buildSampleToSampleRtTolSolution(-1).variable(), SearchScale.LINEAR,
               WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution));
       case MALDI, LDI, DESI, SIMS, DIRECT_INFUSION, FLOW_INJECT -> List.of();
     };
@@ -166,17 +175,17 @@ final class OptimizationParameterRegistry {
 
   private static @NotNull List<ParameterSolutionPrototype> waveletSolutions() {
     return List.of(
-        new BatchParameterSolutionPrototype(WaveletBatchParameterSolutionBuilder::buildWaveletSnr),
+        new BatchParameterSolutionPrototype(WaveletBatchParameterSolutionBuilder::buildWaveletSnr,
+            SearchScale.LINEAR), new BatchParameterSolutionPrototype(
+            WaveletBatchParameterSolutionBuilder::buildWaveletNoiseCalculation, SearchScale.LINEAR),
         new BatchParameterSolutionPrototype(
-            WaveletBatchParameterSolutionBuilder::buildWaveletNoiseCalculation),
-        new BatchParameterSolutionPrototype(
-            WaveletBatchParameterSolutionBuilder::buildWaveletBaselineMethod));
+            WaveletBatchParameterSolutionBuilder::buildWaveletBaselineMethod, SearchScale.LINEAR));
   }
 
   private static @NotNull ParameterSolutionPrototype mobilitySolution(double lowerBound,
       double upperBound) {
     return new WizardParameterSolutionPrototype(
-        () -> new RealVariable(MOBILITY_FWHM_NAME, lowerBound, upperBound),
+        () -> new RealVariable(MOBILITY_FWHM_NAME, lowerBound, upperBound), SearchScale.LINEAR,
         (_, index) -> new DoubleWizardParameterSolution(index, WizardPart.IMS,
             IonMobilityWizardParameters.approximateImsFWHM,
             () -> new RealVariable(MOBILITY_FWHM_NAME, lowerBound, upperBound)));

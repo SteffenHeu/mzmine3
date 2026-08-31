@@ -171,13 +171,6 @@ public final class SinglePassParameterEstimation {
   private static final double WARM_START_PERTURBATION = 0.20;
 
   /**
-   * Bound ratio above which a variable is perturbed multiplicatively rather than additively. Ten
-   * separates the intensity and peak width parameters, whose bounds differ by one to three decades,
-   * from the thresholds and counts, whose bounds differ by less than one.
-   */
-  private static final double LOG_SCALE_SPAN = 10d;
-
-  /**
    * Quantile of the chromatogram edge intensities used as the absolute noise level, i.e. for the
    * instruments without an injection time. Measured across four reference datasets the optimum sits
    * at the 7th percentile of those intensities; the previous 15th percentile was 33 % too high on
@@ -234,6 +227,8 @@ public final class SinglePassParameterEstimation {
     // space filling as a set - it cannot be drawn one solution at a time
     final double[][] deviates = sampling.normalDeviates(Math.max(0, warmCount - 1),
         problem.getNumberOfVariables());
+    final SearchScaleProvider scaleProvider =
+        problem instanceof SearchScaleProvider provider ? provider : _ -> SearchScale.LINEAR;
 
     for (int i = 0; i < warmCount; i++) {
       final Solution solution = problem.newSolution();
@@ -243,7 +238,8 @@ public final class SinglePassParameterEstimation {
         SolutionOrigin.ESTIMATE.applyTo(solution);
       } else {
         // subsequent: center with perturbation
-        applyWithPerturbation(solution, estimates, WARM_START_PERTURBATION, deviates[i - 1]);
+        applyWithPerturbation(solution, estimates, WARM_START_PERTURBATION, deviates[i - 1],
+            scaleProvider);
         SolutionOrigin.PERTURBED.applyTo(solution);
       }
       solutions.add(solution);
@@ -274,12 +270,13 @@ public final class SinglePassParameterEstimation {
    * perturbed too and only rounded when they are read.
    *
    * @param perturbationFraction standard deviation, as a fraction of the variable's range for an
-   *                             additive variable and in log units for a
-   *                             {@link #isLogScale(RealVariable) log scaled} one
+   *                             additive variable and in log units for a logarithmic one
+   * @param scaleProvider       explicit scale declaration for each named parameter
    */
   public static void applyWithPerturbation(@NotNull Solution solution,
-      @NotNull Map<String, Double> estimates, double perturbationFraction) {
-    applyWithPerturbation(solution, estimates, perturbationFraction, null);
+      @NotNull Map<String, Double> estimates, double perturbationFraction,
+      @NotNull SearchScaleProvider scaleProvider) {
+    applyWithPerturbation(solution, estimates, perturbationFraction, null, scaleProvider);
   }
 
   /**
@@ -288,7 +285,7 @@ public final class SinglePassParameterEstimation {
    */
   private static void applyWithPerturbation(@NotNull Solution solution,
       @NotNull Map<String, Double> estimates, double perturbationFraction,
-      @Nullable double[] normalDeviates) {
+      @Nullable double[] normalDeviates, @NotNull SearchScaleProvider scaleProvider) {
     for (int i = 0; i < solution.getNumberOfVariables(); i++) {
       final Variable var = solution.getVariable(i);
       if (!(var instanceof RealVariable rv)) {
@@ -299,7 +296,14 @@ public final class SinglePassParameterEstimation {
           : PRNG.nextGaussian();
       final double perturbed;
 
-      if (isLogScale(rv)) {
+      final boolean logarithmic = !(rv instanceof OrdinalIntegerVariable)
+          && scaleProvider.searchScale(rv.getName()) == SearchScale.LOGARITHMIC;
+      if (logarithmic) {
+        if (rv.getLowerBound() <= 0d) {
+          throw new IllegalArgumentException(
+              "Logarithmic parameter %s requires a positive lower bound, found %s".formatted(
+                  rv.getName(), rv.getLowerBound()));
+        }
         // a fixed relative jitter around the estimate, independent of how wide the box is. The
         // geometric mean is the log scale midpoint, used when there is no estimate to jitter.
         final double base =
@@ -312,26 +316,6 @@ public final class SinglePassParameterEstimation {
 
       rv.setValue(Math.clamp(perturbed, rv.getLowerBound(), rv.getUpperBound()));
     }
-  }
-
-  /**
-   * Whether a variable spans orders of magnitude and therefore has to be perturbed
-   * multiplicatively.
-   * <p>
-   * decision: on an absolute scale sigma is a fraction of the range, so for an intensity threshold
-   * whose bounds differ by two decades sigma ends up several times the estimate itself - the
-   * "perturbation" becomes a near uniform draw over the whole box and the warm start stops being a
-   * warm start. Measured on seven reference datasets, sigma was 1.6 to 3.7 times the estimate for
-   * the minimum height and up to 114 times for the noise level, and those were exactly the
-   * parameters whose results carried no information.
-   */
-  private static boolean isLogScale(@NotNull RealVariable variable) {
-    // an ordinal is a small integer index where one step is the natural unit, never log scaled
-    if (variable instanceof OrdinalIntegerVariable) {
-      return false;
-    }
-    final double lower = variable.getLowerBound();
-    return lower > 0 && variable.getUpperBound() / lower > LOG_SCALE_SPAN;
   }
 
   /**

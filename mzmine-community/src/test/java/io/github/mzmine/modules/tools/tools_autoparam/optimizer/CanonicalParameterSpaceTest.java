@@ -36,16 +36,16 @@ class CanonicalParameterSpaceTest {
   void roundTripUsesLinearLogarithmicAndEffectiveOrdinalValues() {
     final CanonicalParameterSpace space = new CanonicalParameterSpace(new MixedVariableProblem());
     final Solution original = new MixedVariableProblem().newSolution();
-    RealVariable.setReal(original.getVariable(0), 2.5d);
-    RealVariable.setReal(original.getVariable(1), 10d);
+    RealVariable.setReal(original.getVariable(0), 26d);
+    RealVariable.setReal(original.getVariable(1), 3d);
     RealVariable.setReal(original.getVariable(2), 2.6d);
 
     final double[] canonical = space.encode(original);
     final Solution restored = space.materialize(canonical, SolutionOrigin.PATTERN_SEARCH);
 
     Assertions.assertArrayEquals(new double[]{0.25d, 0.5d, 2d / 3d}, canonical, 1e-12);
-    Assertions.assertEquals(2.5d, OrdinalIntegerVariable.effectiveValue(restored, 0), 1e-12);
-    Assertions.assertEquals(10d, OrdinalIntegerVariable.effectiveValue(restored, 1), 1e-12);
+    Assertions.assertEquals(26d, OrdinalIntegerVariable.effectiveValue(restored, 0), 1e-12);
+    Assertions.assertEquals(3d, OrdinalIntegerVariable.effectiveValue(restored, 1), 1e-12);
     Assertions.assertEquals(3d, OrdinalIntegerVariable.effectiveValue(restored, 2), 1e-12);
     Assertions.assertInstanceOf(OrdinalIntegerVariable.class, restored.getVariable(2));
     Assertions.assertEquals(1, restored.getNumberOfConstraints());

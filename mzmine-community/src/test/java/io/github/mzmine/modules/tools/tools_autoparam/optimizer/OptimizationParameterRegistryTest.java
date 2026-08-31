@@ -29,6 +29,8 @@ import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -60,5 +62,17 @@ class OptimizationParameterRegistryTest {
     Assertions.assertEquals(List.of("Inter sample RT tolerance", "Min consecutive",
         "Wavelet SNR threshold", "Wavelet baseline method", "Wavelet noise calculation"), names);
     Assertions.assertFalse(names.contains("Top-to-edge ratio"));
+  }
+
+  @Test
+  void parametersDeclareTheirSearchScale() {
+    final Map<String, SearchScale> scales = OptimizationParameterRegistry.allSolutions().stream()
+        .collect(Collectors.toMap(ParameterSolutionPrototype::name,
+            ParameterSolutionPrototype::searchScale));
+
+    Assertions.assertEquals(SearchScale.LOGARITHMIC, scales.get("Inter sample RT tolerance"));
+    Assertions.assertEquals(SearchScale.LOGARITHMIC, scales.get("Min height"));
+    Assertions.assertEquals(SearchScale.LINEAR, scales.get("Min consecutive"));
+    Assertions.assertEquals(SearchScale.LINEAR, scales.get("Chrom. Threshold"));
   }
 }

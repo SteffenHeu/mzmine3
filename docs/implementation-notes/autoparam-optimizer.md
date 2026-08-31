@@ -30,13 +30,20 @@ Detailed measurements and rejected algorithm pilots are recorded in
   deterministic.
 - Candidates are materialized through `problem.newSolution()`, represented canonically on
   `[0, 1]`, tagged with their origin before evaluation, and deduplicated by their effective values.
-  Wide continuous ranges use logarithmic mapping and ordinal values are rounded before comparison.
+  Every registered parameter explicitly declares a linear or logarithmic `SearchScale`; scale is
+  based on the parameter's meaning rather than inferred from its current bounds. Continuous
+  tolerances, widths, intensities, heights, and SNR are multiplicative; thresholds, ratios, counts,
+  and enum choices are linear. Ordinal values are rounded before comparison.
 - The optional peak-shape rejection remains a constraint rather than part of the score. Its limit
   is derived from the estimate with a floor for nearly perfect baselines. The expensive shape
   diagnostic runs only when the constraint is enabled; the cheap precision diagnostic always runs.
 - GUI runs publish completed solutions to one observable table and a score/best-so-far chart. Stop
   search finishes the current batch, prevents the next proposal, and returns all completed results.
   Headless runs create no JavaFX state and expose the same result through `OptimizationOutcome`.
+- The statistics dashboard shows the cross-file absolute RT-deviation distribution together with
+  the inter-sample RT estimate and search bounds. Because it is inherently a cross-file statistic,
+  this plot is unchanged by the dashboard's single-file/overlay display mode. Optimizer GUI runs
+  reuse the deviations already calculated for the search range.
 - General wizard preset factories do not depend on optimizer classes. Optimizable parameters are
   registered centrally in `OptimizationParameterRegistry`; optional Wavelet parameters are excluded
   from new configurations explicitly, not by list position.

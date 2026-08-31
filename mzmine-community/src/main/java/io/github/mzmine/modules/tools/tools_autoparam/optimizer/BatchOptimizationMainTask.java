@@ -227,12 +227,6 @@ public class BatchOptimizationMainTask extends AbstractTask {
         benchmarkFeatures, getMemoryMapStorage());
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
-    if (DesktopService.isGUI()) {
-      final List<DataFileStatistics> dashboardStats = List.copyOf(stats);
-      FxThread.runLater(() -> MZmineCore.getDesktop().addTab(new SimpleTab("Auto Param Statistics",
-          new DataFileStatisticsDashboardPane(dashboardStats))));
-    }
-
     // set a specific seed to make the results deterministic, see DEFAULT_RANDOM_SEED
     PRNG.setSeed(randomSeed);
 
@@ -245,6 +239,12 @@ public class BatchOptimizationMainTask extends AbstractTask {
     final WizardOptimizationProblem optimizationProblem = new WizardOptimizationProblem(sequence,
         stats, params, externalStatus, totalBatchExecutions, stopSearchRequested::get);
     problem = optimizationProblem;
+    if (DesktopService.isGUI()) {
+      final List<DataFileStatistics> dashboardStats = List.copyOf(stats);
+      FxThread.runLater(() -> MZmineCore.getDesktop().addTab(new SimpleTab("Auto Param Statistics",
+          new DataFileStatisticsDashboardPane(dashboardStats,
+              optimizationProblem.getBuilder().getInterSampleRtStatistics()))));
+    }
     final AtomicReference<OptimizationResultsController> resultsController = new AtomicReference<>();
     final AtomicReference<NondominatedPopulation> completedResult = new AtomicReference<>();
 

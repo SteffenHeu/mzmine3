@@ -69,6 +69,7 @@ public final class YasinIsotopeScore implements SweepMetric {
     final long totalFeatures = featureList.streamFeatures().count();
 
     long correctlyIntegrated = 0;
+    long singleFileFeatures = 0;
 
     List<FeatureListRow> rowsByMz = featureList.getRowsCopy();
     rowsByMz.sort(FeatureListRowSorter.MZ_ASCENDING);
@@ -143,10 +144,13 @@ public final class YasinIsotopeScore implements SweepMetric {
       for (int i = 0; i < foundCount.length; i++) {
         if (foundCount[i] >= row.getRawDataFiles().size() * 0.5) {
           correctlyIntegrated += foundCount[i];
+        } else if (foundCount[i] == 0) {
+          singleFileFeatures++;
         }
       }
     }
 
-    return (double) (correctlyIntegrated * correctlyIntegrated) / Math.max(totalFeatures, 1);
+    return (double) (correctlyIntegrated * correctlyIntegrated) / Math.max(
+        totalFeatures/* + singleFileFeatures*/, 1);
   }
 }

@@ -38,8 +38,6 @@ import org.moeaframework.problem.Problem;
  */
 final class CanonicalParameterSpace {
 
-  private static final double LOG_SCALE_SPAN = 10d;
-
   private final @NotNull Problem problem;
   private final double[] lowerBounds;
   private final double[] upperBounds;
@@ -58,6 +56,8 @@ final class CanonicalParameterSpace {
     ordinal = new boolean[dimensions];
     lowerIntegerBounds = new int[dimensions];
     upperIntegerBounds = new int[dimensions];
+    final SearchScaleProvider scaleProvider =
+        problem instanceof SearchScaleProvider provider ? provider : _ -> SearchScale.LINEAR;
 
     for (int i = 0; i < dimensions; i++) {
       final Variable variable = prototype.getVariable(i);
@@ -75,7 +75,12 @@ final class CanonicalParameterSpace {
       } else {
         lowerBounds[i] = real.getLowerBound();
         upperBounds[i] = real.getUpperBound();
-        logarithmic[i] = lowerBounds[i] > 0d && upperBounds[i] / lowerBounds[i] > LOG_SCALE_SPAN;
+        logarithmic[i] = scaleProvider.searchScale(real.getName()) == SearchScale.LOGARITHMIC;
+        if (logarithmic[i] && lowerBounds[i] <= 0d) {
+          throw new IllegalArgumentException(
+              "Logarithmic parameter %s requires a positive lower bound, found %s".formatted(
+                  real.getName(), lowerBounds[i]));
+        }
       }
     }
   }
