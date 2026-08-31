@@ -25,12 +25,9 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.population.NondominatedPopulation;
 
@@ -57,52 +54,4 @@ public record OptimizationOutcome(@NotNull Map<String, Double> estimates,
     return problem.getEvaluatedSolutions();
   }
 
-  /**
-   * The highest scoring feasible solution, optionally restricted to one phase of the run.
-   *
-   * @param objectiveIndex index into the enabled metrics
-   * @param origin         phase to restrict to, or null for the whole run
-   * @return null when no feasible solution of that origin was evaluated
-   */
-  public @Nullable Solution bestFeasible(int objectiveIndex, @Nullable SolutionOrigin origin) {
-    Solution best = null;
-    for (final Solution solution : evaluatedSolutions()) {
-      if (!solution.isFeasible() || (origin != null && SolutionOrigin.of(solution) != origin)) {
-        continue;
-      }
-      // decision: compared through the Objective rather than on the raw value, because a metric
-      // supplies its own direction via SweepMetric#higherIsBetter. A negative comparison means the
-      // candidate is the better one, for Maximize and Minimize alike.
-      if (best == null
-          || solution.getObjective(objectiveIndex).compareTo(best.getObjective(objectiveIndex))
-          < 0) {
-        best = solution;
-      }
-    }
-    return best;
-  }
-
-  /**
-   * The effective parameter values of a solution, keyed by variable name, in variable order.
-   * Ordinal variables report the rounded value the batch was actually run with.
-   */
-  public static @NotNull Map<String, Double> parameterValues(@NotNull Solution solution) {
-    final Map<String, Double> values = new LinkedHashMap<>();
-    for (int i = 0; i < solution.getNumberOfVariables(); i++) {
-      values.put(solution.getVariable(i).getName(),
-          OrdinalIntegerVariable.effectiveValue(solution, i));
-    }
-    return values;
-  }
-
-  /**
-   * Names of the enabled metrics, in objective order.
-   */
-  public @NotNull List<String> metricNames() {
-    final List<String> names = new ArrayList<>();
-    for (int i = 0; i < estimateSolution.getNumberOfObjectives(); i++) {
-      names.add(estimateSolution.getObjective(i).getName());
-    }
-    return names;
-  }
 }

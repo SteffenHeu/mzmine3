@@ -27,6 +27,8 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
+import io.github.mzmine.modules.tools.batchwizard.WizardPart;
+import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -49,6 +51,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -68,6 +71,7 @@ import testutils.MZmineTestUtil;
  * together rather than per dataset. Datasets come from {@link EstimateVsOptimumTest#DATASETS}.
  */
 @TestInstance(Lifecycle.PER_CLASS)
+@Tag("benchmark")
 public class EstimatorStatisticsDumpTest {
 
   private static final Logger logger = Logger.getLogger(
@@ -97,12 +101,17 @@ public class EstimatorStatisticsDumpTest {
   @Test
   @DisplayName("dump the statistics distributions the estimator derives its values from")
   void dumpStatistics() {
+    Assumptions.assumeTrue(Boolean.getBoolean(EstimateVsOptimumTest.RUN_PROPERTY),
+        "real-data optimizer benchmark is opt-in; enable with -D%s=true".formatted(
+            EstimateVsOptimumTest.RUN_PROPERTY));
     final List<BenchmarkDataset> available = EstimateVsOptimumTest.DATASETS.stream()
         .filter(EstimateVsOptimumTest::isSelected).filter(BenchmarkDataset::isAvailable).toList();
     Assumptions.assumeFalse(available.isEmpty(), "no configured dataset is present");
 
-    final File values = new File(VALUES_CSV).getAbsoluteFile();
-    final File summary = new File(SUMMARY_CSV).getAbsoluteFile();
+    final File values = BenchmarkCampaign.outputDirectory().resolve(VALUES_CSV).toFile()
+        .getAbsoluteFile();
+    final File summary = BenchmarkCampaign.outputDirectory().resolve(SUMMARY_CSV).toFile()
+        .getAbsoluteFile();
     int dumped = 0;
 
     try (final PrintWriter valueWriter = new PrintWriter(Files.newBufferedWriter(values.toPath(),
@@ -140,7 +149,10 @@ public class EstimatorStatisticsDumpTest {
     // ones. Low resolution only affects the m/z tolerance list, which is dumped as counts anyway.
     final WizardParameterSolutionBuilder builder = new WizardParameterSolutionBuilder(stats, null,
         false);
-    final Map<String, Double> estimates = SinglePassParameterEstimation.estimate(stats, builder);
+    final WizardSequence sequence = new WizardSequence();
+    sequence.set(WizardPart.IMS, dataset.ionMobility().create());
+    final Map<String, Double> estimates = SinglePassParameterEstimation.estimate(stats, builder,
+        sequence);
 
     final Map<String, double[]> distributions = new LinkedHashMap<>();
     distributions.put("edgeIntensities", flatten(stats, DataFileStatistics::getEdgeIntensities));

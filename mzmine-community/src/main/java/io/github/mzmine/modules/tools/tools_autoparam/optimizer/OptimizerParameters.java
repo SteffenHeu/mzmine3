@@ -25,22 +25,13 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
-import static io.github.mzmine.javafx.components.factories.FxTexts.boldText;
-import static io.github.mzmine.javafx.components.factories.FxTexts.hyperlinkText;
-import static io.github.mzmine.javafx.components.factories.FxTexts.linebreak;
-import static io.github.mzmine.javafx.components.factories.FxTexts.text;
-
 import io.github.mzmine.datamodel.features.types.numbers.MZType;
 import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.BenchmarkTargetCount;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
@@ -58,10 +49,7 @@ import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.files.ExtensionFilters;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -79,11 +67,9 @@ public class OptimizerParameters extends SimpleParameterSet {
       SweepMetric.GC_EI_FRAGMENT_QUALITY, new BenchmarkTargetCount(List.of()));
 
   /**
-   * Default metrics enabled at startup: features with isotopes, integration score, and the combined
-   * harmonic score.
+   * Default metric enabled at startup.
    */
-  private static final List<SweepMetric> DEFAULT_METRICS = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
-      SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.HARMONIC_SLAW_ISOTOPES);
+  private static final List<SweepMetric> DEFAULT_METRICS = List.of(SweepMetric.YASIN_ISOTOPE_SCORE);
 
   public static final SweepMetricCheckListParameter metricsToOptimize = new SweepMetricCheckListParameter(
       "Metrics to optimize", "Select which quality metrics should drive the optimization.",
@@ -114,16 +100,17 @@ public class OptimizerParameters extends SimpleParameterSet {
           Sensitivity metrics reward detecting more signals, which can be satisfied by picking up \
           noise. This limits how much worse than the estimate a solution's chromatographic shape \
           quality may get, without changing any score.""",
-          ConfigService.getGuiFormats().scoreFormat(), 2.0, 1.0, 100.0), true);
+          ConfigService.getGuiFormats().scoreFormat(), 1.5, 1.0, 100.0), true);
 
   public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
       "Optimizer", "Pattern search supports "
-      + "one selected metric; evolutionary optimizers also support multiple objectives.",
+      + "one selected metric; MOEA/D also supports multiple objectives.",
       OptimizerOptions.values(), OptimizerOptions.MOEAD);
 
   public static final ComboParameter<WarmStartSampling> warmStartSampling = new ComboParameter<>(
       "Warm start sampling", """
-      How the initial attempts are spread around the raw data estimate.
+      How the MOEA/D initial population is spread around the raw data estimate. Pattern search
+      starts directly at the estimate and does not use this setting.
       The initial attempts decide most of the result, and independent draws leave their coverage \
       to chance - the same data can score up to twice as differently depending only on the random \
       seed. A space-filling sequence covers the same neighbourhood the same way every run.""",
@@ -134,15 +121,12 @@ public class OptimizerParameters extends SimpleParameterSet {
    * entries use a default-range dummy builder solely for display/XML. Batch entries wrap
    * {@link BatchParameterSolutionBuilder} method references.
    */
-  private static final List<ParameterSolutionPrototype> ALL_SOLUTIONS = createAllSolutions();
-
-  // decision: wavelet solutions are at the end of ALL_SOLUTIONS and disabled by default
-  // because they require the optional mzio WaveletResolverModule
-  private static final int WAVELET_SOLUTION_COUNT = 5;
+  private static final List<ParameterSolutionPrototype> ALL_SOLUTIONS = OptimizationParameterRegistry.allSolutions();
+  private static final List<ParameterSolutionPrototype> DEFAULT_SOLUTIONS = OptimizationParameterRegistry.defaultSolutions();
 
   public static final WizardParameterSolutionCheckListParameter paramToOptimize = new WizardParameterSolutionCheckListParameter(
       "Parameters to optimize", "Select which parameters should be optimized.", ALL_SOLUTIONS,
-      new ArrayList<>(ALL_SOLUTIONS.subList(0, ALL_SOLUTIONS.size() - WAVELET_SOLUTION_COUNT)));
+      new ArrayList<>(DEFAULT_SOLUTIONS));
 
   public OptimizerParameters() {
     super(metricsToOptimize, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
@@ -151,76 +135,29 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   /**
    * Collects all optimization parameter prototypes that are relevant for the given wizard sequence
-   * by querying each wizard step's factory. The dummy builder (null stats) is used only to derive
-   * variable names for display and XML; actual data ranges are injected at optimization time.
+   * from the optimizer's central parameter registry.
    *
    * @param steps the current wizard sequence
-   * @return ordered list of applicable prototypes, sourced from {@link #ALL_SOLUTIONS}
+   * @return ordered list of applicable prototypes
    */
   public static @NotNull List<ParameterSolutionPrototype> collectSolutions(
       @NotNull WizardSequence steps) {
-    final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
-        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
-    return steps.stream().map(WizardStepParameters::getFactory)
-        .flatMap(f -> f.getOptimizationSolutions(steps, dummy).stream())
-        .sorted(Comparator.comparing(ParameterSolutionPrototype::name)).toList();
-  }
-
-  private static List<ParameterSolutionPrototype> createAllSolutions() {
-    final WizardParameterSolutionBuilder dummy = new WizardParameterSolutionBuilder(null,
-        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
-
-    final Set<ParameterSolutionPrototype> allSolutions = new HashSet<>();
-
-    for (WizardPart part : WizardPart.values()) {
-      for (WizardParameterFactory preset : part.getDefaultPresets()) {
-        WizardSequence sequence = new WizardSequence();
-        sequence.set(part, preset.create());
-        allSolutions.addAll(preset.getOptimizationSolutions(sequence, dummy));
-      }
-    }
-
-    return allSolutions.stream().sorted(Comparator.comparing(ParameterSolutionPrototype::name))
-        .toList();
-
-    /*return List.of(new WizardBuilderParameterSolution(dummy.buildMs1NoiseSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildMs1NoiseSolution),
-        new WizardBuilderParameterSolution(dummy.buildScanToScanToleranceSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildScanToScanToleranceSolution),
-        new WizardBuilderParameterSolution(dummy.buildMinHeightSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildMinHeightSolution),
-        new WizardBuilderParameterSolution(dummy.buildMinConsecutiveSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildMinConsecutiveSolution),
-        new WizardBuilderParameterSolution(dummy.buildFwhmSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildFwhmSolution),
-        new WizardBuilderParameterSolution(dummy.buildSampleToSampleRtTolSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildSampleToSampleRtTolSolution),
-        new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildTopToEdgeRatio),
-        new BatchWizardParameterSolution(BatchParameterSolutionBuilder::buildChromThreshold),
-        // Wavelet resolver parameters (require optional mzio WaveletResolverModule - disabled by default)
-        new BatchWizardParameterSolution(WaveletBatchParameterSolutionBuilder::buildWaveletSnr),
-        new BatchWizardParameterSolution(
-            WaveletBatchParameterSolutionBuilder::buildWaveletNoiseCalculation),
-        new BatchWizardParameterSolution(
-            WaveletBatchParameterSolutionBuilder::buildWaveletBaselineMethod),
-        new BatchWizardParameterSolution(
-            WaveletBatchParameterSolutionBuilder::buildWaveletDipFilter),
-        new BatchWizardParameterSolution(
-            WaveletBatchParameterSolutionBuilder::buildWaveletEdgeDetector));*/
+    return OptimizationParameterRegistry.forSequence(steps);
   }
 
   /**
    * Convenience factory for programmatic use (e.g. tests). Passes the given metrics as the
    * selection and leaves benchmark file options disabled.
    */
-  public static ParameterSet create(@NotNull List<SweepMetric> metrics, int numIterations) {
+  public static @NotNull ParameterSet create(@NotNull List<SweepMetric> metrics,
+      int numIterations) {
     final ParameterSet param = new OptimizerParameters().cloneParameterSet();
     param.setParameter(metricsToOptimize, new ArrayList<>(metrics));
     param.setParameter(benchmarkFeatureTypes, DEFAULT_IMPORT_TYPES);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
     param.setParameter(maxShapeRejectionFactor, false);
-    param.setParameter(paramToOptimize, new ArrayList<>(ALL_SOLUTIONS));
+    param.setParameter(paramToOptimize, new ArrayList<>(DEFAULT_SOLUTIONS));
     return param;
   }
 
@@ -252,18 +189,21 @@ public class OptimizerParameters extends SimpleParameterSet {
 
   @Override
   public @Nullable Region getMessage() {
-    return FxTextFlows.newTextFlowInAccordion("Citations", text(
+    return FxTextFlows.newTextFlowInAccordion("Citations", FxTexts.text(
             "When optimizing on these respective metrics, please respect the following citations:"),
-        linebreak(), FxTexts.boldText(SweepMetric.IPO_ISOTOPE_SCORE.name()), text(": "),
-        hyperlinkText("IPO", "https://doi.org/10.1186/s12859-015-0562-8"), linebreak(),
-        boldText(SweepMetric.SLAW_INTEGRATION_SCORE.name()), text(", "),
-        boldText(SweepMetric.HARMONIC_SLAW_ISOTOPES.name()), text(": "),
-        hyperlinkText("SLAW", "https://pubs.acs.org/doi/10.1021/acs.analchem.1c02687"));
+        FxTexts.linebreak(), FxTexts.boldText(SweepMetric.IPO_ISOTOPE_SCORE.name()),
+        FxTexts.text(": "),
+        FxTexts.hyperlinkText("IPO", "https://doi.org/10.1186/s12859-015-0562-8"),
+        FxTexts.linebreak(), FxTexts.boldText(SweepMetric.SLAW_INTEGRATION_SCORE.name()),
+        FxTexts.text(", "), FxTexts.boldText(SweepMetric.HARMONIC_SLAW_ISOTOPES.name()),
+        FxTexts.text(": "),
+        FxTexts.hyperlinkText("SLAW", "https://pubs.acs.org/doi/10.1021/acs.analchem.1c02687"));
   }
 
-  public ExitCode showSetupDialog(boolean valueCheckRequired, @Nullable WizardSequence sequence) {
+  public @NotNull ExitCode showSetupDialog(boolean valueCheckRequired,
+      @Nullable WizardSequence sequence) {
     getParameter(paramToOptimize).setWizardSequence(sequence);
-    var superReturn = super.showSetupDialog(valueCheckRequired);
+    final ExitCode superReturn = super.showSetupDialog(valueCheckRequired);
     getParameter(paramToOptimize).setWizardSequence(null); // always reset to zero
     return superReturn;
   }

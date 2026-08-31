@@ -25,27 +25,8 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
-import com.opencsv.exceptions.CsvException;
-import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.features.FeatureList;
-import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.datamodel.features.types.numbers.MZType;
-import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
-import io.github.mzmine.datamodel.features.types.numbers.RTType;
-import io.github.mzmine.modules.batchmode.BatchModeModule;
-import io.github.mzmine.modules.batchmode.BatchQueue;
-import io.github.mzmine.modules.batchmode.BatchTask;
-import io.github.mzmine.modules.dataprocessing.filter_isotopegrouper.IsotopeGrouperModule;
-import io.github.mzmine.modules.dataprocessing.filter_rowsfilter.RowsFilterModule;
-import io.github.mzmine.modules.dataprocessing.gapfill_peakfinder.multithreaded.MultiThreadPeakFinderModule;
-import io.github.mzmine.modules.dataprocessing.group_compoundgrouper.CompoundGrouperModule;
-import io.github.mzmine.modules.dataprocessing.group_metacorrelate.corrgrouping.CorrelateGroupingModule;
-import io.github.mzmine.modules.dataprocessing.group_spectral_networking.MainSpectralNetworkingModule;
-import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingModule;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
-import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.CustomizationWizardParameters;
@@ -55,40 +36,30 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverrid
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WorkflowDdaWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
-import io.github.mzmine.modules.tools.tools_autoparam.FeatureStatistics;
-import io.github.mzmine.modules.tools.tools_autoparam.FeatureWithIsotopeTraces;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.BatchParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.BenchmarkTargetCount;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
-import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
-import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.SimpleRunnableTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
-import io.github.mzmine.util.CSVParsingUtils;
 import java.io.File;
-import java.io.IOException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.beans.property.SimpleStringProperty;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.Solution;
@@ -103,23 +74,19 @@ public class WizardOptimizationProblem extends AbstractProblem {
 
   private final int NUM_PARAM;
   private final List<ParameterSolutionPrototype> paramToOptimize;
-  @NotNull
-  private final AtomicReference<TaskStatus> externalStatus;
   private final @NotNull BooleanSupplier stopSearchRequestedSupplier;
   private final @NotNull List<SweepMetric> enabledMetrics;
 
-  private final @NotNull File[] files;
+  private final @NotNull OptimizationBatchEvaluator batchEvaluator;
   private final WizardParameterSolutionBuilder builder;
-  // assumption: kept as a separate field for getAllTargets() GUI accessor
-  @Nullable
-  private final List<FeatureRecord> target;
+  private final @NotNull List<FeatureRecord> target;
   private final WizardSequence initialSequence;
 
   private final @Nullable MZTolerance mzSampleToSampleTolerance;
   private final @Nullable RTTolerance rtSampleToSampleTolerance;
   private final int numWizardParam;
   private final int numBatchParam;
-  private final @Nullable List<FeatureRecord> fileOnlyBenchmarkFeatures;
+  private final @NotNull List<FeatureRecord> fileOnlyBenchmarkFeatures;
   private final @NotNull BatchExecutionBudget batchExecutionBudget;
   private final @NotNull ElapsedTimeTracker elapsedTimeTracker = new ElapsedTimeTracker();
 
@@ -210,20 +177,21 @@ public class WizardOptimizationProblem extends AbstractProblem {
     super(param.getValue(OptimizerParameters.paramToOptimize).size(),
         calculateNumberOfObjectives(param, stats), calculateNumberOfConstraints(param));
 
-    fileOnlyBenchmarkFeatures = WizardOptimizationProblem.extractFeatureRecordsFromFile(null,
-        param);
+    fileOnlyBenchmarkFeatures = BenchmarkFeatureLoader.fromParameterFile(null, param);
     batchExecutionBudget = new BatchExecutionBudget(maxBatchExecutions);
-    target = statsToTargetList(stats);
+    target = Objects.requireNonNull(BenchmarkFeatureLoader.fromStatistics(stats));
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
-    this.externalStatus = externalStatus;
     this.stopSearchRequestedSupplier = stopSearchRequestedSupplier;
     enabledMetrics = buildEnabledMetrics(param, stats);
 
     this.NUM_PARAM = paramToOptimize.size();
 
     this.initialSequence = initialSequence;
-    files = stats.stream().map(DataFileStatistics::file).map(RawDataFile::getAbsoluteFilePath)
+    final File[] files = stats.stream().map(DataFileStatistics::file)
+        .map(RawDataFile::getAbsoluteFilePath)
         .toArray(File[]::new);
+    batchEvaluator = new OptimizationBatchEvaluator(files, enabledMetrics,
+        fileOnlyBenchmarkFeatures, externalStatus);
 
     final ModularFeatureList aligned = OptimizationUtils.alignBenchmarkFeatures(stats, null,
         new SimpleRunnableTask(() -> {
@@ -247,85 +215,6 @@ public class WizardOptimizationProblem extends AbstractProblem {
     }
   }
 
-  public static @Nullable List<FeatureRecord> statsToTargetList(
-      @Nullable List<@NotNull DataFileStatistics> stats) {
-    if (stats == null) {
-      return null;
-    }
-
-    return stats.stream().map(DataFileStatistics::featureStatistics).flatMap(List::stream)
-        // only use isotope traces, not the main isotopes
-        .map(FeatureStatistics::getBestEnvelope).map(FeatureWithIsotopeTraces::isotopeTraces)
-        .flatMap(List::stream).map(
-            fwi -> new FeatureRecord(fwi.getRawDataFile(), fwi.getMZ(), fwi.getRT(),
-                fwi.getMobility())).toList();
-  }
-
-  public static @NotNull List<FeatureRecord> extractFeatureRecordsFromFile(
-      @Nullable List<@NotNull DataFileStatistics> stats, @NotNull ParameterSet param) {
-    final boolean useBenchmarkFiles = param.getValue(OptimizerParameters.benchmarkFeaturesFile);
-
-    List<FeatureRecord> featureRecordsFromFile = new ArrayList<>();
-    if (useBenchmarkFiles) {
-      final File benchmarkFile = param.getEmbeddedParameterValue(
-          OptimizerParameters.benchmarkFeaturesFile);
-      final List<ImportType<?>> types = param.getValue(OptimizerParameters.benchmarkFeatureTypes);
-
-      final Character separator = CSVParsingUtils.autoDetermineSeparator(benchmarkFile);
-      final SimpleStringProperty errorMessage = new SimpleStringProperty();
-      try {
-        final List<String[]> csvData = CSVParsingUtils.readData(benchmarkFile,
-            separator.toString());
-
-        final List<ImportType<?>> lineIds = CSVParsingUtils.findLineIds(types, csvData.getFirst(),
-            errorMessage);
-
-        int mzId = 0;
-        int rtId = 0;
-        Integer mobilityId = null;
-        for (ImportType lineId : lineIds) {
-          switch (lineId.getDataType()) {
-            case MZType _ -> mzId = lineId.getColumnIndex();
-            case RTType _ -> rtId = lineId.getColumnIndex();
-            case MobilityType _ -> mobilityId = lineId.getColumnIndex();
-            default -> {
-            }
-          }
-        }
-
-        if (lineIds.stream().filter(i -> i.getColumnIndex() != -1).filter(
-                i -> i.getDataType().equals(new MZType()) || i.getDataType().equals(new RTType()))
-            .toList().size() < 2) {
-          throw new RuntimeException("MZ and RT columns were not found");
-        }
-
-        for (int i = 1; i < csvData.size(); i++) {
-          final double mz = Double.parseDouble(csvData.get(i)[mzId]);
-          final float rt = Float.parseFloat(csvData.get(i)[rtId]);
-          if (mobilityId != null) {
-            final float mobility = Float.parseFloat(csvData.get(i)[mobilityId]);
-            if (stats != null) {
-              featureRecordsFromFile.addAll(stats.stream().map(DataFileStatistics::file)
-                  .map(f -> new FeatureRecord(f, mz, rt, mobility)).toList());
-            } else {
-              featureRecordsFromFile.add(new FeatureRecord(null, mz, rt, mobility));
-            }
-          } else {
-            if (stats != null) {
-              featureRecordsFromFile.addAll(stats.stream().map(DataFileStatistics::file)
-                  .map(f -> new FeatureRecord(f, mz, rt, null)).toList());
-            } else {
-              featureRecordsFromFile.add(new FeatureRecord(null, mz, rt, null));
-            }
-          }
-        }
-      } catch (IOException | CsvException e) {
-        throw new RuntimeException(e);
-      }
-    }
-    return featureRecordsFromFile;
-  }
-
   /**
    * Builds the enabled {@link SweepMetric} list from the user's checklist selection.
    * {@link BenchmarkTargetCount} placeholder instances are replaced with real instances carrying
@@ -339,7 +228,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
       if (metric instanceof BenchmarkTargetCount) {
         // decision: only include benchmark metric when file statistics are available to derive targets
         if (stats != null) {
-          final List<FeatureRecord> targets = statsToTargetList(stats);
+          final List<FeatureRecord> targets = BenchmarkFeatureLoader.fromStatistics(stats);
           if (targets != null) {
             metrics.add(new BenchmarkTargetCount(targets));
           }
@@ -422,95 +311,8 @@ public class WizardOptimizationProblem extends AbstractProblem {
     }
 
     final WizardSequence wizardSequence = createWizardSequenceFromSolution(solution);
-
-    final BatchQueue optimizedQueue = ((WorkflowWizardParameterFactory) wizardSequence.get(
-        WizardPart.WORKFLOW).get().getFactory()).getBatchBuilder(wizardSequence).createQueue();
-
-    // gap filling screws with the optimized feature detection
-    // also remove other unnecessary steps
-    optimizedQueue.removeIf(step -> step.getModule() instanceof MultiThreadPeakFinderModule);
-    optimizedQueue.removeIf(step -> step.getModule() instanceof RowsFilterModule);
-    optimizedQueue.removeIf(step -> step.getModule() instanceof CorrelateGroupingModule);
-    optimizedQueue.removeIf(step -> step.getModule() instanceof IonNetworkingModule);
-    optimizedQueue.removeIf(step -> step.getModule() instanceof LipidAnnotationModule);
-    optimizedQueue.removeIf(step -> step.getModule() instanceof SpectralLibrarySearchModule);
-    optimizedQueue.removeIf(step -> step.getModule() instanceof MainSpectralNetworkingModule);
-    optimizedQueue.removeIf(step -> step.getModule() instanceof IsotopeGrouperModule);
-    optimizedQueue.removeIf(step -> step.getModule() instanceof CompoundGrouperModule);
-
-    // use the current project, so we dont import files on every iteration
-    final MZmineProject project = ProjectService.getProject();
-    // decision: reserve immediately before launch so a generational algorithm cannot overshoot the
-    // full-batch budget between termination checks.
-    final int batchExecutionIndex = batchExecutionBudget.reserve();
-    final BatchTask batchTask = BatchModeModule.runBatchQueue(optimizedQueue, project, files, null,
-        null, null, Instant.now(), null, null);
-    final double fullBatchTime = batchTask.getStepTimes().getLast().secondsToFinish();
-
-    while (!batchTask.isFinished() && !batchTask.isCanceled()) {
-      try {
-        TimeUnit.MILLISECONDS.sleep(200);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    if (batchTask.isCanceled() || externalStatus.get() != TaskStatus.PROCESSING) {
-      // we need to throw here, because the the optimizer does not respect
-      // the termination condition with the task status
-      throw new RuntimeException("Batch optimization task was canceled");
-    }
-
-    final FeatureList newest = batchTask.getLatestCreatedFeatureLists().getFirst();
-
-    int objectiveIndex = 0;
-    for (SweepMetric metric : enabledMetrics) {
-      solution.setObjectiveValue(objectiveIndex++, metric.evaluate(newest));
-      metric.applyAttributes(newest, solution);
-    }
-
-    // for tracking only as attribute (not an objective)
-    if (fileOnlyBenchmarkFeatures != null && !fileOnlyBenchmarkFeatures.isEmpty()) {
-      final List<FeatureListRow> rows = newest.getRowsCopy();
-      rows.sort(Comparator.comparing(FeatureListRow::getAverageMZ));
-      solution.setAttribute("Target features",
-          fileOnlyBenchmarkFeatures.stream().parallel().mapToLong(r -> r.getNumMatches(rows))
-              .sum());
-    }
-    solution.setAttribute("Total features", newest.streamFeatures().count());
-    solution.setAttribute("Rows (incl. isotopes)", newest.getRows().size());
-    solution.setAttribute(ATTR_BATCH_RUNTIME_SECONDS, fullBatchTime);
-
-    // decision: computed only when the constraint reads it. Fitting peak models is by far the most
-    // expensive diagnostic - it dominated an evaluation once the sample size was raised - and with
-    // the constraint off nothing consumes the result, so it is pure cost.
-    if (getNumberOfConstraints() > 0) {
-      final long shapeStart = System.nanoTime();
-      final ShapeScoreDiagnostic.Result shape = ShapeScoreDiagnostic.evaluate(newest,
-          ShapeScoreDiagnostic.STRICT_SHAPE_SCORE);
-      solution.setAttribute(ShapeScoreDiagnostic.ATTR_REMOVE_PERCENT, shape.wouldRemovePercent());
-      // decision: a constraint rather than a penalty term, so no score changes meaning and the
-      // algorithm's own constraint domination keeps the search out of the noisy region
-      solution.setConstraintValue(0, shape.wouldRemovePercent());
-      solution.setAttribute(ShapeScoreDiagnostic.ATTR_DOUBLE_PEAK_PERCENT,
-          shape.doublePeakPercent());
-      solution.setAttribute("Shape score sample", shape.inspected());
-      logger.finest("Shape diagnostic: %s (took %.1f s)".formatted(shape,
-          (System.nanoTime() - shapeStart) / 1e9));
-    }
-
-    // decision: always computed, because it is cheap and because it measures the failure mode the
-    // shape diagnostic is blind to - marginal detections that fit a peak model perfectly well
-    final long precisionStart = System.nanoTime();
-    final PrecisionDiagnostic.Result precision = PrecisionDiagnostic.evaluate(newest);
-    solution.setAttribute(PrecisionDiagnostic.ATTR_SINGLE_FILE_PERCENT,
-        precision.singleFilePercent());
-    solution.setAttribute(PrecisionDiagnostic.ATTR_NO_ISOTOPE_PERCENT,
-        precision.withoutIsotopesPercent());
-    solution.setAttribute(PrecisionDiagnostic.ATTR_MEDIAN_HEIGHT, precision.medianHeight());
-    solution.setAttribute(PrecisionDiagnostic.ATTR_LOW_HEIGHT, precision.lowHeight());
-    logger.finest("Precision diagnostic: %s (took %.2f s)".formatted(precision,
-        (System.nanoTime() - precisionStart) / 1e9));
+    final int batchExecutionIndex = batchEvaluator.evaluate(wizardSequence, solution,
+        getNumberOfConstraints() > 0, batchExecutionBudget::reserve);
 
     solution.setAttribute(ATTR_CACHE_HIT, false);
     solution.setAttribute(ATTR_PROPOSAL_INDEX, evaluatedSolutions.size() + 1);
@@ -519,8 +321,6 @@ public class WizardOptimizationProblem extends AbstractProblem {
     evaluatedSolutions.add(solution);
     evaluationCache.put(cacheKey, solution);
     notifyEvaluationCompleted(solution);
-
-    project.removeFeatureLists(batchTask.getLatestCreatedFeatureLists());
   }
 
   private void notifyEvaluationCompleted(@NotNull Solution solution) {
@@ -605,7 +405,6 @@ public class WizardOptimizationProblem extends AbstractProblem {
         .createDefaultParameterPreset().getFactory().create();
     final WizardStepParameters filterParam = initialSequence.get(WizardPart.FILTER).get()
         .createDefaultParameterPreset().getFactory().create();
-//    filterParam.setParameter(FilterWizardParameters.goodPeaksOnly, true);
     final WizardStepParameters imsParam = initialSequence.get(WizardPart.IMS).get()
         .createDefaultParameterPreset().getFactory().create();
     final WizardStepParameters msParam = initialSequence.get(WizardPart.MS).get()
@@ -713,11 +512,11 @@ public class WizardOptimizationProblem extends AbstractProblem {
     return batchExecutionBudget.count();
   }
 
-  public @Nullable List<FeatureRecord> getAllTargets() {
+  public @NotNull List<FeatureRecord> getAllTargets() {
     return target;
   }
 
-  public @Nullable List<FeatureRecord> getFileOnlyBenchmarkFeatures() {
+  public @NotNull List<FeatureRecord> getFileOnlyBenchmarkFeatures() {
     return fileOnlyBenchmarkFeatures;
   }
 

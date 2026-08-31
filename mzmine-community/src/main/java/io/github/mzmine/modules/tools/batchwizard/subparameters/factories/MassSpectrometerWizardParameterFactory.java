@@ -25,15 +25,10 @@
 
 package io.github.mzmine.modules.tools.batchwizard.subparameters.factories;
 
-import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
-import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -97,19 +92,6 @@ public enum MassSpectrometerWizardParameterFactory implements WizardParameterFac
       case LOW_RES -> new MassSpectrometerWizardParameters(this, getDefaultMassDetector(), 0, 0, 0,
           new MZTolerance(0.5, 0), new MZTolerance(0.5, 0), new MZTolerance(0.5, 0));
     };
-  }
-
-  @Override
-  public @NotNull List<ParameterSolutionPrototype> getOptimizationSolutions(
-      @NotNull WizardSequence steps, @NotNull WizardParameterSolutionBuilder dummyBuilder) {
-    return List.of(
-        new WizardParameterSolutionPrototype(dummyBuilder.buildMs1NoiseSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildMs1NoiseSolution),
-        new WizardParameterSolutionPrototype(
-            dummyBuilder.buildScanToScanToleranceSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildScanToScanToleranceSolution),
-        new WizardParameterSolutionPrototype(dummyBuilder.buildMinHeightSolution(-1).variable(),
-            WizardParameterSolutionBuilder::buildMinHeightSolution));
   }
 
   public MassDetectorWizardOptions getDefaultMassDetector() {

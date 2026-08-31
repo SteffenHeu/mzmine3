@@ -57,13 +57,9 @@ import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.algorithm.AbstractAlgorithm;
-import org.moeaframework.algorithm.AbstractEvolutionaryAlgorithm;
 import org.moeaframework.algorithm.MOEAD;
-import org.moeaframework.algorithm.sa.AbstractSimulatedAnnealingAlgorithm;
 import org.moeaframework.core.PRNG;
 import org.moeaframework.core.Solution;
-import org.moeaframework.core.TypedProperties;
-import org.moeaframework.core.configuration.Configurable;
 import org.moeaframework.core.initialization.Initialization;
 import org.moeaframework.core.population.NondominatedPopulation;
 
@@ -72,11 +68,11 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private static final Logger logger = Logger.getLogger(BatchOptimizationMainTask.class.getName());
 
   /**
-   * Initial population size for population-based MOEA algorithms. One evaluation is a full batch
+   * Initial population size for MOEA/D. One evaluation is a full batch
    * run, so the MOEA Framework default of 100 would spend the entire batch budget on initialization
    * and leave no generations for the actual search.
    */
-  private static final int EVOLUTIONARY_POPULATION_SIZE = 20;
+  private static final int MOEAD_POPULATION_SIZE = 20;
 
   /**
    * Safety limit for cheap duplicate proposals per expensive batch execution.
@@ -224,8 +220,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
     addTaskStatusListener((_, newStatus, _) -> externalStatus.set(newStatus));
 
     final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, metadata);
-    final List<FeatureRecord> benchmarkFeatures = WizardOptimizationProblem.extractFeatureRecordsFromFile(
-        null, params);
+    final List<FeatureRecord> benchmarkFeatures = BenchmarkFeatureLoader.fromParameterFile(null,
+        params);
 
     final List<DataFileStatistics> stats = OptimizationUtils.computeFileStatistics(importedFiles,
         benchmarkFeatures, getMemoryMapStorage());
@@ -252,13 +248,14 @@ public class BatchOptimizationMainTask extends AbstractTask {
     final AtomicReference<OptimizationResultsController> resultsController = new AtomicReference<>();
     final AtomicReference<NondominatedPopulation> completedResult = new AtomicReference<>();
 
-    optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(optimizationProblem);
+    final OptimizerOptions optimizerOption = params.getValue(OptimizerParameters.optimizers);
+    optimizer = optimizerOption.getOptimizer(optimizationProblem);
 
     final boolean initWithGuesses = params.getValue(
         OptimizerParameters.initializeWithRawDataGuesses);
 
     final Map<String, Double> singlePassEstimates = SinglePassParameterEstimation.estimate(stats,
-        optimizationProblem.getBuilder());
+        optimizationProblem.getBuilder(), sequence);
     final Solution singlePassSolution = optimizationProblem.newSolution();
 
     // decision: always derive and evaluate the raw data estimate, also when it is not used to
@@ -294,10 +291,13 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     final List<Solution> injected;
     if (initWithGuesses) {
-      // decision: fill the whole evolutionary population from the estimate because uniform random
+      // decision: fill the whole MOEA/D population from the estimate because uniform random
       // samples measured far worse. Pattern search consumes only the exact estimate.
-      final int initialDesignSize = initialDesignSize(optimizer);
-      final WarmStartSampling sampling = params.getValue(OptimizerParameters.warmStartSampling);
+      final int initialDesignSize = initialDesignSize(optimizerOption);
+      final WarmStartSampling sampling = switch (optimizerOption) {
+        case PATTERN_SEARCH -> WarmStartSampling.GAUSSIAN;
+        case MOEAD -> params.getValue(OptimizerParameters.warmStartSampling);
+      };
       injected = SinglePassParameterEstimation.createWarmStartSolutions(optimizationProblem,
           singlePassEstimates, initialDesignSize, sampling);
       logger.info("Warm-start enabled for %s: injected %d solutions, batch budget %d".formatted(
@@ -314,9 +314,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
       injected = List.of();
     }
 
-    // decision: size population-based algorithms explicitly. Without this the optimizer keeps the
-    // MOEA Framework default of 100, which equals or exceeds the whole batch budget.
-    configureInitialPopulation(optimizer, optimizationProblem, injected);
+    configureOptimizer(optimizerOption, optimizer, optimizationProblem, injected);
 
     try {
       final int maxProposals = Math.multiplyExact(totalBatchExecutions, PROPOSAL_BUDGET_MULTIPLIER);
@@ -345,7 +343,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
     result.addAll(optimizer.getResult());
     result.addAll(optimizationProblem.getEvaluatedSolutions());
 
-    // log comparison: single-pass vs best MOEA result
+    // log comparison: single-pass estimate versus the best optimizer result
     SinglePassParameterEstimation.logResults(singlePassSolution, singlePassEstimates,
         optimizationProblem.getEnabledMetrics());
     SinglePassParameterEstimation.logComparison(singlePassSolution, result,
@@ -394,56 +392,39 @@ public class BatchOptimizationMainTask extends AbstractTask {
   }
 
   /**
-   * Sets the initial population size and injects the raw data-derived warm-start solutions through
-   * the channel supported by the concrete algorithm.
+   * Configures the two supported algorithms and injects raw data-derived start solutions.
    *
-   * @param injected solutions to seed the search with. May be empty, in which case population-based
-   *                 algorithms initialize randomly and pattern search starts at the box center.
+   * @param injected solutions to seed the search with. May be empty, in which case MOEA/D
+   *                 initializes randomly and pattern search starts at the box center.
    */
-  private void configureInitialPopulation(@NotNull AbstractAlgorithm algorithm,
+  private void configureOptimizer(@NotNull OptimizerOptions option,
+      @NotNull AbstractAlgorithm algorithm,
       @NotNull WizardOptimizationProblem problem, @NotNull List<Solution> injected) {
-
-    // decision: populationSize is an annotated @Property on every algorithm that exposes it, so it
-    // can be set uniformly instead of per class. Algorithms without the property (CMAES, OMOPSO,
-    // SMPSO) ignore the key rather than failing.
-    if (algorithm instanceof Configurable configurable) {
-      final TypedProperties config = new TypedProperties();
-      config.setInt("populationSize", EVOLUTIONARY_POPULATION_SIZE);
-      configurable.applyConfiguration(config);
-    }
-
-    // the initialization is not a scalar property, so it still needs a type check
-    final Initialization initialization = new OriginTaggingInitialization(problem, injected);
-    switch (algorithm) {
-      case MOEAD moead -> {
+    switch (option) {
+      case MOEAD -> {
+        final MOEAD moead = (MOEAD) algorithm;
+        moead.setInitialPopulationSize(MOEAD_POPULATION_SIZE);
+        final Initialization initialization = new OriginTaggingInitialization(problem, injected);
         moead.setInitialization(initialization);
         // at the MOEA/D default of 20 the neighborhood equals the population, so mating draws
         // from the whole population and the decomposition loses the locality it relies on.
         // assumption: the floor of 4 keeps the neighborhood above the differential evolution arity
         // of 4 minus 1, which MOEA/D requires now that the solution vector is all real-valued
-        moead.setNeighborhoodSize(Math.max(4, EVOLUTIONARY_POPULATION_SIZE / 5));
+        moead.setNeighborhoodSize(Math.max(4, MOEAD_POPULATION_SIZE / 5));
         // the variation operator is chosen in the MOEAD constructor from whether every variable is
         // real-valued, so log it - "de+pm" confirms MOEA/D-DE, "sbx+pm+hux+bf" means the vector
         // still contains a non-real variable and the decomposition fell back to SBX
         logger.info("MOEA/D using variation %s, neighborhood %d, population %d".formatted(
-            moead.getVariation().getName(), moead.getNeighborhoodSize(),
-            EVOLUTIONARY_POPULATION_SIZE));
+            moead.getVariation().getName(), moead.getNeighborhoodSize(), MOEAD_POPULATION_SIZE));
       }
-      // covers NSGA-II/III, U-NSGA-III, eps-NSGA-II, AGE-MOEA-II, GDE3, IBEA, RVEA, SMS-EMOA,
-      // SPEA2, eps-MOEA, DBEA and PAES
-      case AbstractEvolutionaryAlgorithm ea -> ea.setInitialization(initialization);
-      case AbstractSimulatedAnnealingAlgorithm sa -> sa.setInitialization(initialization);
-      case PatternSearchAlgorithm patternSearch -> patternSearch.setInitialSolutions(injected);
-      // OMOPSO, SMPSO and CMAES do not expose the initialization and start from their own defaults
-      default -> logger.warning(
-          "%s cannot be warm-started and will initialize randomly.".formatted(algorithm.getName()));
+      case PATTERN_SEARCH -> ((PatternSearchAlgorithm) algorithm).setInitialSolutions(injected);
     }
   }
 
-  private int initialDesignSize(@NotNull AbstractAlgorithm algorithm) {
-    return switch (algorithm) {
-      case PatternSearchAlgorithm _ -> PatternSearchAlgorithm.INITIAL_DESIGN_SIZE;
-      default -> EVOLUTIONARY_POPULATION_SIZE;
+  private int initialDesignSize(@NotNull OptimizerOptions option) {
+    return switch (option) {
+      case PATTERN_SEARCH -> PatternSearchAlgorithm.INITIAL_DESIGN_SIZE;
+      case MOEAD -> MOEAD_POPULATION_SIZE;
     };
   }
 }

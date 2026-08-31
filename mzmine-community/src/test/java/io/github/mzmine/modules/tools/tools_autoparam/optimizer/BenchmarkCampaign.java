@@ -26,6 +26,9 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
@@ -36,6 +39,8 @@ import org.jetbrains.annotations.Nullable;
  * Stable filename suffix for one benchmark configuration.
  */
 final class BenchmarkCampaign {
+
+  static final String OUTPUT_DIRECTORY_PROPERTY = "mzmine.test.autoparam.outputDir";
 
   private final @NotNull String id;
 
@@ -59,7 +64,17 @@ final class BenchmarkCampaign {
   }
 
   @NotNull File outputFile(@NotNull String stem) {
-    return new File("%s-%s.csv".formatted(stem, id)).getAbsoluteFile();
+    return outputDirectory().resolve("%s-%s.csv".formatted(stem, id)).toFile().getAbsoluteFile();
+  }
+
+  static @NotNull Path outputDirectory() {
+    final Path directory = Path.of(
+        System.getProperty(OUTPUT_DIRECTORY_PROPERTY, "build/autoparam-benchmarks"));
+    try {
+      return Files.createDirectories(directory);
+    } catch (IOException e) {
+      throw new IllegalStateException("Cannot create benchmark output directory " + directory, e);
+    }
   }
 
   @NotNull String id() {

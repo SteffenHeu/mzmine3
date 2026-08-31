@@ -25,7 +25,11 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import io.github.mzmine.modules.tools.batchwizard.WizardPart;
+import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.IonMobilityWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.HarmonicSlawIsotopes;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
@@ -64,14 +68,16 @@ public final class SinglePassParameterEstimation {
   /**
    * Estimates a single value for each optimization parameter based on raw data statistics.
    *
-   * @param stats   per-file statistics from
-   *                {@link io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask}
-   * @param builder the builder that defines parameter ranges and instrument type
+   * @param stats    per-file statistics from
+   *                 {@link io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask}
+   * @param builder  the builder that defines parameter ranges and instrument type
+   * @param sequence selected wizard presets, providing defaults for parameters that cannot yet be
+   *                 estimated from the raw data
    * @return map of variable name to estimated value
    */
   public static @NotNull Map<String, Double> estimate(
       @NotNull List<@NotNull DataFileStatistics> stats,
-      @NotNull WizardParameterSolutionBuilder builder) {
+      @NotNull WizardParameterSolutionBuilder builder, @NotNull WizardSequence sequence) {
 
     final Map<String, Double> estimates = new LinkedHashMap<>();
 
@@ -128,6 +134,16 @@ public final class SinglePassParameterEstimation {
     estimates.put("Top-to-edge ratio", 1.7);
     estimates.put("Chrom. Threshold", 0.85);
     estimates.put("Wavelet SNR threshold", 5d);
+
+    // No raw-data estimator exists for mobility peak width yet. Start at the selected preset's
+    // factory default so the initial solution is complete and deterministic rather than NaN.
+    sequence.get(WizardPart.IMS).filter(
+            step -> step.getFactory() instanceof IonMobilityWizardParameterFactory factory
+                && factory != IonMobilityWizardParameterFactory.NO_IMS).map(
+            step -> step.createDefaultParameterPreset()
+                .getValue(IonMobilityWizardParameters.approximateImsFWHM))
+        .filter(value -> value != null && Double.isFinite(value))
+        .ifPresent(value -> estimates.put(OptimizationParameterRegistry.MOBILITY_FWHM_NAME, value));
 
     return estimates;
   }

@@ -25,8 +25,6 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 
-import static io.github.mzmine.modules.tools.batchwizard.WizardPart.WORKFLOW;
-
 import com.opencsv.ICSVWriter;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
@@ -242,7 +240,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
     final WizardSequence sequenceSteps = wizardTab.getSequence();
 
-    final Optional<WizardStepParameters> workflow = sequenceSteps.get(WORKFLOW);
+    final Optional<WizardStepParameters> workflow = sequenceSteps.get(WizardPart.WORKFLOW);
     if (workflow.isEmpty()) {
       DialogLoggerUtil.showErrorDialog("Cannot create batch",
           "A workflow must be selected to create a batch.");
@@ -262,14 +260,14 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
   private void runBatchFilterResults() {
     final BatchQueue q = createOptimizedBatch();
-    BatchModeParameters batchModeParameters = (BatchModeParameters) MZmineCore.getConfiguration()
+    final BatchModeParameters batchModeParameters = (BatchModeParameters) MZmineCore.getConfiguration()
         .getModuleParameters(BatchModeModule.class);
     batchModeParameters.getParameter(BatchModeParameters.batchQueue).setValue(q);
 
     final BatchTask batchTask = new BatchTask(ProjectService.getProject(), batchModeParameters,
         Instant.now(), null);
     TaskService.getController().addTask(batchTask);
-    new AllTasksFinishedListener(List.of(batchTask), l -> {
+    new AllTasksFinishedListener(List.of(batchTask), _ -> {
       final List<FeatureList> latestFlists = batchTask.getLatestCreatedFeatureLists();
       if (latestFlists.size() != 1) {
         throw new IllegalStateException(
@@ -279,34 +277,29 @@ public class OptimizationResultsController extends FxController<OptimizationResu
       final List<FeatureListRow> mzSortedRows = flist.stream()
           .sorted(FeatureListRowSorter.MZ_ASCENDING).toList();
 
-      if (optimization.getFileOnlyBenchmarkFeatures() != null) {
-        for (FeatureRecord t : optimization.getFileOnlyBenchmarkFeatures()) {
-          final FeatureListRow bestMatch = t.getBestMatch(mzSortedRows);
-          if (bestMatch == null) {
-            continue;
-          }
-          final SimpleCompoundDBAnnotation a = new SimpleCompoundDBAnnotation();
-          a.put(CompoundNameType.class, "target feature");
-          bestMatch.addCompoundAnnotation(a);
+      for (final FeatureRecord target : optimization.getFileOnlyBenchmarkFeatures()) {
+        final FeatureListRow bestMatch = target.getBestMatch(mzSortedRows);
+        if (bestMatch == null) {
+          continue;
         }
+        final SimpleCompoundDBAnnotation annotation = new SimpleCompoundDBAnnotation();
+        annotation.put(CompoundNameType.class, "target feature");
+        bestMatch.addCompoundAnnotation(annotation);
       }
 
       final ModularFeatureList copy = FeatureListUtils.createCopy(flist, null, " target", null,
           false, flist.getRawDataFiles(), false, null, null);
-      final List<FeatureListRow> annotated = new ArrayList<>();
-      if (optimization.getAllTargets() != null) {
-        for (FeatureRecord target : optimization.getAllTargets()) {
-          final FeatureListRow bestMatch = target.getBestMatch(mzSortedRows);
-          if (bestMatch == null) {
-            continue;
-          }
-          final SimpleCompoundDBAnnotation a = new SimpleCompoundDBAnnotation();
-          a.put(CompoundNameType.class, "benchmark feature");
-          ModularFeatureListRow annotatedRow = new ModularFeatureListRow(copy,
-              (ModularFeatureListRow) bestMatch, true);
-          annotatedRow.addCompoundAnnotation(a);
-          copy.addRow(annotatedRow);
+      for (final FeatureRecord target : optimization.getAllTargets()) {
+        final FeatureListRow bestMatch = target.getBestMatch(mzSortedRows);
+        if (bestMatch == null) {
+          continue;
         }
+        final SimpleCompoundDBAnnotation annotation = new SimpleCompoundDBAnnotation();
+        annotation.put(CompoundNameType.class, "benchmark feature");
+        final ModularFeatureListRow annotatedRow = new ModularFeatureListRow(copy,
+            (ModularFeatureListRow) bestMatch, true);
+        annotatedRow.addCompoundAnnotation(annotation);
+        copy.addRow(annotatedRow);
       }
       FxThread.runLater(() -> ProjectService.getProject().addFeatureList(copy));
     });

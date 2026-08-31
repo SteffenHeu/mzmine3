@@ -31,28 +31,12 @@ import org.moeaframework.algorithm.MOEAD;
 import org.moeaframework.problem.AbstractProblem;
 
 public enum OptimizerOptions {
-  PATTERN_SEARCH, MOEAD/*, NSGA_II, NSGA_III, AGEMOEA_II, AMOSA, DBEA, CMAES, GDE3, OMOPSO, RVEA, SMPSO, SMSEMOA, SPEA2, UNSGAIII, EpsilonMOEA, EpsilonNSGAII, IBEA*/;
+  PATTERN_SEARCH, MOEAD;
 
   public @NotNull AbstractAlgorithm getOptimizer(@NotNull AbstractProblem problem) {
     return switch (this) {
       case PATTERN_SEARCH -> new PatternSearchAlgorithm(problem);
       case MOEAD -> new MOEAD(problem);
-      /*case NSGA_II -> new NSGAII(problem);
-      case NSGA_III -> new NSGAIII(problem);
-      case AGEMOEA_II -> new AGEMOEAII(problem);
-      case AMOSA -> new AMOSA(problem);
-      case DBEA -> new DBEA(problem);
-      case CMAES -> new CMAES(problem);
-      case GDE3 -> new GDE3(problem);
-      case OMOPSO -> new OMOPSO(problem);
-      case RVEA -> new RVEA(problem);
-      case SMPSO -> new SMPSO(problem);
-      case SMSEMOA -> new SMSEMOA(problem);
-      case SPEA2 -> new SPEA2(problem);
-      case UNSGAIII -> new UNSGAIII(problem);
-      case EpsilonMOEA -> new EpsilonMOEA(problem);
-      case EpsilonNSGAII -> new EpsilonNSGAII(problem);
-      case IBEA -> new IBEA(problem);*/
     };
   }
 }

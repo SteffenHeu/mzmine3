@@ -14,7 +14,8 @@ of the search, not its structure.
 ## How the evidence was produced
 
 `EstimateVsOptimumTest` runs the real `BatchOptimizationMainTask` headlessly over a list of datasets
-and seeds, writing two configuration-suffixed csv files next to the module:
+and seeds, writing two configuration-suffixed CSV files under `build/autoparam-benchmarks` by
+default:
 
 - `autoparam-all-evaluations-<campaign>.csv` — every proposal of every run, with elapsed time,
   effective parameter values, metrics, and diagnostics.
@@ -22,6 +23,9 @@ and seeds, writing two configuration-suffixed csv files next to the module:
 
 The generated campaign suffix encodes the optimizer, metric, sampling, batch ceiling, seeds and
 dataset selection. Set `-Dmzmine.test.autoparam.campaign=<short-name>` to use an explicit suffix.
+The CSV files used for the findings in this note are retained in
+[the optimizer test resources](../../mzmine-community/src/test/resources/io/github/mzmine/modules/tools/tools_autoparam/optimizer/results/),
+separate from newly generated output.
 
 `EstimatorStatisticsDumpTest` runs only the statistics pass (~30 s for all datasets, no batches) and
 dumps the raw distributions the estimator takes its quantiles from, so candidate derivations can be
@@ -29,6 +33,8 @@ evaluated offline instead of by rerunning optimizations.
 
 ```
 .\gradlew.bat "-Dmzmine.test.maxHeap=40g" \
+  "-Dmzmine.test.autoparam.run=true" \
+  "-Dmzmine.test.autoparam.dataRoot=D:/path/to/benchmark-data" \
   "-Dmzmine.test.autoparam.optimizer=PATTERN_SEARCH" \
   "-Dmzmine.test.autoparam.iterations=30" \
   "-Dmzmine.test.autoparam.seeds=42,7,101" \

@@ -58,6 +58,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -72,26 +73,29 @@ import testutils.MZmineTestUtil;
  * its output is the printed table plus configuration-specific csv files. Every dataset costs a full
  * optimization, so it is minutes to hours depending on {@link #ITERATIONS_PROPERTY}.
  * <p>
- * Point it at data with {@code -Dmzmine.test.autoparam.dataRoot=<folder>} and extend
- * {@link #DATASETS}. The test skips when no configured dataset is present, so it is inert on
- * machines without the data.
+ * Enable it explicitly with {@code -Dmzmine.test.autoparam.run=true}, then point it at data with
+ * {@code -Dmzmine.test.autoparam.dataRoot=<folder>}. Generated CSV files go to
+ * {@code build/autoparam-benchmarks} unless {@code mzmine.test.autoparam.outputDir} is set.
  */
+@Tag("benchmark")
 @TestInstance(Lifecycle.PER_CLASS)
 public class EstimateVsOptimumTest {
 
   private static final Logger logger = Logger.getLogger(EstimateVsOptimumTest.class.getName());
 
-  private static final String THERMO_20_YEARS = "D:/OneDrive - mzio GmbH/Example data - Documents/Thermo/20 years mzmine/";
-  private static final String ZENOTOF_PLASMA = "D:/OneDrive - mzio GmbH/Example data - Documents/SCIEX/ZenoTOF/RawData/1_Srm1950_DDA/";
-  private static final String ZENOTOF_FECES = "D:/OneDrive - mzio GmbH/Example data - Documents/SCIEX/ZenoTOF/RawData/3_Feces_DDA/";
-  private static final String TIMSTOF = "D:/OneDrive - mzio GmbH/Example data - Documents/Bruker/"
+  static final String RUN_PROPERTY = "mzmine.test.autoparam.run";
+
+  private static final String THERMO_20_YEARS = "Thermo/20 years mzmine/";
+  private static final String ZENOTOF_PLASMA = "SCIEX/ZenoTOF/RawData/1_Srm1950_DDA/";
+  private static final String ZENOTOF_FECES = "SCIEX/ZenoTOF/RawData/3_Feces_DDA/";
+  private static final String TIMSTOF = "Bruker/"
       + "timsTOF/2026_asms_nist_srm_1950_timsMetabo/for_mzio/";
-  private static final String AGILENT_6550 = "D:/OneDrive - mzio GmbH/Example data - Documents/Agilent/Agilent 6550_Zamboni/";
-  private static final String MSV000094173 = "E:/MSV000094173/";
+  private static final String AGILENT_6550 = "Agilent/Agilent 6550_Zamboni/";
+  private static final String MSV000094173 = "MSV000094173/";
 
   /**
-   * Datasets to compare. Absolute paths are used as given, relative ones are resolved against
-   * {@code mzmine.test.autoparam.dataRoot}.
+   * Datasets to compare. Paths are relative to {@code mzmine.test.autoparam.dataRoot}; select a
+   * compatible subset when the example-data and MSV collections have different roots.
    * <p>
    * assumption: UHPLC throughout. None of these are labelled with their column, and the ion
    * interface preset only seeds the estimator's retention time ranges, so a wrong choice shows up
@@ -338,6 +342,8 @@ public class EstimateVsOptimumTest {
   @Test
   @DisplayName("tabulate the raw data estimate against the optimization result per dataset")
   void compareEstimateAgainstOptimum() {
+    Assumptions.assumeTrue(Boolean.getBoolean(RUN_PROPERTY),
+        "real-data optimizer benchmark is opt-in; enable with -D%s=true".formatted(RUN_PROPERTY));
     // a typo in a long path looks exactly like an absent dataset, so say which files are missing
     // instead of only reporting that nothing ran
     final List<String> unavailable = DATASETS.stream().map(BenchmarkDataset::unavailableReason)
@@ -347,7 +353,7 @@ public class EstimateVsOptimumTest {
     final List<BenchmarkDataset> available = DATASETS.stream()
         .filter(EstimateVsOptimumTest::isSelected).filter(BenchmarkDataset::isAvailable).toList();
     Assumptions.assumeFalse(available.isEmpty(),
-        "no configured dataset is present, see the warnings above. Paths are absolute or relative to -D%s".formatted(
+        "no configured dataset is present, see the warnings above. Paths are relative to -D%s".formatted(
             BenchmarkDataset.DATA_ROOT_PROPERTY));
 
     // checked before the first batch, because the optimizer keeps every result list in memory and
@@ -424,7 +430,7 @@ public class EstimateVsOptimumTest {
     // decision: single objective, so index 0 is the only metric and the front holds at most one
     // meaningfully different solution
     final Solution estimate = outcome.estimateSolution();
-    final Solution perturbed = outcome.bestFeasible(0, SolutionOrigin.PERTURBED);
+    final Solution perturbed = bestFeasible(outcome, 0, SolutionOrigin.PERTURBED);
     final Solution front = bestOfFront(outcome);
 
     final List<ComparisonRow> rows = new ArrayList<>();
@@ -446,11 +452,10 @@ public class EstimateVsOptimumTest {
       trajectory.add(describeEvaluation(dataset, seed, solution));
     }
 
-    final Map<String, Double> estimateValues = OptimizationOutcome.parameterValues(estimate);
+    final Map<String, Double> estimateValues = parameterValues(estimate);
     final Map<String, Double> perturbedValues =
-        perturbed == null ? Map.of() : OptimizationOutcome.parameterValues(perturbed);
-    final Map<String, Double> frontValues =
-        front == null ? Map.of() : OptimizationOutcome.parameterValues(front);
+        perturbed == null ? Map.of() : parameterValues(perturbed);
+    final Map<String, Double> frontValues = front == null ? Map.of() : parameterValues(front);
     for (final Map.Entry<String, Double> entry : estimateValues.entrySet()) {
       if (MZ_TOLERANCE_OPTION.equals(entry.getKey())) {
         // the ordinal is an index into a per-instrument list, so index 3 is a different tolerance on
@@ -482,7 +487,32 @@ public class EstimateVsOptimumTest {
         best = solution;
       }
     }
-    return best != null ? best : outcome.bestFeasible(0, null);
+    return best != null ? best : bestFeasible(outcome, 0, null);
+  }
+
+  private static @Nullable Solution bestFeasible(@NotNull OptimizationOutcome outcome,
+      int objectiveIndex, @Nullable SolutionOrigin origin) {
+    Solution best = null;
+    for (final Solution solution : outcome.evaluatedSolutions()) {
+      if (!solution.isFeasible() || (origin != null && SolutionOrigin.of(solution) != origin)) {
+        continue;
+      }
+      if (best == null
+          || solution.getObjective(objectiveIndex).compareTo(best.getObjective(objectiveIndex))
+          < 0) {
+        best = solution;
+      }
+    }
+    return best;
+  }
+
+  private static @NotNull Map<String, Double> parameterValues(@NotNull Solution solution) {
+    final Map<String, Double> values = new LinkedHashMap<>();
+    for (int index = 0; index < solution.getNumberOfVariables(); index++) {
+      values.put(solution.getVariable(index).getName(),
+          OrdinalIntegerVariable.effectiveValue(solution, index));
+    }
+    return values;
   }
 
   private static @Nullable Double objectiveOrNull(@Nullable Solution solution) {
@@ -668,7 +698,7 @@ public class EstimateVsOptimumTest {
     row.put("feasible", Boolean.toString(solution.isFeasible()));
 
     // the effective values, so a row says what the batch actually ran with
-    OptimizationOutcome.parameterValues(solution)
+    parameterValues(solution)
         .forEach((name, value) -> row.put(name, Double.toString(value)));
     // the tolerance ordinal is an index into a per-instrument list, so resolve it as well
     final MZTolerance tolerance = mzTolerance(solution);

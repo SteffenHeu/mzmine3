@@ -96,9 +96,8 @@ public enum SolutionOrigin {
    * <p>
    * assumption: an untagged solution reaching the evaluation is offspring. Variation operators
    * build their children with {@link Solution#copy()}, which copies the variables but deliberately
-   * not the attributes, so a child never inherits its parent's origin. The exception are the
-   * optimizers that do not expose their initialization at all (CMA-ES, OMOPSO, SMPSO); their
-   * initial population is untagged and therefore counted as evolution.
+   * not the attributes, so a child never inherits its parent's origin. Both supported optimizers
+   * tag their initial candidates explicitly.
    */
   public void applyIfAbsent(@NotNull Solution solution) {
     if (!solution.hasAttribute(ATTRIBUTE)) {

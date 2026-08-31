@@ -238,24 +238,11 @@ public class WizardParameterSolutionBuilder {
         () -> new RealVariable("FWHM", minFwhm, maxFwhm));
   }
 
-  public @NotNull WizardParameterSolution buildMaxPeaksSolution(int index) {
-    WizardParameterSolution maxPeaks = new IntegerWizardParameterSolution(index,
-        WizardPart.ION_INTERFACE, IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram,
-        () -> new OrdinalIntegerVariable("Max peaks", 5, 100));
-    return maxPeaks;
-  }
-
   public @NotNull WizardParameterSolution buildMinConsecutiveSolution(int index) {
     return new IntegerWizardParameterSolution(index, WizardPart.ION_INTERFACE,
         IonInterfaceHplcWizardParameters.minNumberOfDataPoints,
         () -> new OrdinalIntegerVariable("Min consecutive", (int) minMinDp, (int) maxMinDp));
   }
-
-//  public @NotNull WizardParameterSolution buildTopToEdgeSolution(int index) {
-//    return new DoubleWizardParameterSolution(index, WizardPart.,
-//        IonInterfaceHplcWizardParameters.minNumberOfDataPoints,
-//        () -> new RealVariable("Top-to-Edge", 1.2, 4));
-//  }
 
   public @NotNull WizardParameterSolution buildMs1NoiseSolution(int index) {
     final Supplier<RealVariable> var = switch (massDetectorType) {

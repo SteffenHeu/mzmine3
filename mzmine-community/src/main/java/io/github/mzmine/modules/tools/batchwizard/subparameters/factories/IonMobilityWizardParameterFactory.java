@@ -26,17 +26,9 @@
 package io.github.mzmine.modules.tools.batchwizard.subparameters.factories;
 
 import io.github.mzmine.datamodel.MobilityType;
-import io.github.mzmine.modules.tools.batchwizard.WizardPart;
-import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonMobilityWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolution.DoubleWizardParameterSolution;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
-import java.util.List;
 import org.jetbrains.annotations.NotNull;
-import org.moeaframework.core.variable.RealVariable;
 
 /**
  * the defaults should not change the name of enum values. if strings are needed, override the
@@ -82,31 +74,6 @@ public enum IonMobilityWizardParameterFactory implements WizardParameterFactory 
   public @NotNull String getUniqueID() {
     return name();
   }
-
-  @Override
-  public @NotNull List<ParameterSolutionPrototype> getOptimizationSolutions(
-      @NotNull WizardSequence steps, @NotNull WizardParameterSolutionBuilder dummyBuilder) {
-
-    return switch (this) {
-      case TIMS -> List.of(
-          new WizardParameterSolutionPrototype(() -> new RealVariable("FWHM (mobility)", 0.003, 0.02),
-              (_, index) -> new DoubleWizardParameterSolution(index, WizardPart.IMS,
-                  IonMobilityWizardParameters.approximateImsFWHM,
-                  () -> new RealVariable("FWHM (mobility)", 0.003, 0.02))));
-      case IMS, DTIMS, TWIMS -> List.of(
-          new WizardParameterSolutionPrototype(() -> new RealVariable("FWHM (mobility)", 0.1, 5),
-              (_, index) -> new DoubleWizardParameterSolution(index, WizardPart.IMS,
-                  IonMobilityWizardParameters.approximateImsFWHM,
-                  () -> new RealVariable("FWHM (mobility)", 0.1, 5))));
-      case SLIM -> List.of(
-          new WizardParameterSolutionPrototype(() -> new RealVariable("FWHM (mobility)", 1, 20),
-              (_, index) -> new DoubleWizardParameterSolution(index, WizardPart.IMS,
-                  IonMobilityWizardParameters.approximateImsFWHM,
-                  () -> new RealVariable("FWHM (mobility)", 1, 20))));
-      case NO_IMS -> List.of();
-    };
-  }
-
 
   /**
    * Not all combinations work.
