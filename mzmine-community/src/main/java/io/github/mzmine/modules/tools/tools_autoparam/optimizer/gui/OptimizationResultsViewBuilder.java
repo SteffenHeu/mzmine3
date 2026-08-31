@@ -296,9 +296,7 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
 
     final List<ObjectiveWrapper> wrappers = ObjectiveWrapper.extract(solutions);
     for (ObjectiveWrapper wrapper : wrappers) {
-      final TableColumn<Solution, Number> col =
-          wrapper.isHarmonic() ? wrapper.createNormalizedHarmonicColumn(solutions)
-              : wrapper.createColumn();
+      final TableColumn<Solution, Number> col = wrapper.createColumn();
       solutionTable.getColumns().add(col);
     }
 

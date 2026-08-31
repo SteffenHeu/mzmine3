@@ -32,12 +32,9 @@ import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.BenchmarkTargetCount;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
-import io.github.mzmine.parameters.parametertypes.BooleanParameter;
-import io.github.mzmine.parameters.parametertypes.ComboParameter;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.ImportTypeParameter;
@@ -45,6 +42,7 @@ import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileSelectionType;
+import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnumComboParameter;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.files.ExtensionFilters;
 import java.util.ArrayList;
@@ -56,24 +54,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class OptimizerParameters extends SimpleParameterSet {
 
-  /**
-   * All available metrics as ordered singleton instances. {@link BenchmarkTargetCount} uses an
-   * empty placeholder list — at runtime the real target list is injected by
-   * {@link WizardOptimizationProblem#buildEnabledMetrics}.
-   */
-  public static final List<SweepMetric> ALL_METRICS = List.of(SweepMetric.IPO_ISOTOPE_SCORE,
-      SweepMetric.SLAW_INTEGRATION_SCORE, SweepMetric.HARMONIC_SLAW_ISOTOPES,
-      SweepMetric.YASIN_ISOTOPE_SCORE, SweepMetric.DOUBLE_PEAK_RATIO, SweepMetric.FILL_RATIO,
-      SweepMetric.GC_EI_FRAGMENT_QUALITY, new BenchmarkTargetCount(List.of()));
-
-  /**
-   * Default metric enabled at startup.
-   */
-  private static final List<SweepMetric> DEFAULT_METRICS = List.of(SweepMetric.YASIN_ISOTOPE_SCORE);
-
-  public static final SweepMetricCheckListParameter metricsToOptimize = new SweepMetricCheckListParameter(
-      "Metrics to optimize", "Select which quality metrics should drive the optimization.",
-      ALL_METRICS, new ArrayList<>(DEFAULT_METRICS));
+  public static final ModuleOptionsEnumComboParameter<OptimizerOptions> optimizers = new ModuleOptionsEnumComboParameter<>(
+      "Optimizer", "Choose the search algorithm and configure its specific settings.",
+      OptimizerOptions.values(), OptimizerOptions.PATTERN_SEARCH);
 
   private static final List<ImportType<?>> DEFAULT_IMPORT_TYPES = List.of(
       new ImportType<>(true, "mz", new MZType()), new ImportType<>(true, "rt", new RTType()),
@@ -90,9 +73,6 @@ public class OptimizerParameters extends SimpleParameterSet {
       "Maximum number of uncached full batch executions, including the raw-data estimate. Cached "
           + "duplicate proposals do not consume this budget.", 100, 30, 10_000);
 
-  public static final BooleanParameter initializeWithRawDataGuesses = new BooleanParameter(
-      "Initialize with raw data-based defaults", "", true);
-
   public static final OptionalParameter<DoubleParameter> maxShapeRejectionFactor = new OptionalParameter<>(
       new DoubleParameter("Max shape rejection factor", """
           Rejects parameter sets that produce badly shaped peaks, as a multiple of the rate measured \
@@ -101,20 +81,6 @@ public class OptimizerParameters extends SimpleParameterSet {
           noise. This limits how much worse than the estimate a solution's chromatographic shape \
           quality may get, without changing any score.""",
           ConfigService.getGuiFormats().scoreFormat(), 1.5, 1.0, 100.0), true);
-
-  public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
-      "Optimizer", "Pattern search supports "
-      + "one selected metric; MOEA/D also supports multiple objectives.",
-      OptimizerOptions.values(), OptimizerOptions.MOEAD);
-
-  public static final ComboParameter<WarmStartSampling> warmStartSampling = new ComboParameter<>(
-      "Warm start sampling", """
-      How the MOEA/D initial population is spread around the raw data estimate. Pattern search
-      starts directly at the estimate and does not use this setting.
-      The initial attempts decide most of the result, and independent draws leave their coverage \
-      to chance - the same data can score up to twice as differently depending only on the random \
-      seed. A space-filling sequence covers the same neighbourhood the same way every run.""",
-      WarmStartSampling.values(), WarmStartSampling.GAUSSIAN);
 
   /**
    * All available optimization targets as {@link ParameterSolutionPrototype} prototypes. Wizard
@@ -129,8 +95,8 @@ public class OptimizerParameters extends SimpleParameterSet {
       new ArrayList<>(DEFAULT_SOLUTIONS));
 
   public OptimizerParameters() {
-    super(metricsToOptimize, benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
-        initializeWithRawDataGuesses, warmStartSampling, maxShapeRejectionFactor, paramToOptimize);
+    super(benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
+        maxShapeRejectionFactor, paramToOptimize);
   }
 
   /**
@@ -152,13 +118,48 @@ public class OptimizerParameters extends SimpleParameterSet {
   public static @NotNull ParameterSet create(@NotNull List<SweepMetric> metrics,
       int numIterations) {
     final ParameterSet param = new OptimizerParameters().cloneParameterSet();
-    param.setParameter(metricsToOptimize, new ArrayList<>(metrics));
+    setOptimizerAndTargets(param, OptimizerOptions.MOEAD, metrics);
     param.setParameter(benchmarkFeatureTypes, DEFAULT_IMPORT_TYPES);
     param.setParameter(benchmarkFeaturesFile, false);
     param.setParameter(iterations, numIterations);
     param.setParameter(maxShapeRejectionFactor, false);
     param.setParameter(paramToOptimize, new ArrayList<>(DEFAULT_SOLUTIONS));
     return param;
+  }
+
+  /**
+   * Selects an optimizer and writes its algorithm-specific objective parameter.
+   */
+  public static void setOptimizerAndTargets(@NotNull ParameterSet parameters,
+      @NotNull OptimizerOptions optimizer, @NotNull List<SweepMetric> targets) {
+    if (targets.isEmpty()) {
+      throw new IllegalArgumentException("At least one optimization target is required.");
+    }
+
+    final ParameterSet optimizerParameters = parameters.getParameter(optimizers)
+        .setOptionGetParameters(optimizer);
+    switch (optimizer) {
+      case PATTERN_SEARCH -> {
+        if (targets.size() != 1) {
+          throw new IllegalArgumentException("Pattern search requires exactly one target.");
+        }
+        optimizerParameters.setParameter(PatternSearchOptimizerParameters.optimizationTarget,
+            targets.getFirst());
+      }
+      case MOEAD -> optimizerParameters.setParameter(MoeadOptimizerParameters.optimizationTargets,
+          new ArrayList<>(targets));
+    }
+  }
+
+  public static @NotNull ParameterSet getSelectedOptimizerParameters(
+      @NotNull ParameterSet parameters) {
+    return parameters.getParameter(optimizers).getEmbeddedParameters();
+  }
+
+  public static @NotNull List<SweepMetric> getOptimizationTargets(
+      @NotNull ParameterSet parameters) {
+    final OptimizerOptions optimizer = parameters.getValue(optimizers);
+    return optimizer.getOptimizationTargets(getSelectedOptimizerParameters(parameters));
   }
 
   @Override
@@ -179,11 +180,6 @@ public class OptimizerParameters extends SimpleParameterSet {
               benchmarkFeaturesFile.getName()));
     }
 
-    if (getValue(optimizers) == OptimizerOptions.PATTERN_SEARCH
-        && getValue(metricsToOptimize).size() != 1) {
-      errorMessages.add("Pattern search requires exactly one optimization metric.");
-    }
-
     return superCheck && errorMessages.isEmpty();
   }
 
@@ -195,7 +191,6 @@ public class OptimizerParameters extends SimpleParameterSet {
         FxTexts.text(": "),
         FxTexts.hyperlinkText("IPO", "https://doi.org/10.1186/s12859-015-0562-8"),
         FxTexts.linebreak(), FxTexts.boldText(SweepMetric.SLAW_INTEGRATION_SCORE.name()),
-        FxTexts.text(", "), FxTexts.boldText(SweepMetric.HARMONIC_SLAW_ISOTOPES.name()),
         FxTexts.text(": "),
         FxTexts.hyperlinkText("SLAW", "https://pubs.acs.org/doi/10.1021/acs.analchem.1c02687"));
   }

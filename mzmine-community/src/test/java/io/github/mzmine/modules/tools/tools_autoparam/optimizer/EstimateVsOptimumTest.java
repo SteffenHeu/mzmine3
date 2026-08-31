@@ -32,6 +32,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMob
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
+import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -322,13 +323,22 @@ public class EstimateVsOptimumTest {
         "every wizard part needs a preset, the problem dereferences all of them");
 
     final OptimizerParameters params = createParameters(sequence);
-    Assertions.assertEquals(List.of(METRIC),
-        params.getValue(OptimizerParameters.metricsToOptimize));
+    Assertions.assertEquals(List.of(METRIC), OptimizerParameters.getOptimizationTargets(params));
     // the shape rejection guard is deliberately off: it was measured inert and it costs a peak
     // fitting pass on every evaluation
     Assertions.assertFalse(params.getValue(OptimizerParameters.maxShapeRejectionFactor));
-    Assertions.assertEquals(warmStartSampling(),
-        params.getValue(OptimizerParameters.warmStartSampling));
+    final ParameterSet optimizerParameters = OptimizerParameters.getSelectedOptimizerParameters(
+        params);
+    switch (optimizer()) {
+      case PATTERN_SEARCH ->
+          Assertions.assertInstanceOf(PatternSearchOptimizerParameters.class, optimizerParameters);
+      case MOEAD -> {
+        Assertions.assertTrue(
+            optimizerParameters.getValue(MoeadOptimizerParameters.rawDataInitialization));
+        Assertions.assertEquals(warmStartSampling(), optimizerParameters.getEmbeddedParameterValue(
+            MoeadOptimizerParameters.rawDataInitialization));
+      }
+    }
 
     final List<ParameterSolutionPrototype> optimized = params.getValue(
         OptimizerParameters.paramToOptimize);
@@ -588,12 +598,17 @@ public class EstimateVsOptimumTest {
 
   private @NotNull OptimizerParameters createParameters(@NotNull WizardSequence sequence) {
     final OptimizerParameters params = new OptimizerParameters();
-    params.setParameter(OptimizerParameters.metricsToOptimize, List.of(METRIC));
-    params.setParameter(OptimizerParameters.optimizers, optimizer());
+    final OptimizerOptions optimizer = optimizer();
+    OptimizerParameters.setOptimizerAndTargets(params, optimizer, List.of(METRIC));
     params.setParameter(OptimizerParameters.iterations,
         Integer.getInteger(ITERATIONS_PROPERTY, DEFAULT_ITERATIONS));
-    params.setParameter(OptimizerParameters.initializeWithRawDataGuesses, true);
-    params.setParameter(OptimizerParameters.warmStartSampling, warmStartSampling());
+    if (optimizer == OptimizerOptions.MOEAD) {
+      final ParameterSet optimizerParameters = OptimizerParameters.getSelectedOptimizerParameters(
+          params);
+      optimizerParameters.setParameter(MoeadOptimizerParameters.rawDataInitialization, true);
+      optimizerParameters.getParameter(MoeadOptimizerParameters.rawDataInitialization)
+          .getEmbeddedParameter().setValue(warmStartSampling());
+    }
     params.setParameter(OptimizerParameters.benchmarkFeaturesFile, false);
     // decision: off. It was measured inert - three factors from 1.0 to 2.0 reached the identical
     // optimum - and leaving it on costs the peak fitting pass on every evaluation for nothing.

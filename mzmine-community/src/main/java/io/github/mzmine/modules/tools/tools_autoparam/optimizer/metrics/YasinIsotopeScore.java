@@ -62,6 +62,11 @@ public final class YasinIsotopeScore implements SweepMetric {
   }
 
   @Override
+  public @NotNull String toString() {
+    return name();
+  }
+
+  @Override
   public double evaluate(@NotNull FeatureList featureList) {
     // discard low intensities, similar to IPO
     final double noise = MathUtils.calcQuantile(

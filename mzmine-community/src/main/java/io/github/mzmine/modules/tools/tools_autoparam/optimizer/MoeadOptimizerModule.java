@@ -23,40 +23,21 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics;
+package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
-import io.github.mzmine.datamodel.features.FeatureList;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
+import io.github.mzmine.modules.MZmineModule;
+import io.github.mzmine.parameters.ParameterSet;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Maximise: ratio of detected features to the theoretical maximum (rows × files). Mirrors
- * {@link WizardOptimizationProblem}'s {@code maximizeFillRatio} objective.
- */
-public record FillRatio() implements SweepMetric {
+public class MoeadOptimizerModule implements MZmineModule {
 
   @Override
-  public @NotNull String name() {
-    return "Fill ratio";
+  public @NotNull String getName() {
+    return "MOEA/D";
   }
 
   @Override
-  public @NotNull String toString() {
-    return name();
-  }
-
-  @Override
-  public boolean higherIsBetter() {
-    return true;
-  }
-
-  @Override
-  public double evaluate(@NotNull FeatureList featureList) {
-    final int maxFeatures = featureList.getNumberOfRows() * featureList.getNumberOfRawDataFiles();
-    if (maxFeatures == 0) {
-      return 0;
-    }
-    final long numFeatures = featureList.streamFeatures().count();
-    return (double) numFeatures / maxFeatures;
+  public @NotNull Class<? extends ParameterSet> getParameterSetClass() {
+    return MoeadOptimizerParameters.class;
   }
 }

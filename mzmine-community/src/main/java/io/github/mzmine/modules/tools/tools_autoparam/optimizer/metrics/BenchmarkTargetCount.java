@@ -47,6 +47,11 @@ public record BenchmarkTargetCount(@NotNull List<FeatureRecord> targets) impleme
   }
 
   @Override
+  public @NotNull String toString() {
+    return name();
+  }
+
+  @Override
   public boolean higherIsBetter() {
     return true;
   }

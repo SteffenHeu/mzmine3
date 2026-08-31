@@ -226,7 +226,7 @@ public class WizardOptimizationProblem extends AbstractProblem implements Search
    */
   private static @NotNull List<SweepMetric> buildEnabledMetrics(@NotNull ParameterSet param,
       @Nullable List<@NotNull DataFileStatistics> stats) {
-    final List<SweepMetric> selected = param.getValue(OptimizerParameters.metricsToOptimize);
+    final List<SweepMetric> selected = OptimizerParameters.getOptimizationTargets(param);
     final List<SweepMetric> metrics = new ArrayList<>();
     for (final SweepMetric metric : selected) {
       if (metric instanceof BenchmarkTargetCount) {
@@ -254,7 +254,7 @@ public class WizardOptimizationProblem extends AbstractProblem implements Search
 
   static int calculateNumberOfObjectives(@NotNull ParameterSet param,
       @Nullable List<DataFileStatistics> stats) {
-    final List<SweepMetric> selected = param.getValue(OptimizerParameters.metricsToOptimize);
+    final List<SweepMetric> selected = OptimizerParameters.getOptimizationTargets(param);
     // BenchmarkTargetCount only counts as an objective when file statistics are available
     return (int) selected.stream()
         .filter(m -> !(m instanceof BenchmarkTargetCount) || stats != null).count();

@@ -25,18 +25,59 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import io.github.mzmine.modules.MZmineModule;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
+import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnum;
+import java.util.List;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.algorithm.AbstractAlgorithm;
 import org.moeaframework.algorithm.MOEAD;
 import org.moeaframework.problem.AbstractProblem;
 
-public enum OptimizerOptions {
-  PATTERN_SEARCH, MOEAD;
+public enum OptimizerOptions implements ModuleOptionsEnum<MZmineModule> {
+  PATTERN_SEARCH("Pattern search", "pattern_search", PatternSearchOptimizerModule.class), MOEAD(
+      "MOEA/D", "moead", MoeadOptimizerModule.class);
+
+  private final String name;
+  private final String stableId;
+  private final Class<? extends MZmineModule> moduleClass;
+
+  OptimizerOptions(@NotNull final String name, @NotNull final String stableId,
+      @NotNull final Class<? extends MZmineModule> moduleClass) {
+    this.name = name;
+    this.stableId = stableId;
+    this.moduleClass = moduleClass;
+  }
 
   public @NotNull AbstractAlgorithm getOptimizer(@NotNull AbstractProblem problem) {
     return switch (this) {
       case PATTERN_SEARCH -> new PatternSearchAlgorithm(problem);
       case MOEAD -> new MOEAD(problem);
     };
+  }
+
+  public @NotNull List<SweepMetric> getOptimizationTargets(
+      @NotNull ParameterSet optimizerParameters) {
+    return switch (this) {
+      case PATTERN_SEARCH -> List.of(
+          optimizerParameters.getValue(PatternSearchOptimizerParameters.optimizationTarget));
+      case MOEAD -> optimizerParameters.getValue(MoeadOptimizerParameters.optimizationTargets);
+    };
+  }
+
+  @Override
+  public @NotNull Class<? extends MZmineModule> getModuleClass() {
+    return moduleClass;
+  }
+
+  @Override
+  public @NotNull String getStableId() {
+    return stableId;
+  }
+
+  @Override
+  public @NotNull String toString() {
+    return name;
   }
 }

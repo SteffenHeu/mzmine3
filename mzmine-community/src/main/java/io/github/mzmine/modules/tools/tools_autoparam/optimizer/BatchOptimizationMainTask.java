@@ -39,6 +39,7 @@ import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatisticsDashboardPane;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui.OptimizationResultsController;
+import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.MemoryMapStorage;
@@ -249,10 +250,9 @@ public class BatchOptimizationMainTask extends AbstractTask {
     final AtomicReference<NondominatedPopulation> completedResult = new AtomicReference<>();
 
     final OptimizerOptions optimizerOption = params.getValue(OptimizerParameters.optimizers);
+    final ParameterSet optimizerParameters = OptimizerParameters.getSelectedOptimizerParameters(
+        params);
     optimizer = optimizerOption.getOptimizer(optimizationProblem);
-
-    final boolean initWithGuesses = params.getValue(
-        OptimizerParameters.initializeWithRawDataGuesses);
 
     final Map<String, Double> singlePassEstimates = SinglePassParameterEstimation.estimate(stats,
         optimizationProblem.getBuilder(), sequence);
@@ -289,20 +289,27 @@ public class BatchOptimizationMainTask extends AbstractTask {
           completedResult);
     }
 
-    final List<Solution> injected;
-    if (initWithGuesses) {
-      // decision: fill the whole MOEA/D population from the estimate because uniform random
-      // samples measured far worse. Pattern search consumes only the exact estimate.
-      final int initialDesignSize = initialDesignSize(optimizerOption);
-      final WarmStartSampling sampling = switch (optimizerOption) {
-        case PATTERN_SEARCH -> WarmStartSampling.GAUSSIAN;
-        case MOEAD -> params.getValue(OptimizerParameters.warmStartSampling);
-      };
-      injected = SinglePassParameterEstimation.createWarmStartSolutions(optimizationProblem,
-          singlePassEstimates, initialDesignSize, sampling);
-      logger.info("Warm-start enabled for %s: injected %d solutions, batch budget %d".formatted(
-          optimizer.getName(), injected.size(), totalBatchExecutions));
+    final List<Solution> injected = switch (optimizerOption) {
+      // decision: starting at the estimate is intrinsic to local pattern search, not an optional
+      // warm-start strategy.
+      case PATTERN_SEARCH ->
+          SinglePassParameterEstimation.createWarmStartSolutions(optimizationProblem,
+              singlePassEstimates, PatternSearchAlgorithm.INITIAL_DESIGN_SIZE,
+              WarmStartSampling.GAUSSIAN);
+      case MOEAD -> {
+        if (!optimizerParameters.getValue(MoeadOptimizerParameters.rawDataInitialization)) {
+          yield List.of();
+        }
+        final WarmStartSampling sampling = optimizerParameters.getEmbeddedParameterValue(
+            MoeadOptimizerParameters.rawDataInitialization);
+        yield SinglePassParameterEstimation.createWarmStartSolutions(optimizationProblem,
+            singlePassEstimates, MOEAD_POPULATION_SIZE, sampling);
+      }
+    };
 
+    if (!injected.isEmpty()) {
+      logger.info("Initialization for %s: injected %d solutions, batch budget %d".formatted(
+          optimizer.getName(), injected.size(), totalBatchExecutions));
       NotificationService.show(NotificationType.INFO, "Starting optimizer", """
           Using %d attempts around raw-data based estimations and %d full batch executions.
           Estimates:
@@ -310,8 +317,6 @@ public class BatchOptimizationMainTask extends AbstractTask {
           singlePassEstimates.entrySet().stream()
               .map(e -> "%s: %.2f".formatted(e.getKey(), e.getValue()))
               .collect(Collectors.joining("\n"))));
-    } else {
-      injected = List.of();
     }
 
     configureOptimizer(optimizerOption, optimizer, optimizationProblem, injected);
@@ -394,8 +399,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
   /**
    * Configures the two supported algorithms and injects raw data-derived start solutions.
    *
-   * @param injected solutions to seed the search with. May be empty, in which case MOEA/D
-   *                 initializes randomly and pattern search starts at the box center.
+   * @param injected solutions to seed the search with. May be empty for MOEA/D, which then
+   *                 initializes randomly.
    */
   private void configureOptimizer(@NotNull OptimizerOptions option,
       @NotNull AbstractAlgorithm algorithm,
@@ -421,10 +426,4 @@ public class BatchOptimizationMainTask extends AbstractTask {
     }
   }
 
-  private int initialDesignSize(@NotNull OptimizerOptions option) {
-    return switch (option) {
-      case PATTERN_SEARCH -> PatternSearchAlgorithm.INITIAL_DESIGN_SIZE;
-      case MOEAD -> MOEAD_POPULATION_SIZE;
-    };
-  }
 }

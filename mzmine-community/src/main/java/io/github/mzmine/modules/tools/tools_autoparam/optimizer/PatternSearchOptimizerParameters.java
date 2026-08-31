@@ -23,40 +23,19 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics;
+package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
-import io.github.mzmine.datamodel.features.FeatureList;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
-import org.jetbrains.annotations.NotNull;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
+import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.ComboParameter;
 
-/**
- * Maximise: ratio of detected features to the theoretical maximum (rows × files). Mirrors
- * {@link WizardOptimizationProblem}'s {@code maximizeFillRatio} objective.
- */
-public record FillRatio() implements SweepMetric {
+public class PatternSearchOptimizerParameters extends SimpleParameterSet {
 
-  @Override
-  public @NotNull String name() {
-    return "Fill ratio";
-  }
+  public static final ComboParameter<SweepMetric> optimizationTarget = new ComboParameter<>(
+      "Optimization target", "Quality metric that pattern search maximizes.",
+      OptimizationMetrics.ALL, SweepMetric.YASIN_ISOTOPE_SCORE);
 
-  @Override
-  public @NotNull String toString() {
-    return name();
-  }
-
-  @Override
-  public boolean higherIsBetter() {
-    return true;
-  }
-
-  @Override
-  public double evaluate(@NotNull FeatureList featureList) {
-    final int maxFeatures = featureList.getNumberOfRows() * featureList.getNumberOfRawDataFiles();
-    if (maxFeatures == 0) {
-      return 0;
-    }
-    final long numFeatures = featureList.streamFeatures().count();
-    return (double) numFeatures / maxFeatures;
+  public PatternSearchOptimizerParameters() {
+    super(optimizationTarget);
   }
 }

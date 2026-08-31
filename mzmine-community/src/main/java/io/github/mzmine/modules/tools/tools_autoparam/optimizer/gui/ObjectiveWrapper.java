@@ -28,15 +28,11 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.HarmonicSlawIsotopes;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
-import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
@@ -45,8 +41,6 @@ import org.moeaframework.core.objective.Minimize;
 import org.moeaframework.core.objective.Objective;
 
 public record ObjectiveWrapper(String name, int index, Color color) {
-
-  private static final String HARMONIC_OBJECTIVE_NAME = SweepMetric.HARMONIC_SLAW_ISOTOPES.name();
 
   public static List<ObjectiveWrapper> extract(@NotNull List<Solution> solutions) {
     final Solution solution = solutions.getFirst();
@@ -62,13 +56,6 @@ public record ObjectiveWrapper(String name, int index, Color color) {
     return objectives;
   }
 
-  /**
-   * Returns {@code true} when this wrapper represents the harmonic slaw-isotopes objective.
-   */
-  public boolean isHarmonic() {
-    return HARMONIC_OBJECTIVE_NAME.equals(name());
-  }
-
   public TableColumn<Solution, Number> createColumn() {
     final TableColumn<Solution, Number> column = TableColumns.createColumn(name(), 140,
         new DecimalFormat("0.###"), ColumnAlignment.RIGHT,
@@ -77,47 +64,5 @@ public record ObjectiveWrapper(String name, int index, Color color) {
     column.setCellFactory(_ -> new BarTableCell(color, new DecimalFormat("0.###")));
 
     return column;
-  }
-
-  /**
-   * Creates a column for the harmonic objective that displays scores normalised to [0, 1] across
-   * all displayed solutions. The raw slaw and iso component values stored as solution attributes
-   * ({@link HarmonicSlawIsotopes#ATTR_HARMONIC_SLAW} /
-   * {@link HarmonicSlawIsotopes#ATTR_HARMONIC_ISO}) are min-max normalised across those solutions
-   * before the harmonic mean is computed.
-   *
-   * @param solutions every solution shown in the table, including the raw data estimate, so that
-   *                  the estimate is normalised on the same scale as the optimized solutions
-   */
-  public @NotNull TableColumn<Solution, Number> createNormalizedHarmonicColumn(
-      @NotNull ObservableList<Solution> solutions) {
-    final TableColumn<Solution, Number> column = TableColumns.createColumn(name(), 140,
-        new DecimalFormat("0.###"), ColumnAlignment.RIGHT,
-        solution -> Bindings.createDoubleBinding(() -> normalizedHarmonicScore(solutions, solution),
-            solutions));
-    column.setCellFactory(_ -> new BarTableCell(color, new DecimalFormat("0.###")));
-    return column;
-  }
-
-  private static double normalizedHarmonicScore(@NotNull List<Solution> solutions,
-      @NotNull Solution solution) {
-    final double[] slawRaw = solutions.stream()
-        .mapToDouble(s -> attributeAsDouble(s, HarmonicSlawIsotopes.ATTR_HARMONIC_SLAW))
-        .toArray();
-    final double[] isoRaw = solutions.stream()
-        .mapToDouble(s -> attributeAsDouble(s, HarmonicSlawIsotopes.ATTR_HARMONIC_ISO))
-        .toArray();
-    final double[] normalized = HarmonicSlawIsotopes.computeNormalizedScores(slawRaw, isoRaw);
-    for (int i = 0; i < solutions.size(); i++) {
-      if (solutions.get(i) == solution) {
-        return normalized[i];
-      }
-    }
-    return Double.NaN;
-  }
-
-  private static double attributeAsDouble(@NotNull Solution s, @NotNull String key) {
-    final Object val = s.getAttribute(key);
-    return val instanceof Number n ? n.doubleValue() : Double.NaN;
   }
 }

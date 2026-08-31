@@ -48,6 +48,11 @@ public record GcEiFragmentQuality() implements SweepMetric {
   }
 
   @Override
+  public @NotNull String toString() {
+    return name();
+  }
+
+  @Override
   public boolean higherIsBetter() {
     return true;
   }

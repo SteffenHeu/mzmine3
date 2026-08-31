@@ -185,16 +185,6 @@ public class SweepMetricCheckListParameter implements
       return false;
     }
 
-    if (value.contains(SweepMetric.HARMONIC_SLAW_ISOTOPES) && !(
-        value.contains(SweepMetric.IPO_ISOTOPE_SCORE) && value.contains(
-            SweepMetric.SLAW_INTEGRATION_SCORE))) {
-      errorMessages.add("""
-          To optimize on "%s", both "%s" and "%s" need to be enabled.""".formatted(
-          SweepMetric.HARMONIC_SLAW_ISOTOPES.name(), SweepMetric.IPO_ISOTOPE_SCORE.name(),
-          SweepMetric.SLAW_INTEGRATION_SCORE.name()));
-      return false;
-    }
-
     return true;
   }
 

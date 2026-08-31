@@ -43,6 +43,12 @@ public record DoublePeakRatio() implements SweepMetric {
   }
 
   @Override
+  @NotNull
+  public String toString() {
+    return name();
+  }
+
+  @Override
   public boolean higherIsBetter() {
     return false;
   }

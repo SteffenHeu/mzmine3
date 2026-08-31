@@ -57,7 +57,7 @@ public final class WaveletBatchParameterSolutionBuilder {
    */
   public static @NotNull BatchParameterSolution buildWaveletSnr(int index) {
     return new FunctionalBatchParameterSolution(index,
-        () -> new RealVariable("Wavelet SNR threshold", 3, 20), solution -> {
+        () -> new RealVariable("Wavelet SNR threshold", 3, 10), solution -> {
       try {
         final double value = ((RealVariable) solution.getVariable(index)).getValue();
         return makeTopLevelDoubleOverride("snr", value);

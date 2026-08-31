@@ -31,8 +31,8 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.IonMobilityWizar
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.HarmonicSlawIsotopes;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.YasinIsotopeScore;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.ArrayUtils;
 import io.github.mzmine.util.MathUtils;
@@ -133,7 +133,7 @@ public final class SinglePassParameterEstimation {
     // Batch parameters: midpoints of their defined ranges
     estimates.put("Top-to-edge ratio", 1.7);
     estimates.put("Chrom. Threshold", 0.85);
-    estimates.put("Wavelet SNR threshold", 5d);
+    estimates.put("Wavelet SNR threshold", 4d);
 
     // No raw-data estimator exists for mobility peak width yet. Start at the selected preset's
     // factory default so the initial solution is complete and deterministic rather than NaN.
@@ -339,7 +339,7 @@ public final class SinglePassParameterEstimation {
 
   /**
    * Logs comparison between single-pass results and the best MOEA solution (by
-   * {@link HarmonicSlawIsotopes} score, or first metric if harmonic is not enabled).
+   * {@link YasinIsotopeScore} score, or first metric if harmonic is not enabled).
    */
   public static void logComparison(@NotNull Solution singlePass,
       @NotNull NondominatedPopulation moeaResult, @NotNull List<SweepMetric> enabledMetrics) {
@@ -379,9 +379,9 @@ public final class SinglePassParameterEstimation {
   }
 
   private static int findComparisonMetricIndex(@NotNull List<SweepMetric> enabledMetrics) {
-    // prefer HarmonicSlawIsotopes
+    // prefer YasinIsotopeScore
     for (int i = 0; i < enabledMetrics.size(); i++) {
-      if (enabledMetrics.get(i) instanceof HarmonicSlawIsotopes) {
+      if (enabledMetrics.get(i) instanceof YasinIsotopeScore) {
         return i;
       }
     }
