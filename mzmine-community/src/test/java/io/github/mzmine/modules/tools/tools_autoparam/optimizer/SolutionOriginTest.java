@@ -124,5 +124,6 @@ public class SolutionOriginTest {
     Assertions.assertEquals("Perturbed", SolutionOrigin.PERTURBED.toString());
     Assertions.assertEquals("Random", SolutionOrigin.RANDOM.toString());
     Assertions.assertEquals("Evolution", SolutionOrigin.EVOLUTION.toString());
+    Assertions.assertEquals("Pattern search", SolutionOrigin.PATTERN_SEARCH.toString());
   }
 }

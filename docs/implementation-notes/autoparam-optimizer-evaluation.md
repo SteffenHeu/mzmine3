@@ -250,6 +250,92 @@ two, and the late best batches leave open whether a more global method can find 
 solutions sooner. GP Bayesian optimization should therefore be evaluated under the same real-batch
 ceiling and elapsed-time reporting before choosing a default.
 
+### GP Bayesian-optimization pilot
+
+The deterministic GP-ARD implementation was screened at the same 80-batch ceiling on the two
+datasets with existing matched controls. Both runs made 81 proposals: 80 real batches and one cache
+hit for the repeated estimate. Neither run used the numerical Sobol fallback.
+
+| dataset           | estimate | GP best | best / estimate | best batch | best time | finish time |
+|-------------------|---------:|--------:|----------------:|-----------:|----------:|------------:|
+| thermo-20y-qc     |     3014 |    5447 |           1.81× |         44 |     127 s |       186 s |
+| zenotof-feces-pos |    15420 |   33334 |           2.16× |         64 |     267 s |       332 s |
+
+The primary comparison is best score at the GP run's elapsed finish time:
+
+| dataset                  | GP score | pattern-search score | GP difference |
+|--------------------------|---------:|---------------------:|--------------:|
+| thermo-20y-qc, 186 s     |     5447 |                 5460 |       −0.25 % |
+| zenotof-feces-pos, 332 s |    33334 |                38226 |       −12.8 % |
+
+On Thermo the methods were effectively tied when GP stopped, although pattern search was stronger
+in the first minute and later reached 5766 at 258 s. On ZenoTOF feces, GP improved the estimate
+substantially but plateaued near 33334 while pattern search continued to 41330. The portion after
+the 17-point initial design added 51.3 % on Thermo and 49.2 % on feces, so the sequential GP phase
+was doing useful work; it was simply less effective than the coordinate search on this screen.
+
+The current GP is therefore numerically sound but not more efficient than pattern search on this
+screen. The result does not rule out Bayesian optimization in general: it specifically tests a
+17-point estimate-centred Sobol design, regularised Matérn-5/2 ARD, constrained Expected
+Improvement,
+and a mixed global/local candidate pool. Any GP follow-up should change a concrete part of that
+design rather than repeat these deterministic runs with another random seed.
+
+The GP optimizer option, runtime implementation and dedicated tests were subsequently removed. It
+did not improve the practical ranking and carried the highest numerical complexity. The pilot csv
+files and this analysis are retained as evidence for that decision.
+
+### Sobol-only control
+
+To separate GP guidance from merely making more structured evaluations, `SobolSearchAlgorithm` was
+run on the same two datasets. It consumes the identical 17-point estimate-centred initial design as
+GP, then evaluates unused global canonical Sobol points until the same 80-real-batch ceiling. It is
+implemented as a sequential algorithm rather than an enlarged MOEA/D initialization: MOEA/D would
+either add evolutionary offspring or generate more local perturbations, so it would not be the same
+control.
+
+| dataset           | Sobol best | best batch | finish time | GP at finish | pattern at finish |
+|-------------------|-----------:|-----------:|------------:|-------------:|------------------:|
+| thermo-20y-qc     |       3600 |         15 |       112 s |         5368 |              5412 |
+| zenotof-feces-pos |      22347 |         15 |       146 s |        33226 |             34452 |
+
+On both datasets, none of the 63 post-design global Sobol points improved the common initial design.
+This is strong evidence that GP's roughly 50 % post-design gain came from useful surrogate guidance,
+not merely from spending the remaining batches. Pattern search nevertheless remained best at equal
+elapsed time, so the current ranking on these controls is pattern search, GP, then unguided Sobol.
+
+The standalone Sobol-search option, implementation, origin and dedicated tests were subsequently
+removed. Sobol sampling remains in use for warm-start designs and pattern-search restarts.
+
+### TPE pilot
+
+The deterministic multivariate TPE implementation was run with the same 17-point initial design and
+80-real-batch ceiling. Each run made 81 proposals, including one cache hit for the repeated
+estimate,
+and neither used its numerical Sobol fallback.
+
+| dataset           | estimate | TPE best | best / estimate | best batch | best time | finish time |
+|-------------------|---------:|---------:|----------------:|-----------:|----------:|------------:|
+| thermo-20y-qc     |     3014 |     4949 |           1.64× |         68 |     186 s |       224 s |
+| zenotof-feces-pos |    15420 |    35418 |           2.30× |         61 |     279 s |       379 s |
+
+The primary elapsed-time comparison is:
+
+| dataset, TPE finish      |   TPE | pattern search |    GP | TPE vs pattern | TPE vs GP |
+|--------------------------|------:|---------------:|------:|---------------:|----------:|
+| thermo-20y-qc, 224 s     |  4949 |           5632 |  5447 |        −12.1 % |    −9.1 % |
+| zenotof-feces-pos, 379 s | 35418 |          40298 | 33334 |        −12.1 % |    +6.3 % |
+
+TPE guidance was useful: relative to the shared initial-design best, it added 37.5% on Thermo and
+58.5% on feces. It was not merely reproducing the unguided control. However, it lost to pattern
+search by the same roughly 12% margin at both of its finish times. It also gives no consistent
+advantage over GP: worse on Thermo, better on feces, and slower to finish on both. The current
+two-dataset ranking therefore remains pattern search first; neither surrogate is a reason to change
+the default yet.
+
+The TPE option, runtime implementation, origin and dedicated tests were subsequently removed. Its
+pilot csv files and this analysis are retained as evidence for that decision.
+
 ## A note on reading this evidence
 
 Several conclusions here were reversed once measured again, and the pattern is worth recording. Two

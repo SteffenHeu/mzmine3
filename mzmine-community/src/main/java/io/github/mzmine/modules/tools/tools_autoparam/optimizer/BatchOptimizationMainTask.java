@@ -46,6 +46,7 @@ import java.io.File;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -118,6 +119,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
   private final long randomSeed;
   private final AtomicReference<TaskStatus> externalStatus = new AtomicReference<>(
       TaskStatus.PROCESSING);
+  private final AtomicBoolean stopSearchRequested = new AtomicBoolean();
   /**
    * Maximum number of uncached full batch executions, including the raw-data estimate.
    */
@@ -189,6 +191,16 @@ public class BatchOptimizationMainTask extends AbstractTask {
     return outcome;
   }
 
+  /**
+   * Requests a graceful end to the search. The currently running batch may finish, but no new
+   * candidate is started and all completed evaluations are retained in the final result.
+   */
+  public void requestStopSearch() {
+    if (getStatus() == TaskStatus.PROCESSING && stopSearchRequested.compareAndSet(false, true)) {
+      logger.info("Stopping parameter search after the current evaluation.");
+    }
+  }
+
   @Override
   public String getTaskDescription() {
     final int max = totalBatchExecutions > 0 ? totalBatchExecutions : 100;
@@ -235,8 +247,10 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     totalBatchExecutions = Math.max(params.getValue(OptimizerParameters.iterations), 30);
     final WizardOptimizationProblem optimizationProblem = new WizardOptimizationProblem(sequence,
-        stats, params, externalStatus, totalBatchExecutions);
+        stats, params, externalStatus, totalBatchExecutions, stopSearchRequested::get);
     problem = optimizationProblem;
+    final AtomicReference<OptimizationResultsController> resultsController = new AtomicReference<>();
+    final AtomicReference<NondominatedPopulation> completedResult = new AtomicReference<>();
 
     optimizer = params.getValue(OptimizerParameters.optimizers).getOptimizer(optimizationProblem);
 
@@ -267,15 +281,25 @@ public class BatchOptimizationMainTask extends AbstractTask {
           Math.max(baseline * factor, MIN_SHAPE_REJECTION_LIMIT));
     }
 
+    if (tab != null) {
+      optimizationProblem.setEvaluationListener(_ -> {
+        final OptimizationResultsController controller = resultsController.get();
+        if (controller != null) {
+          controller.refreshEvaluatedSolutions();
+        }
+      });
+      showLiveResultsWindow(tab, optimizationProblem, singlePassSolution, resultsController,
+          completedResult);
+    }
+
     final List<Solution> injected;
     if (initWithGuesses) {
       // decision: fill the whole evolutionary population from the estimate because uniform random
-      // samples measured far worse. Sequential pattern search consumes only the exact estimate and
-      // creates its coordinate polls itself.
+      // samples measured far worse. Pattern search consumes only the exact estimate.
       final int initialDesignSize = initialDesignSize(optimizer);
+      final WarmStartSampling sampling = params.getValue(OptimizerParameters.warmStartSampling);
       injected = SinglePassParameterEstimation.createWarmStartSolutions(optimizationProblem,
-          singlePassEstimates, initialDesignSize,
-          params.getValue(OptimizerParameters.warmStartSampling));
+          singlePassEstimates, initialDesignSize, sampling);
       logger.info("Warm-start enabled for %s: injected %d solutions, batch budget %d".formatted(
           optimizer.getName(), injected.size(), totalBatchExecutions));
 
@@ -297,12 +321,17 @@ public class BatchOptimizationMainTask extends AbstractTask {
     try {
       final int maxProposals = Math.multiplyExact(totalBatchExecutions, PROPOSAL_BUDGET_MULTIPLIER);
       optimizer.run(new TaskStatusTerminationCondition(totalBatchExecutions, maxProposals,
-          optimizationProblem::getBatchExecutionCount, this::getStatus));
+          optimizationProblem::getBatchExecutionCount, this::getStatus, stopSearchRequested::get));
     } catch (BatchExecutionLimitReachedException e) {
       // MOEA checks termination between generations, so the problem stops a partial generation at
       // the exact full-batch boundary.
       logger.fine(e.getMessage());
       optimizer.terminate();
+    } catch (OptimizationSearchStoppedException e) {
+      logger.info(e.getMessage());
+      if (!optimizer.isTerminated()) {
+        optimizer.terminate();
+      }
     } catch (RuntimeException e) {
       if (getStatus() != TaskStatus.CANCELED && getStatus() != TaskStatus.ERROR) {
         throw e;
@@ -324,31 +353,44 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     outcome = new OptimizationOutcome(singlePassEstimates, singlePassSolution, result,
         optimizationProblem);
-
-    // decision: the results window needs a wizard to apply its selection to, so a headless run only
-    // records the outcome
-    if (tab == null) {
-      setStatus(TaskStatus.FINISHED);
-      return;
+    completedResult.set(result);
+    optimizationProblem.setEvaluationListener(null);
+    final OptimizationResultsController controller = resultsController.get();
+    if (controller != null) {
+      controller.completeOptimization(result);
     }
 
-    final BatchWizardTab resultTab = tab;
+    setStatus(TaskStatus.FINISHED);
+  }
+
+  private void showLiveResultsWindow(@NotNull BatchWizardTab resultTab,
+      @NotNull WizardOptimizationProblem optimizationProblem, @NotNull Solution singlePassSolution,
+      @NotNull AtomicReference<OptimizationResultsController> resultsController,
+      @NotNull AtomicReference<NondominatedPopulation> completedResult) {
     FxThread.runLater(() -> {
-      Stage stage = new Stage();
+      final Stage stage = new Stage();
       final OptimizationResultsController controller = new OptimizationResultsController(resultTab,
-          optimizationProblem, result, singlePassSolution, stage);
+          optimizationProblem, singlePassSolution, stage, this::requestStopSearch);
+      resultsController.set(controller);
+      controller.refreshEvaluatedSolutions();
+      final NondominatedPopulation alreadyCompleted = completedResult.get();
+      if (alreadyCompleted != null) {
+        controller.completeOptimization(alreadyCompleted);
+      }
+
       final Region region = controller.buildView();
-      stage.setTitle("Optimization Results");
+      stage.setTitle("Parameter optimization - running");
       stage.initOwner(MZmineCore.getDesktop().getMainWindow());
-      Scene scene = new Scene(region);
+      final Scene scene = new Scene(region);
       ConfigService.getConfiguration().getTheme().apply(scene.getStylesheets());
       stage.setScene(scene);
       stage.show();
-      stage.setMaxWidth(Screen.getPrimary().getBounds().getWidth() * 0.8);
+      final double screenWidth = Screen.getPrimary().getBounds().getWidth();
+      final double screenHeight = Screen.getPrimary().getBounds().getHeight();
+      stage.setWidth(Math.min(1400d, screenWidth * 0.9d));
+      stage.setHeight(Math.min(900d, screenHeight * 0.85d));
       stage.centerOnScreen();
     });
-
-    setStatus(TaskStatus.FINISHED);
   }
 
   /**

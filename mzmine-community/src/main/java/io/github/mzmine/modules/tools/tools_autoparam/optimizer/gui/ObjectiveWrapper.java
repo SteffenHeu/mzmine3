@@ -33,10 +33,10 @@ import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMet
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.collections.ObservableList;
 import javafx.scene.control.TableColumn;
 import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
@@ -90,26 +90,30 @@ public record ObjectiveWrapper(String name, int index, Color color) {
    *                  the estimate is normalised on the same scale as the optimized solutions
    */
   public @NotNull TableColumn<Solution, Number> createNormalizedHarmonicColumn(
-      @NotNull List<Solution> solutions) {
+      @NotNull ObservableList<Solution> solutions) {
+    final TableColumn<Solution, Number> column = TableColumns.createColumn(name(), 140,
+        new DecimalFormat("0.###"), ColumnAlignment.RIGHT,
+        solution -> Bindings.createDoubleBinding(() -> normalizedHarmonicScore(solutions, solution),
+            solutions));
+    column.setCellFactory(_ -> new BarTableCell(color, new DecimalFormat("0.###")));
+    return column;
+  }
+
+  private static double normalizedHarmonicScore(@NotNull List<Solution> solutions,
+      @NotNull Solution solution) {
     final double[] slawRaw = solutions.stream()
         .mapToDouble(s -> attributeAsDouble(s, HarmonicSlawIsotopes.ATTR_HARMONIC_SLAW))
         .toArray();
     final double[] isoRaw = solutions.stream()
         .mapToDouble(s -> attributeAsDouble(s, HarmonicSlawIsotopes.ATTR_HARMONIC_ISO))
         .toArray();
-    final double[] normalized = HarmonicSlawIsotopes.computeNormalizedScores(slawRaw,
-        isoRaw);
-
-    final Map<Solution, Double> scoreMap = new IdentityHashMap<>(solutions.size());
+    final double[] normalized = HarmonicSlawIsotopes.computeNormalizedScores(slawRaw, isoRaw);
     for (int i = 0; i < solutions.size(); i++) {
-      scoreMap.put(solutions.get(i), normalized[i]);
+      if (solutions.get(i) == solution) {
+        return normalized[i];
+      }
     }
-
-    final TableColumn<Solution, Number> column = TableColumns.createColumn(name(), 140,
-        new DecimalFormat("0.###"), ColumnAlignment.RIGHT,
-        s -> new ReadOnlyDoubleWrapper(scoreMap.getOrDefault(s, Double.NaN)));
-    column.setCellFactory(_ -> new BarTableCell(color, new DecimalFormat("0.###")));
-    return column;
+    return Double.NaN;
   }
 
   private static double attributeAsDouble(@NotNull Solution s, @NotNull String key) {

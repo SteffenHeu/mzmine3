@@ -123,8 +123,8 @@ public class WizardParameterSolutionBuilder {
       double[] array = stats.stream().map(DataFileStatistics::getIsotopePeakFwhms)
           .flatMapToDouble(Arrays::stream).sorted().toArray();
       minFwhm = MathUtils.calcQuantileSorted(array, 0.05);
-      maxFwhm = Math.max(MathUtils.calcQuantileSorted(array, 0.95),
-          MathUtils.calcQuantileSorted(array, 0.5) * 10);
+      maxFwhm = Math.max(MathUtils.calcQuantileSorted(array, 0.90),
+          MathUtils.calcQuantileSorted(array, 0.5) * 2);
 
       array = stats.stream().map(DataFileStatistics::getNumberOfLowestIsotopeDataPoints)
           .flatMapToInt(Arrays::stream).mapToDouble(i -> i).sorted().toArray();

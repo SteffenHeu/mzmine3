@@ -26,6 +26,7 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.taskcontrol.TaskStatus;
+import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import org.jetbrains.annotations.NotNull;
@@ -37,6 +38,7 @@ public class TaskStatusTerminationCondition extends MaxFunctionEvaluations {
   private final int maxBatchExecutions;
   private final @NotNull IntSupplier batchExecutionSupplier;
   private final @NotNull Supplier<TaskStatus> statusSupplier;
+  private final @NotNull BooleanSupplier stopSearchRequestedSupplier;
 
   /**
    * Stops at the real batch budget, a proposal safety cap, cancellation, or task failure.
@@ -49,6 +51,22 @@ public class TaskStatusTerminationCondition extends MaxFunctionEvaluations {
   public TaskStatusTerminationCondition(int maxBatchExecutions, int maxProposals,
       @NotNull IntSupplier batchExecutionSupplier,
       @NotNull Supplier<TaskStatus> statusSupplier) {
+    this(maxBatchExecutions, maxProposals, batchExecutionSupplier, statusSupplier, () -> false);
+  }
+
+  /**
+   * Stops at the real batch budget, a proposal safety cap, cancellation, task failure, or a
+   * user-requested graceful stop.
+   *
+   * @param maxBatchExecutions          maximum number of uncached full batch executions
+   * @param maxProposals                maximum number of calls accepted by the algorithm
+   * @param batchExecutionSupplier      current number of full batch executions
+   * @param statusSupplier              current task status
+   * @param stopSearchRequestedSupplier whether the user requested a graceful stop
+   */
+  public TaskStatusTerminationCondition(int maxBatchExecutions, int maxProposals,
+      @NotNull IntSupplier batchExecutionSupplier, @NotNull Supplier<TaskStatus> statusSupplier,
+      @NotNull BooleanSupplier stopSearchRequestedSupplier) {
     super(maxProposals);
     if (maxBatchExecutions <= 0) {
       throw new IllegalArgumentException("maxBatchExecutions must be positive");
@@ -59,13 +77,15 @@ public class TaskStatusTerminationCondition extends MaxFunctionEvaluations {
     this.maxBatchExecutions = maxBatchExecutions;
     this.batchExecutionSupplier = batchExecutionSupplier;
     this.statusSupplier = statusSupplier;
+    this.stopSearchRequestedSupplier = stopSearchRequestedSupplier;
   }
 
   @Override
   public boolean shouldTerminate(@NotNull Algorithm algorithm) {
     final TaskStatus status = statusSupplier.get();
     return batchExecutionSupplier.getAsInt() >= maxBatchExecutions || super.shouldTerminate(
-        algorithm) || status == TaskStatus.CANCELED || status == TaskStatus.ERROR;
+        algorithm) || stopSearchRequestedSupplier.getAsBoolean() || status == TaskStatus.CANCELED
+        || status == TaskStatus.ERROR;
   }
 
   @Override

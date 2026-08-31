@@ -63,7 +63,8 @@ final class CanonicalParameterSpace {
       final Variable variable = prototype.getVariable(i);
       if (!(variable instanceof RealVariable real)) {
         throw new IllegalArgumentException(
-            "Pattern search requires real-valued variables, found " + variable.getClass());
+            "Canonical parameter mapping requires real-valued variables, found "
+                + variable.getClass());
       }
       if (real instanceof OrdinalIntegerVariable integer) {
         ordinal[i] = true;
@@ -90,6 +91,11 @@ final class CanonicalParameterSpace {
   double ordinalStep(int dimension) {
     final int range = upperIntegerBounds[dimension] - lowerIntegerBounds[dimension];
     return range > 0 ? 1d / range : 1d;
+  }
+
+  int ordinalLevels(int dimension) {
+    return ordinal[dimension] ? upperIntegerBounds[dimension] - lowerIntegerBounds[dimension] + 1
+        : 0;
   }
 
   @NotNull double[] encode(@NotNull Solution solution) {
@@ -147,7 +153,8 @@ final class CanonicalParameterSpace {
       final Variable variable = solution.getVariable(i);
       if (!(variable instanceof RealVariable real)) {
         throw new IllegalArgumentException(
-            "Pattern search requires real-valued variables, found " + variable.getClass());
+            "Canonical parameter mapping requires real-valued variables, found "
+                + variable.getClass());
       }
       key.add(
           real instanceof OrdinalIntegerVariable ? OrdinalIntegerVariable.effectiveValue(solution,
@@ -163,7 +170,8 @@ final class CanonicalParameterSpace {
       final Variable variable = solution.getVariable(i);
       if (!(variable instanceof RealVariable real)) {
         throw new IllegalArgumentException(
-            "Pattern search requires real-valued variables, found " + variable.getClass());
+            "Canonical parameter mapping requires real-valued variables, found "
+                + variable.getClass());
       }
       final double value = decode(effective[i], i);
       real.setValue(Math.clamp(value, real.getLowerBound(), real.getUpperBound()));

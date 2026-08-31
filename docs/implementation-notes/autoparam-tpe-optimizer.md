@@ -6,14 +6,22 @@ Reach a good wizard parameter set in tens of full batch runs rather than hundred
 budget is 80 uncached batch executions, including the raw-data estimate. Cache hits and rejected
 duplicate proposals are useful diagnostics, but do not consume this budget.
 
-This replaces the earlier TPE-first plan. The implementation order is:
+The practical implementation order is:
 
 1. make the benchmark and budget trustworthy;
 2. establish an adaptive pattern-search baseline;
-3. validate pattern search on representative reference datasets;
-4. implement local Gaussian-process Bayesian optimisation only if pattern search leaves a measured
-   gap;
-5. consider TPE only if the preceding results give a concrete reason to do so.
+3. implement and evaluate GP-ARD (subsequently retired after the pilot);
+4. run the same design without guidance as a Sobol control (subsequently retired);
+5. implement multivariate TPE as a second, simpler surrogate approach (subsequently retired);
+6. compare score as a function of elapsed time before choosing a default.
+
+All five experimental stages were evaluated. The GP, TPE and standalone Sobol-search implementations
+and options were removed after the pilots because none outperformed pattern search. Their benchmark
+csv files and findings remain as evidence. Sobol sampling itself remains available for warm-start
+designs and pattern-search restarts. Real-data screening remains intentionally limited to
+`thermo-20y-qc` and `zenotof-feces-pos`; the current evidence ranks pattern search first. Detailed
+results are recorded in
+[autoparam-optimizer-evaluation.md](autoparam-optimizer-evaluation.md).
 
 The evidence in [autoparam-optimizer-evaluation.md](autoparam-optimizer-evaluation.md) motivates
 this
@@ -64,11 +72,24 @@ csv column. Both are fixed and covered by tests; neither changes the recorded sc
 
 ## Decisions
 
-**Scope.** Pattern search and GP optimisation are single-objective algorithms. MOEA/D remains
-available for genuine multi-objective searches. Neither new algorithm becomes the default until it
-passes the real-data benchmark below.
+**Scope.** Pattern search is the retained single-objective algorithm. MOEA/D remains available for
+genuine multi-objective searches. Pattern search does not become the default until it passes the
+real-data benchmark below.
 
-**Return the result shape expected by the existing task.** Both new algorithms implement
+**Retire the GP implementation after its pilot.** The deterministic GP-ARD experiment was
+numerically sound, but it did not outperform pattern search at matched elapsed time on the two
+screening datasets and carried substantially more implementation and numerical complexity. Remove
+its selectable option, runtime classes and dedicated tests. Preserve its benchmark csv files and
+evaluation findings so the rejected approach remains traceable.
+
+**Retire TPE and the standalone Sobol control after their pilots.** TPE was about 12% worse than
+pattern search at matched elapsed time on both screening datasets. The standalone Sobol search was
+useful only as an unguided experimental control and did not improve beyond its initial design.
+Remove both options, implementations, origins and dedicated tests while preserving their csv files
+and evaluation findings. Keep the shared Sobol sequence used by warm-start sampling and
+pattern-search restarts.
+
+**Return the result shape expected by the existing task.** The sequential algorithms implement
 `getResult()` and return a `NondominatedPopulation` containing the single best feasible observation.
 If cancellation occurs before any feasible observation exists, return the least-violating observed
 solution so the existing result and comparison code still receives a non-empty population.
@@ -91,6 +112,23 @@ runtime copied from their original result. The existing per-solution `Runtime / 
 runtime of that solution's batch queue and is zero for cache hits. Its sum estimates total batch
 processing time, but not time to result because it excludes optimizer and diagnostic overhead.
 
+**Show completed evaluations live in GUI runs.** After evaluating the raw-data estimate,
+`BatchOptimizationMainTask` opens the results window and attaches an optional completion observer to
+`WizardOptimizationProblem`. The problem publishes only completed `Solution` objects and has no
+JavaFX dependency; `OptimizationResultsController` transfers snapshots to the GUI thread and updates
+one observable table list via `setAll`. The plot above the table uses proposal/evaluation number on
+the x axis, every finite score as a dot, the best feasible score as a step line, and the raw-data
+estimate as a dashed baseline. Objective canonical values determine improvement, so both minimise
+and maximise metrics work; infeasible points remain visible but cannot advance the best line.
+Single-objective optimizers use their only objective. For a MOEA/D multi-objective run the chart
+labels and shows the first objective, while the table retains every objective. Actions that consume
+a selected solution stay disabled until the final front is available. Headless runs do not attach
+the observer or create a window. The live window provides a **Stop search** action: it lets the
+currently running batch finish, prevents another candidate from starting even inside a population
+generation, and then finalizes normally with every completed evaluation. This is not task
+cancellation; the result actions become available after the graceful stop. Headless callers can
+request the same behavior programmatically.
+
 **Preserve benchmark evidence by configuration.** Benchmark filenames encode the optimizer,
 metric, sampling design, batch ceiling, seeds and selected datasets. A short explicit campaign label
 may replace that generated suffix. Rerunning the same campaign may replace its own files; changing
@@ -101,52 +139,41 @@ bounds span more than 10-fold are mapped logarithmically. Integer and tolerance-
 are represented by their effective discrete values, not by the fractional backing value of
 `OrdinalIntegerVariable`. Candidate vectors are rounded, clamped and deduplicated before evaluation.
 
-**Treat the current activity ranking as evidence, not truth.** Both algorithms search all enabled
-parameters. Pattern search may poll the three currently dominant parameters first, and GP-ARD may
-learn long length scales for unimportant parameters, but neither fixes the remaining parameters at
-their estimates.
+**Treat the current activity ranking as evidence, not truth.** All algorithms search all enabled
+parameters. Pattern search may poll the three currently dominant parameters first, but it does not
+fix the remaining parameters at their estimates.
 
 **Use the estimate as a starting observation, not as a modified statistical prior.** The raw-data
-estimate and a local space-filling design express the useful prior information directly. The GP
-retains a regular constant mean and the TPE prior is not moved away from its standard broad form.
+estimate and an optional local space-filling design express the useful prior information directly.
 
 **Warm-start bare algorithms explicitly.** `AbstractAlgorithm` has no initialization channel, and
 the current `configureInitialPopulation` switch only injects solutions into evolutionary and
-simulated-annealing algorithms. Add explicit `PatternSearchAlgorithm` and
-`GaussianProcessAlgorithm` cases that call each class's `setInitialSolutions(List<Solution>)`
-method. An empty list means warm-starting is disabled; the algorithm then creates its configured
-global initial design. The supplied list may contain the exact estimate that the task already
-evaluated; both algorithms match canonical vectors and reuse that observation. Sequential
-algorithms must not assume that `setInitialization()` reaches them. Introduce a shared interface
-only if additional sequential algorithms later make the concrete switch cases repetitive.
+simulated-annealing algorithms. Add an explicit `PatternSearchAlgorithm` case that calls its
+`setInitialSolutions(List<Solution>)` method. An empty list means warm-starting is disabled; the
+algorithm then creates its configured global initial design. The supplied list may contain the
+exact estimate that the task already evaluated; all sequential algorithms match canonical vectors
+and reuse that observation. Sequential algorithms must not assume that `setInitialization()`
+reaches them. Introduce a shared interface only if additional sequential algorithms later make the
+concrete switch cases repetitive.
 
 **Separate population size from initial-design size.** Rename the existing constant to
-`EVOLUTIONARY_POPULATION_SIZE = 20`; it configures only population-based MOEA algorithms. GP owns an
-`INITIAL_DESIGN_SIZE = 17` constant, while pattern search initially consumes only the estimate and
-generates its small restart block on demand. `BatchOptimizationMainTask` chooses the warm-start
-count by concrete algorithm type before calling `createWarmStartSolutions`. Neither sequential
-algorithm inherits the evolutionary population size accidentally.
+`EVOLUTIONARY_POPULATION_SIZE = 20`; it configures only population-based MOEA algorithms. Pattern
+search initially consumes only the estimate and generates its small restart block on demand.
+`BatchOptimizationMainTask` chooses the warm-start count by concrete algorithm type before calling
+`createWarmStartSolutions`. No sequential algorithm inherits the evolutionary population size
+accidentally.
 
-**Prefer deterministic, inspectable proposal generation.** Production uses a fixed sequence so the
-same data and settings reproduce the same result. Benchmarks use seeded shifts of the same Sobol
-design, shared between comparable configurations, to measure sensitivity to the initial design.
-Generate those shifts centrally from the task's `randomSeed` after `PRNG.setSeed`; pass the
-resulting
-initial design to the algorithm. No sampler may call `NormalDistribution.sample()` or construct an
-unseeded private random generator. `NormalDistribution.inverseCumulativeProbability()` remains safe
-because its input is supplied by the seeded or deterministic design. This rule also covers GP
-hyperparameter fitting: every marginal-likelihood restart uses a fixed deterministic start or a
-seeded Sobol start, iteration order is stable, and equal fits use a deterministic tie-breaker.
+**Prefer deterministic, inspectable proposal generation.** Production and the primary benchmarks
+use a fixed Sobol sequence so the same data and settings reproduce the same result. Sensitivity to
+the initial design, if needed, is a separate experiment with explicitly shifted designs. No sampler
+may call `NormalDistribution.sample()` or construct an unseeded private random generator.
+`NormalDistribution.inverseCumulativeProbability()` remains safe because its input is supplied by
+the deterministic design.
 
-**Materialise and tag every proposal consistently.** Pattern-search and GP candidates are always
-created by `problem.newSolution()`, then assigned canonical effective values. Add
-`PATTERN_SEARCH` and `SURROGATE` to `SolutionOrigin` and apply the appropriate origin before calling
-`evaluate()`. The existing `EVOLUTION.applyIfAbsent` remains only a fallback for legacy variation
-operators. Surrogate Sobol fallbacks retain `SURROGATE` and carry a separate fallback diagnostic.
-
-**Fail safely.** Numerical GP failures increase the diagonal jitter and retry. If fitting or
-acquisition still fails, the algorithm evaluates the next unused Sobol point and continues. A
-surrogate failure must not lose the best feasible result already found.
+**Materialise and tag every proposal consistently.** Pattern-search candidates are always created
+by `problem.newSolution()`, then assigned canonical effective values. Apply `PATTERN_SEARCH` before
+calling `evaluate()`. The existing `EVOLUTION.applyIfAbsent` remains only a fallback for legacy
+variation operators.
 
 ## Implementation plan
 
@@ -161,16 +188,14 @@ surrogate failure must not lose the best feasible result already found.
    cap and cancellation checks independent of that counter.
 4. Preserve each benchmark campaign under a configuration-specific filename instead of overwriting
    the evidence used by the implementation note.
-5. Extend `configureInitialPopulation` with explicit cases for `PatternSearchAlgorithm` and
-   `GaussianProcessAlgorithm`, passing the injected list to their setters. Verify that neither
-   warm-started algorithm reaches the "cannot be warm-started" fallback.
+5. Extend `configureInitialPopulation` with an explicit `PatternSearchAlgorithm` case, passing the
+   injected list to its setter. Verify that it does not reach the "cannot be warm-started" fallback.
 6. Rename `POPULATION_SIZE` to `EVOLUTIONARY_POPULATION_SIZE` and select the warm-start count by
-   concrete algorithm: 20 for population algorithms, 17 for GP, and one for pattern search.
+   concrete algorithm: 20 for population algorithms and one for pattern search.
 7. Extend `SolutionOrigin`, make the canonical search-space mapper materialise candidates through
    `problem.newSolution()`, and test the resulting origin, variable subclasses and constraint count.
-8. Add a reproducibility integration test: the same task seed must produce the same initial design,
-   fitted GP hyperparameters, canonical proposal sequence and scores, while a different benchmark
-   seed must change the shifted-Sobol design.
+8. Add reproducibility tests: repeated runs must produce the same initial design, canonical
+   proposal sequence and scores.
 
 This phase is complete when an 80-batch run reports exactly 80 cache misses, terminates even under
 duplicate proposals, and its result files identify the algorithm, seed/design and budget.
@@ -203,50 +228,14 @@ interior optimum, inactive dimensions, rounded ordinal variables, duplicate avoi
 and exact budget termination. They also verify that `getResult()` returns the best feasible solution
 as a singleton `NondominatedPopulation`.
 
-### 2. Conditional local GP Bayesian optimisation
+### 2. Rejected GP experiment
 
-Do not start this phase merely because it was next in the original list. Implement GP only if
-pattern search misses an actual product requirement, shows a clear plateau below the best known
-result, or a substantially smaller time budget becomes necessary. The completed four-dataset run
-gives no current evidence that GP's additional machinery is needed. Do not launch a long all-dataset
-campaign merely to unblock GP implementation.
-
-Implement the numerical pieces independently of MOEA Framework:
-
-- `Matern52Kernel` for an ARD Matérn-5/2 covariance;
-- `GaussianProcessSurrogate` for fitting and posterior predictions;
-- `ExpectedImprovement` for maximisation;
-- `GaussianProcessAlgorithm extends AbstractAlgorithm` for search integration.
-
-The first model consumes 17 observations from the explicit initial design: the already evaluated
-estimate plus 16 shifted-Sobol perturbations. With an 80-batch budget this leaves 63 guided
-evaluations.
-
-Model contract:
-
-1. Train on canonical transformed vectors and standardised objective values.
-2. Fit one bounded length scale per parameter, signal variance and a small diagonal noise/jitter
-   term by regularised marginal likelihood. Weak length-scale priors prevent 17 observations from
-   producing extreme ARD estimates. Use deterministic bounded multistart points and a stable
-   tie-breaker. These are internal constants, not user parameters.
-3. Refit after the initial design and then every few evaluations, warm-starting from the previous
-   fit. Cholesky decomposition and triangular solves come from `commons-math3`; no dependency is
-   added.
-4. Select the next point by expected improvement over a deterministic Sobol candidate pool. Mix
-   candidates from the full bounds with candidates in a trust region around the incumbent. Adapt
-   the trust-region width after repeated successes or failures.
-5. Canonicalise and deduplicate every candidate before scoring its acquisition. The likelihood and
-   the actual batch must see the same rounded ordinal values. Materialise the winner with
-   `problem.newSolution()` and tag it `SURROGATE` before evaluation.
-6. When the shape constraint is enabled, fit its violation value as a separate surrogate and use
-   constrained expected improvement. Do not mix infeasible objective values into the ordinary
-   objective model as if they were simply low scores.
-
-Unit tests cover covariance values, posterior interpolation, increasing uncertainty away from
-observations, EI at known and unknown points, ARD on irrelevant dimensions, near-singular inputs,
-ordinal deduplication, deterministic hyperparameter refits, the Sobol fallback, `getResult()` and
-budget termination. End-to-end synthetic tests compare best-so-far curves across several fixed
-designs rather than requiring one stochastic run to beat random search.
+A deterministic GP-ARD optimizer with constrained Expected Improvement and a mixed global/local
+candidate pool was implemented and screened at the same 80-batch ceiling. It performed useful
+guided optimization beyond its 17-point initial design, but was no better than pattern search on
+Thermo and about 13% worse at matched time on ZenoTOF feces. Its runtime implementation and tests
+were therefore removed. The exact configuration, measurements and retained csv evidence are in
+[autoparam-optimizer-evaluation.md](autoparam-optimizer-evaluation.md).
 
 ### 3. Benchmark and choose the default
 
@@ -255,14 +244,17 @@ Report actual batch executions and proposal counts as secondary axes. Compare:
 
 - raw estimate plus Sobol sampling only;
 - adaptive pattern search;
-- local GP-ARD with expected improvement;
 - current MOEA/D at the same batch budget.
 
 The initial screening on `thermo-20y-qc` and `zenotof-feces-pos` is complete for deterministic
 pattern search and three MOEA/D seeds. A follow-up pattern run also completed both ZenoTOF plasma
 datasets and was intentionally stopped after feces. Further datasets are optional product
-validation, not the next implementation step. If GP is later implemented, compare it with fixed
-designs using common elapsed-time checkpoints and an 80-batch safety ceiling. Report per dataset:
+validation, not the next implementation step. Use common elapsed-time checkpoints and an 80-batch
+safety ceiling. Report per dataset:
+
+The retired standalone Sobol experiment was the unguided structured-search control. It consumed the
+same 17-point estimate-centred design as the surrogate experiments, then evaluated unused global
+canonical Sobol points sequentially until the same real-batch ceiling.
 
 - best feasible score divided by the estimate score;
 - median and interquartile range at fixed elapsed-time checkpoints;
@@ -275,13 +267,11 @@ default only if it has the best median result at the elapsed-time limit and fini
 the best method on every reference dataset. The two historical 401-proposal scores above are
 stretch goals, not a substitute for this comparison.
 
-### 4. Conditional TPE follow-up
+### 4. Rejected TPE and Sobol-search experiments
 
-Do not implement TPE merely as proof that a surrogate can work. Reconsider it only if GP maintenance
-or numerical robustness is unacceptable, or if the future parameter space becomes substantially
-categorical or conditional.
-
-If that condition is met, the implementation must include discrete probability masses for ordinal
-variables, candidate deduplication, explicit constraint handling and a multivariate model or direct
-evidence that independent densities are adequate. It is judged by the same batch-count benchmark;
-matching pattern search does not justify its additional complexity.
+Multivariate TPE and a standalone unguided Sobol control were implemented and screened under the
+same 80-batch ceiling. TPE improved beyond its shared initial design, but pattern search was about
+12% better at each TPE finish time. The Sobol control did not improve beyond its initial design.
+Their selectable options, runtime implementations, origins and dedicated tests were therefore
+removed. The benchmark configuration, measurements and retained csv evidence are in
+[autoparam-optimizer-evaluation.md](autoparam-optimizer-evaluation.md).

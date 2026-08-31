@@ -25,27 +25,46 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 
+import io.github.mzmine.gui.chartbasics.simplechart.SimpleXYChart;
+import io.github.mzmine.gui.chartbasics.simplechart.datasets.ColoredXYDataset;
+import io.github.mzmine.gui.chartbasics.simplechart.datasets.DatasetAndRenderer;
+import io.github.mzmine.gui.chartbasics.simplechart.datasets.RunOption;
+import io.github.mzmine.gui.chartbasics.simplechart.providers.PlotXYDataProvider;
+import io.github.mzmine.gui.chartbasics.simplechart.providers.SimpleXYProvider;
+import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYLineRenderer;
+import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYShapeRenderer;
 import io.github.mzmine.javafx.components.factories.FxButtons;
+import io.github.mzmine.javafx.components.factories.FxSplitPanes;
 import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.util.FxIcons;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OrdinalIntegerVariable;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SolutionOrigin;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
+import io.github.mzmine.util.color.SimpleColorPalette;
+import java.awt.BasicStroke;
+import java.awt.geom.Ellipse2D;
 import java.io.Serializable;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.IdentityHashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import javafx.geometry.Orientation;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
+import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
@@ -53,6 +72,7 @@ import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jfree.chart.axis.NumberAxis;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.variable.RealVariable;
 import org.moeaframework.core.variable.Variable;
@@ -71,20 +91,25 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
   private final Runnable onExportPressed;
   private final Runnable quickRun;
   @Nullable
+  private final Runnable stopSearch;
+  @Nullable
   private final Stage stage;
 
-  protected OptimizationResultsViewBuilder(OptimizationResultModel model, Runnable onAcceptPressed,
-      Runnable openInBatch, Runnable onExportPressed, Runnable quickRun, @Nullable final Stage stage) {
+  protected OptimizationResultsViewBuilder(@NotNull OptimizationResultModel model,
+      @NotNull Runnable onAcceptPressed, @NotNull Runnable openInBatch,
+      @NotNull Runnable onExportPressed, @NotNull Runnable quickRun, @Nullable Runnable stopSearch,
+      @Nullable final Stage stage) {
     super(model);
     this.onAcceptPressed = onAcceptPressed;
     this.openInBatch = openInBatch;
     this.onExportPressed = onExportPressed;
     this.quickRun = quickRun;
+    this.stopSearch = stopSearch;
     this.stage = stage;
   }
 
   @Override
-  public Region build() {
+  public @NotNull Region build() {
     final TableView<Solution> solutionTable = new TableView<>();
     // decision: bind the model's single observable list instead of replacing the items list, so
     // listeners and bindings on it are not discarded
@@ -94,8 +119,15 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     solutionTable.getSelectionModel().selectedItemProperty()
         .subscribe(s -> model.selectedSolutionProperty().set(s));
 
-    BorderPane borderPane = new BorderPane();
-    borderPane.setCenter(solutionTable);
+    final SimpleXYChart<PlotXYDataProvider> progressChart = createProgressChart();
+    model.getDisplayedSolutions()
+        .addListener((ListChangeListener<Solution>) _ -> updateProgressChart(progressChart));
+    updateProgressChart(progressChart);
+
+    final SplitPane content = FxSplitPanes.newSplitPane(0.45, Orientation.VERTICAL, progressChart,
+        solutionTable);
+    final BorderPane borderPane = new BorderPane();
+    borderPane.setCenter(content);
 
     final Button acceptButton = FxButtons.createButton("Apply to wizard", FxIcons.CHECK_CIRCLE,
         null, onAcceptPressed);
@@ -106,9 +138,28 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     final Button quickRunButton = FxButtons.createButton("Quick run & annotate", FxIcons.BATCH,
         null, quickRun);
 
-    ButtonBar buttonBar = new ButtonBar();
+    final BooleanBinding noUsableSelection = model.optimizationRunningProperty()
+        .or(model.selectedSolutionProperty().isNull());
+    acceptButton.disableProperty().bind(noUsableSelection);
+    batchButton.disableProperty().bind(noUsableSelection);
+    quickRunButton.disableProperty().bind(noUsableSelection);
+    exportButton.disableProperty().bind(Bindings.isEmpty(model.getDisplayedSolutions()));
+
+    final ButtonBar buttonBar = new ButtonBar();
     buttonBar.getButtons().addAll(exportButton, batchButton, quickRunButton, acceptButton);
     borderPane.setBottom(buttonBar);
+
+    if (stopSearch != null) {
+      final Button stopButton = FxButtons.createButton("Stop search", FxIcons.STOP,
+          "Finish after the current batch and keep all completed results", stopSearch);
+      stopButton.disableProperty()
+          .bind(model.optimizationRunningProperty().not().or(model.stopSearchRequestedProperty()));
+      stopButton.textProperty().bind(
+          Bindings.when(model.stopSearchRequestedProperty()).then("Stopping...")
+              .otherwise("Stop search"));
+      ButtonBar.setButtonData(stopButton, ButtonBar.ButtonData.LEFT);
+      buttonBar.getButtons().add(0, stopButton);
+    }
 
     if (stage != null) {
       final Button closeButton = FxButtons.createButton("Close", FxIcons.CANCEL, null, stage::hide);
@@ -118,24 +169,82 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
     return borderPane;
   }
 
+  private @NotNull SimpleXYChart<PlotXYDataProvider> createProgressChart() {
+    final Solution template = model.getDisplayedSolutions().getFirst();
+    final String objectiveName = template.getObjective(0).getName();
+    final SimpleXYChart<PlotXYDataProvider> chart = new SimpleXYChart<>(
+        "Candidate evaluations and best-so-far", "Evaluation number", objectiveName);
+    chart.setItemLabelsVisible(false);
+    chart.setShowCrosshair(true);
+    chart.setMinHeight(260d);
+    final NumberAxis evaluationAxis = (NumberAxis) chart.getXYPlot().getDomainAxis();
+    evaluationAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+    return chart;
+  }
+
+  private void updateProgressChart(@NotNull SimpleXYChart<PlotXYDataProvider> chart) {
+    final List<Solution> solutions = List.copyOf(model.getDisplayedSolutions());
+    if (solutions.isEmpty()) {
+      chart.removeAllDatasets();
+      return;
+    }
+
+    // assumption: the first objective is the score shown in the live chart. Multi-objective runs
+    // retain all objective columns in the table; the chart label states which one is plotted.
+    final OptimizationProgressData progress = OptimizationProgressData.create(solutions,
+        model.getSinglePassSolution(), 0);
+    chart.setRangeAxisLabel(progress.objectiveName());
+
+    final SimpleColorPalette palette = ConfigService.getDefaultColorPalette();
+    final List<DatasetAndRenderer> datasets = new ArrayList<>(3);
+
+    final SimpleXYProvider candidates = new SimpleXYProvider("Candidate score",
+        palette.getPositiveColorAWT(), progress.evaluations(), progress.scores(), noDecimals,
+        threeDecimals);
+    final ColoredXYShapeRenderer candidateRenderer = new ColoredXYShapeRenderer(false,
+        new Ellipse2D.Double(-3.5d, -3.5d, 7d, 7d), true);
+    datasets.add(new DatasetAndRenderer(new ColoredXYDataset(candidates, RunOption.THIS_THREAD),
+        candidateRenderer));
+
+    final SimpleXYProvider best = new SimpleXYProvider("Best so far", palette.getAWT(1),
+        progress.bestEvaluations(), progress.bestScores(), noDecimals, threeDecimals);
+    final ColoredXYLineRenderer bestRenderer = new ColoredXYLineRenderer();
+    bestRenderer.setDefaultStroke(new BasicStroke(2.2f));
+    datasets.add(
+        new DatasetAndRenderer(new ColoredXYDataset(best, RunOption.THIS_THREAD), bestRenderer));
+
+    if (Double.isFinite(progress.estimateScore()) && progress.evaluations().length > 0) {
+      final double firstEvaluation = progress.evaluations()[0];
+      final double lastEvaluation = progress.evaluations()[progress.evaluations().length - 1];
+      final double start =
+          firstEvaluation == lastEvaluation ? firstEvaluation - 0.5d : firstEvaluation;
+      final double end = firstEvaluation == lastEvaluation ? lastEvaluation + 0.5d : lastEvaluation;
+      final SimpleXYProvider estimate = new SimpleXYProvider("Raw data estimate",
+          palette.getNeutralColorAWT(), new double[]{start, end},
+          new double[]{progress.estimateScore(), progress.estimateScore()}, noDecimals,
+          threeDecimals);
+      final ColoredXYLineRenderer estimateRenderer = new ColoredXYLineRenderer();
+      estimateRenderer.setDefaultStroke(
+          new BasicStroke(1.2f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f,
+              new float[]{6f, 4f}, 0f));
+      datasets.add(new DatasetAndRenderer(new ColoredXYDataset(estimate, RunOption.THIS_THREAD),
+          estimateRenderer));
+    }
+
+    chart.setDatasetsAndRenderers(datasets);
+  }
+
   /**
    * Derives the table columns from the first displayed solution. The raw data estimate is always
    * the first row, so it remains a valid template even when the optimizer returned no solutions,
    * for example after an early cancel.
    */
   private void createColumns(@NotNull TableView<Solution> solutionTable) {
-    final List<Solution> solutions = model.getDisplayedSolutions();
+    final ObservableList<Solution> solutions = model.getDisplayedSolutions();
     if (solutions.isEmpty()) {
       return;
     }
     final Solution template = solutions.getFirst();
-
-    // assumption: the table sorts its items list in place, so the original row order is captured
-    // here instead of being looked up in the live list
-    final Map<Solution, Integer> originalOrder = new IdentityHashMap<>(solutions.size());
-    for (int i = 0; i < solutions.size(); i++) {
-      originalOrder.put(solutions.get(i), i);
-    }
 
     final TableColumn<Solution, String> sourceCol = TableColumns.createColumn("Source", 130,
         s -> new ReadOnlyStringWrapper(s == model.getSinglePassSolution() ? SOURCE_ESTIMATE
@@ -150,8 +259,8 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
             Objects.requireNonNullElse(s.getAttribute(SolutionOrigin.ATTRIBUTE), "").toString()));
     solutionTable.getColumns().add(originCol);
 
-    final TableColumn<Solution, Number> indexCol = TableColumns.createColumn("Index", 50,
-        s -> new ReadOnlyIntegerWrapper(originalOrder.getOrDefault(s, -1)));
+    final TableColumn<Solution, Number> indexCol = TableColumns.createColumn("Evaluation", 80,
+        s -> new ReadOnlyIntegerWrapper(evaluationIndex(s)));
     solutionTable.getColumns().add(indexCol);
 
     for (int i = 0; i < template.getNumberOfVariables(); i++) {
@@ -198,7 +307,8 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
       // Skip internal attributes (prefixed with '_'), the MOEA penalty attribute and the origin,
       // which already has its own column next to Source
       if (attribute.startsWith("_") || attribute.equalsIgnoreCase("penalty") || attribute.equals(
-          SolutionOrigin.ATTRIBUTE)) {
+          SolutionOrigin.ATTRIBUTE) || attribute.equals(
+          WizardOptimizationProblem.ATTR_PROPOSAL_INDEX)) {
         continue;
       }
       final TableColumn<Solution, String> col = TableColumns.createColumn(attribute, 120,
@@ -206,5 +316,11 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
               Objects.requireNonNullElse(s.getAttribute(attribute), "").toString()));
       solutionTable.getColumns().add(col);
     }
+  }
+
+  private int evaluationIndex(@NotNull Solution solution) {
+    final Object index = solution.getAttribute(WizardOptimizationProblem.ATTR_PROPOSAL_INDEX);
+    return index instanceof Number number ? number.intValue()
+        : model.getDisplayedSolutions().indexOf(solution) + 1;
   }
 }

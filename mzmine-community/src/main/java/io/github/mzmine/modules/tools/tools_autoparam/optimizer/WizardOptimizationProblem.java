@@ -84,6 +84,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.beans.property.SimpleStringProperty;
 import org.jetbrains.annotations.NotNull;
@@ -102,6 +105,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
   private final List<ParameterSolutionPrototype> paramToOptimize;
   @NotNull
   private final AtomicReference<TaskStatus> externalStatus;
+  private final @NotNull BooleanSupplier stopSearchRequestedSupplier;
   private final @NotNull List<SweepMetric> enabledMetrics;
 
   private final @NotNull File[] files;
@@ -173,6 +177,12 @@ public class WizardOptimizationProblem extends AbstractProblem {
   private final List<Solution> evaluatedSolutions = Collections.synchronizedList(new ArrayList<>());
 
   /**
+   * Optional observer for live result displays. The optimizer problem remains independent of
+   * JavaFX; callers decide which thread consumes the completed solution.
+   */
+  private volatile @Nullable Consumer<Solution> evaluationListener;
+
+  /**
    * Results of already evaluated parameter vectors, keyed by the effective values the batch is run
    * with. Differential evolution leaves a vector untouched whenever its crossover rate does not
    * fire, and a converged population produces the same offspring repeatedly, so a noticeable share
@@ -188,6 +198,13 @@ public class WizardOptimizationProblem extends AbstractProblem {
   public WizardOptimizationProblem(@NotNull final WizardSequence initialSequence,
       @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param,
       @NotNull AtomicReference<TaskStatus> externalStatus, int maxBatchExecutions) {
+    this(initialSequence, stats, param, externalStatus, maxBatchExecutions, () -> false);
+  }
+
+  public WizardOptimizationProblem(@NotNull final WizardSequence initialSequence,
+      @NotNull List<@NotNull DataFileStatistics> stats, @NotNull final ParameterSet param,
+      @NotNull AtomicReference<TaskStatus> externalStatus, int maxBatchExecutions,
+      @NotNull BooleanSupplier stopSearchRequestedSupplier) {
 
     // decision: super() must be first — use static helper for objective count before enabledMetrics field is assigned
     super(param.getValue(OptimizerParameters.paramToOptimize).size(),
@@ -199,6 +216,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
     target = statsToTargetList(stats);
     paramToOptimize = param.getValue(OptimizerParameters.paramToOptimize);
     this.externalStatus = externalStatus;
+    this.stopSearchRequestedSupplier = stopSearchRequestedSupplier;
     enabledMetrics = buildEnabledMetrics(param, stats);
 
     this.NUM_PARAM = paramToOptimize.size();
@@ -380,6 +398,12 @@ public class WizardOptimizationProblem extends AbstractProblem {
   @Override
   public void evaluate(@NotNull Solution solution) {
 
+    // decision: a GUI stop is graceful: finish the batch already in progress, but reject the next
+    // proposal before cache lookup or another full batch can start.
+    if (stopSearchRequestedSupplier.getAsBoolean()) {
+      throw new OptimizationSearchStoppedException();
+    }
+
     // untagged means the variation operators built it, see SolutionOrigin#applyIfAbsent
     SolutionOrigin.EVOLUTION.applyIfAbsent(solution);
 
@@ -393,6 +417,7 @@ public class WizardOptimizationProblem extends AbstractProblem {
       solution.setAttribute(ATTR_BATCH_EXECUTION_INDEX, batchExecutionBudget.count());
       solution.setAttribute(ATTR_ELAPSED_OPTIMIZATION_SECONDS, elapsedTimeTracker.elapsedSeconds());
       evaluatedSolutions.add(solution);
+      notifyEvaluationCompleted(solution);
       return;
     }
 
@@ -493,8 +518,21 @@ public class WizardOptimizationProblem extends AbstractProblem {
     solution.setAttribute(ATTR_ELAPSED_OPTIMIZATION_SECONDS, elapsedTimeTracker.elapsedSeconds());
     evaluatedSolutions.add(solution);
     evaluationCache.put(cacheKey, solution);
+    notifyEvaluationCompleted(solution);
 
     project.removeFeatureLists(batchTask.getLatestCreatedFeatureLists());
+  }
+
+  private void notifyEvaluationCompleted(@NotNull Solution solution) {
+    final Consumer<Solution> listener = evaluationListener;
+    if (listener != null) {
+      try {
+        listener.accept(solution);
+      } catch (RuntimeException e) {
+        // decision: a presentation observer must never abort an expensive optimization.
+        logger.log(Level.WARNING, "Could not publish completed optimizer evaluation", e);
+      }
+    }
   }
 
   /**
@@ -658,6 +696,14 @@ public class WizardOptimizationProblem extends AbstractProblem {
     synchronized (evaluatedSolutions) {
       return List.copyOf(evaluatedSolutions);
     }
+  }
+
+  /**
+   * Sets a single observer that is called after each proposal has a complete score and diagnostic
+   * attributes. Passing {@code null} detaches the observer.
+   */
+  public void setEvaluationListener(@Nullable Consumer<Solution> evaluationListener) {
+    this.evaluationListener = evaluationListener;
   }
 
   /**

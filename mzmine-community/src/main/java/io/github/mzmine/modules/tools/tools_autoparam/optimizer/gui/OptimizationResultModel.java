@@ -28,7 +28,9 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -42,6 +44,8 @@ public class OptimizationResultModel {
   private final ObjectProperty<@Nullable NondominatedPopulation> result = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable Solution> selectedSolution = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable Solution> singlePassSolution = new SimpleObjectProperty<>();
+  private final BooleanProperty optimizationRunning = new SimpleBooleanProperty(true);
+  private final BooleanProperty stopSearchRequested = new SimpleBooleanProperty(false);
 
   /**
    * Every solution shown in the results table: the raw data estimate first, followed by the
@@ -85,6 +89,22 @@ public class OptimizationResultModel {
 
   public ObjectProperty<@Nullable Solution> singlePassSolutionProperty() {
     return singlePassSolution;
+  }
+
+  public boolean isOptimizationRunning() {
+    return optimizationRunning.get();
+  }
+
+  public @NotNull BooleanProperty optimizationRunningProperty() {
+    return optimizationRunning;
+  }
+
+  public boolean isStopSearchRequested() {
+    return stopSearchRequested.get();
+  }
+
+  public @NotNull BooleanProperty stopSearchRequestedProperty() {
+    return stopSearchRequested;
   }
 
   public @NotNull ObservableList<Solution> getDisplayedSolutions() {

@@ -90,6 +90,8 @@ public class OptimizationResultsController extends FxController<OptimizationResu
   private final WizardOptimizationProblem optimization;
   @Nullable
   private final Stage stage;
+  @Nullable
+  private final Runnable stopSearchAction;
 
   /**
    * @param singlePassSolution the evaluated raw data estimate. Shown as the first row of the
@@ -98,24 +100,74 @@ public class OptimizationResultsController extends FxController<OptimizationResu
    *                           optimizer.
    */
   public OptimizationResultsController(@NotNull BatchWizardTab wizardTab,
-      @NotNull WizardOptimizationProblem optimization, final NondominatedPopulation result,
-      @Nullable final Solution singlePassSolution, @Nullable final Stage stage) {
+      @NotNull WizardOptimizationProblem optimization, @Nullable final Solution singlePassSolution,
+      @Nullable final Stage stage) {
+    this(wizardTab, optimization, singlePassSolution, stage, null);
+  }
+
+  public OptimizationResultsController(@NotNull BatchWizardTab wizardTab,
+      @NotNull WizardOptimizationProblem optimization, @Nullable final Solution singlePassSolution,
+      @Nullable final Stage stage, @Nullable final Runnable stopSearchAction) {
     super(new OptimizationResultModel());
     this.wizardTab = wizardTab;
     this.optimization = optimization;
     this.stage = stage;
-    model.resultProperty().set(result);
+    this.stopSearchAction = stopSearchAction;
     model.singlePassSolutionProperty().set(singlePassSolution);
+    rebuildDisplayedSolutions();
+  }
+
+  /**
+   * Compatibility constructor for callers that only create the window after optimization.
+   */
+  public OptimizationResultsController(@NotNull BatchWizardTab wizardTab,
+      @NotNull WizardOptimizationProblem optimization, @NotNull NondominatedPopulation result,
+      @Nullable Solution singlePassSolution, @Nullable Stage stage) {
+    this(wizardTab, optimization, singlePassSolution, stage);
+    completeModel(result);
+  }
+
+  /**
+   * Refreshes the table and chart from all completed evaluations. Safe to call from the optimizer
+   * task thread.
+   */
+  public void refreshEvaluatedSolutions() {
+    onGuiThread(this::rebuildDisplayedSolutions);
+  }
+
+  /**
+   * Publishes the final non-dominated population and enables actions that consume a selected
+   * solution. Safe to call from the optimizer task thread.
+   */
+  public void completeOptimization(@NotNull NondominatedPopulation result) {
+    onGuiThread(() -> completeModel(result));
+  }
+
+  private void completeModel(@NotNull NondominatedPopulation result) {
+    model.resultProperty().set(result);
+    model.getFrontSolutions().clear();
+    model.getFrontSolutions().addAll(result.asList());
+    model.stopSearchRequestedProperty().set(false);
+    model.optimizationRunningProperty().set(false);
+    rebuildDisplayedSolutions();
+    if (stage != null) {
+      stage.setTitle("Optimization Results");
+    }
+  }
+
+  private void rebuildDisplayedSolutions() {
+    final NondominatedPopulation result = model.getResult();
+    final Solution singlePassSolution = model.getSinglePassSolution();
 
     // the raw data estimate is intentionally kept outside the non-dominated population, which
     // would reject it whenever an optimized solution dominates it
-    model.getFrontSolutions().addAll(result.asList());
-
     final List<Solution> displayed = new ArrayList<>();
     if (singlePassSolution != null) {
       displayed.add(singlePassSolution);
     }
-    displayed.addAll(result.asList());
+    if (result != null) {
+      displayed.addAll(result.asList());
+    }
 
     // every remaining evaluated solution, so the table shows the whole search and not just the
     // front - dominated and infeasible candidates carry the diagnostics needed to judge where the
@@ -134,7 +186,17 @@ public class OptimizationResultsController extends FxController<OptimizationResu
   @Override
   protected @NotNull FxViewBuilder<OptimizationResultModel> getViewBuilder() {
     return new OptimizationResultsViewBuilder(this.model, this::applyToWizardSequence,
-        this::openInBatch, this::exportSolutions, this::runBatchFilterResults, stage);
+        this::openInBatch, this::exportSolutions, this::runBatchFilterResults,
+        stopSearchAction == null ? null : this::requestStopSearch, stage);
+  }
+
+  private void requestStopSearch() {
+    if (!model.isOptimizationRunning() || model.isStopSearchRequested()
+        || stopSearchAction == null) {
+      return;
+    }
+    model.stopSearchRequestedProperty().set(true);
+    stopSearchAction.run();
   }
 
   public void applyToWizardSequence() {

@@ -117,8 +117,9 @@ public class OptimizerParameters extends SimpleParameterSet {
           ConfigService.getGuiFormats().scoreFormat(), 2.0, 1.0, 100.0), true);
 
   public static final ComboParameter<OptimizerOptions> optimizers = new ComboParameter<>(
-      "Optimizer", "Pattern search supports one selected metric; evolutionary optimizers also "
-      + "support multiple objectives.", OptimizerOptions.values(), OptimizerOptions.MOEAD);
+      "Optimizer", "Pattern search supports "
+      + "one selected metric; evolutionary optimizers also support multiple objectives.",
+      OptimizerOptions.values(), OptimizerOptions.MOEAD);
 
   public static final ComboParameter<WarmStartSampling> warmStartSampling = new ComboParameter<>(
       "Warm start sampling", """

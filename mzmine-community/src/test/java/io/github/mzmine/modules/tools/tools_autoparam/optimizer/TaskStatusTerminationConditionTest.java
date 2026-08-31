@@ -26,6 +26,7 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.taskcontrol.TaskStatus;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Assertions;
@@ -85,6 +86,19 @@ class TaskStatusTerminationConditionTest {
     Assertions.assertTrue(condition.shouldTerminate(algorithm));
 
     status.set(TaskStatus.ERROR);
+    Assertions.assertTrue(condition.shouldTerminate(algorithm));
+  }
+
+  @Test
+  void userStopTerminatesWithoutCancelingTheTask() {
+    final AtomicBoolean stopRequested = new AtomicBoolean();
+    final TaskStatusTerminationCondition condition = new TaskStatusTerminationCondition(3, 10,
+        () -> 1, () -> TaskStatus.PROCESSING, stopRequested::get);
+    final NSGAII algorithm = new NSGAII(new TwoRealProblem());
+    condition.initialize(algorithm);
+
+    Assertions.assertFalse(condition.shouldTerminate(algorithm));
+    stopRequested.set(true);
     Assertions.assertTrue(condition.shouldTerminate(algorithm));
   }
 
