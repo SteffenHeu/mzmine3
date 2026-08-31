@@ -33,6 +33,7 @@ import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.javafx.dialogs.NotificationService;
 import io.github.mzmine.javafx.dialogs.NotificationService.NotificationType;
 import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.main.KeepInMemory;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardTab;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
@@ -220,6 +221,13 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     addTaskStatusListener((_, newStatus, _) -> externalStatus.set(newStatus));
 
+    // store all in ram while optimizing
+    MemoryMapStorage.setStoreAllInRam(true);
+    // restore to initial value on change
+    final KeepInMemory initialMemoryOption = ConfigService.getPreference(
+        MZminePreferences.memoryOption);
+    addTaskStatusListener((_, _, _) -> initialMemoryOption.enforceToMemoryMapping());
+
     final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, metadata);
     final List<FeatureRecord> benchmarkFeatures = BenchmarkFeatureLoader.fromParameterFile(null,
         params);
@@ -230,11 +238,6 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     // set a specific seed to make the results deterministic, see DEFAULT_RANDOM_SEED
     PRNG.setSeed(randomSeed);
-
-    // store all in ram while optimizing
-    addTaskStatusListener((_, _, _) -> ConfigService.getPreference(MZminePreferences.memoryOption)
-        .enforceToMemoryMapping());
-    MemoryMapStorage.setStoreAllInRam(true);
 
     totalBatchExecutions = Math.max(params.getValue(OptimizerParameters.iterations), 30);
     final WizardOptimizationProblem optimizationProblem = new WizardOptimizationProblem(sequence,
