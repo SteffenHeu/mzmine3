@@ -107,8 +107,7 @@ public class ScanRtCorrectionTask extends AbstractTask {
     calibrationModuleParameters = calibrationMethod.parameters();
     calibrationModule = calibrationMethod.value().getModuleInstance();
 
-    sampleTypeFilter = new SampleTypeFilter(
-        parameters.getParameter(RTCorrectionParameters.sampleTypes).getValue());
+    sampleTypeFilter = parameters.getParameter(RTCorrectionParameters.sampleTypes).getValue();
   }
 
   static @NotNull String createUnsatisfiedSampleFilterMessage(SampleTypeFilter sampleTypeFilter,
