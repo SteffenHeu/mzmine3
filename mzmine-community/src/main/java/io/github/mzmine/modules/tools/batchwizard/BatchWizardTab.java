@@ -454,7 +454,7 @@ public class BatchWizardTab extends SimpleTab {
         "Derive wizard parameters from the same representative files used for optimization and "
             + "show their statistics", this::estimateParametersFromFiles);
     estimate.disableProperty().bind(parameterEstimationRunning);
-    final Button optimize = FxButtons.createButton("Optimize sequence", FxIcons.GRAPH_UP, null,
+    final Button optimize = FxButtons.createButton("Optimize parameters", FxIcons.GRAPH_UP, null,
         this::runOptimizer);
 
     instrumentComboBoxPane.getChildren()
