@@ -52,9 +52,13 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInt
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
+import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatisticsDashboardPane;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchOptimizationMainTask;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerModule;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SinglePassParameterEstimation;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterEstimationResult;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterEstimationTask;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.modules.visualization.projectmetadata.extract.SampleMetadataExtractionParameters;
 import io.github.mzmine.parameters.ParameterUtils;
@@ -62,6 +66,7 @@ import io.github.mzmine.parameters.dialogs.ParameterSetupPane;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNamesComponent;
 import io.github.mzmine.parameters.parametertypes.filenames.LastFilesButton;
 import io.github.mzmine.taskcontrol.TaskService;
+import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.collections.CollectionUtils;
@@ -132,6 +137,7 @@ public class BatchWizardTab extends SimpleTab {
   private final Map<WizardPart, ComboBox<WizardStepParameters>> combos = new HashMap<>();
   private final LastFilesButton localPresetsButton;
   private final SimpleBooleanProperty advancedMode = new SimpleBooleanProperty(false);
+  private final SimpleBooleanProperty parameterEstimationRunning = new SimpleBooleanProperty(false);
   private final int helpButtonSize = 50;
   private boolean listenersActive = true;
   private TabPane tabPane;
@@ -439,16 +445,21 @@ public class BatchWizardTab extends SimpleTab {
           });
     }
 
-    Button createBatch = FxButtons.createButton("Create batch", FxIcons.START, null,
+    final Button createBatch = FxButtons.createButton("Create batch", FxIcons.START, null,
         this::createBatch);
-    Button save = FxButtons.createSaveButton("Save presets", this::saveLocalWizardSequence);
-    Button load = FxButtons.createLoadButton("Load presets", this::chooseAndLoadLocalSequence);
-    Button optimize = FxButtons.createButton("Optimize sequence", FxIcons.GRAPH_UP, null,
+    final Button save = FxButtons.createSaveButton("Save presets", this::saveLocalWizardSequence);
+    final Button load = FxButtons.createLoadButton("Load presets",
+        this::chooseAndLoadLocalSequence);
+    final Button estimate = FxButtons.createButton("Estimate parameters", FxIcons.LIGHTBULB,
+        "Derive wizard parameters from the same representative files used for optimization and "
+            + "show their statistics", this::estimateParametersFromFiles);
+    estimate.disableProperty().bind(parameterEstimationRunning);
+    final Button optimize = FxButtons.createButton("Optimize sequence", FxIcons.GRAPH_UP, null,
         this::runOptimizer);
 
     instrumentComboBoxPane.getChildren()
         .addAll(createSpacer(), new Label("="), createSpacer(), createBatch, save, load,
-            localPresetsButton, optimize);
+            localPresetsButton, estimate, optimize);
 
     schemaPane = new HBox(0);
     schemaPane.setAlignment(Pos.CENTER);
@@ -487,17 +498,7 @@ public class BatchWizardTab extends SimpleTab {
     final WizardStepParameters importParam = sequenceSteps.get(DATA_IMPORT).get();
     final @NotNull File[] allFiles = importParam.getParameter(DataImportWizardParameters.fileNames)
         .getValue();
-    List<File> qcFiles = CollectionUtils.selectRandomElements(
-        Arrays.stream(allFiles).filter(f -> SampleType.guessFromName(f.getName()) == SampleType.QC)
-            .limit(10).toList(), 10);
-
-    if (qcFiles.size() < 3) {
-      File[] nonBlanks = Arrays.stream(allFiles)
-          .filter(f -> SampleType.guessFromName(f.getName()) != SampleType.BLANK).limit(10)
-          .toArray(File[]::new);
-      qcFiles = CollectionUtils.selectRandomElements(
-          List.of(nonBlanks.length > 3 ? nonBlanks : allFiles), 10);
-    }
+    final File[] optimizerFiles = selectOptimizerInputFiles(allFiles);
 
     final var metadataFile = importParam.getOptionalValue(DataImportWizardParameters.metadataFile)
         .orElse(null);
@@ -511,9 +512,89 @@ public class BatchWizardTab extends SimpleTab {
     }
 
     final BatchOptimizationMainTask optimizer = new BatchOptimizationMainTask(
-        MemoryMapStorage.forRawDataFile(), Instant.now(), qcFiles.toArray(File[]::new),
+        MemoryMapStorage.forRawDataFile(), Instant.now(), optimizerFiles,
         metadataFile, this, optimizerParam);
     TaskService.getController().addTask(optimizer);
+  }
+
+  private void estimateParametersFromFiles() {
+    if (parameterEstimationRunning.get()) {
+      return;
+    }
+    updateAllParametersFromUi();
+    final WizardStepParameters importParameters = sequenceSteps.get(DATA_IMPORT).orElse(null);
+    if (importParameters == null) {
+      DialogLoggerUtil.showErrorDialog("Cannot estimate parameters",
+          "The wizard has no data import step.");
+      return;
+    }
+
+    final File[] allFiles = importParameters.getValue(DataImportWizardParameters.fileNames);
+    if (allFiles == null || allFiles.length == 0) {
+      DialogLoggerUtil.showErrorDialog("Cannot estimate parameters",
+          "Select at least one raw data file in the Data Import step first.");
+      return;
+    }
+    final File[] estimateFiles = selectOptimizerInputFiles(allFiles);
+
+    final File metadataFile = importParameters.getOptionalValue(
+        DataImportWizardParameters.metadataFile).orElse(null);
+    final WizardSequence sequenceSnapshot = copySequence(sequenceSteps);
+    final WizardParameterEstimationTask task = new WizardParameterEstimationTask(
+        MemoryMapStorage.forRawDataFile(), Instant.now(), estimateFiles, metadataFile,
+        sequenceSnapshot, this::applyParameterEstimationResult);
+    parameterEstimationRunning.set(true);
+    task.addTaskStatusListener((_, newStatus, _) -> {
+      if (!newStatus.isUnmodifiable()) {
+        return;
+      }
+      Platform.runLater(() -> {
+        parameterEstimationRunning.set(false);
+        if (newStatus == TaskStatus.ERROR) {
+          DialogLoggerUtil.showErrorDialog("Cannot estimate parameters", task.getErrorMessage());
+        }
+      });
+    });
+    TaskService.getController().addTask(task);
+  }
+
+  /**
+   * Uses the same small, representative input set for raw-data estimation and optimization.
+   */
+  private static File @NotNull [] selectOptimizerInputFiles(File @NotNull [] allFiles) {
+    final List<File> qcFiles = CollectionUtils.selectRandomElements(Arrays.stream(allFiles)
+        .filter(file -> SampleType.guessFromName(file.getName()) == SampleType.QC).limit(10)
+        .toList(), 10);
+    if (qcFiles.size() >= 3) {
+      return qcFiles.toArray(File[]::new);
+    }
+
+    final File[] nonBlankFiles = Arrays.stream(allFiles)
+        .filter(file -> SampleType.guessFromName(file.getName()) != SampleType.BLANK).limit(10)
+        .toArray(File[]::new);
+    final File[] candidates = nonBlankFiles.length > 3 ? nonBlankFiles : allFiles;
+    return CollectionUtils.selectRandomElements(List.of(candidates), 10).toArray(File[]::new);
+  }
+
+  private void applyParameterEstimationResult(@NotNull WizardParameterEstimationResult result) {
+    // Preserve unrelated edits made while the background task was running.
+    updateAllParametersFromUi();
+    SinglePassParameterEstimation.applyToWizardSequence(sequenceSteps, result.estimates(),
+        result.builder());
+    createParameterPanes();
+    MZmineCore.getDesktop().addTab(new SimpleTab("Data File Statistics",
+        new DataFileStatisticsDashboardPane(result.statistics(), result.interSampleRtStatistics(),
+            result.builder().getMassDetectorType())));
+  }
+
+  private static @NotNull WizardSequence copySequence(@NotNull WizardSequence source) {
+    final WizardSequence copy = new WizardSequence();
+    for (final WizardStepParameters step : source) {
+      final WizardStepParameters stepCopy = step.getFactory().create();
+      ParameterUtils.copyParameters(step, stepCopy);
+      copy.add(stepCopy);
+    }
+    return copy;
   }
 
   /**

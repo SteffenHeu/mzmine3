@@ -25,7 +25,6 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
-import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.SimpleRange;
 import io.github.mzmine.datamodel.SimpleRange.SimpleIntegerRange;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
@@ -36,6 +35,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometer
 import io.github.mzmine.modules.tools.batchwizard.subparameters.custom_parameters.WizardMassDetectorNoiseLevels;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.InterSampleRtStatistics;
+import io.github.mzmine.modules.tools.tools_autoparam.RawDataParameterEstimation;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolution.DoubleWizardParameterSolution;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolution.IntegerWizardParameterSolution;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -108,14 +108,7 @@ public class WizardParameterSolutionBuilder {
     if (massDetectorType != null) {
       this.massDetectorType = massDetectorType;
     } else if (dataFileStatistics != null) {
-      this.massDetectorType = stats.stream().map(DataFileStatistics::file).anyMatch(file -> {
-        if (file instanceof IMSRawDataFile) {
-          return false;
-        }
-        return file.getScans().stream()
-            .anyMatch(scan -> scan.getMSLevel() == 1 && scan.hasInjectionTime());
-      }) ? MassDetectorWizardOptions.FACTOR_OF_LOWEST_SIGNAL
-          : MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL;
+      this.massDetectorType = RawDataParameterEstimation.inferMassDetectorType(dataFileStatistics);
     } else {
       throw new IllegalArgumentException(
           "Data file statistics must be given or ms type must be set.");

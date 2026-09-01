@@ -31,19 +31,16 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.IonMobilityWizar
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
+import io.github.mzmine.modules.tools.tools_autoparam.RawDataParameterEstimation;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.IsotopeRatioConsistencyScore;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
-import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
-import io.github.mzmine.util.ArrayUtils;
-import io.github.mzmine.util.MathUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.moeaframework.core.PRNG;
@@ -83,21 +80,19 @@ public final class SinglePassParameterEstimation {
 
     // FWHM: median (50th percentile) of isotope peak FWHMs
     final double[] fwhms = stats.stream().map(DataFileStatistics::getIsotopePeakFwhms)
-        .flatMapToDouble(Arrays::stream).sorted().toArray();
-    if (fwhms.length > 0) {
-      estimates.put("FWHM", MathUtils.calcQuantileSorted(fwhms, 0.5));
+        .flatMapToDouble(Arrays::stream).toArray();
+    final Double fwhmEstimate = RawDataParameterEstimation.estimateFwhm(fwhms);
+    if (fwhmEstimate != null) {
+      estimates.put("FWHM", fwhmEstimate);
     }
 
     final double[] dataPts = stats.stream()
         .map(DataFileStatistics::getNumberOfLowestIsotopeDataPoints).flatMapToInt(Arrays::stream)
-        .mapToDouble(i -> i).sorted().toArray();
-    if (dataPts.length > 0) {
-      // decision: half the median width of the weakest isotope traces. The previous rule,
-      // min(max(5, shortest), q30), collapsed to exactly 5 on all seven reference datasets whose
-      // optima were 3, 6, 6, 6, 6, 7 and 6, so it carried no information about the data. Of the
-      // candidates measured against those optima this had the smallest worst case error.
-      estimates.put("Min consecutive",
-          MIN_CONSECUTIVE_DATA_POINT_FRACTION * MathUtils.calcQuantileSorted(dataPts, 0.5));
+        .mapToDouble(i -> i).toArray();
+    final Double minConsecutiveEstimate = RawDataParameterEstimation.estimateMinConsecutiveScans(
+        dataPts);
+    if (minConsecutiveEstimate != null) {
+      estimates.put("Min consecutive", minConsecutiveEstimate);
     }
 
     // MS1 noise level: factor 5 for injection-time instruments, 15th percentile of edge intensities otherwise
@@ -105,25 +100,25 @@ public final class SinglePassParameterEstimation {
       estimates.put("MS1 noise level", 5.0);
     } else {
       final double[] edgeIntensities = stats.stream().map(DataFileStatistics::getEdgeIntensities)
-          .flatMapToDouble(Arrays::stream).sorted().toArray();
-      if (edgeIntensities.length > 0) {
-        estimates.put("MS1 noise level",
-            MathUtils.calcQuantileSorted(edgeIntensities, ABSOLUTE_NOISE_QUANTILE));
+          .flatMapToDouble(Arrays::stream).toArray();
+      final Double noiseEstimate = RawDataParameterEstimation.estimateAbsoluteNoiseLevel(
+          edgeIntensities);
+      if (noiseEstimate != null) {
+        estimates.put("MS1 noise level", noiseEstimate);
       }
     }
 
     // Min height: median of lowest isotope heights
     final double[] heights = stats.stream().map(DataFileStatistics::getLowestIsotopeHeights)
-        .flatMapToDouble(Arrays::stream).sorted().toArray();
-    if (heights.length > 0) {
-      estimates.put("Min height", MathUtils.calcQuantileSorted(heights, 0.5));
+        .flatMapToDouble(Arrays::stream).toArray();
+    final Double minHeightEstimate = RawDataParameterEstimation.estimateMinHeight(heights);
+    if (minHeightEstimate != null) {
+      estimates.put("Min height", minHeightEstimate);
     }
 
-    // mz tolerance: use one index higher than the most used one as default start
-    final MZTolerance bestTolerance = getMostFrequentTolerance(stats);
-    estimates.put("MZ tolerance option", (double) Math.clamp(
-        ArrayUtils.indexOf(bestTolerance, WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS) + 1,
-        0, WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS.length - 1));
+    final int mzToleranceIndex = List.of(WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS)
+        .indexOf(RawDataParameterEstimation.estimateMzTolerance(stats));
+    estimates.put("MZ tolerance option", (double) mzToleranceIndex);
 
     // Inter sample RT tolerance: a high quantile of the deviations seen between the aligned
     // benchmark features, floored at the smallest deviation so it is never below the search range
@@ -149,45 +144,35 @@ public final class SinglePassParameterEstimation {
   }
 
   /**
-   * Finds the index in the builder's available tolerance array that best covers the harmonized
-   * isotope tolerance across all files.
+   * Applies every available estimate that maps to a parameter in the active wizard presets. Batch
+   * overrides and mobility FWHM are intentionally excluded: the former are not wizard parameters,
+   * while the latter currently comes from the preset default rather than raw-data estimation.
    */
-  @NotNull
-  private static MZTolerance getMostFrequentTolerance(
-      @NotNull List<@NotNull DataFileStatistics> stats) {
+  public static void applyToWizardSequence(@NotNull WizardSequence sequence,
+      @NotNull Map<String, Double> estimates, @NotNull WizardParameterSolutionBuilder builder) {
+    final List<WizardParameterSolution> parameters = new ArrayList<>();
+    for (final ParameterSolutionPrototype prototype : OptimizationParameterRegistry.forSequence(
+        sequence)) {
+      if (prototype instanceof WizardParameterSolutionPrototype wizardPrototype
+          && estimates.containsKey(wizardPrototype.name())
+          && !OptimizationParameterRegistry.MOBILITY_FWHM_NAME.equals(wizardPrototype.name())) {
+        parameters.add(wizardPrototype.toRealSolution(builder, parameters.size()));
+      }
+    }
 
-    // find most used tolerance
-    return stats.stream().map(DataFileStatistics::extractToleranceCounts)
-        .flatMap(m -> m.entrySet().stream())
-        // sum occurrence counts
-        .collect(Collectors.toMap(Entry::getKey, Entry::getValue, Integer::sum)).entrySet().stream()
-        .max(Entry.comparingByValue()).map(Entry::getKey)
-        .orElse(MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA);
+    final Solution solution = new Solution(parameters.size(), 0);
+    parameters.forEach(parameter -> parameter.applyToSolution(solution));
+    applyToSolution(solution, estimates);
+    for (final WizardParameterSolution parameter : parameters) {
+      sequence.get(parameter.part())
+          .ifPresent(step -> parameter.setToParameters().accept(step, solution, parameter.index()));
+    }
   }
 
   /**
    * Standard deviation for warm-start perturbation as a fraction of each variable's range.
    */
   private static final double WARM_START_PERTURBATION = 0.20;
-
-  /**
-   * Quantile of the chromatogram edge intensities used as the absolute noise level, i.e. for the
-   * instruments without an injection time. Measured across four reference datasets the optimum sits
-   * at the 7th percentile of those intensities; the previous 15th percentile was 33 % too high on
-   * average, and this is within 7 %.
-   * <p>
-   * assumption: only the absolute branch. The factor of lowest signal detector has no distribution
-   * to take a quantile of - the edge intensities are absolute counts, not factors - so that branch
-   * keeps its constant until a lowest-signal statistic exists.
-   */
-  private static final double ABSOLUTE_NOISE_QUANTILE = 0.07;
-
-  /**
-   * Share of the median isotope trace width used as the minimum number of consecutive data points.
-   * A peak has to be resolvable from clearly fewer points than a typical one spans, or the weaker
-   * half of the isotopes is discarded, and clearly more than a couple, or noise passes as a peak.
-   */
-  private static final double MIN_CONSECUTIVE_DATA_POINT_FRACTION = 0.5;
 
   /**
    * Standard deviation of the multiplicative perturbation, in natural log units. At 0.5 two

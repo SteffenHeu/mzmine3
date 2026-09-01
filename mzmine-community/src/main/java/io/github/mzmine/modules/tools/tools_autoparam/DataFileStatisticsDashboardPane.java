@@ -29,7 +29,10 @@ import io.github.mzmine.gui.chartbasics.FxChartFactory;
 import io.github.mzmine.gui.chartbasics.HistogramChartFactory;
 import io.github.mzmine.gui.chartbasics.gui.javafx.EChartViewer;
 import io.github.mzmine.javafx.components.util.FxLayout;
+import io.github.mzmine.javafx.util.color.Colors;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.MathUtils;
 import java.awt.BasicStroke;
@@ -60,11 +63,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.CategoryMarker;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.StandardXYBarPainter;
 import org.jfree.chart.renderer.xy.XYBarRenderer;
+import org.jfree.chart.ui.RectangleInsets;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.xy.XYBarDataset;
 import org.jfree.data.xy.XYSeries;
@@ -81,20 +86,26 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
 
   private static final int GRID_COLUMNS = 2;
 
-  private static final Color MEAN_COLOR = new Color(0, 0, 200);
-  private static final Color MEDIAN_COLOR = new Color(0, 160, 0);
-  private static final Color SIGMA_1_COLOR = new Color(200, 0, 200);
-  private static final Color SIGMA_2_COLOR = new Color(200, 0, 200, 140);
-  private static final Color SIGMA_3_COLOR = new Color(200, 0, 200, 80);
+  private static final Color MEAN_COLOR = ConfigService.getDefaultColorPalette()
+      .getNeutralColorAWT();
+  private static final Color MEDIAN_COLOR = ConfigService.getDefaultColorPalette()
+      .getNegativeColorAWT();
+  private static final Color SIGMA_1_COLOR = Colors.MAGENTA;
+  private static final Color SIGMA_2_COLOR = SIGMA_1_COLOR.brighter();
+  private static final Color SIGMA_3_COLOR = SIGMA_2_COLOR.brighter();
   private static final Color RT_DISTRIBUTION_COLOR = new Color(70, 120, 200);
   private static final Color RT_BOUND_COLOR = new Color(190, 50, 50);
+  private static final Color RAW_DATA_ESTIMATE_COLOR = ConfigService.getDefaultColorPalette()
+      .getPositiveColorAWT();
   private static final BasicStroke SOLID_STROKE = new BasicStroke(1.5f);
   private static final BasicStroke DASHED_STROKE = new BasicStroke(1.0f, BasicStroke.CAP_BUTT,
       BasicStroke.JOIN_MITER, 1, new float[]{5f, 3f}, 0);
+  private static Color TRANSPARENT = new Color(0, 0, 0, 0);
 
   private final List<DataFileStatistics> statistics;
   private final Map<DataFileStatistics, Color> fileColors;
   private final @NotNull InterSampleRtStatistics interSampleRtStatistics;
+  private final @NotNull MassDetectorWizardOptions massDetectorType;
 
   private final ComboBox<StatisticsDisplayMode> modeCombo = new ComboBox<>();
   private final ComboBox<DataFileStatistics> fileCombo = new ComboBox<>();
@@ -103,9 +114,17 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
 
   public DataFileStatisticsDashboardPane(@NotNull List<DataFileStatistics> statistics,
       @NotNull InterSampleRtStatistics interSampleRtStatistics) {
+    this(statistics, interSampleRtStatistics,
+        RawDataParameterEstimation.inferMassDetectorType(statistics));
+  }
+
+  public DataFileStatisticsDashboardPane(@NotNull List<DataFileStatistics> statistics,
+      @NotNull InterSampleRtStatistics interSampleRtStatistics,
+      @NotNull MassDetectorWizardOptions massDetectorType) {
     this.statistics = List.copyOf(statistics);
     this.fileColors = assignColors(this.statistics);
     this.interSampleRtStatistics = interSampleRtStatistics;
+    this.massDetectorType = massDetectorType;
 
     initControls();
     initGrid();
@@ -265,7 +284,7 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
       final JFreeChart chart = HistogramChartFactory.createHistogram(series, binWidth,
           type.yAxisLabel());
       chart.setTitle(type.label());
-      addMarkers(chart, merged);
+      addMarkers(chart, merged, type, massDetectorType);
       if (type.hasGaussianFit()) {
         addGaussianFit(chart, merged, binWidth, 1);
       }
@@ -302,7 +321,7 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
     // markers and optional Gaussian fit on the combined data of all plotted files
     // in overlay mode, divide Gaussian amplitude by file count so it matches per-file bar heights
     final double[] combinedData = allData.stream().flatMapToDouble(DoubleStream::of).toArray();
-    addMarkers(chart, combinedData);
+    addMarkers(chart, combinedData, type, massDetectorType);
     if (type.hasGaussianFit()) {
       addGaussianFit(chart, combinedData, binWidth, allData.size());
     }
@@ -347,6 +366,18 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
         filesToPlot.size() > 1, true, false);
     chart.setBackgroundPaint(new Color(230, 230, 230));
 
+    final MZTolerance estimatedTolerance = RawDataParameterEstimation.estimateMzTolerance(
+        filesToPlot);
+    final CategoryMarker estimateMarker = new CategoryMarker(estimatedTolerance.toString(),
+        new Color(RAW_DATA_ESTIMATE_COLOR.getRed() / 255f,
+            RAW_DATA_ESTIMATE_COLOR.getGreen() / 255f, RAW_DATA_ESTIMATE_COLOR.getBlue() / 255f,
+            0.2f), new BasicStroke(2f));
+//    estimateMarker.setDrawAsLine(true);
+    estimateMarker.setLabel("Raw-data m/z tolerance estimate: " + estimatedTolerance);
+    estimateMarker.setLabelBackgroundColor(
+        ConfigService.getConfiguration().getTheme().isDark() ? Color.WHITE : TRANSPARENT);
+    chart.getCategoryPlot().addDomainMarker(estimateMarker);
+
     // apply file colors if overlay
     if (mode != StatisticsDisplayMode.ACCUMULATED && filesToPlot.size() > 1) {
       final var renderer = chart.getCategoryPlot().getRenderer();
@@ -389,16 +420,16 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
     final ValueMarker estimate = new ValueMarker(interSampleRtStatistics.estimatedTolerance(),
         MEDIAN_COLOR, SOLID_STROKE);
     estimate.setLabel("Estimate: %.4g min".formatted(interSampleRtStatistics.estimatedTolerance()));
+    estimate.setLabelBackgroundColor(
+        ConfigService.getConfiguration().getTheme().isDark() ? Color.WHITE : TRANSPARENT);
     plot.addDomainMarker(estimate);
-
-    final ValueMarker lowerBound = new ValueMarker(interSampleRtStatistics.lowerSearchBound(),
-        RT_BOUND_COLOR, DASHED_STROKE);
-    lowerBound.setLabel("Search min: %.4g".formatted(interSampleRtStatistics.lowerSearchBound()));
-    plot.addDomainMarker(lowerBound);
 
     final ValueMarker upperBound = new ValueMarker(interSampleRtStatistics.upperSearchBound(),
         RT_BOUND_COLOR, DASHED_STROKE);
     upperBound.setLabel("Search max: %.4g".formatted(interSampleRtStatistics.upperSearchBound()));
+    upperBound.setLabelBackgroundColor(
+        ConfigService.getConfiguration().getTheme().isDark() ? Color.WHITE : TRANSPARENT);
+    upperBound.setLabelOffset(new RectangleInsets(14, 0, 0, 0));
     plot.addDomainMarker(upperBound);
 
     final double displayUpper = Math.max(observedMax, interSampleRtStatistics.upperSearchBound());
@@ -489,11 +520,14 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
   /**
    * Adds value markers for mean, median, and 1/2/3 sigma to the histogram plot.
    *
-   * @param chart the histogram chart to annotate
-   * @param data  the raw data values used to compute statistics
+   * @param chart            the histogram chart to annotate
+   * @param data             the raw data values used to compute statistics
+   * @param type             statistic represented by the histogram
+   * @param massDetectorType determines whether an absolute noise estimate is meaningful
    */
-  private static void addMarkers(@NotNull JFreeChart chart, double @NotNull [] data) {
-    if (data.length < 3) {
+  private static void addMarkers(@NotNull JFreeChart chart, double @NotNull [] data,
+      @NotNull StatisticsPlotType type, @NotNull MassDetectorWizardOptions massDetectorType) {
+    if (data.length == 0) {
       return;
     }
 
@@ -503,16 +537,37 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
     final double[] sorted = data.clone();
     Arrays.sort(sorted);
     final double median = MathUtils.calcMedian(sorted);
-    final double sigma = MathUtils.calcStd(data);
+    final double sigma = data.length >= 3 ? MathUtils.calcStd(data) : 0d;
 
     // mean marker (solid blue)
-    ValueMarker meanMarker = new ValueMarker(mean, MEAN_COLOR, SOLID_STROKE);
+    final ValueMarker meanMarker = new ValueMarker(mean, MEAN_COLOR, SOLID_STROKE);
     meanMarker.setLabel("Mean: %.4f".formatted(mean));
+    meanMarker.setLabelBackgroundColor(
+        ConfigService.getConfiguration().getTheme().isDark() ? Color.WHITE : TRANSPARENT);
     plot.addDomainMarker(meanMarker);
     // median marker (solid green)
-    ValueMarker medianMarker = new ValueMarker(median, MEDIAN_COLOR, SOLID_STROKE);
-    medianMarker.setLabel("Median: %.4f".formatted(median));
+    final ValueMarker medianMarker = new ValueMarker(median, MEDIAN_COLOR, SOLID_STROKE);
+    final Double rawDataEstimate = rawDataEstimate(type, data, massDetectorType);
+    final boolean estimateIsMedian =
+        rawDataEstimate != null && Double.compare(rawDataEstimate, median) == 0;
+    final String estimateTarget = rawDataEstimateTarget(type);
+    medianMarker.setLabel(
+        (estimateIsMedian ? "Median / raw-data %s estimate: %.4g".formatted(estimateTarget, median)
+            : "Median: %.4f".formatted(median)));
+    medianMarker.setLabelOffset(new RectangleInsets(14, 0, 0, 0));
+    medianMarker.setLabelBackgroundColor(
+        ConfigService.getConfiguration().getTheme().isDark() ? Color.WHITE : TRANSPARENT);
     plot.addDomainMarker(medianMarker);
+
+    if (rawDataEstimate != null && !estimateIsMedian) {
+      final ValueMarker estimateMarker = new ValueMarker(rawDataEstimate, RAW_DATA_ESTIMATE_COLOR,
+          SOLID_STROKE);
+      estimateMarker.setLabelOffset(new RectangleInsets(28, 0, 0, 0));
+      estimateMarker.setLabel("%s estimate: %.4g".formatted(estimateTarget, rawDataEstimate));
+      estimateMarker.setLabelBackgroundColor(
+          ConfigService.getConfiguration().getTheme().isDark() ? Color.WHITE : TRANSPARENT);
+      plot.addDomainMarker(estimateMarker);
+    }
 
     // sigma markers (dashed magenta, decreasing opacity)
     if (sigma > 0) {
@@ -523,6 +578,28 @@ public class DataFileStatisticsDashboardPane extends BorderPane {
       plot.addDomainMarker(new ValueMarker(mean - 3 * sigma, SIGMA_3_COLOR, DASHED_STROKE));
       plot.addDomainMarker(new ValueMarker(mean + 3 * sigma, SIGMA_3_COLOR, DASHED_STROKE));
     }
+  }
+
+  static @Nullable Double rawDataEstimate(@NotNull StatisticsPlotType type, double @NotNull [] data,
+      @NotNull MassDetectorWizardOptions massDetectorType) {
+    return switch (type) {
+      case FWHM -> RawDataParameterEstimation.estimateFwhm(data);
+      case LOWEST_ISOTOPE_HEIGHT -> RawDataParameterEstimation.estimateMinHeight(data);
+      case EDGE_INTENSITY -> massDetectorType == MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL
+          ? RawDataParameterEstimation.estimateAbsoluteNoiseLevel(data) : null;
+      case ISOTOPE_DATA_POINTS -> RawDataParameterEstimation.estimateMinConsecutiveScans(data);
+      case BEST_TOLERANCE_FREQUENCY -> null;
+    };
+  }
+
+  static @NotNull String rawDataEstimateTarget(@NotNull StatisticsPlotType type) {
+    return switch (type) {
+      case FWHM -> "FWHM";
+      case LOWEST_ISOTOPE_HEIGHT -> "minimum height";
+      case EDGE_INTENSITY -> "MS1 noise level";
+      case ISOTOPE_DATA_POINTS -> "minimum consecutive scans";
+      case BEST_TOLERANCE_FREQUENCY -> "";
+    };
   }
 
   private static void styleXYBarChart(@NotNull JFreeChart chart,

@@ -247,7 +247,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
       final List<DataFileStatistics> dashboardStats = List.copyOf(stats);
       FxThread.runLater(() -> MZmineCore.getDesktop().addTab(new SimpleTab("Auto Param Statistics",
           new DataFileStatisticsDashboardPane(dashboardStats,
-              optimizationProblem.getBuilder().getInterSampleRtStatistics()))));
+              optimizationProblem.getBuilder().getInterSampleRtStatistics(),
+              optimizationProblem.getBuilder().getMassDetectorType()))));
     }
     final AtomicReference<OptimizationResultsController> resultsController = new AtomicReference<>();
     final AtomicReference<NondominatedPopulation> completedResult = new AtomicReference<>();

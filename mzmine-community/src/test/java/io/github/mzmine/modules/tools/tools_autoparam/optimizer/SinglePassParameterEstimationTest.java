@@ -27,9 +27,14 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonMobilityWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.custom_parameters.WizardMassDetectorNoiseLevels;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
@@ -87,5 +92,48 @@ class SinglePassParameterEstimationTest {
         sequence);
 
     Assertions.assertFalse(estimates.containsKey(OptimizationParameterRegistry.MOBILITY_FWHM_NAME));
+  }
+
+  @Test
+  void appliesEstimatedWizardParametersButLeavesMobilityUnchanged() {
+    final WizardSequence sequence = new WizardSequence();
+    sequence.set(WizardPart.ION_INTERFACE, IonInterfaceWizardParameterFactory.HPLC.create());
+    sequence.set(WizardPart.IMS, IonMobilityWizardParameterFactory.TIMS.create());
+    sequence.set(WizardPart.MS, MassSpectrometerWizardParameterFactory.QTOF.create());
+    final WizardParameterSolutionBuilder builder = new WizardParameterSolutionBuilder(null,
+        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
+    final double initialMobilityFwhm = sequence.get(WizardPart.IMS).orElseThrow()
+        .getValue(IonMobilityWizardParameters.approximateImsFWHM);
+    final Map<String, Double> estimates = Map.ofEntries(Map.entry("FWHM", 0.08d),
+        Map.entry("Min consecutive", 6d), Map.entry("MS1 noise level", 500d),
+        Map.entry("Min height", 12_345d), Map.entry("MZ tolerance option", 4d),
+        Map.entry("Inter sample RT tolerance", 0.12d),
+        Map.entry(OptimizationParameterRegistry.MOBILITY_FWHM_NAME, 0.02d));
+
+    SinglePassParameterEstimation.applyToWizardSequence(sequence, estimates, builder);
+
+    final var ionInterface = sequence.get(WizardPart.ION_INTERFACE).orElseThrow();
+    Assertions.assertEquals(0.08d,
+        ionInterface.getValue(IonInterfaceHplcWizardParameters.approximateChromatographicFWHM)
+            .getToleranceInMinutes(), 1e-6);
+    Assertions.assertEquals(6,
+        ionInterface.getValue(IonInterfaceHplcWizardParameters.minNumberOfDataPoints));
+    Assertions.assertEquals(0.12d,
+        ionInterface.getValue(IonInterfaceHplcWizardParameters.interSampleRTTolerance)
+            .getToleranceInMinutes(), 1e-6);
+
+    final var massSpectrometer = sequence.get(WizardPart.MS).orElseThrow();
+    final WizardMassDetectorNoiseLevels noise = massSpectrometer.getValue(
+        MassSpectrometerWizardParameters.massDetectorOption);
+    Assertions.assertEquals(MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, noise.getValueType());
+    Assertions.assertEquals(500d, noise.getMs1NoiseLevel());
+    Assertions.assertEquals(200d, noise.getMsnNoiseLevel());
+    Assertions.assertEquals(12_345d,
+        massSpectrometer.getValue(MassSpectrometerWizardParameters.minimumFeatureHeight));
+    Assertions.assertEquals(WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[4],
+        massSpectrometer.getValue(MassSpectrometerWizardParameters.scanToScanMzTolerance));
+
+    Assertions.assertEquals(initialMobilityFwhm, sequence.get(WizardPart.IMS).orElseThrow()
+        .getValue(IonMobilityWizardParameters.approximateImsFWHM));
   }
 }

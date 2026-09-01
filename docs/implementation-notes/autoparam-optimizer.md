@@ -55,6 +55,20 @@ Detailed measurements and rejected algorithm pilots are recorded in
   the inter-sample RT estimate and search bounds. Because it is inherently a cross-file statistic,
   this plot is unchanged by the dashboard's single-file/overlay display mode. Optimizer GUI runs
   reuse the deviations already calculated for the search range.
+- Dashboard estimate markers name the wizard parameter they feed. FWHM and minimum-height estimates
+  coincide with their distribution medians; minimum consecutive scans is half the median isotope
+  trace width rounded to the integer applied by the wizard. The edge-intensity histogram marks the
+  seventh-percentile MS1 noise estimate only for the absolute-intensity detector; no marker is shown
+  for factor-of-lowest-signal data because edge intensities and detector factors have different
+  units. The categorical m/z plot marks the estimated preset, one predefined tolerance step above
+  the most frequently sufficient tolerance. The dashboard and single-pass optimizer call the same
+  estimator functions.
+- The wizard's **Estimate parameters** action uses the optimizer's representative-file rule: up to
+  ten filename-identified QCs when at least three are available, otherwise up to ten non-blanks
+  when at least four are available, and otherwise up to ten of all selected files. It analyses that
+  subset on a background task, applies only estimates backed by those statistics to the active
+  wizard presets, and opens the statistics dashboard. It does not change mobility FWHM or batch-only
+  overrides; with only one file it also leaves the sample-to-sample RT tolerance unchanged.
 - General wizard preset factories do not depend on optimizer classes. Optimizable parameters are
   registered centrally in `OptimizationParameterRegistry`; optional Wavelet parameters are excluded
   from new configurations explicitly, not by list position.
