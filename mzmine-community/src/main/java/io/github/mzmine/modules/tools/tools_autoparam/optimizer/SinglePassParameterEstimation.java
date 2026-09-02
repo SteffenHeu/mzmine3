@@ -27,11 +27,14 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.CustomizationWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonMobilityWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.RawDataParameterEstimation;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.BatchParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.ParameterSolutionPrototype.WizardParameterSolutionPrototype;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.IsotopeRatioConsistencyScore;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
@@ -40,6 +43,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -144,12 +148,22 @@ public final class SinglePassParameterEstimation {
   }
 
   /**
-   * Applies every available estimate that maps to a parameter in the active wizard presets. Batch
-   * overrides and mobility FWHM are intentionally excluded: the former are not wizard parameters,
-   * while the latter currently comes from the preset default rather than raw-data estimation.
+   * Applies every available estimate that maps to the active wizard presets. Wizard parameters are
+   * written directly to their steps and batch-only parameters are added to the customization
+   * overrides. Mobility FWHM is intentionally excluded because it currently comes from the preset
+   * default rather than raw-data estimation.
    */
   public static void applyToWizardSequence(@NotNull WizardSequence sequence,
       @NotNull Map<String, Double> estimates, @NotNull WizardParameterSolutionBuilder builder) {
+    applyToWizardSequence(sequence, estimates, builder, Set.of());
+  }
+
+  /**
+   * @param excludedBatchParameterNames batch parameters supplied by an optimizer solution instead
+   */
+  static void applyToWizardSequence(@NotNull WizardSequence sequence,
+      @NotNull Map<String, Double> estimates, @NotNull WizardParameterSolutionBuilder builder,
+      @NotNull Set<String> excludedBatchParameterNames) {
     final List<WizardParameterSolution> parameters = new ArrayList<>();
     for (final ParameterSolutionPrototype prototype : OptimizationParameterRegistry.forSequence(
         sequence)) {
@@ -167,6 +181,66 @@ public final class SinglePassParameterEstimation {
       sequence.get(parameter.part())
           .ifPresent(step -> parameter.setToParameters().accept(step, solution, parameter.index()));
     }
+
+    applyBatchOverridesToWizardSequence(sequence,
+        createEstimatedBatchOverrides(sequence, estimates, excludedBatchParameterNames));
+  }
+
+  /**
+   * Converts available single-pass estimates for batch-only parameters into wizard customization
+   * overrides.
+   *
+   * @param excludedParameterNames parameters supplied by the optimizer solution instead; excluding
+   *                               them prevents duplicate overrides for the same batch parameter
+   */
+  static @NotNull List<ParameterOverride> createEstimatedBatchOverrides(
+      @NotNull WizardSequence sequence, @NotNull Map<String, Double> estimates,
+      @NotNull Set<String> excludedParameterNames) {
+    final List<ParameterOverride> overrides = new ArrayList<>();
+    for (final ParameterSolutionPrototype prototype : OptimizationParameterRegistry.forSequence(
+        sequence)) {
+      if (!(prototype instanceof BatchParameterSolutionPrototype batchPrototype)
+          || !estimates.containsKey(batchPrototype.name())
+          || excludedParameterNames.contains(batchPrototype.name())) {
+        continue;
+      }
+
+      final BatchParameterSolution parameter = batchPrototype.toBatchParameterSolution(0);
+      final Solution estimatedSolution = new Solution(1, 0);
+      parameter.applyToSolution(estimatedSolution);
+      applyToSolution(estimatedSolution, estimates);
+      overrides.add(parameter.toParameterOverride(estimatedSolution));
+    }
+    return List.copyOf(overrides);
+  }
+
+  /**
+   * Adds or replaces batch parameter overrides without discarding unrelated wizard customization.
+   */
+  static void applyBatchOverridesToWizardSequence(@NotNull WizardSequence sequence,
+      @NotNull List<ParameterOverride> replacements) {
+    if (replacements.isEmpty()) {
+      return;
+    }
+    sequence.get(WizardPart.CUSTOMIZATION).ifPresent(customization -> {
+      final List<ParameterOverride> existing = customization.getValue(
+          CustomizationWizardParameters.overrides);
+      final List<ParameterOverride> merged = new ArrayList<>(
+          existing != null ? existing : List.of());
+      for (final ParameterOverride replacement : replacements) {
+        merged.removeIf(current -> targetsSameParameter(current, replacement));
+        merged.add(replacement);
+      }
+      customization.setParameter(CustomizationWizardParameters.enabled, true);
+      customization.setParameter(CustomizationWizardParameters.overrides, List.copyOf(merged));
+    });
+  }
+
+  private static boolean targetsSameParameter(@NotNull ParameterOverride first,
+      @NotNull ParameterOverride second) {
+    return first.moduleClassName().equals(second.moduleClassName())
+        && first.parameterWithValue().getName().equals(second.parameterWithValue().getName())
+        && first.scope() == second.scope();
   }
 
   /**

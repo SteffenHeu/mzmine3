@@ -29,7 +29,6 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
-import io.github.mzmine.modules.tools.batchwizard.subparameters.CustomizationWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
@@ -82,6 +81,12 @@ public class WizardOptimizationProblem extends AbstractProblem implements Search
   private final WizardParameterSolutionBuilder builder;
   private final @NotNull List<FeatureRecord> target;
   private final WizardSequence initialSequence;
+
+  /**
+   * Raw-data estimates used as fixed baseline values for parameters outside the selected search
+   * space. Selected optimizer variables are applied afterwards and therefore take precedence.
+   */
+  private @NotNull Map<String, Double> estimatedParameters = Map.of();
 
   private final @Nullable MZTolerance mzSampleToSampleTolerance;
   private final @Nullable RTTolerance rtSampleToSampleTolerance;
@@ -391,13 +396,7 @@ public class WizardOptimizationProblem extends AbstractProblem implements Search
       @NotNull WizardSequence sequence) {
     final List<ParameterOverride> overrides = createBatchParameters().stream()
         .map(bp -> bp.toParameterOverride(solution)).toList();
-
-    if (overrides.isEmpty()) {
-      return;
-    }
-    final WizardStepParameters customization = sequence.get(WizardPart.CUSTOMIZATION).get();
-    customization.setParameter(CustomizationWizardParameters.enabled, true);
-    customization.setParameter(CustomizationWizardParameters.overrides, overrides);
+    SinglePassParameterEstimation.applyBatchOverridesToWizardSequence(sequence, overrides);
   }
 
   /**
@@ -439,9 +438,13 @@ public class WizardOptimizationProblem extends AbstractProblem implements Search
     wizardSequence.add(workflowParam);
     wizardSequence.add(customizationParameters);
 
-    for (WizardParameterSolution parameter : createWizardParameters()) {
-      parameter.setToParameters()
-          .accept(wizardSequence.get(parameter.part()).get(), solution, parameter.index());
+    final Set<String> optimizedParameterNames = paramToOptimize.stream()
+        .map(ParameterSolutionPrototype::name).collect(java.util.stream.Collectors.toSet());
+    SinglePassParameterEstimation.applyToWizardSequence(wizardSequence, estimatedParameters,
+        builder, optimizedParameterNames);
+    for (final WizardParameterSolution parameter : createWizardParameters()) {
+      wizardSequence.get(parameter.part()).ifPresent(
+          step -> parameter.setToParameters().accept(step, solution, parameter.index()));
     }
 
     if (workflowParam.getNameParameterMap()
@@ -463,6 +466,18 @@ public class WizardOptimizationProblem extends AbstractProblem implements Search
     }
 
     return wizardSequence;
+  }
+
+  /**
+   * Sets the raw-data estimates that complete partial optimizer solutions. Must be called before
+   * the first evaluation so every candidate and the final wizard/batch use the same fixed baseline.
+   */
+  public void setEstimatedParameters(@NotNull Map<String, Double> estimates) {
+    if (!evaluatedSolutions.isEmpty() || batchExecutionBudget.count() > 0) {
+      throw new IllegalStateException(
+          "Estimated parameters cannot be changed after optimization has started.");
+    }
+    estimatedParameters = Map.copyOf(estimates);
   }
 
   @Override

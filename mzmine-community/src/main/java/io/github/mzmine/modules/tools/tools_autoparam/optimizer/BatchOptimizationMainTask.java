@@ -260,6 +260,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
     final Map<String, Double> singlePassEstimates = SinglePassParameterEstimation.estimate(stats,
         optimizationProblem.getBuilder(), sequence);
+    optimizationProblem.setEstimatedParameters(singlePassEstimates);
     final Solution singlePassSolution = optimizationProblem.newSolution();
 
     // decision: always derive and evaluate the raw data estimate, also when it is not used to

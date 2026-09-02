@@ -27,16 +27,19 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.CustomizationWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonMobilityWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.ParameterOverride;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.custom_parameters.WizardMassDetectorNoiseLevels;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.moeaframework.core.Solution;
@@ -135,5 +138,62 @@ class SinglePassParameterEstimationTest {
 
     Assertions.assertEquals(initialMobilityFwhm, sequence.get(WizardPart.IMS).orElseThrow()
         .getValue(IonMobilityWizardParameters.approximateImsFWHM));
+  }
+
+  @Test
+  void appliesBatchEstimatesToCustomizationAndExcludesOptimizedParameters() {
+    final WizardSequence sequence = new WizardSequence();
+    sequence.set(WizardPart.ION_INTERFACE, IonInterfaceWizardParameterFactory.HPLC.create());
+    sequence.set(WizardPart.CUSTOMIZATION, CustomizationWizardParameters.createDefault());
+    final WizardParameterSolutionBuilder builder = new WizardParameterSolutionBuilder(null,
+        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
+
+    SinglePassParameterEstimation.applyToWizardSequence(sequence,
+        Map.of("Top-to-edge ratio", 1.7d, "Chrom. Threshold", 0.85d), builder,
+        Set.of("Top-to-edge ratio"));
+
+    final var customization = sequence.get(WizardPart.CUSTOMIZATION).orElseThrow();
+    Assertions.assertTrue(customization.getValue(CustomizationWizardParameters.enabled));
+    List<ParameterOverride> overrides = customization.getValue(
+        CustomizationWizardParameters.overrides);
+    Assertions.assertEquals(1, overrides.size());
+    final ParameterOverride override = overrides.getFirst();
+    Assertions.assertEquals("Chromatographic threshold", override.parameterWithValue().getName());
+    Assertions.assertEquals(0.85d, override.parameterWithValue().getValue());
+
+    SinglePassParameterEstimation.applyToWizardSequence(sequence,
+        Map.of("Top-to-edge ratio", 1.9d), builder);
+
+    overrides = customization.getValue(CustomizationWizardParameters.overrides);
+    Assertions.assertEquals(2, overrides.size());
+    final ParameterOverride topToEdge = overrides.stream()
+        .filter(candidate -> "Min ratio of peak top/edge".equals(
+            candidate.parameterWithValue().getName())).findFirst().orElseThrow();
+    Assertions.assertEquals(1.9d, topToEdge.parameterWithValue().getValue());
+  }
+
+  @Test
+  void optimizedWizardValueOverridesEstimateWithoutDroppingOtherEstimates() {
+    final WizardSequence sequence = new WizardSequence();
+    sequence.set(WizardPart.ION_INTERFACE, IonInterfaceWizardParameterFactory.HPLC.create());
+    final WizardParameterSolutionBuilder builder = new WizardParameterSolutionBuilder(null,
+        MassDetectorWizardOptions.ABSOLUTE_NOISE_LEVEL, false);
+    final WizardParameterSolution optimizedFwhm = builder.buildFwhmSolution(0);
+    final Solution optimizedSolution = new Solution(1, 0);
+    optimizedFwhm.applyToSolution(optimizedSolution);
+    ((RealVariable) optimizedSolution.getVariable(0)).setValue(0.04d);
+
+    SinglePassParameterEstimation.applyToWizardSequence(sequence,
+        Map.of("FWHM", 0.08d, "Min consecutive", 6d), builder);
+    sequence.get(optimizedFwhm.part()).ifPresent(
+        step -> optimizedFwhm.setToParameters().accept(step, optimizedSolution,
+            optimizedFwhm.index()));
+
+    final var ionInterface = sequence.get(WizardPart.ION_INTERFACE).orElseThrow();
+    Assertions.assertEquals(0.04d,
+        ionInterface.getValue(IonInterfaceHplcWizardParameters.approximateChromatographicFWHM)
+            .getToleranceInMinutes(), 1e-6);
+    Assertions.assertEquals(6,
+        ionInterface.getValue(IonInterfaceHplcWizardParameters.minNumberOfDataPoints));
   }
 }
