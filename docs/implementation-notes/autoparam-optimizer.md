@@ -67,8 +67,9 @@ Detailed measurements and rejected algorithm pilots are recorded in
   ten filename-identified QCs when at least three are available, otherwise up to ten non-blanks
   when at least four are available, and otherwise up to ten of all selected files. It analyses that
   subset on a background task, applies only estimates backed by those statistics to the active
-  wizard presets, and opens the statistics dashboard. It does not change mobility FWHM or batch-only
-  overrides; with only one file it also leaves the sample-to-sample RT tolerance unchanged.
+  wizard presets, adds batch-only estimates as customization overrides, and opens the statistics
+  dashboard. It does not change mobility FWHM; with only one file it also leaves the sample-to-sample
+  RT tolerance unchanged.
 - General wizard preset factories do not depend on optimizer classes. Optimizable parameters are
   registered centrally in `OptimizationParameterRegistry`; optional Wavelet parameters are excluded
   from new configurations explicitly, not by list position.
