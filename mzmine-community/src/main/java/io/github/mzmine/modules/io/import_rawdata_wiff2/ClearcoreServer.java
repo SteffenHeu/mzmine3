@@ -26,7 +26,7 @@
 package io.github.mzmine.modules.io.import_rawdata_wiff2;
 
 import com.sun.jna.Platform;
-import io.github.mzmine.util.DotNetUtils;
+import io.github.mzmine.util.ShellUtils;
 import io.github.mzmine.util.concurrent.CloseableReentrantReadWriteLock;
 import io.github.mzmine.util.concurrent.CloseableResourceLock;
 import io.github.mzmine.util.files.FileAndPathUtil;
@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -72,6 +74,13 @@ public class ClearcoreServer {
    * name, so the presence of the directory itself signals that this version was already copied.
    */
   private static final String SCIEX_USER_DIR = SCIEX_SOURCE_DIR + "_" + SERVER_VERSION;
+  // 461808 is the minimum release key for .NET Framework 4.7.2. Later versions use larger keys.
+  private static final int DOT_NET_FRAMEWORK_472_RELEASE_KEY = 461808;
+  private static final Pattern WINDOWS_DOT_NET_RELEASE_PATTERN = Pattern.compile(
+      "(?m)^\\s*Release\\s+REG_DWORD\\s+(0x[0-9a-fA-F]+|\\d+)\\s*$");
+  private static final String WINDOWS_DOT_NET_RELEASE_REGISTRY_PATH = "HKLM\\SOFTWARE\\Microsoft\\NET Framework Setup\\NDP\\v4\\Full";
+  private static final Pattern LINUX_DOT_NET_RUNTIME_PATTERN = Pattern.compile(
+      "(?m)^Microsoft\\.NETCore\\.App\\s+([\\d]+)\\.\\d+\\.\\d+\\b.*$");
 
   /**
    * current instance. may change if the server crashes or so.
