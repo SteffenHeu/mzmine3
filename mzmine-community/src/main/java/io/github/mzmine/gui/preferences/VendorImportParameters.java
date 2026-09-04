@@ -177,6 +177,8 @@ public class VendorImportParameters extends SimpleParameterSet {
         preferences.getValue(MZminePreferences.excludeThermoExceptionMasses),
         preferences.getValue(MZminePreferences.agilentImportChoice),
         preferences.getValue(MZminePreferences.brukerPressureComp));
+
+    return param;
   }
 
   @Override
