@@ -26,7 +26,7 @@
 package io.github.mzmine.modules.tools.tools_autoparam;
 
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.MzToleranceSearchOptions;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -62,13 +62,14 @@ class DataFileStatisticsDashboardPaneTest {
     Assertions.assertEquals("minimum consecutive scans",
         DataFileStatisticsDashboardPane.rawDataEstimateTarget(
             StatisticsPlotType.ISOTOPE_DATA_POINTS));
-    Assertions.assertEquals("m/z tolerance", DataFileStatisticsDashboardPane.rawDataEstimateTarget(
+    // The categorical tolerance plot supplies its own marker label.
+    Assertions.assertEquals("", DataFileStatisticsDashboardPane.rawDataEstimateTarget(
         StatisticsPlotType.BEST_TOLERANCE_FREQUENCY));
   }
 
   @Test
   void usesTheDefaultToleranceEstimateWithoutObservedSignals() {
-    Assertions.assertEquals(WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[4],
+    Assertions.assertEquals(MzToleranceSearchOptions.ALL_TOLERANCE_OPTIONS[4],
         RawDataParameterEstimation.estimateMzTolerance(List.of()));
   }
 

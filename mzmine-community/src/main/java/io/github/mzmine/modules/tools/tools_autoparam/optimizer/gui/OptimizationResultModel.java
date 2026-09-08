@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.IndexedParameter;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
@@ -42,6 +43,12 @@ import org.moeaframework.core.Solution;
 import org.moeaframework.core.population.NondominatedPopulation;
 
 public class OptimizationResultModel {
+
+  private final ObservableList<IndexedParameter<?>> parameters = FXCollections.observableArrayList();
+
+  public @NotNull ObservableList<IndexedParameter<?>> getParameters() {
+    return parameters;
+  }
 
   private final ObjectProperty<@Nullable NondominatedPopulation> result = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable Solution> selectedSolution = new SimpleObjectProperty<>();

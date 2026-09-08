@@ -31,7 +31,17 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInt
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMobilityWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WizardParameterFactory;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.MzToleranceSearchOptions;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterDefinition;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.domain.OrdinalIntegerVariable;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.WizardOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.ShapeScoreDiagnostic;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.MoeadOptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.OptimizerOptions;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.PatternSearchOptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.SolutionOrigin;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.WarmStartSampling;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.project.ProjectService;
@@ -312,41 +322,21 @@ public class EstimateVsOptimumTest {
   }
 
   /**
-   * Runs without any data, so the headless setup path is covered even on a machine that has none.
-   * Everything here would otherwise only fail minutes into a real run.
+   * Resolves the m/z tolerance ordinal to the tolerance it selects.
    */
-  @Test
-  @DisplayName("sequence and optimizer parameters build headlessly")
-  void setupWorksWithoutAGui() {
-    final WizardSequence sequence = createSequence(DATASETS.getFirst());
-    Assertions.assertEquals(WizardPart.values().length, sequence.size(),
-        "every wizard part needs a preset, the problem dereferences all of them");
-
-    final OptimizerParameters params = createParameters(sequence);
-    Assertions.assertEquals(List.of(METRIC), OptimizerParameters.getOptimizationTargets(params));
-    // the shape rejection guard is deliberately off: it was measured inert and it costs a peak
-    // fitting pass on every evaluation
-    Assertions.assertFalse(params.getValue(OptimizerParameters.maxShapeRejectionFactor));
-    final ParameterSet optimizerParameters = OptimizerParameters.getSelectedOptimizerParameters(
-        params);
-    switch (optimizer()) {
-      case PATTERN_SEARCH ->
-          Assertions.assertInstanceOf(PatternSearchOptimizerParameters.class, optimizerParameters);
-      case MOEAD -> {
-        Assertions.assertTrue(
-            optimizerParameters.getValue(MoeadOptimizerParameters.rawDataInitialization));
-        Assertions.assertEquals(warmStartSampling(), optimizerParameters.getEmbeddedParameterValue(
-            MoeadOptimizerParameters.rawDataInitialization));
-      }
+  private static @Nullable MZTolerance mzTolerance(@Nullable Solution solution) {
+    if (solution == null) {
+      return null;
     }
-
-    final List<ParameterSolutionPrototype> optimized = params.getValue(
-        OptimizerParameters.paramToOptimize);
-    Assertions.assertFalse(optimized.isEmpty(),
-        "the sequence exposes no optimizable parameter, so a run would have nothing to search");
-    logger.info(
-        "%s optimizes %d parameters: %s".formatted(DATASETS.getFirst().name(), optimized.size(),
-            optimized.stream().map(ParameterSolutionPrototype::name).toList()));
+    for (int i = 0; i < solution.getNumberOfVariables(); i++) {
+      if (!MZ_TOLERANCE_OPTION.equals(solution.getVariable(i).getName())) {
+        continue;
+      }
+      final int index = OrdinalIntegerVariable.getInt(solution, i);
+      final MZTolerance[] options = MzToleranceSearchOptions.ALL_TOLERANCE_OPTIONS;
+      return index >= 0 && index < options.length ? options[index] : null;
+    }
+    return null;
   }
 
   @Test
@@ -540,21 +530,41 @@ public class EstimateVsOptimumTest {
   }
 
   /**
-   * Resolves the m/z tolerance ordinal to the tolerance it selects.
+   * Runs without any data, so the headless setup path is covered even on a machine that has none.
+   * Everything here would otherwise only fail minutes into a real run.
    */
-  private static @Nullable MZTolerance mzTolerance(@Nullable Solution solution) {
-    if (solution == null) {
-      return null;
-    }
-    for (int i = 0; i < solution.getNumberOfVariables(); i++) {
-      if (!MZ_TOLERANCE_OPTION.equals(solution.getVariable(i).getName())) {
-        continue;
+  @Test
+  @DisplayName("sequence and optimizer parameters build headlessly")
+  void setupWorksWithoutAGui() {
+    final WizardSequence sequence = createSequence(DATASETS.getFirst());
+    Assertions.assertEquals(WizardPart.values().length, sequence.size(),
+        "every wizard part needs a preset, the problem dereferences all of them");
+
+    final OptimizerParameters params = createParameters(sequence);
+    Assertions.assertEquals(List.of(METRIC), OptimizerParameters.getOptimizationTargets(params));
+    // the shape rejection guard is deliberately off: it was measured inert and it costs a peak
+    // fitting pass on every evaluation
+    Assertions.assertFalse(params.getValue(OptimizerParameters.maxShapeRejectionFactor));
+    final ParameterSet optimizerParameters = OptimizerParameters.getSelectedOptimizerParameters(
+        params);
+    switch (optimizer()) {
+      case PATTERN_SEARCH ->
+          Assertions.assertInstanceOf(PatternSearchOptimizerParameters.class, optimizerParameters);
+      case MOEAD -> {
+        Assertions.assertTrue(
+            optimizerParameters.getValue(MoeadOptimizerParameters.rawDataInitialization));
+        Assertions.assertEquals(warmStartSampling(), optimizerParameters.getEmbeddedParameterValue(
+            MoeadOptimizerParameters.rawDataInitialization));
       }
-      final int index = OrdinalIntegerVariable.getInt(solution, i);
-      final MZTolerance[] options = WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS;
-      return index >= 0 && index < options.length ? options[index] : null;
     }
-    return null;
+
+    final List<ParameterDefinition<?>> optimized = params.getValue(
+        OptimizerParameters.paramToOptimize);
+    Assertions.assertFalse(optimized.isEmpty(),
+        "the sequence exposes no optimizable parameter, so a run would have nothing to search");
+    logger.info(
+        "%s optimizes %d parameters: %s".formatted(DATASETS.getFirst().name(), optimized.size(),
+            optimized.stream().map(ParameterDefinition::name).toList()));
   }
 
   private static @Nullable Double attributeAsDouble(@Nullable Solution solution,

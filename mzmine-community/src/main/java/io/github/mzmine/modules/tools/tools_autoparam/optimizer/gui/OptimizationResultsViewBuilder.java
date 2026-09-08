@@ -40,10 +40,11 @@ import io.github.mzmine.javafx.components.factories.TableColumns.ColumnAlignment
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.util.FxIcons;
 import io.github.mzmine.main.ConfigService;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OrdinalIntegerVariable;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SolutionOrigin;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.domain.ChoiceSearchDomain;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.domain.OrdinalIntegerVariable;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.IndexedParameter;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.WizardOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.SolutionOrigin;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.awt.BasicStroke;
 import java.awt.geom.Ellipse2D;
@@ -291,11 +292,11 @@ public class OptimizationResultsViewBuilder extends FxViewBuilder<OptimizationRe
       switch (variable) {
         // decision: the ordinal case must precede RealVariable, which it extends
         case OrdinalIntegerVariable v -> {
-          if (v.getName().equals("MZ tolerance option")) {
+          final IndexedParameter<?> parameter = model.getParameters().get(i);
+          if (parameter.parameter().searchDomain() instanceof ChoiceSearchDomain<?>) {
             final TableColumn<Solution, String> col = TableColumns.createColumn(v.getName(), 120,
                 200, ColumnAlignment.RIGHT, String::compareTo, s -> new ReadOnlyStringWrapper(
-                    WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS[OrdinalIntegerVariable.getInt(
-                        s, finalI)].toString()));
+                    parameter.value(s).toString()));
             solutionTable.getColumns().add(col);
           } else {
             final TableColumn<Solution, Number> col = TableColumns.createColumn(v.getName(), 120,

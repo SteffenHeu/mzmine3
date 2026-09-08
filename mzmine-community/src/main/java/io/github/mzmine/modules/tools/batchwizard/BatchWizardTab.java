@@ -53,12 +53,11 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMob
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatisticsDashboardPane;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.WizardParameterEstimationResult;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.WizardParameterEstimationTask;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchOptimizationMainTask;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerModule;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.SinglePassParameterEstimation;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterEstimationResult;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterEstimationTask;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.modules.visualization.projectmetadata.extract.SampleMetadataExtractionParameters;
 import io.github.mzmine.parameters.ParameterUtils;
@@ -579,12 +578,22 @@ public class BatchWizardTab extends SimpleTab {
   private void applyParameterEstimationResult(@NotNull WizardParameterEstimationResult result) {
     // Preserve unrelated edits made while the background task was running.
     updateAllParametersFromUi();
-    SinglePassParameterEstimation.applyToWizardSequence(sequenceSteps, result.estimates(),
-        result.builder());
-    createParameterPanes();
+    final boolean previousListenersActive = listenersActive;
+    setListenersActive(false);
+    try {
+      // decision: estimation replaces previous customization with the newly estimated overrides.
+      sequenceSteps.get(WizardPart.CUSTOMIZATION).ifPresent(WizardStepParameters::resetToDefaults);
+      result.estimates().applyEstimates(sequenceSteps);
+      advancedMode.set(sequenceSteps.get(WizardPart.CUSTOMIZATION)
+          .map(step -> step.getValue(CustomizationWizardParameters.overrides))
+          .map(overrides -> !overrides.isEmpty()).orElse(false));
+      createParameterPanes();
+    } finally {
+      setListenersActive(previousListenersActive);
+    }
     MZmineCore.getDesktop().addTab(new SimpleTab("Data File Statistics",
         new DataFileStatisticsDashboardPane(result.statistics(), result.interSampleRtStatistics(),
-            result.builder().getMassDetectorType())));
+            result.context().massDetectorType())));
   }
 
   private static @NotNull WizardSequence copySequence(@NotNull WizardSequence source) {

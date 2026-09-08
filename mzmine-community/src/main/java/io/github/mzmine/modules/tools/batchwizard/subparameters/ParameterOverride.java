@@ -27,32 +27,80 @@ package io.github.mzmine.modules.tools.batchwizard.subparameters;
 
 import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.parameters.Parameter;
-import io.github.mzmine.parameters.parametertypes.EmbeddedParameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.ParameterUtils;
-import io.github.mzmine.parameters.parametertypes.OptionalParameter;
+import io.github.mzmine.parameters.parametertypes.EmbeddedParameter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Represents a single parameter override for a specific module parameter. This class is
  * serializable so it can be saved/loaded with wizard presets.
  */
-public record ParameterOverride(String moduleClassName, String moduleUniqueId,
-                                Parameter<?> parameterWithValue, ApplicationScope scope) {
+public final class ParameterOverride {
+
+  private final @NotNull String moduleClassName;
+  private final @NotNull String moduleUniqueId;
+  private final @NotNull Parameter<?> parameterWithValue;
+  private final @NotNull ApplicationScope scope;
 
   private static final Logger logger = Logger.getLogger(ParameterOverride.class.getName());
 
-  public ParameterOverride(@NotNull String moduleClassName, @NotNull String moduleUniqueId,
-      @NotNull final Parameter<?> parameterWithValue, @NotNull ApplicationScope scope) {
+  /**
+   * The supplied parameter may be a shared prototype; only its clone receives the override value.
+   */
+  public <T> ParameterOverride(@NotNull String moduleClassName, @NotNull String moduleUniqueId,
+      @NotNull Parameter<T> parameter, @Nullable T value, @NotNull ApplicationScope scope) {
     this.moduleClassName = moduleClassName;
     this.moduleUniqueId = moduleUniqueId;
-    this.parameterWithValue = parameterWithValue;
+    final Parameter<T> clone = parameter.cloneParameter();
+    clone.setValue(value);
+    this.parameterWithValue = clone;
     this.scope = scope;
+  }
+
+  /**
+   * Snapshots an edited or XML-loaded parameter, including its embedded parameter settings.
+   */
+  public static <T> @NotNull ParameterOverride fromParameter(@NotNull String moduleClassName,
+      @NotNull String moduleUniqueId, @NotNull Parameter<T> parameter,
+      @NotNull ApplicationScope scope) {
+    return new ParameterOverride(moduleClassName, moduleUniqueId, parameter, parameter.getValue(),
+        scope);
+  }
+
+  public @NotNull String moduleClassName() {
+    return moduleClassName;
+  }
+
+  public @NotNull String moduleUniqueId() {
+    return moduleUniqueId;
+  }
+
+  public @NotNull Parameter<?> parameterWithValue() {
+    return parameterWithValue;
+  }
+
+  public @NotNull ApplicationScope scope() {
+    return scope;
+  }
+
+  @Override
+  public boolean equals(@Nullable Object other) {
+    return other instanceof ParameterOverride override && moduleClassName.equals(
+        override.moduleClassName) && moduleUniqueId.equals(override.moduleUniqueId)
+        && parameterWithValue.equals(override.parameterWithValue) && scope == override.scope;
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(moduleClassName, moduleUniqueId, parameterWithValue, scope);
   }
 
   /**

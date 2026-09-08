@@ -32,7 +32,12 @@ import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.OptimizationParameterRegistry;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterDefinition;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.MoeadOptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.OptimizerOptions;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.PatternSearchOptimizerParameters;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
@@ -83,14 +88,13 @@ public class OptimizerParameters extends SimpleParameterSet {
           ConfigService.getGuiFormats().scoreFormat(), 1.5, 1.0, 100.0), true);
 
   /**
-   * All available optimization targets as {@link ParameterSolutionPrototype} prototypes. Wizard
-   * entries use a default-range dummy builder solely for display/XML. Batch entries wrap
-   * {@link BatchParameterSolutionBuilder} method references.
+   * Definitions carry stable identities, typed estimators, and wizard/batch bindings.
+   * The selection stores definitions; dataset-specific values are prepared only at runtime.
    */
-  private static final List<ParameterSolutionPrototype> ALL_SOLUTIONS = OptimizationParameterRegistry.allSolutions();
-  private static final List<ParameterSolutionPrototype> DEFAULT_SOLUTIONS = OptimizationParameterRegistry.defaultSolutions();
+  private static final List<ParameterDefinition<?>> ALL_SOLUTIONS = OptimizationParameterRegistry.allSolutions();
+  private static final List<ParameterDefinition<?>> DEFAULT_SOLUTIONS = OptimizationParameterRegistry.defaultSolutions();
 
-  public static final WizardParameterSolutionCheckListParameter paramToOptimize = new WizardParameterSolutionCheckListParameter(
+  public static final ParameterDefinitionCheckListParameter paramToOptimize = new ParameterDefinitionCheckListParameter(
       "Parameters to optimize", "Select which parameters should be optimized.", ALL_SOLUTIONS,
       new ArrayList<>(DEFAULT_SOLUTIONS));
 
@@ -100,13 +104,13 @@ public class OptimizerParameters extends SimpleParameterSet {
   }
 
   /**
-   * Collects all optimization parameter prototypes that are relevant for the given wizard sequence
+   * Collects all optimization parameter definitions that are relevant for the given wizard sequence
    * from the optimizer's central parameter registry.
    *
    * @param steps the current wizard sequence
-   * @return ordered list of applicable prototypes
+   * @return ordered list of applicable definitions
    */
-  public static @NotNull List<ParameterSolutionPrototype> collectSolutions(
+  public static @NotNull List<ParameterDefinition<?>> collectSolutions(
       @NotNull WizardSequence steps) {
     return OptimizationParameterRegistry.forSequence(steps);
   }

@@ -39,7 +39,26 @@ import io.github.mzmine.modules.tools.batchwizard.BatchWizardTab;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatisticsDashboardPane;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.BenchmarkFeatureLoader;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.FeatureRecord;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterEstimationContext;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterEstimators;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.PreparedParameterSet;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.RawDataAnalysis;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.RawDataPreparation;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.BatchExecutionLimitReachedException;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.OptimizationSearchStoppedException;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.TaskStatusTerminationCondition;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.WizardOptimizationProblem;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui.OptimizationResultsController;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.ShapeScoreDiagnostic;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.MoeadOptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.OptimizerOptions;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.OriginTaggingInitialization;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.PatternSearchAlgorithm;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.SolutionOrigin;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.WarmStartInitialization;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.WarmStartSampling;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -47,11 +66,9 @@ import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
 import javafx.stage.Screen;
@@ -228,11 +245,14 @@ public class BatchOptimizationMainTask extends AbstractTask {
         MZminePreferences.memoryOption);
     addTaskStatusListener((_, _, _) -> initialMemoryOption.enforceToMemoryMapping());
 
-    final List<RawDataFile> importedFiles = OptimizationUtils.importFilesBlocking(files, metadata);
-    final List<FeatureRecord> benchmarkFeatures = BenchmarkFeatureLoader.fromParameterFile(null,
-        params);
+    final List<RawDataFile> importedFiles = RawDataPreparation.importFilesBlocking(files, metadata);
+    final List<FeatureRecord> benchmarkFeatures =
+        params.getValue(OptimizerParameters.benchmarkFeaturesFile)
+            ? BenchmarkFeatureLoader.fromFile(null,
+            params.getEmbeddedParameterValue(OptimizerParameters.benchmarkFeaturesFile),
+            params.getValue(OptimizerParameters.benchmarkFeatureTypes)) : List.of();
 
-    final List<DataFileStatistics> stats = OptimizationUtils.computeFileStatistics(importedFiles,
+    final List<DataFileStatistics> stats = RawDataPreparation.computeFileStatistics(importedFiles,
         benchmarkFeatures, getMemoryMapStorage());
     stats.forEach(stat -> logger.info(stat.getMzToleranceForIsotopes().toString()));
 
@@ -240,15 +260,21 @@ public class BatchOptimizationMainTask extends AbstractTask {
     PRNG.setSeed(randomSeed);
 
     totalBatchExecutions = Math.max(params.getValue(OptimizerParameters.iterations), 30);
-    final WizardOptimizationProblem optimizationProblem = new WizardOptimizationProblem(sequence,
-        stats, params, externalStatus, totalBatchExecutions, stopSearchRequested::get);
+    final RawDataAnalysis analysis = RawDataAnalysis.analyze(stats);
+    final ParameterEstimationContext estimationContext = new ParameterEstimationContext(analysis,
+        sequence);
+    final PreparedParameterSet singlePassEstimates = PreparedParameterSet.prepare(
+        estimationContext);
+    final WizardOptimizationProblem optimizationProblem = new WizardOptimizationProblem(
+        estimationContext, singlePassEstimates, params, externalStatus, totalBatchExecutions,
+        stopSearchRequested::get);
     problem = optimizationProblem;
     if (DesktopService.isGUI()) {
       final List<DataFileStatistics> dashboardStats = List.copyOf(stats);
       FxThread.runLater(() -> MZmineCore.getDesktop().addTab(new SimpleTab("Auto Param Statistics",
           new DataFileStatisticsDashboardPane(dashboardStats,
-              optimizationProblem.getBuilder().getInterSampleRtStatistics(),
-              optimizationProblem.getBuilder().getMassDetectorType()))));
+              ParameterEstimators.interSampleRtStatistics(analysis),
+              estimationContext.massDetectorType()))));
     }
     final AtomicReference<OptimizationResultsController> resultsController = new AtomicReference<>();
     final AtomicReference<NondominatedPopulation> completedResult = new AtomicReference<>();
@@ -258,15 +284,11 @@ public class BatchOptimizationMainTask extends AbstractTask {
         params);
     optimizer = optimizerOption.getOptimizer(optimizationProblem);
 
-    final Map<String, Double> singlePassEstimates = SinglePassParameterEstimation.estimate(stats,
-        optimizationProblem.getBuilder(), sequence);
-    optimizationProblem.setEstimatedParameters(singlePassEstimates);
     final Solution singlePassSolution = optimizationProblem.newSolution();
 
     // decision: always derive and evaluate the raw data estimate, also when it is not used to
     // warm-start the optimizer, so the results table can always show it next to the optimized
     // solutions and the logged comparison is meaningful in both cases
-    SinglePassParameterEstimation.applyToSolution(singlePassSolution, singlePassEstimates);
     SolutionOrigin.ESTIMATE.applyTo(singlePassSolution);
     optimizationProblem.evaluate(singlePassSolution);
 
@@ -297,9 +319,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
     final List<Solution> injected = switch (optimizerOption) {
       // decision: starting at the estimate is intrinsic to local pattern search, not an optional
       // warm-start strategy.
-      case PATTERN_SEARCH ->
-          SinglePassParameterEstimation.createWarmStartSolutions(optimizationProblem,
-              singlePassEstimates, PatternSearchAlgorithm.INITIAL_DESIGN_SIZE,
+      case PATTERN_SEARCH -> WarmStartInitialization.createSolutions(optimizationProblem,
+          PatternSearchAlgorithm.INITIAL_DESIGN_SIZE,
               WarmStartSampling.GAUSSIAN);
       case MOEAD -> {
         if (!optimizerParameters.getValue(MoeadOptimizerParameters.rawDataInitialization)) {
@@ -307,8 +328,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
         }
         final WarmStartSampling sampling = optimizerParameters.getEmbeddedParameterValue(
             MoeadOptimizerParameters.rawDataInitialization);
-        yield SinglePassParameterEstimation.createWarmStartSolutions(optimizationProblem,
-            singlePassEstimates, MOEAD_POPULATION_SIZE, sampling);
+        yield WarmStartInitialization.createSolutions(optimizationProblem, MOEAD_POPULATION_SIZE,
+            sampling);
       }
     };
 
@@ -318,10 +339,7 @@ public class BatchOptimizationMainTask extends AbstractTask {
       NotificationService.show(NotificationType.INFO, "Starting optimizer", """
           Using %d attempts around raw-data based estimations and %d full batch executions.
           Estimates:
-          %s""".formatted(injected.size(), totalBatchExecutions,
-          singlePassEstimates.entrySet().stream()
-              .map(e -> "%s: %.2f".formatted(e.getKey(), e.getValue()))
-              .collect(Collectors.joining("\n"))));
+          %s""".formatted(injected.size(), totalBatchExecutions, singlePassEstimates.describe()));
     }
 
     configureOptimizer(optimizerOption, optimizer, optimizationProblem, injected);
@@ -354,9 +372,9 @@ public class BatchOptimizationMainTask extends AbstractTask {
     result.addAll(optimizationProblem.getEvaluatedSolutions());
 
     // log comparison: single-pass estimate versus the best optimizer result
-    SinglePassParameterEstimation.logResults(singlePassSolution, singlePassEstimates,
+    OptimizationResultLogger.logResults(singlePassSolution, singlePassEstimates,
         optimizationProblem.getEnabledMetrics());
-    SinglePassParameterEstimation.logComparison(singlePassSolution, result,
+    OptimizationResultLogger.logComparison(singlePassSolution, result,
         optimizationProblem.getEnabledMetrics());
 
     outcome = new OptimizationOutcome(singlePassEstimates, singlePassSolution, result,

@@ -551,8 +551,8 @@ public class ParameterCustomizationViewBuilder extends FxViewBuilder<ParameterCu
       String moduleClassName = selectedModule.getClass().getName();
       String moduleUniqueId = getModuleUniqueId(selectedModule.getClass());
       ApplicationScope scope = model.getSelectedScope();
-      final ParameterOverride added = new ParameterOverride(moduleClassName, moduleUniqueId,
-          param.cloneParameter(), scope);
+      final ParameterOverride added = new ParameterOverride(moduleClassName, moduleUniqueId, param,
+          param.getValue(), scope);
       model.getOverrides().put(new OverrideKey(selectedModule, param.getName(), scope), added);
       model.setSelectedOverride(added);
       model.setInstructionsText(
@@ -583,7 +583,8 @@ public class ParameterCustomizationViewBuilder extends FxViewBuilder<ParameterCu
     String paramName = override.parameterWithValue().getName();
     model.getOverrides().remove(new OverrideKey(moduleClass, paramName, override.scope()));
     model.getOverrides().put(new OverrideKey(moduleClass, paramName, newScope),
-        new ParameterOverride(moduleClass, override.moduleUniqueId(), override.parameterWithValue(),
+        ParameterOverride.fromParameter(moduleClass, override.moduleUniqueId(),
+            override.parameterWithValue(),
             newScope));
   }
 

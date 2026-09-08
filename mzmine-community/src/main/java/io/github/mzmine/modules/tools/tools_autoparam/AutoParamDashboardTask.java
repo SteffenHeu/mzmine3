@@ -30,8 +30,9 @@ import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.mainwindow.SimpleTab;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.main.MZmineCore;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.FeatureRecord;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.FeatureRecord;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterEstimators;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.RawDataAnalysis;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -83,10 +84,8 @@ public class AutoParamDashboardTask extends AbstractTask {
     logger.info("Computed statistics for %d files".formatted(stats.size()));
 
     if (DesktopService.isGUI()) {
-      final InterSampleRtStatistics rtStatistics =
-          stats.size() > 1 ? new WizardParameterSolutionBuilder(stats, null,
-              false).getInterSampleRtStatistics()
-              : new InterSampleRtStatistics(new double[0], Double.NaN, Double.NaN, Double.NaN);
+      final InterSampleRtStatistics rtStatistics = ParameterEstimators.interSampleRtStatistics(
+          RawDataAnalysis.analyze(stats));
       FxThread.runLater(() -> MZmineCore.getDesktop().addTab(new SimpleTab("Data File Statistics",
           new DataFileStatisticsDashboardPane(stats, rtStatistics))));
     }

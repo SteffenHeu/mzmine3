@@ -26,7 +26,7 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics;
 
 import io.github.mzmine.datamodel.features.FeatureList;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.WizardOptimizationProblem;
 import org.jetbrains.annotations.NotNull;
 
 /**

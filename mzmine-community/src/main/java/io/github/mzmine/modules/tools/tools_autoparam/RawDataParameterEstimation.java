@@ -27,7 +27,7 @@ package io.github.mzmine.modules.tools.tools_autoparam;
 
 import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.MzToleranceSearchOptions;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.ArrayUtils;
 import io.github.mzmine.util.MathUtils;
@@ -91,7 +91,7 @@ public final class RawDataParameterEstimation {
         .collect(Collectors.toMap(Entry::getKey, Entry::getValue, Integer::sum)).entrySet().stream()
         .max(Entry.comparingByValue()).map(Entry::getKey)
         .orElse(MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA);
-    final MZTolerance[] options = WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS;
+    final MZTolerance[] options = MzToleranceSearchOptions.ALL_TOLERANCE_OPTIONS;
     final int estimatedIndex = Math.clamp(ArrayUtils.indexOf(mostFrequentTolerance, options) + 1, 0,
         options.length - 1);
     return options[estimatedIndex];

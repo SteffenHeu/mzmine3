@@ -25,8 +25,9 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.PreparedParameterSet;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.WizardOptimizationProblem;
 import java.util.List;
-import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.moeaframework.core.Solution;
 import org.moeaframework.core.population.NondominatedPopulation;
@@ -36,13 +37,13 @@ import org.moeaframework.core.population.NondominatedPopulation;
  * it back. {@link BatchOptimizationMainTask} keeps these as locals otherwise, which makes the run
  * observable only through the GUI.
  *
- * @param estimates        the single-pass estimate per parameter name, before any optimization
+ * @param estimates        the prepared parameter baseline, before any optimization
  * @param estimateSolution the evaluated estimate, so its scores can be compared against the
  *                         optimized solutions
  * @param front            non-dominated result across every completed observation
  * @param problem          the problem, which holds every evaluated solution in evaluation order
  */
-public record OptimizationOutcome(@NotNull Map<String, Double> estimates,
+public record OptimizationOutcome(@NotNull PreparedParameterSet estimates,
                                   @NotNull Solution estimateSolution,
                                   @NotNull NondominatedPopulation front,
                                   @NotNull WizardOptimizationProblem problem) {

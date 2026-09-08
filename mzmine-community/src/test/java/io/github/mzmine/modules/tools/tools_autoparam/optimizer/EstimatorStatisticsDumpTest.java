@@ -26,14 +26,18 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.MzToleranceSearchOptions;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterEstimationContext;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterEstimators;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.PreparedParameterSet;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.RawDataAnalysis;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.RawDataPreparation;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.project.ProjectService;
-import io.github.mzmine.taskcontrol.SimpleRunnableTask;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -58,7 +62,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import testutils.MZmineTestUtil;
 
 /**
- * Dumps the raw distributions {@link SinglePassParameterEstimation} takes its quantiles from, per
+ * Dumps the raw distributions {@link ParameterEstimators} takes its quantiles from, per
  * dataset, so alternative derivations can be evaluated offline.
  * <p>
  * Why this exists: the estimate and the variable's own bounds are quantiles of the <em>same</em>
@@ -89,7 +93,7 @@ public class EstimatorStatisticsDumpTest {
 
   /**
    * Share of the files a row has to be detected in before its deviations count, matching what
-   * {@link WizardParameterSolutionBuilder} uses.
+   * {@link ParameterEstimators} uses.
    */
   private static final double MIN_DETECTION_SHARE = 0.8;
 
@@ -140,19 +144,18 @@ public class EstimatorStatisticsDumpTest {
 
   private void dump(@NotNull BenchmarkDataset dataset, @NotNull PrintWriter valueWriter,
       @NotNull PrintWriter summaryWriter) {
-    final List<RawDataFile> files = OptimizationUtils.importFilesBlocking(dataset.rawFiles(),
+    final List<RawDataFile> files = RawDataPreparation.importFilesBlocking(dataset.rawFiles(),
         dataset.metadataFile());
-    final List<DataFileStatistics> stats = OptimizationUtils.computeFileStatistics(files, null,
+    final List<DataFileStatistics> stats = RawDataPreparation.computeFileStatistics(files, null,
         null);
 
-    // assumption: the same builder the optimizer would use, so the reported bounds are the real
-    // ones. Low resolution only affects the m/z tolerance list, which is dumped as counts anyway.
-    final WizardParameterSolutionBuilder builder = new WizardParameterSolutionBuilder(stats, null,
-        false);
+    final RawDataAnalysis analysis = RawDataAnalysis.analyze(stats);
     final WizardSequence sequence = new WizardSequence();
     sequence.set(WizardPart.IMS, dataset.ionMobility().create());
-    final Map<String, Double> estimates = SinglePassParameterEstimation.estimate(stats, builder,
-        sequence);
+    sequence.set(WizardPart.ION_INTERFACE, dataset.ionInterface().create());
+    sequence.set(WizardPart.MS, dataset.massSpectrometer().create());
+    final ParameterEstimationContext context = new ParameterEstimationContext(analysis, sequence);
+    final PreparedParameterSet estimates = PreparedParameterSet.prepare(context);
 
     final Map<String, double[]> distributions = new LinkedHashMap<>();
     distributions.put("edgeIntensities", flatten(stats, DataFileStatistics::getEdgeIntensities));
@@ -163,16 +166,9 @@ public class EstimatorStatisticsDumpTest {
         stats.stream().map(DataFileStatistics::getNumberOfLowestIsotopeDataPoints)
             .flatMapToInt(Arrays::stream).mapToDouble(i -> i).toArray());
 
-    // the inter sample retention time tolerance is the one parameter whose estimate and bounds are
-    // both quantiles of a distribution the statistics never exposed, so it is aligned here the same
-    // way the builder does it internally
-    final ModularFeatureList aligned = OptimizationUtils.alignBenchmarkFeatures(stats, null,
-        new SimpleRunnableTask(() -> {
-        }));
-    distributions.put("rtDeviations", OptimizationUtils.extractSampleToSampleRtDeviations(aligned,
-        (int) (stats.size() * MIN_DETECTION_SHARE)));
+    distributions.put("rtDeviations", analysis.rtDeviations());
 
-    final MassDetectorWizardOptions detector = builder.getMassDetectorType();
+    final MassDetectorWizardOptions detector = context.massDetectorType();
     for (final Map.Entry<String, double[]> entry : distributions.entrySet()) {
       final double[] sorted = entry.getValue().clone();
       Arrays.sort(sorted);
@@ -197,7 +193,7 @@ public class EstimatorStatisticsDumpTest {
       for (int i = 0; i < count; i++) {
         valueWriter.printf(Locale.ROOT, "%s,mzToleranceIndex,%d%n", dataset.name(),
             io.github.mzmine.util.ArrayUtils.indexOf(tol,
-                WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS));
+                MzToleranceSearchOptions.ALL_TOLERANCE_OPTIONS));
       }
     });
 

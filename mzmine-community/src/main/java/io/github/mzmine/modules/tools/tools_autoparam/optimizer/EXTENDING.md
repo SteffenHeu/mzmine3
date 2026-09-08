@@ -3,6 +3,27 @@
 The optimizer has two independent extension points: scores evaluated on a feature list and
 parameters varied by the search.
 
+## Package layout
+
+Paths below are relative to `io.github.mzmine.modules.tools.tools_autoparam`.
+
+- `estimation`: raw-data preparation and analysis, benchmark input, typed definitions, estimation
+  rules, prepared values, and the wizard's estimate-only task. It does not depend on optimizer code.
+- `estimation.domain`: typed search domains, search scales, and ordinal variables. The existing
+  MOEA variable integration lives here.
+- `optimizer.search`: search algorithms, their module settings, canonical coordinates, and
+  warm-start initialization.
+- `optimizer.execution`: binding prepared values to vector indices, batch evaluation, execution
+  budgets, termination, and timing.
+- `optimizer.metrics`: metric implementations, their catalog, and score diagnostics.
+- `optimizer.gui`: progress and result presentation.
+- `optimizer`: module entry points, configuration, main-task orchestration, outcomes, and logging.
+
+Keep the sealed `ParameterDefinition` interface and its implementations together in `estimation`.
+The registry exposes the applicable definitions; its individual constants and optional wavelet
+helpers remain package-private. Search and execution consume prepared values without making
+estimation depend on either package.
+
 ## Add an evaluation metric
 
 1. Add a separate implementation of the sealed `SweepMetric` interface under `metrics/`.
@@ -18,27 +39,49 @@ Override `applyAttributes` only for additional diagnostic values that should app
 
 ## Add an optimization parameter
 
-Use a `WizardParameterSolution` when changing a value in `WizardStepParameters`. Add the concrete
-builder method to `WizardParameterSolutionBuilder`; continuous and ordinal implementations already
-exist.
+Add a typed definition in `OptimizationParameterRegistry`.
+Use `WizardParameterDefinition<T>` for a wizard parameter and `BatchParameterDefinition<T>` for
+a processing-module override. Pass the actual `UserParameter<T, ?>` to connect its value type to
+the estimator. Search domains convert composite values; optional wavelet reflection is isolated in
+`WaveletParameterDefinitions`.
 
-Use a `BatchParameterSolution` when overriding a parameter in a processing module's batch step.
-Add its builder method to `BatchParameterSolutionBuilder` or a resolver-specific builder.
+Each definition's estimator receives a `ParameterEstimationContext` and returns a
+`ParameterEstimate<T>`: initial value, `ValueOrigin`, and `SearchDomain<T>`. Keep estimation and
+range rules together. Use `DoubleSearchDomain`, `IntegerSearchDomain`, `RtSearchDomain`, or
+`ChoiceSearchDomain<T>` as appropriate. `MappedSearchDomain<T>` supports composite values controlled
+by one continuous coordinate. Explicitly declare linear or logarithmic continuous search.
 
-Register either kind in `OptimizationParameterRegistry`:
+Register the definition only for presets containing its target. Optional-module definitions must
+not load their module classes during registry initialization, and stay out of `defaultSolutions()`.
 
-- `WizardParameterSolutionPrototype` pairs a display-variable supplier, explicit `SearchScale`, and
-  the runtime builder.
-- `BatchParameterSolutionPrototype` wraps an index-aware batch-parameter builder and explicit
-  `SearchScale`.
-- Add it only to the wizard presets whose generated batch queue contains the target parameter.
-- Keep optional-module parameters out of `defaultSolutions()`.
+IDs are derived automatically from the binding: wizard part and parameter name, or module class,
+application scope, and parameter name. Optional reflected bindings use their parameter field name
+so IDs remain available without loading the module. No separate ID registration is needed.
 
-Prototype names are both UI labels and XML identifiers, so every name must be unique and stable.
+XML stores these target-derived IDs for optimizer selections. Optimization names are display labels
+only; there are no legacy-name aliases. Statistics, prepared parameters, and indexed adapters are
+runtime objects.
 
 ## Runtime boundary
 
-`WizardOptimizationProblem` owns the search-space variables, constraints, cache, and evaluation
-history. It converts a solution into a `WizardSequence`. `OptimizationBatchEvaluator` builds and
-runs the reduced batch queue, evaluates metrics, and attaches diagnostics. General batch-wizard
-preset factories must not depend on optimizer prototype or solution classes.
+1. `RawDataPreparation` imports files and computes per-file statistics. `RawDataAnalysis.analyze`
+   aggregates those measurements and aligns cross-file benchmark features once. It does not choose
+   initial parameter values or search bounds.
+2. `PreparedParameterSet.prepare` prepares every applicable definition, retaining the
+   typed value, provenance, domain, and definition in an immutable `PreparedParameterSet`.
+3. `WizardOptimizationProblem` receives the completed preparation and binds only selected
+   parameters to vector indices via `IndexedParameter.bind(prepared, selected)`. It owns
+   constraints,
+   cache, and evaluation history. `WarmStartInitialization` perturbs the initialized coordinates.
+
+Direct application and optimizer decoding use the same definition's binding. Unselected parameters
+remain at their prepared baseline; selected candidate values replace them. Inter-sample RT always
+uses its prepared estimate, without a later quantile override. The wizard's estimate-only action
+applies raw-data estimates and heuristics while preserving existing values for preset fallbacks.
+
+`OptimizationBatchEvaluator` builds and runs the reduced batch queue, evaluates metrics, and
+attaches diagnostics. General wizard preset factories must not depend on optimization definitions.
+
+Verify that direct application and optimizer encode/decode produce equivalent wizard/batch values.
+Also check reordered selections, fixed baseline parameters, fallback values, and stable-ID XML
+round trips.

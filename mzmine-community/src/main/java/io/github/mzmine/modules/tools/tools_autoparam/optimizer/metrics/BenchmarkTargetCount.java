@@ -27,8 +27,8 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics;
 
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.FeatureRecord;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.FeatureRecord;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.WizardOptimizationProblem;
 import java.util.Comparator;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;

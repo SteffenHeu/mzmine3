@@ -26,6 +26,10 @@
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer;
 
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.MoeadOptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.OptimizerOptions;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.PatternSearchOptimizerParameters;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.WarmStartSampling;
 import io.github.mzmine.parameters.ParameterSet;
 import java.util.List;
 import org.junit.jupiter.api.Assertions;
@@ -69,7 +73,5 @@ class OptimizerParametersTest {
     Assertions.assertTrue(selected.getValue(MoeadOptimizerParameters.rawDataInitialization));
     Assertions.assertEquals(WarmStartSampling.GAUSSIAN,
         selected.getEmbeddedParameterValue(MoeadOptimizerParameters.rawDataInitialization));
-    Assertions.assertEquals(2,
-        WizardOptimizationProblem.calculateNumberOfObjectives(parameters, null));
   }
 }

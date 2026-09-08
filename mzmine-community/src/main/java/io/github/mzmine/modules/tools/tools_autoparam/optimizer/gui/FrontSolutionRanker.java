@@ -25,7 +25,7 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardOptimizationProblem;
+import io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution.WizardOptimizationProblem;
 import java.util.Comparator;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;

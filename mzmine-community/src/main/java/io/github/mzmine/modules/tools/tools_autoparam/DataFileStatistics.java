@@ -27,7 +27,7 @@ package io.github.mzmine.modules.tools.tools_autoparam;
 
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.Feature;
-import io.github.mzmine.modules.tools.tools_autoparam.optimizer.WizardParameterSolutionBuilder;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.MzToleranceSearchOptions;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -60,12 +60,12 @@ public record DataFileStatistics(RawDataFile file, List<FeatureStatistics> featu
   }
 
   /**
-   * Counts how often each tolerance in {@link WizardParameterSolutionBuilder#ALL_TOLERANCE_OPTIONS}
+   * Counts how often each tolerance in {@link MzToleranceSearchOptions#ALL_TOLERANCE_OPTIONS}
    * was selected as best tolerance. Returns a map from tolerance label to count, preserving the
    * order of the tolerance array.
    */
   public @NotNull Map<MZTolerance, Integer> extractToleranceCounts() {
-    final MZTolerance[] allTolerances = WizardParameterSolutionBuilder.ALL_TOLERANCE_OPTIONS;
+    final MZTolerance[] allTolerances = MzToleranceSearchOptions.ALL_TOLERANCE_OPTIONS;
     final Map<MZTolerance, Integer> counts = new LinkedHashMap<>();
     for (MZTolerance tol : allTolerances) {
       counts.put(tol, 0);
