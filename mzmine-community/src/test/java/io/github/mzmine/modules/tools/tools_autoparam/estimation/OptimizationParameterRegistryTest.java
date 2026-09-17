@@ -122,8 +122,8 @@ class OptimizationParameterRegistryTest {
     final List<String> names = OptimizationParameterRegistry.forSequence(sequence).stream()
         .map(ParameterDefinition::name).toList();
 
-    Assertions.assertEquals(
-        List.of("Inter sample RT tolerance", "Min consecutive", "Wavelet SNR threshold",
+    Assertions.assertEquals(List.of("Inter sample RT tolerance", "Min consecutive", "RT correction",
+        "Wavelet SNR threshold",
             "Wavelet baseline method", "Wavelet noise calculation"), names);
     Assertions.assertFalse(names.contains("Top-to-edge ratio"));
   }

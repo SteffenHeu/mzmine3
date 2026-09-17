@@ -53,12 +53,12 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonMob
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.MassSpectrometerWizardParameterFactory;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatisticsDashboardPane;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.RawDataPreparation;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.WizardParameterEstimationResult;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.WizardParameterEstimationTask;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.BatchOptimizationMainTask;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerModule;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
-import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.modules.visualization.projectmetadata.extract.SampleMetadataExtractionParameters;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.dialogs.ParameterSetupPane;
@@ -68,14 +68,12 @@ import io.github.mzmine.taskcontrol.TaskService;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.MemoryMapStorage;
-import io.github.mzmine.util.collections.CollectionUtils;
 import io.mzio.links.MzioMZmineLinks;
 import java.io.File;
 import java.text.MessageFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -497,7 +495,7 @@ public class BatchWizardTab extends SimpleTab {
     final WizardStepParameters importParam = sequenceSteps.get(DATA_IMPORT).get();
     final @NotNull File[] allFiles = importParam.getParameter(DataImportWizardParameters.fileNames)
         .getValue();
-    final File[] optimizerFiles = selectOptimizerInputFiles(allFiles);
+    final File[] optimizerFiles = RawDataPreparation.selectOptimizerInputFiles(allFiles);
 
     final var metadataFile = importParam.getOptionalValue(DataImportWizardParameters.metadataFile)
         .orElse(null);
@@ -534,7 +532,7 @@ public class BatchWizardTab extends SimpleTab {
           "Select at least one raw data file in the Data Import step first.");
       return;
     }
-    final File[] estimateFiles = selectOptimizerInputFiles(allFiles);
+    final File[] estimateFiles = RawDataPreparation.selectOptimizerInputFiles(allFiles);
 
     final File metadataFile = importParameters.getOptionalValue(
         DataImportWizardParameters.metadataFile).orElse(null);
@@ -555,24 +553,6 @@ public class BatchWizardTab extends SimpleTab {
       });
     });
     TaskService.getController().addTask(task);
-  }
-
-  /**
-   * Uses the same small, representative input set for raw-data estimation and optimization.
-   */
-  private static File @NotNull [] selectOptimizerInputFiles(File @NotNull [] allFiles) {
-    final List<File> qcFiles = CollectionUtils.selectRandomElements(Arrays.stream(allFiles)
-        .filter(file -> SampleType.guessFromName(file.getName()) == SampleType.QC).limit(10)
-        .toList(), 10);
-    if (qcFiles.size() >= 3) {
-      return qcFiles.toArray(File[]::new);
-    }
-
-    final File[] nonBlankFiles = Arrays.stream(allFiles)
-        .filter(file -> SampleType.guessFromName(file.getName()) != SampleType.BLANK).limit(10)
-        .toArray(File[]::new);
-    final File[] candidates = nonBlankFiles.length > 3 ? nonBlankFiles : allFiles;
-    return CollectionUtils.selectRandomElements(List.of(candidates), 10).toArray(File[]::new);
   }
 
   private void applyParameterEstimationResult(@NotNull WizardParameterEstimationResult result) {

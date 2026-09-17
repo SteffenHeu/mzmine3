@@ -73,6 +73,16 @@ Detailed measurements and rejected algorithm pilots are recorded in
 - General wizard preset factories do not depend on optimizer classes. Optimizable parameters are
   registered centrally in `OptimizationParameterRegistry`; optional Wavelet parameters are excluded
   from new configurations explicitly, not by list position.
+- Scan RT correction is a Boolean search choice for LC workflows (including Wavelet and GC-CI).
+  Its initial estimate uses absolute per-feature RT differences from each aligned benchmark row's
+  median, then a median per file. Enable correction when any file median exceeds both three times
+  the median across files and half the median peak FWHM. These are initial heuristic thresholds,
+  not calibrated performance guarantees. Require rows detected in at least 80% of files (rounded
+  up), at least three detections per row, and at least five eligible observations per file.
+  Fewer than three eligible files or missing peak widths retains the preset fallback without
+  overwriting the user's switch in estimate-only mode; optimization still explores both values.
+  The existing inter-sample RT tolerance statistic remains unchanged. Estimation reuses its
+  benchmark alignment, so shifts outside that alignment's RT window may remain undetected.
 - `WizardOptimizationProblem` owns the search space, cache, constraints, and evaluation history.
   `OptimizationBatchEvaluator` owns reduced batch construction/execution, scoring, and diagnostics.
   `BenchmarkFeatureLoader` owns optional CSV and statistics-derived target loading.

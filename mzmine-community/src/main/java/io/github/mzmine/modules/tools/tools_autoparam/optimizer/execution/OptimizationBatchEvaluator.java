@@ -42,6 +42,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.Lip
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.DataImportWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.WorkflowWizardParameterFactory;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.FeatureRecord;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.PrecisionDiagnostic;
@@ -81,9 +82,14 @@ final class OptimizationBatchEvaluator {
     this.externalStatus = externalStatus;
   }
 
-  private static @NotNull BatchQueue createEvaluationQueue(@NotNull WizardSequence sequence) {
+  private @NotNull BatchQueue createEvaluationQueue(@NotNull WizardSequence sequence) {
     final WorkflowWizardParameterFactory workflow = (WorkflowWizardParameterFactory) sequence.get(
         WizardPart.WORKFLOW).orElseThrow().getFactory();
+
+    // file count is needed to derive some settings in the batch builder.
+    sequence.get(WizardPart.DATA_IMPORT).get()
+        .setParameter(DataImportWizardParameters.fileNames, files);
+
     final BatchQueue queue = workflow.getBatchBuilder(sequence).createQueue();
     queue.removeIf(step -> isPostProcessingModule(step.getModule()));
     return queue;

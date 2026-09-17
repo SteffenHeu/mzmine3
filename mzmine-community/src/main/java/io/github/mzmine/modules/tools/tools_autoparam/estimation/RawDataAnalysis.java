@@ -27,6 +27,7 @@ package io.github.mzmine.modules.tools.tools_autoparam.estimation;
 
 import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.MobilityType;
+import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
@@ -48,6 +49,7 @@ import io.github.mzmine.parameters.parametertypes.tolerances.mobilitytolerance.M
 import io.github.mzmine.taskcontrol.SimpleRunnableTask;
 import io.github.mzmine.taskcontrol.Task;
 import io.github.mzmine.util.FeatureListRowSorter;
+import io.github.mzmine.util.MathUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import java.util.ArrayList;
@@ -71,6 +73,7 @@ public record RawDataAnalysis(@NotNull List<DataFileStatistics> files, double @N
                               double @NotNull [] consecutiveScans,
                               double @NotNull [] edgeIntensities, double @NotNull [] heights,
                               double @NotNull [] rtDeviations,
+                              double @NotNull [] fileMedianRtDeviations,
                               @NotNull Map<MZTolerance, Integer> sampleMzToleranceCounts) {
 
   public RawDataAnalysis {
@@ -82,6 +85,8 @@ public record RawDataAnalysis(@NotNull List<DataFileStatistics> files, double @N
     heights = positiveSorted(heights);
     rtDeviations = Arrays.stream(rtDeviations).filter(Double::isFinite).filter(value -> value >= 0d)
         .sorted().toArray();
+    fileMedianRtDeviations = Arrays.stream(fileMedianRtDeviations).filter(Double::isFinite)
+        .filter(value -> value >= 0d).sorted().toArray();
   }
 
   public static @NotNull RawDataAnalysis analyze(@NotNull List<DataFileStatistics> files) {
@@ -92,7 +97,8 @@ public record RawDataAnalysis(@NotNull List<DataFileStatistics> files, double @N
     final double[] edges = flatten(files, DataFileStatistics::getEdgeIntensities);
     final double[] heights = flatten(files, DataFileStatistics::getLowestIsotopeHeights);
     if (files.size() < 2) {
-      return new RawDataAnalysis(files, fwhms, points, edges, heights, new double[0], Map.of());
+      return new RawDataAnalysis(files, fwhms, points, edges, heights, new double[0], new double[0],
+          Map.of());
     }
 
     final ModularFeatureList aligned = alignBenchmarkFeatures(files, null,
@@ -101,7 +107,33 @@ public record RawDataAnalysis(@NotNull List<DataFileStatistics> files, double @N
     final int minimumDetections = (int) (files.size() * 0.8);
     return new RawDataAnalysis(files, fwhms, points, edges, heights,
         extractSampleToSampleRtDeviations(aligned, minimumDetections),
+        extractFileMedianRtDeviations(aligned, Math.max(3, (int) Math.ceil(files.size() * 0.8))),
         extractSampleToSampleMzToleranceCounts(aligned, minimumDetections));
+  }
+
+  /**
+   * Per-file median absolute deviations from aligned row medians, in minutes. Require at least five
+   * shared observations per file so isolated alignment matches cannot trigger correction.
+   */
+  static double @NotNull [] extractFileMedianRtDeviations(final @NotNull ModularFeatureList aligned,
+      final int minimumDetections) {
+    final Map<RawDataFile, DoubleArrayList> deviations = new HashMap<>();
+    for (final FeatureListRow row : aligned.getRows()) {
+      final List<? extends Feature> features = row.streamFeatures()
+          .filter(feature -> feature.getRT() != null && Float.isFinite(feature.getRT())).toList();
+      if (features.size() < Math.max(3, minimumDetections)) {
+        continue;
+      }
+      final double[] rts = features.stream().mapToDouble(Feature::getRT).sorted().toArray();
+      final double median = MathUtils.calcQuantileSorted(rts, 0.5);
+      for (final Feature feature : features) {
+        deviations.computeIfAbsent(feature.getRawDataFile(), _ -> new DoubleArrayList())
+            .add(Math.abs(feature.getRT() - median));
+      }
+    }
+    return deviations.values().stream().filter(values -> values.size() >= 5).mapToDouble(
+            values -> MathUtils.calcQuantileSorted(values.doubleStream().sorted().toArray(), 0.5))
+        .sorted().toArray();
   }
 
   private static double @NotNull [] flatten(@NotNull List<DataFileStatistics> files,
@@ -238,6 +270,11 @@ public record RawDataAnalysis(@NotNull List<DataFileStatistics> files, double @N
   @Override
   public double @NotNull [] rtDeviations() {
     return rtDeviations.clone();
+  }
+
+  @Override
+  public double @NotNull [] fileMedianRtDeviations() {
+    return fileMedianRtDeviations.clone();
   }
 
 }

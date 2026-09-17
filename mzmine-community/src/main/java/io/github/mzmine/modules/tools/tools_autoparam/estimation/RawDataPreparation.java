@@ -35,15 +35,18 @@ import io.github.mzmine.modules.tools.tools_autoparam.AutoParamModule;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.AutoParamTask;
 import io.github.mzmine.modules.tools.tools_autoparam.DataFileStatistics;
+import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.taskcontrol.AllTasksFinishedListener;
 import io.github.mzmine.taskcontrol.Task;
 import io.github.mzmine.taskcontrol.TaskService;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.collections.CollectionUtils;
 import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -103,4 +106,21 @@ public final class RawDataPreparation {
         .filter(raw -> files.contains(raw.getFileName())).toList();
   }
 
+  /**
+   * Uses the same small, representative input set for raw-data estimation and optimization.
+   */
+  public static File @NotNull [] selectOptimizerInputFiles(File @NotNull [] allFiles) {
+    final List<File> qcFiles = CollectionUtils.selectRandomElements(Arrays.stream(allFiles)
+        .filter(file -> SampleType.guessFromName(file.getName()) == SampleType.QC).limit(10)
+        .toList(), 10);
+    if (qcFiles.size() >= 3) {
+      return qcFiles.toArray(File[]::new);
+    }
+
+    final File[] nonBlankFiles = Arrays.stream(allFiles)
+        .filter(file -> SampleType.guessFromName(file.getName()) != SampleType.BLANK).limit(10)
+        .toArray(File[]::new);
+    final File[] candidates = nonBlankFiles.length > 3 ? nonBlankFiles : allFiles;
+    return CollectionUtils.selectRandomElements(List.of(candidates), 10).toArray(File[]::new);
+  }
 }

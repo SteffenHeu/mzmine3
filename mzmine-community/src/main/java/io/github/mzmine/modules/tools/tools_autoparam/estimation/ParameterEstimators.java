@@ -160,6 +160,22 @@ public final class ParameterEstimators {
         (float) quantile(deviations, 0d), (float) quantile(deviations, 1d) * 2d);
   }
 
+  public static @NotNull ParameterEstimate<Boolean> rtCorrection(
+      final @NotNull ParameterEstimationContext context) {
+    final ChoiceSearchDomain<Boolean> domain = new ChoiceSearchDomain<>(List.of(false, true));
+    final double[] medians = context.analysis().fileMedianRtDeviations();
+    final double[] widths = context.analysis().fwhms();
+    if (medians.length < 3 || widths.length == 0) {
+      return new ParameterEstimate<>(context.preset(WizardPart.ION_INTERFACE,
+          IonInterfaceHplcWizardParameters.scanRtCorrection), ValueOrigin.PRESET_DEFAULT, domain);
+    }
+    // decision: require both an outlier relative to other files and a shift relevant to peak width.
+    final double threshold = Math.max(3d * quantile(medians, 0.5),
+        0.5d * RawDataParameterEstimation.estimateFwhm(widths));
+    return new ParameterEstimate<>(medians[medians.length - 1] > threshold, ValueOrigin.RAW_DATA,
+        domain);
+  }
+
   public static @NotNull ParameterEstimate<Double> mobilityFwhm(
       @NotNull ParameterEstimationContext context) {
     final IonMobilityWizardParameterFactory factory = (IonMobilityWizardParameterFactory) context.sequence()

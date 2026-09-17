@@ -71,6 +71,9 @@ public final class OptimizationParameterRegistry {
   static final WizardParameterDefinition<RTTolerance> INTER_SAMPLE_RT = new WizardParameterDefinition<>(
       "Inter sample RT tolerance", WizardPart.ION_INTERFACE,
       IonInterfaceHplcWizardParameters.interSampleRTTolerance, ParameterEstimators::interSampleRt);
+  static final WizardParameterDefinition<Boolean> RT_CORRECTION = new WizardParameterDefinition<>(
+      "RT correction", WizardPart.ION_INTERFACE, IonInterfaceHplcWizardParameters.scanRtCorrection,
+      ParameterEstimators::rtCorrection);
 
   static final WizardParameterDefinition<Double> MOBILITY_FWHM = new WizardParameterDefinition<>(
       "FWHM (mobility)", WizardPart.IMS, IonMobilityWizardParameters.approximateImsFWHM,
@@ -90,7 +93,7 @@ public final class OptimizationParameterRegistry {
   private static final List<ParameterDefinition<?>> WAVELET = WaveletParameterDefinitions.definitions();
   private static final List<ParameterDefinition<?>> DEFAULTS = sorted(
       List.of(MINIMUM_FEATURE_HEIGHT, MS1_NOISE, MZ_TOLERANCE, FWHM, MINIMUM_CONSECUTIVE_SCANS,
-          INTER_SAMPLE_RT, MOBILITY_FWHM, TOP_TO_EDGE, CHROMATOGRAPHIC_THRESHOLD));
+          INTER_SAMPLE_RT, RT_CORRECTION, MOBILITY_FWHM, TOP_TO_EDGE, CHROMATOGRAPHIC_THRESHOLD));
 
   private OptimizationParameterRegistry() {
   }
@@ -124,10 +127,11 @@ public final class OptimizationParameterRegistry {
     if (factory instanceof IonInterfaceWizardParameterFactory ionInterface) {
       return switch (ionInterface) {
         case HPLC, UHPLC, HILIC, GC_CI ->
-            List.of(FWHM, MINIMUM_CONSECUTIVE_SCANS, INTER_SAMPLE_RT, TOP_TO_EDGE,
+            List.of(FWHM, MINIMUM_CONSECUTIVE_SCANS, INTER_SAMPLE_RT, RT_CORRECTION, TOP_TO_EDGE,
                 CHROMATOGRAPHIC_THRESHOLD);
         case LC_WAVELET -> java.util.stream.Stream.concat(
-                List.of(MINIMUM_CONSECUTIVE_SCANS, INTER_SAMPLE_RT).stream(), WAVELET.stream())
+                List.of(MINIMUM_CONSECUTIVE_SCANS, INTER_SAMPLE_RT, RT_CORRECTION).stream(),
+                WAVELET.stream())
             .toList();
         case GC_EI -> List.of(FWHM, MINIMUM_CONSECUTIVE_SCANS, INTER_SAMPLE_RT);
         case MALDI, LDI, DESI, SIMS, DIRECT_INFUSION, FLOW_INJECT -> List.of();

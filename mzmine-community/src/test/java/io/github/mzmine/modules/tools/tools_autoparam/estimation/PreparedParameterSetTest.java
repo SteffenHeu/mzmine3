@@ -293,7 +293,8 @@ class PreparedParameterSetTest {
     final var narrow = MzToleranceSearchOptions.ALL_TOLERANCE_OPTIONS[2];
     final var wide = MzToleranceSearchOptions.ALL_TOLERANCE_OPTIONS[5];
     final RawDataAnalysis analysis = new RawDataAnalysis(List.of(), new double[0], new double[0],
-        new double[0], new double[0], new double[0], java.util.Map.of(narrow, 2, wide, 8));
+        new double[0], new double[0], new double[0], new double[0],
+        java.util.Map.of(narrow, 2, wide, 8));
     Assertions.assertEquals(wide, new ParameterEstimationContext(analysis,
         ParameterEstimationTestData.sequence()).sampleMzTolerance());
     Assertions.assertNull(new ParameterEstimationContext(RawDataAnalysis.analyze(List.of()),

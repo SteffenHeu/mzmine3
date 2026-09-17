@@ -51,7 +51,7 @@ public final class ParameterEstimationTestData {
         new RawDataAnalysis(List.of(), new double[]{0.01, 0.04, 0.08, 0.1, 0.2},
             new double[]{6, 10, 12, 16, 20}, new double[]{10, 100, 500, 1000, 10000},
             new double[]{800, 1000, 12000, 25000, 250000}, new double[]{0.01, 0.02, 0.03, 0.05},
-            java.util.Map.of()), sequence);
+            new double[0], java.util.Map.of()), sequence);
   }
 
   public static @NotNull WizardSequence sequence() {
