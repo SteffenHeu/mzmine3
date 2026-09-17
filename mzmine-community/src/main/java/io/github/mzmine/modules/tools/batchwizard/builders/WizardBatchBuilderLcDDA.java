@@ -50,6 +50,7 @@ public class WizardBatchBuilderLcDDA extends BaseWizardBatchBuilder {
   protected final RTTolerance rtFwhm;
   protected final Boolean stableIonizationAcrossSamples;
   protected final Boolean rtSmoothing;
+  protected final boolean scanRtCorrection;
   protected final Boolean applySpectralNetworking;
   protected final File exportPath;
   protected final boolean isExportActive;
@@ -72,6 +73,8 @@ public class WizardBatchBuilderLcDDA extends BaseWizardBatchBuilder {
     rtFwhm = getValue(params, IonInterfaceHplcWizardParameters.approximateChromatographicFWHM);
     stableIonizationAcrossSamples = getValue(params,
         IonInterfaceHplcWizardParameters.stableIonizationAcrossSamples);
+    scanRtCorrection = dataFiles.length > 1 && Boolean.TRUE.equals(
+        getValue(params, IonInterfaceHplcWizardParameters.scanRtCorrection));
 
     // DDA workflow parameters
     params = steps.get(WizardPart.WORKFLOW);
@@ -114,6 +117,9 @@ public class WizardBatchBuilderLcDDA extends BaseWizardBatchBuilder {
     makeAndAddDeisotopingStep(q, intraSampleRtTol);
     makeAndAddFeatureFilterStep(q);
     makeAndAddIsotopeFinderStep(q);
+    if (scanRtCorrection) {
+      makeAndAddScanRtCorrectionStep(q, mzTolInterSample, interSampleRtTol);
+    }
     makeAndAddJoinAlignmentStep(q, interSampleRtTol);
     makeAndAddRowFilterStep(q);
     makeAndAddGapFillStep(q, interSampleRtTol, minRtDataPoints);
