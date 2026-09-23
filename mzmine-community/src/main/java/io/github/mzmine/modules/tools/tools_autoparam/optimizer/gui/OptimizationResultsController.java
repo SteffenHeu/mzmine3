@@ -237,7 +237,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
     sequence.get(WizardPart.DATA_IMPORT).ifPresent(sequence::remove);
     wizardTab.getTabPane().getSelectionModel().select(wizardTab);
-    wizardTab.applyPartialSequence(sequence);
+    wizardTab.applyPartialSequence(sequence, "parameter optimization");
   }
 
   public void openInBatch() {
@@ -261,7 +261,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
     sequence.get(WizardPart.DATA_IMPORT).ifPresent(sequence::remove);
     wizardTab.getTabPane().getSelectionModel().select(wizardTab);
-    wizardTab.applyPartialSequence(sequence);
+    wizardTab.applyPartialSequence(sequence, "parameter optimization");
 
     final WizardSequence sequenceSteps = wizardTab.getSequence();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,8 +30,14 @@ import static java.util.Objects.requireNonNullElse;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javafx.beans.value.ObservableValue;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.control.TextInputControl;
+import javafx.scene.layout.Pane;
+import org.controlsfx.control.decoration.Decoration;
+import org.controlsfx.control.decoration.Decorator;
+import org.controlsfx.validation.Severity;
 import org.controlsfx.validation.ValidationResult;
 import org.controlsfx.validation.ValidationSupport;
 import org.controlsfx.validation.decoration.CompoundValidationDecoration;
@@ -41,13 +47,48 @@ import org.jetbrains.annotations.NotNull;
 
 public class FxValidation {
 
+  private static final IconValidationDecoration ICON_DECORATOR = new IconValidationDecoration();
   private static final ValidationDecoration DEFAULT_DECORATOR = new CompoundValidationDecoration(
-      new StyleClassValidationDecoration(), new IconValidationDecoration());
+      new StyleClassValidationDecoration(), ICON_DECORATOR);
 
   public static ValidationSupport newValidationSupport() {
     final ValidationSupport support = new ValidationSupport();
     support.setValidationDecorator(DEFAULT_DECORATOR);
     return support;
+  }
+
+  /**
+   * Adds a message icon with tooltip to any node, e.g., a parameter component that is a layout
+   * pane. {@link ValidationSupport} only works on {@link Control}s with a value extractor.
+   * <p>
+   * The decoration is intentionally not flagged as a validation decoration so that
+   * {@link ValidationSupport#redecorate()} on the same node does not remove it.
+   * <p>
+   * {@link Pane} targets are decorated relative to their visible children, as components often grow
+   * with the window and the graphic would otherwise be placed far away from the actual inputs.
+   *
+   * @return the decoration to remove it later via
+   * {@link Decorator#removeDecoration(Node, Decoration)}
+   */
+  public static @NotNull Decoration addMessageDecoration(@NotNull Node target,
+      @NotNull Severity severity, @NotNull String message, @NotNull Pos pos) {
+    final Node graphic = ICON_DECORATOR.createDecorationNode(severity, message);
+    final Decoration decoration =
+        target instanceof Pane ? new ContentAlignedGraphicDecoration(graphic, pos)
+            : new TooltipFixGraphicDecoration(graphic, pos);
+    Decorator.addDecoration(target, decoration);
+    return decoration;
+  }
+
+  /**
+   * Marks a node with a checkmark, e.g., to show that its value was changed automatically.
+   *
+   * @param message tooltip message
+   * @return the decoration to remove it later via
+   * {@link Decorator#removeDecoration(Node, Decoration)}
+   */
+  public static @NotNull Decoration markChanged(@NotNull Node target, @NotNull String message) {
+    return addMessageDecoration(target, Severity.OK, message, Pos.TOP_LEFT);
   }
 
   public static void registerErrorValidator(@NotNull Control field,
