@@ -25,14 +25,22 @@
 
 package io.github.mzmine.modules.batchmode.order;
 
+import java.util.List;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Result of evaluating one (possibly combined) recommendation. {@code violations} is non-empty only
+ * when {@code status} is {@link ModuleOrderRuleStatus#VIOLATION} and lists every violated
+ * alternative in declaration order.
+ */
 record ModuleOrderRecommendationEvaluation(@NotNull ModuleOrderRecommendation recommendation,
-                                           @NotNull ModuleOrderRuleEvaluation ruleEvaluation) {
+                                           @NotNull ModuleOrderRuleStatus status,
+                                           @NotNull List<@NotNull ModuleOrderRuleViolation> violations) {
 
   ModuleOrderRecommendationEvaluation {
     Objects.requireNonNull(recommendation);
-    Objects.requireNonNull(ruleEvaluation);
+    Objects.requireNonNull(status);
+    violations = List.copyOf(Objects.requireNonNull(violations));
   }
 }
