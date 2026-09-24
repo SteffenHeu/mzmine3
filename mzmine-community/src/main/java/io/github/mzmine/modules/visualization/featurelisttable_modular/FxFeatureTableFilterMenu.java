@@ -30,6 +30,7 @@ import static io.github.mzmine.javafx.components.factories.FxTextFields.newAutoG
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.features.compoundlist.CompoundRowSelection;
+import io.github.mzmine.datamodel.features.preferences.FeatureListPreferences;
 import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.javafx.components.factories.FxCheckBox;
 import io.github.mzmine.javafx.components.factories.FxComboBox;
@@ -81,6 +82,7 @@ public class FxFeatureTableFilterMenu extends BorderPane {
   private final FxFeatureTableController parentController;
   private final FlowPane filterFlow;
   private final HBox rightButtonMenu;
+  private @NotNull RowTypeFilterComponent rowTypeFilter;
 
   public FxFeatureTableFilterMenu(FxFeatureTableModel parentModel,
       @NotNull FxFeatureTableController parentController) {
@@ -131,7 +133,9 @@ public class FxFeatureTableFilterMenu extends BorderPane {
   }
 
   private FlowPane createFilters() {
-    RowTypeFilterComponent rowTypeFilter = new RowTypeFilterParameter().createEditingComponent();
+    rowTypeFilter = new RowTypeFilterParameter().createEditingComponent(
+        true, FeatureListPreferences.DEFAULT_TAG_LABELS.size());
+    parentModel.featureListProperty().subscribe(_ -> refreshTagLabels());
     model.specialRowTypeFilterProperty().bindBidirectional(rowTypeFilter.valueProperty());
 
     final TextField idField = newAutoGrowTextField(model.idFilterProperty(), "1,5-6",
@@ -189,6 +193,12 @@ public class FxFeatureTableFilterMenu extends BorderPane {
         newBoldLabel("m/z="), mzField, //
         newBoldLabel("RT="), rtField, //
         rowTypeFilter);
+  }
+
+  public void refreshTagLabels() {
+    final var featureList = parentModel.getFeatureList();
+    rowTypeFilter.setTagLabels(featureList == null ? FeatureListPreferences.DEFAULT_TAG_LABELS
+        : featureList.getPreferences().getTagLabels());
   }
 
   private void initValidation(TextField idField, TextField cidField, TextField mzField,
