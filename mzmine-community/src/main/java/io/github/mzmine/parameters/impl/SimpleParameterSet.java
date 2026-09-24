@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -37,23 +37,30 @@ import io.github.mzmine.parameters.ParameterContainer;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.dialogs.ParameterSetupDialog;
+import io.github.mzmine.parameters.parametertypes.EmbeddedParameterSet;
 import io.github.mzmine.parameters.parametertypes.HiddenParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.util.ExitCode;
+import io.github.mzmine.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.ButtonType;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Element;
 
@@ -71,6 +78,20 @@ public class SimpleParameterSet implements ParameterSet {
   protected String helpUrl = null;
   private String moduleNameAttribute;
   private boolean skipSensitiveParameters = false;
+
+  /**
+   * false as long as this set is a scratch copy, like the one of the module configuration that
+   * every setup dialog reuses. Not copied by {@link #cloneParameterSet()}, a clone is a scratch
+   * copy again until it becomes the configuration of a batch step.
+   */
+  private boolean batchStepParameters = false;
+
+  /**
+   * Error messages populated during loading from xml. This value is not cloned. Do not include in
+   * hashCode or equals.
+   */
+  @NotNull
+  private String loadingVersionMessages = "";
 
   public SimpleParameterSet() {
     this(new Parameter<?>[0], null);
@@ -105,6 +126,16 @@ public class SimpleParameterSet implements ParameterSet {
   }
 
   @Override
+  public void setAsBatchStepParameters() {
+    batchStepParameters = true;
+  }
+
+  @Override
+  public boolean isBatchStepParameters() {
+    return batchStepParameters;
+  }
+
+  @Override
   public Map<String, Parameter<?>> loadValuesFromXML(Element xmlElement) {
     var nameParameterMap = getNameParameterMap();
 
@@ -117,6 +148,16 @@ public class SimpleParameterSet implements ParameterSet {
         this.getClass(), xmlElement, nameParameterMap);
 
     handleLoadedParameters(loadedParameters, loadedVersion);
+
+    // dont check if the versions differ here, as there may be embedded parameter sets that
+    // should be checked. Alternatively, stream over all parameters and check if we have an
+    // EmbeddedParameterSet parameter.
+    final String message = extractAllLoadingVersionMessages(loadedVersion).collect(
+        Collectors.joining("\n"));
+    if (!StringUtils.isBlank(message)) {
+      loadingVersionMessages = message;
+    }
+
     return loadedParameters;
   }
 
@@ -165,19 +206,6 @@ public class SimpleParameterSet implements ParameterSet {
    */
   @Override
   public ParameterSet cloneParameterSet(boolean keepSelection) {
-
-    // Make a deep copy of the parameters
-    Parameter<?>[] newParameters = new Parameter[parameters.length];
-    for (int i = 0; i < parameters.length; i++) {
-      if (parameters[i] instanceof RawDataFilesParameter rfp) {
-        newParameters[i] = rfp.cloneParameter(keepSelection);
-      } else if (parameters[i] instanceof FeatureListsParameter flp) {
-        newParameters[i] = flp.cloneParameter(keepSelection);
-      } else {
-        newParameters[i] = parameters[i].cloneParameter();
-      }
-    }
-
     try {
       /*
        * Do not create a new instance of SimpleParameterSet, but instead clone the runtime class of
@@ -185,7 +213,8 @@ public class SimpleParameterSet implements ParameterSet {
        * proper behavior of showSetupDialog(xxx) method for cloned classes.
        */
       SimpleParameterSet newSet = this.getClass().getDeclaredConstructor().newInstance();
-      newSet.parameters = newParameters;
+      // Make a deep copy of the parameters
+      newSet.parameters = ParameterUtils.cloneParameters(parameters, keepSelection);
       newSet.setSkipSensitiveParameters(skipSensitiveParameters);
       newSet.setModuleNameAttribute(this.getModuleNameAttribute());
       newSet.helpUrl = helpUrl;
@@ -193,20 +222,19 @@ public class SimpleParameterSet implements ParameterSet {
       return newSet;
     } catch (Throwable e) {
       logger.log(Level.WARNING, "While cloning parameters: " + e.getMessage(), e);
-      e.printStackTrace();
       return null;
     }
   }
 
   @Override
   @SuppressWarnings("unchecked")
-  public <T extends Parameter<?>> T getParameter(T parameter) {
+  public @NotNull <T extends Parameter<?>> Optional<T> tryGetParameter(T parameter) {
     for (Parameter<?> p : parameters) {
       if (p.getName().equals(parameter.getName())) {
-        return (T) p;
+        return Optional.of((T) p);
       }
     }
-    throw new IllegalArgumentException("Parameter " + parameter.getName() + " does not exist");
+    return Optional.empty();
   }
 
   @Override
@@ -359,5 +387,35 @@ public class SimpleParameterSet implements ParameterSet {
   @Override
   public void setModuleNameAttribute(String moduleName) {
     this.moduleNameAttribute = moduleName;
+  }
+
+  /**
+   * Only used during loading of the ParameterSet to set the internal
+   * {@link #getLoadingVersionMessages()}. Starts with messages from this parameter set, followed by
+   * messages from embedded parameters sets.
+   *
+   * @param storedVersion the loaded version
+   * @return stream of non-blank messages
+   */
+  protected @NotNull Stream<@NotNull String> extractAllLoadingVersionMessages(int storedVersion) {
+    List<String> embeddedMessages = Arrays.stream(this.parameters).<String>mapMulti((p, c) -> {
+      if (p instanceof EmbeddedParameterSet<?, ?> embeddedParameterSetParam) {
+        ParameterSet embeddedParameters = embeddedParameterSetParam.getEmbeddedParameters();
+        final String embeddedMessage = embeddedParameters.getLoadingVersionMessages();
+        if (!StringUtils.isBlank(embeddedMessage)) {
+          String name = embeddedParameterSetParam.getName();
+          c.accept(name + " (embedded): " + embeddedMessage);
+        }
+      }
+    }).toList();
+
+    return Stream.concat(
+        IntStream.range(storedVersion + 1, getVersion() + 1).mapToObj(this::getVersionMessage)
+            .filter(StringUtils::hasValue), embeddedMessages.stream());
+  }
+
+  @Override
+  public @NotNull String getLoadingVersionMessages() {
+    return loadingVersionMessages;
   }
 }

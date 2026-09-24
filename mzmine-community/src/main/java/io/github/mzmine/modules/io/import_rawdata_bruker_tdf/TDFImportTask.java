@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -42,10 +43,13 @@ import io.github.mzmine.datamodel.impl.SimpleFrame;
 import io.github.mzmine.datamodel.impl.masslist.ScanPointerMassList;
 import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
 import io.github.mzmine.datamodel.msms.PasefMsMsInfo;
+import io.github.mzmine.gui.preferences.VendorImportParameters;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.MZmineModule;
+import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportParameters;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.ScanImportProcessorConfig;
 import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.datamodel.BrukerScanMode;
+import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.datamodel.TdfPressureCompensation;
 import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.datamodel.sql.BuildingPASEFMsMsInfo;
 import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.datamodel.sql.DiaFrameMsMsInfoTable;
 import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.datamodel.sql.DiaFrameMsMsWindowTable;
@@ -119,6 +123,7 @@ public class TDFImportTask extends AbstractTask implements RawDataImportTask {
   private double finishedPercentage;
   private double lastFinishedPercentage;
   private int loadedFrames;
+  private final TdfPressureCompensation applyPressureComp;
 
   /**
    * Bruker tims format: - Folder - contains multiple files - one folder per analysis - .d extension
@@ -145,6 +150,8 @@ public class TDFImportTask extends AbstractTask implements RawDataImportTask {
     this.scanProcessorConfig = scanProcessorConfig;
     this.module = module;
     this.parameters = parameters;
+    this.applyPressureComp = parameters.getParameter(AllSpectralDataImportParameters.vendorOptions)
+        .getEmbeddedParameters().getValue(VendorImportParameters.applyTimsPressureCompensation);
     setDescription("Importing raw data file %s".formatted(file.getName()));
   }
 
@@ -262,7 +269,7 @@ public class TDFImportTask extends AbstractTask implements RawDataImportTask {
       return;
     }
 
-    try (final TDFUtils tdfUtils = new TDFUtils()) {
+    try (final TDFUtils tdfUtils = new TDFUtils(applyPressureComp)) {
 
       logger.finest(() -> "Opening tdf file " + tdfBin.getAbsolutePath());
       final long handle = tdfUtils.openFile(tdfBin);
@@ -339,7 +346,7 @@ public class TDFImportTask extends AbstractTask implements RawDataImportTask {
       assignTimsAutoMsMsInfo(newMZmineFile, frameTable, frameMsMsInfoTable);
 
     } catch (RuntimeException e) {
-      error("Error importing file %s".formatted(fileNameToOpen.getName()), e);
+      error("Error importing file %s. %s".formatted(fileNameToOpen.getName(), e.getMessage()), e);
     }
 
     if (isCanceled()) {
@@ -616,7 +623,7 @@ public class TDFImportTask extends AbstractTask implements RawDataImportTask {
 
   @Nullable
   private Frame getParentFrame(IMSRawDataFile file, Integer parentFrameNumber) {
-    if (parentFrameNumber == null) {
+    if (parentFrameNumber == null || parentFrameNumber == 0) {
       return null;
     }
     Optional<Frame> optionalFrame = (Optional<Frame>) file.getFrames().stream()

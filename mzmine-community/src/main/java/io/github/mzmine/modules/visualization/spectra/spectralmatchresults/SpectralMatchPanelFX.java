@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,6 +39,7 @@ import io.github.mzmine.javafx.components.util.FxLayout.GridColumnGrow;
 import io.github.mzmine.javafx.util.FxColorUtil;
 import io.github.mzmine.javafx.util.FxIconUtil;
 import io.github.mzmine.javafx.util.color.ColorScaleUtil;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.visualization.molstructure.Structure2DComponent;
 import io.github.mzmine.parameters.ParameterSet;
@@ -52,12 +53,10 @@ import io.github.mzmine.util.spectraldb.entry.DBEntryField;
 import io.github.mzmine.util.spectraldb.entry.DataPointsTag;
 import io.github.mzmine.util.spectraldb.entry.SpectralDBAnnotation;
 import io.github.mzmine.util.spectraldb.entry.SpectralLibraryEntry;
-import jakarta.json.Json;
 import java.awt.Dimension;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.text.DecimalFormat;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -210,7 +209,9 @@ public class SpectralMatchPanelFX extends GridPane {
             FxColorUtil.fxColorToAWT(MAX_COS_COLOR), MIN_COS_COLOR_VALUE, MAX_COS_COLOR_VALUE,
             simScore));
 
-    lblHit = createLabel(hit.getCompoundName(), "white-larger-label");
+    final String analogWarning = (hit.isAnalogMatch() ? "ANALOG (Δm/z %s) of: ".formatted(
+        ConfigService.getGuiFormats().mz(hit.getMzAbsoluteError())) : "");
+    lblHit = createLabel(analogWarning + hit.getCompoundName(), "white-larger-label");
 
     String simScoreTooltip =
         "Cosine similarity of raw data scan (top, blue) and database scan: " + COS_FORM.format(
@@ -290,7 +291,13 @@ public class SpectralMatchPanelFX extends GridPane {
     // try to draw the component
     if (molecule != null) {
       try {
-        newComponent = new Structure2DComponent(molecule.structure());
+        final Structure2DComponent structureViewer = new Structure2DComponent(molecule.structure());
+        // larger structures here because more space and single structure
+        structureViewer.setRenderConfig(ConfigService.getStructureRenderConfig().multiplyZoom(2));
+        if (hit.isAnalogMatch()) {
+          structureViewer.setTopRightText("Analog match");
+        }
+        newComponent = structureViewer;
       } catch (Exception e) {
         String errorMessage = "Could not load 2D structure\n" + "Exception: ";
         logger.log(Level.WARNING, errorMessage, e);
@@ -338,7 +345,7 @@ public class SpectralMatchPanelFX extends GridPane {
     g1.add(spectrumInfo, 0, 1, 2, 1);
 
     metaDataPanel.getChildren().add(g1);
-    if(pnExtra != null) {
+    if (pnExtra != null) {
       metaDataPanel.getChildren().add(pnExtra);
     }
     metaDataPanel.setMinSize(META_WIDTH, ENTRY_HEIGHT);
@@ -454,7 +461,8 @@ public class SpectralMatchPanelFX extends GridPane {
     }
 
     final Map<String, String> jsonEntries = JsonUtils.readValueOrElse(json, new LinkedHashMap<>());
-    final GridPane main = FxLayout.newGrid2Col(GridColumnGrow.BOTH, FxLayout.DEFAULT_PADDING_INSETS);
+    final GridPane main = FxLayout.newGrid2Col(GridColumnGrow.BOTH,
+        FxLayout.DEFAULT_PADDING_INSETS);
 
     int index = 0;
     for (Entry<String, String> e : jsonEntries.entrySet()) {
@@ -558,28 +566,23 @@ public class SpectralMatchPanelFX extends GridPane {
 
     // this is so unbelievably dirty
     // i'm so sorry ~SteffenHeu
-    final JFrame[] frame = new JFrame[1];
-    logger.info("Creating dummy window for spectral match export...");
-    SpectralMatchPanel[] swingPanel = new SpectralMatchPanel[1];
-    SwingUtilities.invokeLater(() -> {
-      frame[0] = new JFrame();
-      swingPanel[0] = new SpectralMatchPanel(hit);
-      frame[0].setContentPane(swingPanel[0]);
-      frame[0].revalidate();
-      frame[0].setVisible(true);
-      frame[0].toBack();
-      swingPanel[0].calculateAndSetSize();
-    });
-
-    // get file
     File file = chooser.showSaveDialog(null);
     if (file != null) {
-      swingPanel[0].exportToGraphics(format, file);
+      logger.info("Creating dummy window for spectral match export...");
+      SwingUtilities.invokeLater(() -> {
+        var frame = new JFrame();
+        var swingPanel = new SpectralMatchPanel(hit);
+        frame.setContentPane(swingPanel);
+        frame.revalidate();
+        frame.setVisible(true);
+        frame.toBack();
+        swingPanel.calculateAndSetSize();
+        swingPanel.exportToGraphics(format, file);
+        logger.info("Disposing dummy window for spectral match export...");
+        frame.dispose();
+      });
+
     }
-
-    logger.info("Disposing dummy window for spectral match export...");
-    SwingUtilities.invokeLater(() -> frame[0].dispose());
-
     // it works though, until we figure something out
   }
 

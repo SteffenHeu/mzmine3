@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -24,6 +25,8 @@
 
 package io.github.mzmine.parameters;
 
+import io.github.mzmine.modules.MZmineProcessingStep;
+import io.github.mzmine.modules.dataprocessing.filter_featurelistpreferences.FeatureListPreferencesParameters;
 import io.github.mzmine.modules.presets.ModulePreset;
 import io.github.mzmine.modules.presets.ModulePresetStore;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
@@ -79,7 +82,21 @@ public interface ParameterSet extends ParameterContainer {
 
   Parameter<?>[] getParameters();
 
-  <T extends Parameter<?>> T getParameter(T parameter);
+  /**
+   * Get parameter with given {@link Parameter#getName()}
+   *
+   * @return the parameter or throws exception if parameter is missing
+   */
+  default @NotNull <T extends Parameter<?>> T getParameter(T parameter) {
+    return tryGetParameter(parameter).orElseThrow(
+        () -> new IllegalArgumentException("Parameter " + parameter.getName() + " does not exist"));
+  }
+
+  /**
+   *
+   * @return the optional parameter or empty if missing
+   */
+  <T extends Parameter<?>> @NotNull Optional<T> tryGetParameter(T parameter);
 
   default <V, T extends Parameter<V>> V getValue(T parameter) {
     final T actualParam = getParameter(parameter);
@@ -246,6 +263,21 @@ public interface ParameterSet extends ParameterContainer {
   ExitCode showSetupDialog(boolean valueCheckRequired);
 
   /**
+   * Called when this parameter set becomes the configuration of a batch queue step
+   * {@link MZmineProcessingStep}, either by adding the step, by loading a queue, or by copying a
+   * step. So it is false before the step was added and true afterwards.
+   *
+   * See example of use in {@link FeatureListPreferencesParameters#showSetupDialog(boolean)}
+   */
+  void setAsBatchStepParameters();
+
+  /**
+   * @return true if this set is the stored configuration of a batch step in
+   * {@link MZmineProcessingStep}
+   */
+  boolean isBatchStepParameters();
+
+  /**
    * Set the value of a parameter
    *
    * @param parameter the parameter to change
@@ -318,4 +350,15 @@ public interface ParameterSet extends ParameterContainer {
   default @NotNull List<ModulePreset> createDefaultPresets() {
     return List.of();
   }
+
+  /**
+   * A string containing all messages/hints for old parameters while loading this module from xml.
+   * This message is discarded on clone.
+   * <p>
+   * This also contains all messages from internal embedded {@link EmbeddedParameterSet}.
+   *
+   * @return A string containing all messages/hints for old parameters while loading this module
+   * from xml. Empty if no messages, not null.
+   */
+  @NotNull String getLoadingVersionMessages();
 }

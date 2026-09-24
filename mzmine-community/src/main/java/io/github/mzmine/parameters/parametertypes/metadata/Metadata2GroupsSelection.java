@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,8 +27,6 @@ package io.github.mzmine.parameters.parametertypes.metadata;
 
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
-import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
-import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.util.StringUtils;
 import java.util.List;
 import java.util.Map;
@@ -36,38 +34,64 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public record Metadata2GroupsSelection(@NotNull String columnName, @NotNull String groupA,
-                                       @NotNull String groupB) {
+                                       @NotNull String groupB) implements MetadataGroupsSelection {
 
   public final static Metadata2GroupsSelection NONE = new Metadata2GroupsSelection("", "", "");
 
+  public Metadata2GroupsSelection(@NotNull String columnName, @NotNull String groupA,
+      @NotNull String groupB) {
+    this.columnName = columnName.trim();
+    this.groupA = groupA.trim();
+    this.groupB = groupB.trim();
+  }
+
   /**
    * @return Checks if the current metadata table contains the specified column and the specified
-   * value. Case sensitive.
+   * value. Case insensitive, see {@link #matchesValue(Object)}.
    */
+  @Override
   public boolean isValid() {
     if (columnName.isBlank() || groupA.isBlank() || groupB.isBlank()) {
       return false;
     }
 
-    final MetadataTable metadata = ProjectService.getMetadata();
-
-    final MetadataColumn<?> column = getColumn();
-    if (column == null) {
+    final Map<RawDataFile, Object> columnValues = getColumnData();
+    if (columnValues == null) {
       return false;
     }
 
-    final Map<RawDataFile, Object> columnValues = metadata.getData().get(column);
-    return columnValues.values().stream().anyMatch(
-        str -> StringUtils.isEqualToString(groupA, str) || StringUtils.isEqualToString(groupB,
-            str));
+    // requires both A and B to have at least one value
+    boolean hasA = false;
+    boolean hasB = false;
+    for (Object value : columnValues.values()) {
+      if (!hasA && matchesA(value)) {
+        hasA = true;
+      }
+      if (!hasB && matchesB(value)) {
+        hasB = true;
+      }
+      if (hasA && hasB) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
-   * @return The actual column from the metadata table or null.
+   * Matches ignoring case and surrounding whitespace, so that a metadata column holding {@code QC}
+   * and a selection of {@code qc} refer to the same group.
    */
-  @Nullable
-  public MetadataColumn<?> getColumn() {
-    return ProjectService.getMetadata().getColumnByName(columnName());
+  @Override
+  public boolean matchesValue(@Nullable Object value) {
+    return matchesA(value) || matchesB(value);
+  }
+
+  public boolean matchesA(@Nullable Object value) {
+    return value != null && StringUtils.equalStrippedIgnoreCase(value, groupA);
+  }
+
+  public boolean matchesB(@Nullable Object value) {
+    return value != null && StringUtils.equalStrippedIgnoreCase(value, groupB);
   }
 
   /**
@@ -76,14 +100,12 @@ public record Metadata2GroupsSelection(@NotNull String columnName, @NotNull Stri
    * does not contain the value.
    */
   public List<RawDataFile> getMatchingFilesA(List<RawDataFile> rawFiles) {
-    if (!isValid()) {
+    final Map<RawDataFile, Object> column = getColumnData();
+    if (!isValid() || column == null) {
       return List.of();
     }
 
-    final Map<RawDataFile, Object> column = ProjectService.getMetadata().getColumnData(getColumn());
-
-    return rawFiles.stream().filter(raw -> StringUtils.isEqualToString(groupA, column.get(raw)))
-        .toList();
+    return rawFiles.stream().filter(raw -> matchesA(column.get(raw))).toList();
   }
 
   /**
@@ -92,13 +114,11 @@ public record Metadata2GroupsSelection(@NotNull String columnName, @NotNull Stri
    * does not contain the value.
    */
   public List<RawDataFile> getMatchingFilesB(List<RawDataFile> rawFiles) {
-    if (!isValid()) {
+    final Map<RawDataFile, Object> column = getColumnData();
+    if (!isValid() || column == null) {
       return List.of();
     }
 
-    final Map<RawDataFile, Object> column = ProjectService.getMetadata().getColumnData(getColumn());
-
-    return rawFiles.stream().filter(raw -> StringUtils.isEqualToString(groupB, column.get(raw)))
-        .toList();
+    return rawFiles.stream().filter(raw -> matchesB(column.get(raw))).toList();
   }
 }

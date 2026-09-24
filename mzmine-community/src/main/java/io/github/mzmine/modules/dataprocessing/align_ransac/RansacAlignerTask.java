@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -41,6 +41,7 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
+import io.github.mzmine.util.FeatureListUtils;
 import io.github.mzmine.util.FeatureUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.RangeUtils;
@@ -143,6 +144,9 @@ class RansacAlignerTask extends AbstractTask {
         Arrays.stream(featureLists).flatMap(flist -> flist.getRawDataFiles().stream()).distinct()
             .toList());
 
+    // do not transfer types add them later
+    FeatureListUtils.transferMetadata(List.of(featureLists), alignedFeatureList, false);
+
     for (ModularFeatureList featureList : featureLists) {
 
       for (RawDataFile dataFile : featureList.getRawDataFiles()) {
@@ -157,9 +161,6 @@ class RansacAlignerTask extends AbstractTask {
         }
 
         allDataFiles.add(dataFile);
-
-        featureList.getRawDataFiles().forEach(
-            file -> alignedFeatureList.setSelectedScans(file, featureList.getSeletedScans(file)));
       }
     }
 
@@ -183,15 +184,21 @@ class RansacAlignerTask extends AbstractTask {
           alignedFeatureList.addRow(targetRow);
         }
 
-        // Add all peaks from the original row to the aligned row
+        // Add all peaks from the original row to the aligned row.
+        // row bindings aggregate over all features, so applying them per feature is O(features^2)
+        // per aligned row. Applied once for the whole list after all feature lists were aligned
         for (RawDataFile file : row.getRawDataFiles()) {
-          targetRow.addFeature(file, new ModularFeature(alignedFeatureList, row.getFeature(file)));
+          targetRow.addFeature(file, new ModularFeature(alignedFeatureList, row.getFeature(file)),
+              false);
         }
 
         processedRows++;
       }
 
     } // Next feature list
+
+    // features were added without updating the row bindings - update all rows once
+    alignedFeatureList.applyRowBindings();
 
     // Add new aligned feature list to the project
     project.addFeatureList(alignedFeatureList);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -34,6 +34,8 @@ import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
+import io.github.mzmine.datamodel.features.correlation.R2RMap;
+import io.github.mzmine.datamodel.features.correlation.RowsRelationship;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataanalysis.spec_chimeric_precursor.ChimericPrecursorChecker;
 import io.github.mzmine.modules.dataanalysis.spec_chimeric_precursor.ChimericPrecursorFlag;
@@ -240,12 +242,16 @@ public class ExportScansFeatureTask extends AbstractFeatureListTask {
 
       for (FeatureList flist : featureLists) {
         description = "Exporting scan entries for feature list " + flist.getName();
+        final Map<FeatureListRow, List<RowsRelationship>> correlationMapIndex = flist.getMs1CorrelationMap()
+            .filter(_ -> exportMs1 && ms1Selection.includesCorrelated()).map(R2RMap::createRowIndex)
+            .orElse(null);
+
         for (var row : flist.getRows()) {
           if (!checkPreConditions(row)) {
             finishedItems.incrementAndGet();
             continue;
           }
-          exportRow(row);
+          exportRow(row, correlationMapIndex);
           finishedItems.incrementAndGet();
         }
         flist.getAppliedMethods().add(
@@ -285,7 +291,8 @@ public class ExportScansFeatureTask extends AbstractFeatureListTask {
     }
   }
 
-  private void exportRow(final FeatureListRow row) throws IOException {
+  private void exportRow(final FeatureListRow row,
+      Map<FeatureListRow, List<RowsRelationship>> correlationMapIndex) throws IOException {
     // get all fragment scans as entries to decide whether to export MS1 or not
     final List<SpectralLibraryEntry> fragmentScans = prepareFragmentScans(row);
 
@@ -294,7 +301,7 @@ public class ExportScansFeatureTask extends AbstractFeatureListTask {
     }
 
     final List<SpectralLibraryEntry> ms1Scans =
-        exportMs1 ? prepareMs1Scans(row) : new ArrayList<>();
+        exportMs1 ? prepareMs1Scans(row, correlationMapIndex) : new ArrayList<>();
 
     // optional filtering of entries
     filterEntries(row, ms1Scans, fragmentScans);
@@ -322,7 +329,7 @@ public class ExportScansFeatureTask extends AbstractFeatureListTask {
    */
   protected boolean checkPreConditions(final FeatureListRow row) {
     // option to overwrite this method to control which row is processed
-    if (skipAnnotatedFeatures && CompoundAnnotationUtils.streamFeatureAnnotations(row).findFirst()
+    if (skipAnnotatedFeatures && CompoundAnnotationUtils.getBestFeatureAnnotation(row)
         .isPresent()) {
       return false;
     }
@@ -346,7 +353,8 @@ public class ExportScansFeatureTask extends AbstractFeatureListTask {
    *
    * @return modifiable list of spectral library entries for MS1
    */
-  private List<SpectralLibraryEntry> prepareMs1Scans(final FeatureListRow row) {
+  private List<SpectralLibraryEntry> prepareMs1Scans(final FeatureListRow row,
+      Map<FeatureListRow, List<RowsRelationship>> correlationMapIndex) {
     if (!exportMs1) {
       return new ArrayList<>();
     }
@@ -355,7 +363,7 @@ public class ExportScansFeatureTask extends AbstractFeatureListTask {
     if (ms1Selection.includesCorrelated()) {
       // isotope pattern + adducts etc
       var correlated = SiriusExportTask.generateCorrelationSpectrum(entryFactory,
-          MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA, row, null, metadataMap);
+          MZTolerance.FIFTEEN_PPM_OR_FIVE_MDA, row, null, metadataMap, correlationMapIndex);
       if (correlated != null) {
         entries.add(correlated);
       }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2023 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -29,17 +29,28 @@ import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularDataModel;
-import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.compoundannotations.SimpleCompoundDBAnnotation;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundList;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundRow;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundRowSelection;
 import io.github.mzmine.datamodel.features.types.DataType;
+import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.LinkedGraphicalType;
+import io.github.mzmine.datamodel.features.types.annotations.CompoundDatabaseMatchesType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
+import io.github.mzmine.datamodel.features.types.annotations.PreferredAnnotationType;
+import io.github.mzmine.datamodel.features.types.annotations.SpectralLibraryMatchesType;
+import io.github.mzmine.datamodel.features.types.annotations.formula.FormulaListType;
+import io.github.mzmine.datamodel.features.types.annotations.iin.IonAdductType;
 import io.github.mzmine.datamodel.features.types.modifiers.NoTextColumn;
 import io.github.mzmine.datamodel.features.types.modifiers.NullColumnType;
 import io.github.mzmine.datamodel.features.types.modifiers.SubColumnsFactory;
+import io.github.mzmine.datamodel.features.types.numbers.SampleRsdType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.NumberRangeType;
+import io.github.mzmine.datamodel.features.types.numbers.scores.SimilarityType;
 import io.github.mzmine.modules.io.export_features_gnps.fbmn.FeatureListRowsFilter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.AbstractTask;
@@ -48,6 +59,7 @@ import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.FeatureListRowSorter;
 import io.github.mzmine.util.files.FileAndPathUtil;
 import io.github.mzmine.util.io.CSVUtils;
+import io.github.mzmine.util.spectraldb.entry.SpectralDBAnnotation;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -57,8 +69,8 @@ import java.text.MessageFormat;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.ConcurrentModificationException;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -86,6 +98,7 @@ public class CSVExportModularTask extends AbstractTask implements ProcessedItems
   private final String headerSeparator = ":";
   private final FeatureListRowsFilter rowFilter;
   private final boolean removeEmptyCols;
+  private final CompoundRowSelection rowSelection;
   private final ParameterSet parameters;
   // track number of exported items
   private final AtomicInteger exportedRows = new AtomicInteger(0);
@@ -100,19 +113,22 @@ public class CSVExportModularTask extends AbstractTask implements ProcessedItems
     idSeparator = parameters.getParameter(CSVExportModularParameters.idSeparator).getValue();
     this.rowFilter = parameters.getParameter(CSVExportModularParameters.filter).getValue();
     removeEmptyCols = parameters.getValue(CSVExportModularParameters.omitEmptyColumns);
+    rowSelection = parameters.getValue(CSVExportModularParameters.compoundRowSelection);
     this.parameters = parameters;
   }
 
   /**
-   * @param featureLists   feature lists to export
-   * @param fileName       export file name
-   * @param fieldSeparator separation of columns
-   * @param idSeparator    identity field separation
-   * @param rowFilter      Row filter
+   * @param compoundRowSelection
+   * @param featureLists         feature lists to export
+   * @param fileName             export file name
+   * @param fieldSeparator       separation of columns
+   * @param idSeparator          identity field separation
+   * @param rowFilter            Row filter
    */
   public CSVExportModularTask(ModularFeatureList[] featureLists, File fileName,
       String fieldSeparator, String idSeparator, FeatureListRowsFilter rowFilter,
-      boolean removeEmptyCols, @NotNull Instant moduleCallDate) {
+      boolean removeEmptyCols, @NotNull Instant moduleCallDate,
+      CompoundRowSelection compoundRowSelection) {
     super(null, moduleCallDate); // no new data stored -> null
     if (fieldSeparator.equals(idSeparator)) {
       throw new IllegalArgumentException(MessageFormat.format(
@@ -124,6 +140,7 @@ public class CSVExportModularTask extends AbstractTask implements ProcessedItems
     this.idSeparator = idSeparator;
     this.rowFilter = rowFilter;
     this.removeEmptyCols = removeEmptyCols;
+    this.rowSelection = compoundRowSelection;
     parameters = null;
   }
 
@@ -229,16 +246,26 @@ public class CSVExportModularTask extends AbstractTask implements ProcessedItems
   @SuppressWarnings("rawtypes")
   private void exportFeatureList(ModularFeatureList flist, BufferedWriter writer)
       throws IOException {
-    final List<FeatureListRow> rows = flist.getRows().stream().filter(rowFilter::accept)
+    final List<FeatureListRow> selectedRows = new ArrayList<>(flist.getRowsCopy(rowSelection));
+    final List<FeatureListRow> rows = selectedRows.stream().filter(rowFilter::accept)
         .sorted(FeatureListRowSorter.DEFAULT_ID).toList();
     List<RawDataFile> rawDataFiles = flist.getRawDataFiles();
 
-    List<DataType> rowTypes = flist.getRowTypes().stream().filter(this::filterType)
-        .filter(type -> !removeEmptyCols || typeContainData(type, rows, false, -1))
+    final Comparator<DataType> sorter = DataTypes.getDefaultSorterFeatureTable();
+
+    // when compound rows are exported, also offer the compound-only row types as columns
+    final Set<DataType> rowTypeSource = new LinkedHashSet<>(flist.getRowTypes());
+    final CompoundList compoundList = flist.getCompoundList();
+    if (compoundList != null && rows.stream().anyMatch(row -> row instanceof CompoundRow)) {
+      rowTypeSource.addAll(compoundList.getCompoundRowSchema().getTypes());
+    }
+
+    List<DataType> rowTypes = rowTypeSource.stream().filter(this::filterType)
+        .filter(type -> !removeEmptyCols || typeContainData(type, rows, false, -1)).sorted(sorter)
         .collect(Collectors.toList());
 
     List<DataType> featureTypes = flist.getFeatureTypes().stream().filter(this::filterType)
-        .filter(type -> !removeEmptyCols || typeContainData(type, rows, true, -1))
+        .filter(type -> !removeEmptyCols || typeContainData(type, rows, true, -1)).sorted(sorter)
         .collect(Collectors.toList());
 
     final Map<DataType, List<DataType>> rowsSubTypesIndex = indexSubTypes(rowTypes, rows);
@@ -303,10 +330,19 @@ public class CSVExportModularTask extends AbstractTask implements ProcessedItems
    * Checks all rows and their data types for sub types, that may or may not be listed in the
    * {@link SubColumnsFactory#getType(int)} method.
    *
+   * @param types a list of the main types, e.g. {@link FeatureList#getRowTypes()}
    * @return A map of main type (in the row) to all it's sub types in the entries.
    */
   private Map<DataType, List<DataType>> indexSubTypes(List<DataType> types,
       List<? extends ModularDataModel> rows) {
+    // PreferredAnnotationType is special as it combines multiple FeatureAnnotation types
+    // using types defined in SpectralLibraryMatchesType to have the same columns
+    // for the preferred annotation compared to the library matches columns
+    final SpectralLibraryMatchesType specMatchMainType = DataTypes.get(
+        SpectralLibraryMatchesType.class);
+    final List<DataType> specMatchTypes = specMatchMainType.getSubDataTypes();
+
+    // collecting all sub columns for their parent types
     Map<DataType, Set<DataType>> subTypes = new LinkedHashMap<>();
     for (DataType mainType : types) {
       if (!(mainType instanceof SubColumnsFactory subFactory)
@@ -319,6 +355,12 @@ public class CSVExportModularTask extends AbstractTask implements ProcessedItems
       for (int i = 0; i < definedSubTypes; i++) {
         // check if we keep the "static" sub types
         DataType subType = subFactory.getType(i);
+
+        if (subType.equals(subFactory)) {
+          // never remove the main type
+          typesList.add(subType);
+          continue;
+        }
         if (!filterType(subType) || (removeEmptyCols && !typeContainData(mainType, rows, false,
             i))) {
           continue;
@@ -344,16 +386,62 @@ public class CSVExportModularTask extends AbstractTask implements ProcessedItems
         }
 
         switch (first) {
-          case ModularDataModel modular -> typesList.addAll(modular.getTypes());
+          // spectral match may be also listed as preferred annotation, so we need to add sub types explicitly here.
+          case SpectralDBAnnotation a -> {
+            if (removeEmptyCols) {
+              for (DataType<?> subType : specMatchTypes) {
+                if (a.get(subType) != null) {
+                  typesList.add(subType);
+                }
+              }
+            } else {
+              typesList.addAll(specMatchTypes);
+            }
+          }
+          // modular may return a larger types list where all values are empty so check if null
+          case ModularDataModel modular -> {
+            if (removeEmptyCols) {
+              for (DataType<?> t : modular.getTypes()) {
+                if (modular.get(t) != null) {
+                  typesList.add(t);
+                }
+              }
+            } else {
+              typesList.addAll(modular.getTypes());
+            }
+          }
+          // no need to check if values are preset because annotation only contains type if value mapped
           case SimpleCompoundDBAnnotation annotation -> typesList.addAll(annotation.getTypes());
           default -> {
           }
         }
       }
+      // all sub types were added now do post processing and remove some again
+      excludeSubTypesFromMain(mainType, typesList);
     }
 
-    return subTypes.entrySet().stream()
-        .collect(Collectors.toMap(Entry::getKey, entry -> List.copyOf(entry.getValue())));
+    return subTypes.entrySet().stream().collect(Collectors.toMap(Entry::getKey,
+        entry -> entry.getValue().stream().filter(this::filterType).toList()));
+  }
+
+  private void excludeSubTypesFromMain(DataType mainType, Set<DataType> typesList) {
+    if (mainType instanceof SampleRsdType rsdType) {
+      // the value of this type is the row itself, so the loop above added all row types as sub
+      // types. Only the RSD types are actually sub columns of it
+      typesList.retainAll(rsdType.getSubDataTypes());
+    }
+    if (mainType instanceof PreferredAnnotationType) {
+      // preferred annotation type inherits many sub types from CompoundDB, SpectralLibrary etc.
+      // remove the main types because otherwise we get duplicates here
+      typesList.remove(DataTypes.get(SpectralLibraryMatchesType.class));
+      typesList.remove(DataTypes.get(CompoundDatabaseMatchesType.class));
+      typesList.remove(DataTypes.get(LipidMatchListType.class));
+      typesList.remove(DataTypes.get(FormulaListType.class));
+      // remove IonAdductType which may be added by spectral library matches
+      typesList.remove(DataTypes.get(IonAdductType.class));
+      // this is added by spectral library matches and is already added as ScoreType by preferred
+      typesList.remove(DataTypes.get(SimilarityType.class));
+    }
   }
 
   /**

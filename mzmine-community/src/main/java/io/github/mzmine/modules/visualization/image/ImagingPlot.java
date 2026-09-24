@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -43,6 +43,7 @@ import java.util.logging.Logger;
 import javafx.scene.layout.BorderPane;
 import org.jfree.chart.axis.AxisLocation;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.ui.RectangleInsets;
 
 /**
  * @author Robin Schmid <a href="https://github.com/robinschmid">https://github.com/robinschmid</a>
@@ -123,6 +124,8 @@ public class ImagingPlot extends BorderPane {
     axis.setAutoRangeIncludesZero(false);
 //    axis.setRange(new org.jfree.data.Range(0, imagingParameters.getLateralHeight()));
     axis.setVisible(!hideAxes);
+    axis.setLowerMargin(0);
+    axis.setUpperMargin(0);
 
     axis = (NumberAxis) chart.getXYPlot().getDomainAxis();
     axis.setAutoRangeStickyZero(false);
@@ -130,12 +133,18 @@ public class ImagingPlot extends BorderPane {
     chart.getXYPlot().setDomainAxisLocation(AxisLocation.TOP_OR_RIGHT);
 //    axis.setRange(new org.jfree.data.Range(0, imagingParameters.getLateralWidth()));
     axis.setVisible(!hideAxes);
+    axis.setLowerMargin(0);
+    axis.setUpperMargin(0);
 
     final boolean lockOnAspectRatio = MZmineCore.getConfiguration()
         .getModuleParameters(FeatureTableFXModule.class)
         .getParameter(FeatureTableFXParameters.lockImagesToAspectRatio).getValue();
-    MZmineCore.getConfiguration().getDefaultChartTheme().apply(chart);
     chart.getXYPlot().setBackgroundPaint(Color.BLACK);
+
+    chart.setLegendVisible(true);
+
+    chart.getXYPlot().setAxisOffset(RectangleInsets.ZERO_INSETS);
+    chart.setShowCrosshair(true);
 
     setCenter(chart);
     return chart;

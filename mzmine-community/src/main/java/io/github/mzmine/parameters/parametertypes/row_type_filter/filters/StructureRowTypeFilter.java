@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,6 +27,7 @@ package io.github.mzmine.parameters.parametertypes.row_type_filter.filters;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
+import io.github.mzmine.datamodel.structures.HarmonizationOptions;
 import io.github.mzmine.datamodel.structures.StructureInputType;
 import io.github.mzmine.datamodel.structures.StructureParser;
 import io.github.mzmine.datamodel.structures.SubstructureMatcher;
@@ -34,7 +35,6 @@ import io.github.mzmine.datamodel.structures.SubstructureMatcher.StructureMatchM
 import io.github.mzmine.parameters.parametertypes.row_type_filter.MatchingMode;
 import io.github.mzmine.parameters.parametertypes.row_type_filter.QueryFormatException;
 import io.github.mzmine.parameters.parametertypes.row_type_filter.RowTypeFilterOption;
-import io.github.mzmine.util.annotations.CompoundAnnotationUtils;
 import org.jetbrains.annotations.NotNull;
 
 final class StructureRowTypeFilter extends AbstractRowTypeFilter {
@@ -55,8 +55,10 @@ final class StructureRowTypeFilter extends AbstractRowTypeFilter {
 
     final boolean isSmiles = selectedType == RowTypeFilterOption.SMILES;
     if (isSmiles || selectedType == RowTypeFilterOption.INCHI) {
+      // query options keep every fragment and charge, see HarmonizationOptions.QUERY
       var structure = StructureParser.silent()
-          .parseStructure(query, isSmiles ? StructureInputType.SMILES : StructureInputType.INCHI);
+          .parseStructure(query, isSmiles ? StructureInputType.SMILES : StructureInputType.INCHI,
+              HarmonizationOptions.QUERY);
       if (structure == null) {
         throw new QueryFormatException(query);
       }
@@ -74,8 +76,8 @@ final class StructureRowTypeFilter extends AbstractRowTypeFilter {
 
   @Override
   public boolean matches(FeatureListRow row) {
-    return CompoundAnnotationUtils.streamFeatureAnnotations(row)
-        .map(FeatureAnnotation::getStructure).anyMatch(matcher::matches);
+    return row.streamAllFeatureAnnotations().map(FeatureAnnotation::getStructure)
+        .anyMatch(matcher::matches);
   }
 
 }

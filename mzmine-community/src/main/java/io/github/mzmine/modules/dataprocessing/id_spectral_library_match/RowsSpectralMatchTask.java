@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -38,6 +38,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.msms.DDAMsMsInfo;
 import io.github.mzmine.modules.dataprocessing.id_ccscalc.CCSUtils;
 import io.github.mzmine.modules.dataprocessing.id_spectral_match_sort.SortSpectralMatchesTask;
+import io.github.mzmine.modules.io.import_spectral_library.SpectralLibraryImportTask;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.datapointprocessing.isotopes.MassListDeisotoper;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.datapointprocessing.isotopes.MassListDeisotoperParameters;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.spectraidentification.spectraldatabase.SingleSpectrumLibrarySearchModule;
@@ -50,6 +51,7 @@ import io.github.mzmine.parameters.parametertypes.tolerances.PercentTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RITolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
+import io.github.mzmine.taskcontrol.TaskService;
 import io.github.mzmine.util.RIRecord;
 import io.github.mzmine.util.collections.BinarySearch;
 import io.github.mzmine.util.exceptions.MissingMassListException;
@@ -344,16 +346,29 @@ public class RowsSpectralMatchTask extends AbstractTask {
   }
 
   private @NotNull List<SpectralLibraryEntry> getSortedSpectralLibraryEntries() {
+    // have to check if spectral libraries are all imported
+    // cannot run matching if libraries are still imported this is most likely because
+    // user loaded manually and started matching to early
+    if (TaskService.getController()
+        .isTaskInstanceRunningOrQueued(SpectralLibraryImportTask.class)) {
+      error(
+          "Cannot run spectral library matching while a spectral library is imported. Finish import first.");
+      return List.of();
+    }
+
     final List<SpectralLibraryEntry> entries = parameters.getValue(
         SpectralLibrarySearchParameters.libraries).getMatchingLibraryEntriesAndCheckAvailability();
     var stream = entries.stream().filter(entry -> entry.getNumberOfDataPoints() >= minMatch);
 
     if (msLevelFilter.isFragmentationNoMS1()) {
-      // remove scans without precursor mz if its MS2
-      // sort by mz for binary search
+      // remove scans without precursor mz if its MS2.
+      // sorted by mz for the binary search and then by further fields, so entries with the same
+      // precursor keep a defined order instead of the order their libraries were imported in
       stream = stream.filter(entry -> entry.getPrecursorMZ() != null)
           .sorted(Comparator.comparing(SpectralLibraryEntry::getPrecursorMZ));
     }
+    // takes a lot of time due to structure harmonization - better to only call for matching results
+//    return stream.sorted(SpectralLibraryEntrySorter.DETERMINISTIC).toList();
     return stream.toList();
   }
 

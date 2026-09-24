@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,6 +30,7 @@ import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataanalysis.significance.SignificanceTests;
 import io.github.mzmine.modules.dataanalysis.utils.imputation.ImputationFunctions;
+import io.github.mzmine.modules.dataprocessing.filter_isotopefinder.IsotopeFinderModule;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import io.github.mzmine.parameters.Parameter;
@@ -42,6 +43,7 @@ import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
+import io.github.mzmine.parameters.parametertypes.IndexRangesParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.MinimumSamplesFilterConfig;
 import io.github.mzmine.parameters.parametertypes.MinimumSamplesInAnyMetadataGroupParameter;
@@ -54,8 +56,8 @@ import io.github.mzmine.parameters.parametertypes.StringParameter;
 import io.github.mzmine.parameters.parametertypes.absoluterelative.AbsoluteAndRelativeInt;
 import io.github.mzmine.parameters.parametertypes.absoluterelative.AbsoluteAndRelativeInt.Mode;
 import io.github.mzmine.parameters.parametertypes.massdefect.MassDefectParameter;
+import io.github.mzmine.parameters.parametertypes.metadata.Metadata1GroupSelection;
 import io.github.mzmine.parameters.parametertypes.metadata.Metadata2GroupsSelection;
-import io.github.mzmine.parameters.parametertypes.metadata.MetadataGroupSelection;
 import io.github.mzmine.parameters.parametertypes.ranges.DoubleRangeParameter;
 import io.github.mzmine.parameters.parametertypes.ranges.IntRangeParameter;
 import io.github.mzmine.parameters.parametertypes.ranges.MZRangeParameter;
@@ -67,6 +69,7 @@ import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelectio
 import io.github.mzmine.parameters.parametertypes.submodules.OptionalModuleParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.ExitCode;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import javafx.application.Platform;
@@ -108,6 +111,26 @@ public class RowsFilterParameters extends SimpleParameterSet {
       "Removes rows that are not the most intense or the monoisotopic peak in an isotope pattern.",
       false);
 
+  public static final BooleanParameter KEEP_ALL_ANNOTATED = new BooleanParameter(
+      "Never remove annotated rows",
+      "If checked, a feature that is annotated will never be removed from the feature list.",
+      false);
+
+  public static final OptionalParameter<IndexRangesParameter> ROW_ID_FILTER = new OptionalParameter<>(
+      new IndexRangesParameter("Feature row IDs", """
+          Filter by feature list row IDs. \
+          Provide a list of single indices and ranges, e.g., 1,5-6 or 1,5,6.
+          This is a strong filter that cannot be combined with other filters only with the Compound IDs filter."""),
+      false);
+
+  public static final OptionalParameter<IndexRangesParameter> COMPOUND_ID_FILTER = new OptionalParameter<>(
+      new IndexRangesParameter("Compound IDs", """
+          Filter by compound IDs assigned by the compound grouping step. \
+          Only compound rows carry a compound ID. \
+          Provide a list of single indices and ranges, e.g., 1,5-6 or 1,5,6.
+          This is a strong filter that cannot be combined with other filters only with the Feature row IDs filter."""),
+      false);
+
   public static final OptionalParameter<MZRangeParameter> MZ_RANGE = new OptionalParameter<>(
       new MZRangeParameter(), false);
 
@@ -124,7 +147,8 @@ public class RowsFilterParameters extends SimpleParameterSet {
           "Permissible range of chromatographic FWHM per row",
           MZmineCore.getConfiguration().getRTFormat(), Range.closed(0.0, 1.0)), false);
   public static final OptionalParameter<IntRangeParameter> CHARGE = new OptionalParameter<>(
-      new IntRangeParameter("Charge", "Filter by charge, run isotopic features grouper first", true,
+      new IntRangeParameter("Charge",
+          "Filter by charge, run %s module first".formatted(IsotopeFinderModule.MODULE_NAME), true,
           Range.closed(1, 2)), false);
 
   public static final OptionalModuleParameter<KendrickMassDefectFilterParameters> KENDRICK_MASS_DEFECT = new OptionalModuleParameter<>(
@@ -164,17 +188,12 @@ public class RowsFilterParameters extends SimpleParameterSet {
       "If checked, the rows that don't contain MS2 scan will be removed.", false);
 
   public static final BooleanParameter KEEP_ALL_MS2 = new BooleanParameter(
-      "Never remove rows with MS2",
-      "If checked, all rows with MS2 are retained without applying any further filters on them.",
-      true);
+      "Never remove rows with MS2", """
+      If checked, all rows with MS2 are retained without applying any further filters on them.
+      GC-EI-MS pseudo MS2 spectra are not considered MS2, because every row has one.""", false);
 
   public static final OptionalParameter<RowTypeFilterParameter> ROW_TYPE_FILTER = new OptionalParameter<>(
       new RowTypeFilterParameter());
-
-  public static final BooleanParameter KEEP_ALL_ANNOTATED = new BooleanParameter(
-      "Never remove annotated rows",
-      "If checked, a feature that is annotated will never be removed from the feature list.",
-      false);
 
   public static final BooleanParameter Reset_ID = new BooleanParameter("Reset the row ID",
       "If checked, the row number of original feature list will be reset.", false);
@@ -201,13 +220,52 @@ public class RowsFilterParameters extends SimpleParameterSet {
             // TODO what does redundant do?
             MIN_ISOTOPE_PATTERN_COUNT, ISOTOPE_FILTER_13C, removeRedundantRows,
             // feature properties
-            MZ_RANGE, RT_RANGE, FEATURE_DURATION, FWHM, CHARGE, massDefect, KENDRICK_MASS_DEFECT,
+            ROW_ID_FILTER, COMPOUND_ID_FILTER, MZ_RANGE, RT_RANGE, FEATURE_DURATION, FWHM, CHARGE,
+            massDefect, KENDRICK_MASS_DEFECT,
             // identities / annotations
             ROW_TYPE_FILTER, HAS_IDENTITIES, IDENTITY_TEXT, COMMENT_TEXT, MS2_Filter,
             onlyCorrelatedWithOtherDetectors, KEEP_ALL_MS2, KEEP_ALL_ANNOTATED, Reset_ID},
         "https://mzmine.github.io/mzmine_documentation/module_docs/feature_list_row_filter/feature_list_rows_filter.html");
   }
 
+  @Override
+  public boolean checkParameterValues(Collection<String> errorMessages,
+      boolean skipRawDataAndFeatureListParameters) {
+    final boolean state = super.checkParameterValues(errorMessages,
+        skipRawDataAndFeatureListParameters);
+
+    if (!(getValue(COMPOUND_ID_FILTER) || getValue(ROW_ID_FILTER))) {
+      return state;
+    }
+
+    // ID filters are strong filters and cannot be combined with other because this would lead to
+    // unclear behavior
+    boolean otherFilterActive = false;
+    for (Parameter<?> parameter : parameters) {
+      if (parameter.getName().equals(COMPOUND_ID_FILTER.getName()) || //
+          parameter.getName().equals(ROW_ID_FILTER.getName())) {
+        continue;
+      }
+
+      try {
+        // covers BooleanParameter, OptionalModuleParameter and OptionalParameter and more
+        final Object value = parameter.getValue();
+        if (value instanceof Boolean b) {
+          otherFilterActive = b;
+        }
+      } catch (Exception e) {
+      }
+
+      if (otherFilterActive) {
+        final String msg = """
+            Cannot combine feature row ID or compound ID filters with other filters, as this leads to unclear behavior. \
+            If you need to run another filter, run this step again and split the filters.""";
+        errorMessages.add(msg);
+        return false;
+      }
+    }
+    return state;
+  }
 
   @Override
   public ExitCode showSetupDialog(boolean valueCheckRequired) {
@@ -225,8 +283,8 @@ public class RowsFilterParameters extends SimpleParameterSet {
             MIN_FEATURE_IN_ONE_GROUP_COUNT, cvFilter, foldChangeFilter), //
         new ParameterGroup("Isotope filters", MIN_ISOTOPE_PATTERN_COUNT, ISOTOPE_FILTER_13C,
             removeRedundantRows), //
-        new ParameterGroup("Feature properties", MZ_RANGE, RT_RANGE, FEATURE_DURATION, FWHM, CHARGE,
-            massDefect, KENDRICK_MASS_DEFECT), //
+        new ParameterGroup("Feature properties", ROW_ID_FILTER, COMPOUND_ID_FILTER, MZ_RANGE,
+            RT_RANGE, FEATURE_DURATION, FWHM, CHARGE, massDefect, KENDRICK_MASS_DEFECT), //
         new ParameterGroup("Annotations & MS2 filter", KEEP_ALL_MS2, MS2_Filter, KEEP_ALL_ANNOTATED,
             ROW_TYPE_FILTER, HAS_IDENTITIES, IDENTITY_TEXT, COMMENT_TEXT), //
         new ParameterGroup("Other options", onlyCorrelatedWithOtherDetectors, Reset_ID) //
@@ -279,30 +337,33 @@ public class RowsFilterParameters extends SimpleParameterSet {
         .getEmbeddedParameters();
     cvFilter.setAll(AbundanceMeasure.Area, ImputationFunctions.GLOBAL_LIMIT_OF_DETECTION, 0.2, 0.2,
         false,
-        new MetadataGroupSelection(MetadataColumn.SAMPLE_TYPE_HEADER, SampleType.QC.toString()));
+        new Metadata1GroupSelection(MetadataColumn.SAMPLE_TYPE_HEADER, SampleType.QC.toString()));
 
     param.setParameter(RowsFilterParameters.foldChangeFilter, false);
     final FoldChangeSignificanceRowFilterParameters fcParams = param.getParameter(
         RowsFilterParameters.foldChangeFilter).getEmbeddedParameters();
 
     fcParams.setAll(AbundanceMeasure.Area, ImputationFunctions.GLOBAL_LIMIT_OF_DETECTION,
-        Metadata2GroupsSelection.NONE, SignificanceTests.WELCHS_T_TEST, 0.05, 1d,
+        Metadata2GroupsSelection.NONE, SignificanceTests.WELCHS_T_TEST, true, 0.05, 1d,
         FoldChangeFilterSides.ABS_BOTH_SIDES);
 
     //
     param.setParameter(RowsFilterParameters.removeRedundantRows, false);
+    param.setParameter(RowsFilterParameters.ROW_ID_FILTER, false);
+    param.setParameter(RowsFilterParameters.COMPOUND_ID_FILTER, false);
     param.setParameter(RowsFilterParameters.MZ_RANGE, false);
     param.setParameter(RowsFilterParameters.RT_RANGE, false);
     param.setParameter(RowsFilterParameters.FEATURE_DURATION, false);
     param.setParameter(RowsFilterParameters.FWHM, false);
-    param.setParameter(RowsFilterParameters.CHARGE, false);
+    // set the default to charge 1
+    param.setParameter(RowsFilterParameters.CHARGE, false, Range.closed(1, 1));
     param.setParameter(RowsFilterParameters.KENDRICK_MASS_DEFECT, false);
     param.setParameter(RowsFilterParameters.HAS_IDENTITIES, false);
     param.setParameter(RowsFilterParameters.IDENTITY_TEXT, false);
     param.setParameter(RowsFilterParameters.COMMENT_TEXT, false);
     param.setParameter(RowsFilterParameters.REMOVE_ROW, RowsFilterChoices.KEEP_MATCHING);
     param.setParameter(RowsFilterParameters.MS2_Filter, false);
-    param.setParameter(RowsFilterParameters.KEEP_ALL_MS2, true);
+    param.setParameter(RowsFilterParameters.KEEP_ALL_MS2, false);
     param.setParameter(RowsFilterParameters.KEEP_ALL_ANNOTATED, false);
     param.setParameter(RowsFilterParameters.ROW_TYPE_FILTER, false);
     param.setParameter(RowsFilterParameters.Reset_ID, false);
@@ -320,9 +381,10 @@ public class RowsFilterParameters extends SimpleParameterSet {
   @Override
   public @Nullable String getVersionMessage(int version) {
     return switch (version) {
+      // 3 had message for internal change to cvFilter - but internal changes are now also printed since mzmine 4.9
+      // still print added option here because either way there is a message that RSD filter was changed
       case 3 -> """
-          "%s" has changed internally. Missing value imputation was added.
-          "%s" was added as an additional filtering option.""".formatted(cvFilter.getName(),
+          "%s" was added as an additional filtering option.""".formatted(
           foldChangeFilter.getName());
       default -> null;
     };
@@ -340,6 +402,12 @@ public class RowsFilterParameters extends SimpleParameterSet {
     // deactivate new parameter that may not be available
     if (!loadedParams.containsKey(ROW_TYPE_FILTER.getName())) {
       setParameter(ROW_TYPE_FILTER, false);
+    }
+    if (!loadedParams.containsKey(ROW_ID_FILTER.getName())) {
+      setParameter(ROW_ID_FILTER, false);
+    }
+    if (!loadedParams.containsKey(COMPOUND_ID_FILTER.getName())) {
+      setParameter(COMPOUND_ID_FILTER, false);
     }
     if (!loadedParams.containsKey(MIN_FEATURE_IN_GROUP_COUNT.getName())) {
       setParameter(MIN_FEATURE_IN_GROUP_COUNT, false);

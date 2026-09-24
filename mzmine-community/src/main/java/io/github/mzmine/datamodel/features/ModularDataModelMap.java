@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,12 +25,10 @@
 
 package io.github.mzmine.datamodel.features;
 
-import static java.util.Objects.requireNonNullElse;
-
-import io.github.mzmine.datamodel.features.columnar_data.ColumnarModularDataModelRow;
 import io.github.mzmine.datamodel.features.columnar_data.ColumnarModularDataModelSchema;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.annotations.MissingValueType;
+import io.github.mzmine.datamodel.features.types.modifiers.MappingType;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -79,28 +77,10 @@ public abstract class ModularDataModelMap implements ModularDataModel {
    */
   @Override
   public @Nullable <T extends Object> T get(DataType<T> type) {
+    if (type instanceof MappingType<?> mt) {
+      return (T) mt.getValue(this);
+    }
     return (T) getMap().get(type);
-  }
-
-  /**
-   * Value for this datatype or default value if no value was mapped. So only returns default if
-   * there was no mapping
-   *
-   * @return
-   */
-  @Override
-  public @Nullable <T> T getOrDefault(DataType<T> type, T defaultValue) {
-    return (T) getMap().getOrDefault(type, defaultValue);
-  }
-
-  /**
-   * Value for this datatype or default value if no value was mapped or the mapped value was null
-   *
-   * @return
-   */
-  @Override
-  public @NotNull <T> T getNonNullElse(DataType<T> type, @NotNull T defaultValue) {
-    return (T) requireNonNullElse(getMap().getOrDefault(type, null), defaultValue);
   }
 
   /**
@@ -118,7 +98,7 @@ public abstract class ModularDataModelMap implements ModularDataModel {
           "Type %s is not meant to be added to a feature.".formatted(type.getClass()));
     }
 
-    Object old = getMap().put(type, value);
+    Object old = value == null ? getMap().remove(type) : getMap().put(type, value);
     // send changes to all listeners for this data type
     List<DataTypeValueChangeListener<?>> listeners = getValueChangeListeners().get(type);
     if (!Objects.equals(old, value)) {

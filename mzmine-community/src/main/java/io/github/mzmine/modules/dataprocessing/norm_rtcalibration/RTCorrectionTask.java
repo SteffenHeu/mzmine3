@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,8 +27,6 @@ package io.github.mzmine.modules.dataprocessing.norm_rtcalibration;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.MZmineProject;
-import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
@@ -41,6 +39,7 @@ import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.parameters.parametertypes.tolerances.RTTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
+import io.github.mzmine.util.FeatureListUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -109,9 +108,13 @@ class RTCorrectionTask extends AbstractTask {
     normalizedFeatureLists = new ModularFeatureList[originalFeatureLists.length];
 
     for (int i = 0; i < originalFeatureLists.length; i++) {
-      normalizedFeatureLists[i] = new ModularFeatureList(originalFeatureLists[i] + " " + suffix,
-          getMemoryMapStorage(), originalFeatureLists[i].getRawDataFiles());
-      totalRows += originalFeatureLists[i].getNumberOfRows();
+      final int listRows = originalFeatureLists[i].getNumberOfRows();
+      final int totalFeatures = originalFeatureLists[i].stream().mapToInt(FeatureListRow::getNumberOfFeatures)
+          .sum();
+      normalizedFeatureLists[i] = FeatureListUtils.createCopyWithoutRows(originalFeatureLists[i], suffix,
+          getMemoryMapStorage(), listRows, totalFeatures);
+
+      totalRows += listRows;
     }
 
     List<ModularFeatureListRow[]> goodStandards = findGoodStandards();
@@ -127,16 +130,8 @@ class RTCorrectionTask extends AbstractTask {
     }
 
     for (int i = 0; i < originalFeatureLists.length; i++) {
-      for (FeatureListAppliedMethod proc : originalFeatureLists[i].getAppliedMethods()) {
-        normalizedFeatureLists[i].addDescriptionOfAppliedTask(proc);
-      }
-
-      for (RawDataFile f : originalFeatureLists[i].getRawDataFiles()) {
-        normalizedFeatureLists[i].setSelectedScans(f, originalFeatureLists[i].getSeletedScans(f));
-      }
-
       normalizedFeatureLists[i].addDescriptionOfAppliedTask(
-          new SimpleFeatureListAppliedMethod("Retention time normalization",
+          new SimpleFeatureListAppliedMethod(RTCorrectionModule.MODULE_NAME,
               RTCorrectionModule.class, parameters, getModuleCallDate()));
 
       handleOriginal.reflectNewFeatureListToProject(suffix, project, normalizedFeatureLists[i],
@@ -262,15 +257,15 @@ class RTCorrectionTask extends AbstractTask {
           normalizedStdRTs);
     }
 
-    for (RawDataFile file : originalRow.getRawDataFiles()) {
-      ModularFeature originalFeature = originalRow.getFeature(file);
-      if (originalFeature != null) {
-        ModularFeature normalizedFeature = new ModularFeature(targetFeatureList, originalFeature);
-        normalizedFeature.setRT((float) normalizedRT);
-        float correctedRt = (float) (normalizedRT - originalRT);
-        normalizedFeature.set(RtAbsoluteCorrectionType.class, correctedRt);
-        normalizedRow.addFeature(file, normalizedFeature);
-      }
+    // only iterate the features that are present instead of all raw data files
+    for (ModularFeature originalFeature : originalRow.getFeatures()) {
+      ModularFeature normalizedFeature = new ModularFeature(targetFeatureList, originalFeature);
+      normalizedFeature.setRT((float) normalizedRT);
+      float correctedRt = (float) (normalizedRT - originalRT);
+      normalizedFeature.set(RtAbsoluteCorrectionType.class, correctedRt);
+      // row bindings aggregate over all features, so applying them per feature is O(features^2).
+      // the caller adds the row to the feature list, which applies the bindings once
+      normalizedRow.addFeature(originalFeature.getRawDataFile(), normalizedFeature, false);
     }
 
     return normalizedRow;

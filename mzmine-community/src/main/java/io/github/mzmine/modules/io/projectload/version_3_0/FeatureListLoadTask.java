@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,22 +28,34 @@ package io.github.mzmine.modules.io.projectload.version_3_0;
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
+import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundList;
+import io.github.mzmine.datamodel.features.compoundlist.ModularCompoundFeature;
+import io.github.mzmine.datamodel.features.compoundlist.ModularCompoundRow;
+import io.github.mzmine.datamodel.features.correlation.R2RNetworkingMaps;
+import io.github.mzmine.datamodel.features.correlation.project_io.R2RNetworkingMapsLoader;
+import io.github.mzmine.datamodel.features.preferences.FeatureListPreferences;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.numbers.IDType;
+import io.github.mzmine.datamodel.identities.iontype.project_io.IonNetworksLoader;
 import io.github.mzmine.main.MZmineCore;
+import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingModule;
+import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingParameters;
 import io.github.mzmine.modules.io.projectload.CachedIMSRawDataFile;
 import io.github.mzmine.modules.io.projectsave.FeatureListSaveTask;
+import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.DataTypeUtils;
 import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.ParsingUtils;
+import io.github.mzmine.util.XMLUtils;
 import io.github.mzmine.util.ZipUtils;
 import io.github.mzmine.util.files.FileAndPathUtil;
 import java.io.File;
@@ -57,14 +69,15 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.zip.ZipFile;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -149,6 +162,8 @@ public class FeatureListLoadTask extends AbstractTask {
   @Override
   public void run() {
     setStatus(TaskStatus.PROCESSING);
+
+    List<FeatureList> loadedFeatureLists = new ArrayList<>();
     try {
       Path tempDirectory = FileAndPathUtil.createTempDirectory(TEMP_FLIST_DATA_FOLDER);
 
@@ -190,11 +205,17 @@ public class FeatureListLoadTask extends AbstractTask {
         }
         parseFeatureList(storage, project, flist, flistFile);
 
+        loadR2RNetworkingMaps(flist, flistFile);
+
+        // after the rows exist, they can be resolved by ID and get their ion identities back
+        loadIonNetworks(flist, flistFile);
+
         // TODO maybe remove so that ModularFeatureList.getFeatureList can be unmodifiable
         // disable buffering after the import (replace references to CachedIMSRawDataFiles with IMSRawDataFiles
         flist.replaceCachedFilesAndScans();
 
         project.addFeatureList(flist);
+        loadedFeatureLists.add(flist);
         processedFlists++;
       }
     } catch (Exception e) {
@@ -208,7 +229,47 @@ public class FeatureListLoadTask extends AbstractTask {
 
     // disable caching on project level
     project.setProjectLoadImsImportCaching(false);
+
+    //  group flists by date created, only use the latest set of feature lists in next batch step
+    final Set<FeatureList> mostRecentStepFeatureLists = Set.copyOf(loadedFeatureLists.stream()
+        .collect(
+            Collectors.groupingBy(flist -> flist.getAppliedMethods().getLast().getModuleCallDate()))
+        .entrySet().stream().max(Entry.comparingByKey()).map(Entry::getValue).orElse(List.of()));
+    loadedFeatureLists.forEach(
+        flist -> flist.setExcludedFromBatchLast(!mostRecentStepFeatureLists.contains(flist)));
+
     setStatus(TaskStatus.FINISHED);
+  }
+
+  private void loadIonNetworks(ModularFeatureList flist, File flistFile) {
+    final File iinFile = new File(flistFile.toString()
+        .replace(FeatureListSaveTask.DATA_FILE_SUFFIX, FeatureListSaveTask.IIN_FILE_SUFFIX));
+    if (!iinFile.exists()) {
+      // older projects predate ion identity network persistence - silently skip
+      return;
+    }
+    try (InputStream in = new FileInputStream(iinFile)) {
+      IonNetworksLoader.load(in, flist);
+    } catch (IOException | XMLStreamException e) {
+      logger.log(Level.WARNING,
+          "Failed to load ion identity networks for feature list " + flist.getName(), e);
+    }
+  }
+
+  private void loadR2RNetworkingMaps(ModularFeatureList flist, File flistFile) {
+    final File r2rFile = new File(flistFile.toString()
+        .replace(FeatureListSaveTask.DATA_FILE_SUFFIX, FeatureListSaveTask.R2R_FILE_SUFFIX));
+    if (!r2rFile.exists()) {
+      // older projects predate R2R persistence — silently skip
+      return;
+    }
+    try (InputStream in = new FileInputStream(r2rFile)) {
+      final R2RNetworkingMaps maps = R2RNetworkingMapsLoader.load(in, flist);
+      flist.addRowMaps(maps);
+    } catch (IOException e) {
+      logger.log(Level.WARNING,
+          "Failed to load R2R networking maps for feature list " + flist.getName(), e);
+    }
   }
 
   private void parseFeatureList(MemoryMapStorage storage, MZmineProject project,
@@ -234,18 +295,198 @@ public class FeatureListLoadTask extends AbstractTask {
                 || !flist.getDateCreated()
                 .equals(reader.getAttributeValue(null, CONST.XML_DATE_CREATED_ATTR))) {
               throw new IllegalArgumentException(
-                  "Feature list names do not match. " + flist.getName() + " != "
-                      + reader.getAttributeValue(null, CONST.XML_FLIST_NAME_ATTR));
+                  "The name of the loaded feature list does not match the expected name. %s != %s Does a feature list with this name already exist?".formatted(
+                      flist.getName(), reader.getAttributeValue(null, CONST.XML_FLIST_NAME_ATTR)));
             }
           } else if (CONST.XML_ROW_ELEMENT.equals(localName)) {
             parseRow(reader, storage, project, flist);
             processedRows++;
+          } else if (CONST.XML_COMPOUND_LIST_ELEMENT.equals(localName)) {
+            parseCompoundList(reader, project, flist);
           }
         }
       }
 
     } catch (IOException | XMLStreamException e) {
       logger.log(Level.WARNING, "Error opening file " + flistFile.getAbsolutePath(), e);
+    }
+  }
+
+  /**
+   * Parse a {@code <compoundlist>} block in two passes within a single forward StAX scan:
+   * <ul>
+   * <li>Pass A: read the leading {@code <ids>} element (every compound id at every level of the
+   * tree) and register a {@link ModularCompoundRow} stub for each id in the
+   * {@link CompoundList}'s id index. The separate {@code <toplevel_ids>} element lists only the
+   * ids that should appear in {@link CompoundList#getRows()}; this list is remembered for
+   * pass C. After pass A, {@link CompoundList#findRowByCompoundId(int)} resolves any forward
+   * reference, including references to nested-only compound rows that never appear in the
+   * top-level list.</li>
+   * <li>Pass B: for each {@code <compoundrow id="X">} (top-level or nested), look up the stub and
+   * populate its data types (compound row schema) and compound features (compound features
+   * schema) by iterating the XML directly — all DataType resolution goes through
+   * {@link DataTypes#getTypeForId}, so no schema-type enumeration is hardcoded here.</li>
+   * <li>Pass C ({@link CompoundList#finalizeLoaded(List)}): resolve the remembered top-level ids
+   * to populated rows in saved order, set them as the top-level rows, rebuild the member index
+   * recursively, and wire listeners.</li>
+   * </ul>
+   * Finally calls {@link ModularFeatureList#setCompoundList(CompoundList)}.
+   */
+  public static void parseCompoundList(@NotNull final XMLStreamReader reader,
+      @NotNull final MZmineProject project, @NotNull final ModularFeatureList flist)
+      throws XMLStreamException {
+    final String numRowsStr = reader.getAttributeValue(null, CONST.XML_NUM_ROWS_ATTR);
+    final int numRows = numRowsStr != null ? Integer.parseInt(numRowsStr) : 0;
+
+    final CompoundList cl = new CompoundList(flist, flist.getMemoryMapStorage(), numRows);
+
+    // Ordered list of compound ids that should appear in CompoundList.getRows() after load.
+    // Populated when the loader reads <toplevel_ids>; resolved to stubs at finalizeLoaded time.
+    final List<Integer> topLevelIds = new ArrayList<>();
+
+    while (reader.hasNext()) {
+      final int event = reader.next();
+      if (event == XMLEvent.END_ELEMENT && CONST.XML_COMPOUND_LIST_ELEMENT.equals(
+          reader.getLocalName())) {
+        break;
+      }
+      if (event != XMLEvent.START_ELEMENT) {
+        continue;
+      }
+      final String localName = reader.getLocalName();
+      if (CONST.XML_COMPOUND_IDS_ELEMENT.equals(localName)) {
+        // Pass A: stub registration for every compound id at every level
+        final String text = reader.getElementText().trim();
+        if (!text.isEmpty()) {
+          for (final String idStr : text.split("\\s+")) {
+            final int id = Integer.parseInt(idStr);
+            cl.registerCompoundRowStub(new ModularCompoundRow(cl, id));
+          }
+        }
+      } else if (CONST.XML_COMPOUND_TOP_LEVEL_IDS_ELEMENT.equals(localName)) {
+        final String text = reader.getElementText().trim();
+        if (!text.isEmpty()) {
+          for (final String idStr : text.split("\\s+")) {
+            topLevelIds.add(Integer.parseInt(idStr));
+          }
+        }
+      } else if (CONST.XML_COMPOUND_ROW_ELEMENT.equals(localName)) {
+        // Pass B: populate content of an existing stub (top-level or nested)
+        final int compoundId = Integer.parseInt(
+            reader.getAttributeValue(null, CONST.XML_COMPOUND_ID_ATTR));
+        final ModularCompoundRow row = cl.findRowByCompoundId(compoundId);
+        if (row == null) {
+          logger.log(Level.WARNING, () -> "Skipping <compoundrow id=" + compoundId
+              + "> because no stub was created for it (missing <ids>?)");
+          // skip the element
+          skipElement(reader, CONST.XML_COMPOUND_ROW_ELEMENT);
+          continue;
+        }
+        parseCompoundRow(reader, project, flist, cl, row);
+      }
+    }
+
+    // Resolve top-level ids to populated stubs. Missing ids degrade gracefully — log + skip.
+    final List<ModularCompoundRow> topLevelRows = new ArrayList<>(topLevelIds.size());
+    for (final int id : topLevelIds) {
+      final ModularCompoundRow row = cl.findRowByCompoundId(id);
+      if (row == null) {
+        logger.log(Level.WARNING,
+            () -> "Top-level compound id " + id + " has no stub — skipping in top-level list");
+        continue;
+      }
+      topLevelRows.add(row);
+    }
+    cl.finalizeLoaded(topLevelRows);
+    flist.setCompoundList(cl);
+  }
+
+  private static void parseCompoundRow(@NotNull final XMLStreamReader reader,
+      @NotNull final MZmineProject project, @NotNull final ModularFeatureList flist,
+      @NotNull final CompoundList cl, @NotNull final ModularCompoundRow row)
+      throws XMLStreamException {
+    while (reader.hasNext()) {
+      final int event = reader.next();
+      if (event == XMLEvent.END_ELEMENT && CONST.XML_COMPOUND_ROW_ELEMENT.equals(
+          reader.getLocalName())) {
+        return;
+      }
+      if (event != XMLEvent.START_ELEMENT) {
+        continue;
+      }
+      final String localName = reader.getLocalName();
+      if (CONST.XML_DATA_TYPE_ELEMENT.equals(localName)) {
+        final DataType type = DataTypes.getTypeForId(
+            reader.getAttributeValue(null, CONST.XML_DATA_TYPE_ID_ATTR));
+        final Object value = parseDataType(reader, type, project, flist, row, null, null);
+        if (type != null && value != null) {
+          try {
+            row.set(type, value);
+          } catch (RuntimeException e) {
+            logger.log(Level.WARNING, () -> String.format(
+                "DataType %s and value %s were not set to compound row. Maybe incompatible during loading?",
+                type, value));
+          }
+        }
+      } else if (CONST.XML_FEATURE_ELEMENT.equals(localName)) {
+        final String fileName = reader.getAttributeValue(null, CONST.XML_RAW_FILE_ELEMENT);
+        final RawDataFile rf = project.getCurrentRawDataFiles().stream()
+            .filter(f -> f.getName().equals(fileName)).findFirst().orElse(null);
+        if (rf == null) {
+          logger.warning(
+              () -> "Cannot load compound feature for compound row id " + row.getCompoundId()
+                  + " for file " + fileName + ". File does not exist in project.");
+          skipElement(reader, CONST.XML_FEATURE_ELEMENT);
+          continue;
+        }
+        parseCompoundFeature(reader, project, flist, cl, row, rf);
+      }
+    }
+  }
+
+  private static void parseCompoundFeature(@NotNull final XMLStreamReader reader,
+      @NotNull final MZmineProject project, @NotNull final ModularFeatureList flist,
+      @NotNull final CompoundList cl, @NotNull final ModularCompoundRow row,
+      @NotNull final RawDataFile rf) throws XMLStreamException {
+    final ModularCompoundFeature cf = new ModularCompoundFeature(cl, row, rf);
+    while (reader.hasNext()) {
+      final int event = reader.next();
+      if (event == XMLEvent.END_ELEMENT && CONST.XML_FEATURE_ELEMENT.equals(
+          reader.getLocalName())) {
+        break;
+      }
+      if (event != XMLEvent.START_ELEMENT) {
+        continue;
+      }
+      if (!CONST.XML_DATA_TYPE_ELEMENT.equals(reader.getLocalName())) {
+        continue;
+      }
+      final DataType type = DataTypes.getTypeForId(
+          reader.getAttributeValue(null, CONST.XML_DATA_TYPE_ID_ATTR));
+      final Object value = parseDataType(reader, type, project, flist, row, cf, rf);
+      if (type != null && value != null) {
+        try {
+          cf.set(type, value);
+        } catch (RuntimeException e) {
+          logger.log(Level.WARNING, () -> String.format(
+              "DataType %s and value %s were not set to compound feature. Maybe incompatible during loading?",
+              type, value));
+        }
+      }
+    }
+    row.addFeature(rf, cf, false);
+  }
+
+  private static void skipElement(@NotNull final XMLStreamReader reader,
+      @NotNull final String localName) throws XMLStreamException {
+    int depth = 1;
+    while (reader.hasNext() && depth > 0) {
+      final int event = reader.next();
+      if (event == XMLEvent.START_ELEMENT && localName.equals(reader.getLocalName())) {
+        depth++;
+      } else if (event == XMLEvent.END_ELEMENT && localName.equals(reader.getLocalName())) {
+        depth--;
+      }
     }
   }
 
@@ -304,18 +545,21 @@ public class FeatureListLoadTask extends AbstractTask {
    */
   private ModularFeatureList readMetadataCreateFeatureList(File file, MemoryMapStorage storage) {
     try {
-      DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+      final Document configuration = XMLUtils.load(file);
 
-      DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-      Document configuration = dBuilder.parse(file);
-
-      XPathFactory factory = XPathFactory.newInstance();
-      XPath xpath = factory.newXPath();
+      final XPathFactory factory = XPathFactory.newInstance();
+      final XPath xpath = factory.newXPath();
 
       XPathExpression metadataExpr = xpath.compile(
           "//" + CONST.XML_ROOT_ELEMENT + "/" + CONST.XML_FLIST_METADATA_ELEMENT);
       final Element metadataElement = (Element) (((NodeList) metadataExpr.evaluate(configuration,
           XPathConstants.NODESET)).item(0));
+
+      // preferences may be absent in projects saved before they were introduced
+      XPathExpression preferencesExpr = xpath.compile(
+          "//" + CONST.XML_ROOT_ELEMENT + "/" + CONST.XML_FLIST_PREFERENCES_ELEMENT);
+      final Element preferencesElement = (Element) (((NodeList) preferencesExpr.evaluate(
+          configuration, XPathConstants.NODESET)).item(0));
 
       XPathExpression expr = xpath.compile(
           "//" + CONST.XML_ROOT_ELEMENT + "/" + CONST.XML_FLIST_APPLIED_METHODS_LIST_ELEMENT);
@@ -384,6 +628,19 @@ public class FeatureListLoadTask extends AbstractTask {
               .getTextContent());
       flist.getAppliedMethods().addAll(appliedMethods);
       selectedScansMap.forEach(flist::setSelectedScans);
+
+      final FeatureListAppliedMethod preferredAnnoationSorting = ParameterUtils.getLatestModuleCall(
+          appliedMethods, PreferredAnnotationRankingModule.class);
+      if (preferredAnnoationSorting != null) {
+        PreferredAnnotationRankingParameters param = (PreferredAnnotationRankingParameters) preferredAnnoationSorting.getParameters();
+        flist.setAnnotationSortConfig(param.toConfig());
+      }
+      final FeatureListPreferences preferences = FeatureListPreferences.loadFromXML(
+          preferencesElement);
+      // old projects do not have preferences (introduced mzmine 4.11)
+      if (preferences != null) {
+        flist.setPreferences(preferences);
+      }
       return flist;
     } catch (XPathExpressionException | ParserConfigurationException | SAXException |
              IOException e) {
@@ -404,6 +661,7 @@ public class FeatureListLoadTask extends AbstractTask {
       throw new IllegalStateException("Row ids do not match.");
     }
 
+    boolean featuresParsed = false;
     while (!(reader.getEventType() == XMLEvent.END_ELEMENT && reader.getLocalName()
         .equals(CONST.XML_ROW_ELEMENT)) && reader.hasNext()) {
       if (reader.next() == XMLEvent.START_ELEMENT) {
@@ -417,6 +675,7 @@ public class FeatureListLoadTask extends AbstractTask {
             continue;
           }
           parseFeature(reader, storage, project, flist, row, file);
+          featuresParsed = true;
         } else if (reader.getLocalName().equals(CONST.XML_DATA_TYPE_ELEMENT)) {
           DataType type = DataTypes.getTypeForId(
               reader.getAttributeValue(null, CONST.XML_DATA_TYPE_ID_ATTR));
@@ -434,6 +693,12 @@ public class FeatureListLoadTask extends AbstractTask {
           }
         }
       }
+    }
+
+    if (featuresParsed) {
+      // features were added without updating the row bindings - update once for the whole row.
+      // rows without features keep the loaded values, as before
+      flist.applyRowBindings(row);
     }
     rowCounter.getAndIncrement();
   }
@@ -473,6 +738,10 @@ public class FeatureListLoadTask extends AbstractTask {
     }
 
     DataTypeUtils.applyFeatureSpecificGraphicalTypes(feature);
-    row.addFeature(originalFile, feature);
+    // each row binding aggregates over all features of the row, so applying them per feature makes
+    // loading a row O(features^2). parseRow applies them once after all features were parsed.
+    // assumption: FeatureListSaveTask#writeRow writes all row data types before the features, so
+    // the loaded row values are overwritten by the bindings either way
+    row.addFeature(originalFile, feature, false);
   }
 }

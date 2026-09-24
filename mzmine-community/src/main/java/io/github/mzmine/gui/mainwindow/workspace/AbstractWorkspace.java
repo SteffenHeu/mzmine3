@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -31,6 +31,7 @@ import static io.github.mzmine.util.javafx.FxMenuUtil.addModuleMenuItems;
 import static io.github.mzmine.util.javafx.FxMenuUtil.addRadioMenuItem;
 import static io.github.mzmine.util.javafx.FxMenuUtil.addSeparator;
 
+import io.github.mzmine.datamodel.identities.fx.GlobalIonLibrariesModule;
 import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.gui.MZmineGUI;
 import io.github.mzmine.gui.WindowLocation;
@@ -42,6 +43,7 @@ import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.ModuleQuickSelectDialog;
+import io.github.mzmine.modules.dataanalysis.compounddashboard.CompoundDashboardModule;
 import io.github.mzmine.modules.dataanalysis.statsdashboard.StatsDasboardModule;
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule;
 import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.minimumsearch.MinimumSearchFeatureResolverModule;
@@ -54,6 +56,11 @@ import io.github.mzmine.modules.dataprocessing.featdet_msn_tree.MsnTreeFeatureDe
 import io.github.mzmine.modules.dataprocessing.featdet_targeted.TargetedFeatureDetectionModule;
 import io.github.mzmine.modules.dataprocessing.filter_clearannotations.ClearFeatureAnnotationsModule;
 import io.github.mzmine.modules.dataprocessing.filter_interestingfeaturefinder.AnnotateIsomersModule;
+import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.LipidAnnotationCleanupModule;
+import io.github.mzmine.modules.dataprocessing.filter_lipidpreferredlevel.SetLipidAnnotationLevelModule;
+import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingModule;
+import io.github.mzmine.modules.dataprocessing.group_compoundgrouper.CompoundGrouperModule;
+import io.github.mzmine.modules.dataprocessing.group_compoundgrouper.intensityrepresentation.ConfigCompoundRepresentationModule;
 import io.github.mzmine.modules.dataprocessing.group_imagecorrelate.ImageCorrelateGroupingModule;
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.corrgrouping.CorrelateGroupingModule;
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.export.ExportCorrAnnotationModule;
@@ -68,12 +75,12 @@ import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.formul
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.formula.prediction.FormulaPredictionIonNetworkModule;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingModule;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.refinement.IonNetworkRefinementModule;
-import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.relations.IonNetRelationsModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
 import io.github.mzmine.modules.dataprocessing.id_localcsvsearch.LocalCSVDatabaseSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_ms2search.Ms2SearchModule;
 import io.github.mzmine.modules.dataprocessing.id_nist.NistMsSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_online_reactivity.OnlineLcReactivityModule;
+import io.github.mzmine.modules.dataprocessing.id_spectral_library_analog_search.AnalogSpectralLibrarySearchModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.SpectralLibrarySearchModule;
 import io.github.mzmine.modules.io.export_ccsbase.CcsBaseExportModule;
 import io.github.mzmine.modules.io.export_compoundAnnotations_csv.CompoundAnnotationsCSVExportModule;
@@ -108,6 +115,7 @@ import io.github.mzmine.modules.tools.timstofmaldiacq.TimsTOFMaldiAcquisitionMod
 import io.github.mzmine.modules.tools.timstofmaldiacq.imaging.SimsefImagingSchedulerModule;
 import io.github.mzmine.modules.visualization.chromatogram.ChromatogramVisualizerModule;
 import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashboardModule;
+import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModule;
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberModule;
 import io.github.mzmine.modules.visualization.feat_histogram.FeatureHistogramPlotModule;
 import io.github.mzmine.modules.visualization.frames.FrameVisualizerModule;
@@ -124,6 +132,7 @@ import io.github.mzmine.modules.visualization.msms.MsMsVisualizerModule;
 import io.github.mzmine.modules.visualization.network_overview.FeatureNetworkOverviewModule;
 import io.github.mzmine.modules.visualization.otherdetectors.multidetector.MultidetectorVisualizerModule;
 import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataTab;
+import io.github.mzmine.modules.visualization.projectmetadata.extract.SampleMetadataExtractionModule;
 import io.github.mzmine.modules.visualization.raw_data_summary.RawDataSummaryModule;
 import io.github.mzmine.modules.visualization.rawdataoverview.RawDataOverviewModule;
 import io.github.mzmine.modules.visualization.rawdataoverviewims.IMSRawDataOverviewModule;
@@ -208,7 +217,10 @@ public abstract class AbstractWorkspace implements Workspace {
 
     menu.setOnShowing(_ -> getWorkspaceMenuHelper().fillRecentProjects(recentProjects));
 
-    addModuleMenuItem(menu, ProjectLoadModule.class, KeyCode.O, KeyCombination.SHORTCUT_DOWN);
+    addMenuItem(menu, "Open project", () -> ProjectLoadModule.openQuickSelect(), KeyCode.O,
+        KeyCombination.SHORTCUT_DOWN);
+    addModuleMenuItem(menu, ProjectLoadModule.class, KeyCode.O, KeyCombination.SHORTCUT_DOWN,
+        KeyCombination.SHIFT_DOWN);
     menu.getItems().add(recentProjects);
     addModuleMenuItem(menu, ProjectSaveModule.class, KeyCode.S, KeyCombination.SHORTCUT_DOWN);
     addModuleMenuItem(menu, ProjectSaveAsModule.class, KeyCode.S, KeyCombination.SHORTCUT_DOWN,
@@ -221,6 +233,7 @@ public abstract class AbstractWorkspace implements Workspace {
     addMenuItem(menu, "Sample metadata",
         () -> MZmineCore.getDesktop().addTab(new ProjectMetadataTab()), KeyCode.M,
         KeyCombination.SHORTCUT_DOWN);
+    addModuleMenuItems(menu, SampleMetadataExtractionModule.class);
     addSeparator(menu);
     addMenuItem(menu, "Set preferences",
         () -> MZmineCore.getConfiguration().getPreferences().showSetupDialog(true), KeyCode.P,
@@ -286,9 +299,12 @@ public abstract class AbstractWorkspace implements Workspace {
   protected Menu buildDefaultFeatureGroupingSubMenu() {
     final Menu groupingMenu = addModuleMenuItems("Feature grouping", CorrelateGroupingModule.class,
         IonNetworkingModule.class, MainSpectralNetworkingModule.class, AddIonNetworkingModule.class,
-        IonNetworkRefinementModule.class, IonNetRelationsModule.class,
-        FormulaPredictionIonNetworkModule.class, CreateAvgNetworkFormulasModule.class,
-        IonNetworkMSMSCheckModule.class, ClearIonIdentitiesModule.class);
+        IonNetworkRefinementModule.class, FormulaPredictionIonNetworkModule.class,
+        CreateAvgNetworkFormulasModule.class, IonNetworkMSMSCheckModule.class,
+        ClearIonIdentitiesModule.class);
+    groupingMenu.getItems().add(new SeparatorMenuItem());
+    addModuleMenuItems(groupingMenu, CompoundGrouperModule.class,
+        ConfigCompoundRepresentationModule.class);
     groupingMenu.getItems().add(new SeparatorMenuItem());
     addModuleMenuItems(groupingMenu, OnlineLcReactivityModule.class, AnnotateIsomersModule.class);
     groupingMenu.getItems().addAll(new SeparatorMenuItem(),
@@ -302,11 +318,13 @@ public abstract class AbstractWorkspace implements Workspace {
     addModuleMenuItems(menu, "Search precursor mass", LocalCSVDatabaseSearchModule.class,
         BioTransformerModule.class);
     addModuleMenuItems(menu, "Search spectra", SpectralLibrarySearchModule.class,
-        LipidAnnotationModule.class, NistMsSearchModule.class,
-        FormulaPredictionFeatureListModule.class, Ms2SearchModule.class);
+        AnalogSpectralLibrarySearchModule.class, LipidAnnotationModule.class,
+        NistMsSearchModule.class, FormulaPredictionFeatureListModule.class, Ms2SearchModule.class);
     addModuleMenuItems(menu, "EC-MS workflow", CalcEcmsPotentialModule.class);
     menu.getItems().add(new SeparatorMenuItem());
-    addModuleMenuItems(menu, ClearFeatureAnnotationsModule.class);
+    addModuleMenuItems(menu, ClearFeatureAnnotationsModule.class,
+        LipidAnnotationCleanupModule.class, SetLipidAnnotationLevelModule.class,
+        PreferredAnnotationRankingModule.class);
     return menu;
   }
 
@@ -337,9 +355,10 @@ public abstract class AbstractWorkspace implements Workspace {
     addModuleMenuItems(featureVis, KendrickMassPlotModule.class, VanKrevelenDiagramModule.class,
         MassvoltammogramFromFeatureListModule.class);
     addSeparator(featureVis);
-    addModuleMenuItems(featureVis, "Lipids", EquivalentCarbonNumberModule.class,
-        LipidAnnotationSummaryModule.class);
-    addModuleMenuItems(featureVis, "Dashboards", IntegrationDashboardModule.class,
+    addModuleMenuItems(featureVis, "Lipids", LipidAnnotationQCDashboardModule.class,
+        EquivalentCarbonNumberModule.class, LipidAnnotationSummaryModule.class);
+    addModuleMenuItems(featureVis, "Dashboards", CompoundDashboardModule.class,
+        IntegrationDashboardModule.class, LipidAnnotationQCDashboardModule.class,
         StatsDasboardModule.class);
     // end of feature visualization
     // back to main visualization menu
@@ -352,7 +371,8 @@ public abstract class AbstractWorkspace implements Workspace {
     final Menu menu = new Menu("Tools");
     addMenuItem(menu, "Quick search", ModuleQuickSelectDialog::openQuickSearch, KeyCode.F,
         KeyCombination.SHORTCUT_DOWN);
-    addModuleMenuItems(menu, IsotopePatternPreviewModule.class, QualityParametersModule.class);
+    addModuleMenuItems(menu, GlobalIonLibrariesModule.class, IsotopePatternPreviewModule.class,
+        QualityParametersModule.class);
     addModuleMenuItems(menu, "Libraries", LibraryAnalysisCSVExportModule.class,
         MsMsQualityExportModule.class, MergeLibrariesModule.class);
     addModuleMenuItems(menu, "timsTOF fleX", TimsTOFMaldiAcquisitionModule.class,

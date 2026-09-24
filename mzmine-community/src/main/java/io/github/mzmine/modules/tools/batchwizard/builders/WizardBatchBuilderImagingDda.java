@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -88,7 +88,7 @@ public class WizardBatchBuilderImagingDda extends BaseWizardBatchBuilder {
   }
 
   @Override
-  public BatchQueue createQueue() {
+  protected BatchQueue createQueueInternal() {
     final BatchQueue q = new BatchQueue();
     makeAndAddImportTask(q);
     makeAndAddMassDetectorSteps(q);
@@ -120,6 +120,7 @@ public class WizardBatchBuilderImagingDda extends BaseWizardBatchBuilder {
     makeAndAddLipidAnnotationStep(q);
     makeAndAddFormulaPredictionStep(q);
     makeAndAddBatchExportStep(q, true, null);
+
     return q;
   }
 
@@ -162,7 +163,8 @@ public class WizardBatchBuilderImagingDda extends BaseWizardBatchBuilder {
 
       final var param = AllSpectralDataImportParameters.create(
           ConfigService.getPreferences().getVendorImportParameters(), dataFiles,
-          metadataFile.active() ? metadataFile.value() : null, libraries, advancedParam);
+          metadataFile.active() ? metadataFile.value() : null, extractMetadataParams, libraries,
+          advancedParam);
 
       q.add(new MZmineProcessingStepImpl<>(
           MZmineCore.getModuleInstance(AllSpectralDataImportModule.class), param));
@@ -234,8 +236,11 @@ public class WizardBatchBuilderImagingDda extends BaseWizardBatchBuilder {
   }
 
   protected void makeAndAddMassDetectorSteps(final BatchQueue q) {
-    if (isImsActive && imsInstrumentType == MobilityType.TIMS) {
+    if (isImsActive && (imsInstrumentType == MobilityType.TIMS
+        || imsInstrumentType == MobilityType.TRAVELING_WAVE)) {
       makeAndAddMassDetectionStep(q, 1, SelectedScanTypes.FRAMES);
+      makeAndAddMassDetectionStep(q, 1,
+          SelectedScanTypes.MOBLITY_SCANS); // in theory not needed due to advanced import, but if the file was imported manually it can throw
       makeAndAddMassDetectionStep(q, 2, SelectedScanTypes.MOBLITY_SCANS);
     } else {
       makeAndAddMassDetectionStep(q, 1, SelectedScanTypes.SCANS);

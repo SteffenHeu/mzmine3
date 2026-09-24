@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.visualization.featurelisttable_modular;
 
+import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.ImagingRawDataFile;
 import io.github.mzmine.datamodel.RawDataFile;
@@ -34,6 +35,11 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeature;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundFeatureMember;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundList;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundRowSelection;
+import io.github.mzmine.datamodel.features.compoundlist.ModularCompoundRow;
+import io.github.mzmine.datamodel.features.types.AbstractBoxPlotType;
 import io.github.mzmine.datamodel.features.types.AreaBoxPlotType;
 import io.github.mzmine.datamodel.features.types.AreaShareType;
 import io.github.mzmine.datamodel.features.types.DataType;
@@ -44,9 +50,13 @@ import io.github.mzmine.datamodel.features.types.FeatureShapeMobilogramType;
 import io.github.mzmine.datamodel.features.types.FeatureShapeType;
 import io.github.mzmine.datamodel.features.types.ImageType;
 import io.github.mzmine.datamodel.features.types.alignment.AlignmentMainType;
+import io.github.mzmine.datamodel.features.types.annotations.AnnotationSummaryType;
 import io.github.mzmine.datamodel.features.types.annotations.CompoundDatabaseMatchesType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidMatchListType;
+import io.github.mzmine.datamodel.features.types.annotations.LipidSpectrumType;
+import io.github.mzmine.datamodel.features.types.annotations.MolecularStructureType;
+import io.github.mzmine.datamodel.features.types.annotations.PreferredAnnotationType;
 import io.github.mzmine.datamodel.features.types.annotations.RdbeType;
-import io.github.mzmine.datamodel.features.types.annotations.SmilesStructureType;
 import io.github.mzmine.datamodel.features.types.annotations.SpectralLibraryMatchesType;
 import io.github.mzmine.datamodel.features.types.annotations.formula.ConsensusFormulaListType;
 import io.github.mzmine.datamodel.features.types.annotations.formula.FormulaMassType;
@@ -56,19 +66,22 @@ import io.github.mzmine.datamodel.features.types.annotations.iin.IonAdductType;
 import io.github.mzmine.datamodel.features.types.annotations.iin.IonIdentityListType;
 import io.github.mzmine.datamodel.features.types.annotations.iin.IonNetworkIDType;
 import io.github.mzmine.datamodel.features.types.annotations.iin.IonTypeType;
+import io.github.mzmine.datamodel.features.types.compoundlist.CompoundIdType;
 import io.github.mzmine.datamodel.features.types.fx.ColumnID;
 import io.github.mzmine.datamodel.features.types.fx.ColumnType;
+import io.github.mzmine.datamodel.features.types.fx.MetadataHeaderColumn;
+import io.github.mzmine.datamodel.features.types.graphicalnodes.CompoundHierarchyTreeTableRow;
 import io.github.mzmine.datamodel.features.types.modifiers.ExpandableType;
 import io.github.mzmine.datamodel.features.types.modifiers.MinSamplesRequirement;
 import io.github.mzmine.datamodel.features.types.modifiers.SubColumnsFactory;
 import io.github.mzmine.datamodel.features.types.numbers.AreaType;
 import io.github.mzmine.datamodel.features.types.numbers.HeightType;
 import io.github.mzmine.datamodel.features.types.numbers.MZType;
-import io.github.mzmine.datamodel.features.types.numbers.MatchingSignalsType;
 import io.github.mzmine.datamodel.features.types.numbers.MzAbsoluteDifferenceType;
 import io.github.mzmine.datamodel.features.types.numbers.MzPpmDifferenceType;
 import io.github.mzmine.datamodel.features.types.numbers.NeutralMassType;
-import io.github.mzmine.datamodel.features.types.numbers.PrecursorMZType;
+import io.github.mzmine.datamodel.features.types.numbers.NormalizedAreaType;
+import io.github.mzmine.datamodel.features.types.numbers.NormalizedHeightType;
 import io.github.mzmine.datamodel.features.types.numbers.SizeType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.DoubleRangeType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.DoubleType;
@@ -76,17 +89,21 @@ import io.github.mzmine.datamodel.features.types.numbers.abstr.FloatRangeType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.FloatType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.IntegerType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.NumberRangeType;
+import io.github.mzmine.datamodel.features.types.numbers.abstr.ScoreType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.CombinedScoreType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.CompoundAnnotationScoreType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.IsotopePatternScoreType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.MsMsScoreType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.SimilarityType;
+import io.github.mzmine.gui.DesktopService;
 import io.github.mzmine.javafx.components.factories.FxButtons;
+import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.javafx.components.factories.FxTexts;
 import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
+import io.github.mzmine.javafx.properties.DelayedListChangeListener;
 import io.github.mzmine.javafx.util.FxIconUtil;
 import io.github.mzmine.javafx.util.FxIcons;
 import io.github.mzmine.main.MZmineCore;
@@ -116,7 +133,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.event.ActionEvent;
@@ -133,7 +149,6 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.TreeTableView.TreeTableViewSelectionModel;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.KeyCode;
@@ -146,6 +161,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
+import javafx.util.Duration;
 import org.controlsfx.control.NotificationPane;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -155,42 +171,81 @@ import org.jetbrains.annotations.Nullable;
  *
  * @author Robin Schmid (robinschmid@uni-muenster.de)
  */
-public class FeatureTableFX extends BorderPane implements ListChangeListener<FeatureListRow> {
+public class FeatureTableFX extends BorderPane {
 
   private final TreeTableView<ModularFeatureListRow> table = new TreeTableView<>();
 
   private static final Logger logger = Logger.getLogger(FeatureTableFX.class.getName());
   private final FilteredList<TreeItem<ModularFeatureListRow>> filteredRowItems;
   private final ObservableList<TreeItem<ModularFeatureListRow>> rowItems;
+  // One per compound tree row: the filtered view of that row's member children. Rebuilt by
+  // updateRows() and re-predicated by applyCurrentRowFilter() so children can be hidden when
+  // "filter children" is on.
+  private final List<FilteredList<TreeItem<ModularFeatureListRow>>> childFilteredLists = new ArrayList<>();
+  // last applied row filter and child-filtering flag; re-applied after the tree is rebuilt so a new
+  // tree picks up the active filter without the user re-typing.
+  private @Nullable TableFeatureListRowFilter currentRowFilter = null;
+  private boolean filterChildren = false;
   // parameters
   private final ParameterSet parameters;
   private final DataTypeCheckListParameter rowTypesParameter;
   private final DataTypeCheckListParameter featureTypesParameter;
+
+  // option to set an owner so that actions might know if this feature table is in the
+  // stats dashboard or compound dashboard
+  private final ObjectProperty<FeatureTableOwner> tableOwner = new SimpleObjectProperty<>(
+      FeatureTableOwner.UNDEFINED);
+
 
   // column map to keep track of columns
   private final Map<TreeTableColumn<ModularFeatureListRow, ?>, ColumnID> newColumnMap;
   private final ObjectProperty<ModularFeatureList> featureListProperty = new SimpleObjectProperty<>();
   private final NotificationPane dataChangedNotification;
   private final BooleanProperty sampleColVisibleParameter = new SimpleBooleanProperty();
+  // null = use feature list rows; non-null = use compound list with the given selection level
+  private final ObjectProperty<@Nullable CompoundRowSelection> compoundRowSelection = new SimpleObjectProperty<>(
+      null);
   private final List<TreeTableColumn<ModularFeatureListRow, String>> rawColumns = new ArrayList<>();
   private final FeatureTableContextMenu contextMenu;
   private final FeatureTableColumnMenuHelper contextMenuHelper;
   private final int SAMPLE_COLUMNS_THRESHOLD = 30;
+  /**
+   * Rows are changed in the feature list on any thread. Those changes are accumulated in the
+   * listener and rows in table updated later.
+   */
+  private final DelayedListChangeListener<FeatureListRow> rowsChangedListener = new DelayedListChangeListener<>(
+      Duration.millis(500), this::updateRows);
+  // The compound list keeps its rows in a separate observable list from the flat feature-list rows.
+  // Track which compound list we currently listen to so compound-row deletions/edits (which mutate
+  // CompoundList.getRows() via setRows) refresh the table. Rewired whenever the compound list changes.
+  private @Nullable CompoundList listenedCompoundList = null;
 
   /**
    * Package private to centralize creation in {@link FxFeatureTableController}
    */
   FeatureTableFX(@NotNull ParameterSet parameters) {
+    this(parameters, FeatureTableOwner.UNDEFINED);
+  }
+
+  FeatureTableFX(@NotNull ParameterSet parameters, FeatureTableOwner tableOwner) {
+    FeatureTableFXUtil.addInstance(this);
+    setTableOwner(tableOwner);
     dataChangedNotification = new NotificationPane(table);
     setCenter(dataChangedNotification);
 
     initDataChangedNotification();
+
+    initTableF1Help();
 
     // add dummy root
     TreeItem<ModularFeatureListRow> root = new TreeItem<>();
     root.setExpanded(true);
     table.setRoot(root);
     table.setShowRoot(false);
+    // colored compound-hierarchy stripe drawn in the disclosure (indent) area; only visible when
+    // the table is showing compound rows so plain feature tables look unchanged.
+    table.setRowFactory(tv -> new CompoundHierarchyTreeTableRow(
+        compoundRowSelection.isEqualTo(CompoundRowSelection.COMPOUNDS)));
     // simple plus button over the scroll bar
     // hard to change layout and add more components as layout is hard coded
     // still use it to show the context menu from there
@@ -212,6 +267,9 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     // auto reflect filtered items to table
     Bindings.bindContent(root.getChildren(), filteredRowItems);
 
+    // re-populate rows when the display mode is changed by the user
+    compoundRowSelection.subscribe(_ -> updateRows());
+
     newColumnMap = new HashMap<>();
     initHandleDoubleClicks();
     contextMenu = new FeatureTableContextMenu(this);
@@ -220,13 +278,17 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     // create custom button context menu to select columns
     contextMenuHelper = new FeatureTableColumnMenuHelper(this);
     // Adding additional menu options
-    addContextMenuItem(contextMenuHelper, "Compact table", e -> showCompactChromatographyColumns());
-    addContextMenuItem(contextMenuHelper, "Toggle sample columns", e -> toggleSampleColumns());
-    addContextMenuItem(contextMenuHelper, "Toggle shape columns", e -> toggleShapeColumns());
+    addContextMenuItem(contextMenuHelper, "Compact table", _ -> showCompactChromatographyColumns());
+    addContextMenuItem(contextMenuHelper, "Toggle sample columns", _ -> toggleSampleColumns());
+    addContextMenuItem(contextMenuHelper, "Toggle shape columns", _ -> toggleShapeColumns());
     addContextMenuItem(contextMenuHelper, "Toggle alignment columns",
-        e -> toggleAlignmentColumns());
-    addContextMenuItem(contextMenuHelper, "Toggle ion identities", e -> toggleIonIdentities());
-    addContextMenuItem(contextMenuHelper, "Toggle library matches", e -> toggleAnnotations());
+        _ -> toggleAlignmentColumns());
+    addContextMenuItem(contextMenuHelper, "Toggle ion identities", _ -> toggleIonIdentities());
+    addContextMenuItem(contextMenuHelper, "Toggle library matches", _ -> toggleAnnotations());
+    addContextMenuItem(contextMenuHelper, "Toggle lipid annotations",
+        _ -> toggleLipidAnnotations(true));
+    addContextMenuItem(contextMenuHelper, "Show only preferred annotation",
+        _ -> showPreferredAnnotationOnly());
 
     final KeyCodeCombination keyCodeCopy = new KeyCodeCombination(KeyCode.C,
         KeyCombination.CONTROL_ANY);
@@ -249,7 +311,24 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
       if (event.getCode() == KeyCode.DELETE) {
         final List<ModularFeatureListRow> rows = getSelectedRows();
         table.getSelectionModel().clearSelection();
-        DeleteRowsModule.deleteWithConfirmation(featureListProperty.get(), rows);
+        DeleteRowsModule.deleteWithConfirmationThisThread(featureListProperty.get(), rows);
+      }
+    });
+  }
+
+  private void initTableF1Help() {
+    table.addEventHandler(KeyEvent.KEY_RELEASED, e -> {
+      if (e.getCode() != KeyCode.F1) {
+        return;
+      }
+      final DataType<?> selectedDataType = getSelectionModel().getSelectedCells().stream()
+          .findFirst().map(TreeTablePosition::getTableColumn).map(c -> getNewColumnMap().get(c))
+          .map(ColumnID::getDataType).orElse(null);
+      switch (selectedDataType) {
+        case PreferredAnnotationType _ -> DesktopService.getDesktop().openWebPage(
+            "https://mzmine.github.io/mzmine_documentation/terminology/annotations.html#preferred-annotation");
+        case null, default -> DesktopService.getDesktop().openWebPage(
+            "https://mzmine.github.io/mzmine_documentation/module_docs/lc-ms_featdet/featdet_results/featdet_results.html");
       }
     });
   }
@@ -291,6 +370,20 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     return switch (parameters.getValue(FeatureTableFXParameters.defaultAbundanceMeasure)) {
       case Height -> HeightType.class;
       case Area -> AreaType.class;
+      case NORMALIZED_HEIGHT -> {
+        if (getFeatureList() != null && getFeatureList().hasRowType(NormalizedHeightType.class)
+            && getFeatureList().hasFeatureType(NormalizedHeightType.class)) {
+          yield NormalizedHeightType.class;
+        }
+        yield HeightType.class;
+      }
+      case NORMALIZED_AREA -> {
+        if (getFeatureList() != null && getFeatureList().hasRowType(NormalizedAreaType.class)
+            && getFeatureList().hasFeatureType(NormalizedHeightType.class)) {
+          yield NormalizedAreaType.class;
+        }
+        yield AreaType.class;
+      }
     };
   }
 
@@ -358,14 +451,12 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
 
   private void setColumnVisibilityAndSubColumns(final ColumnID mainColumn, final boolean visible,
       boolean applyVisibility) {
-    rowTypesParameter.setDataTypeVisible(mainColumn, visible);
-    final String parentHeader = mainColumn.getCombinedHeaderString();
 
     // apply to all sub columns
+    rowTypesParameter.setDataTypeVisible(mainColumn, visible);
     if (mainColumn.getDataType() instanceof SubColumnsFactory subFact) {
       for (int i = 0; i < subFact.getNumberOfSubColumns(); i++) {
-        var header = subFact.getHeader(i);
-        setVisible(ColumnType.ROW_TYPE, parentHeader, header, visible);
+        setVisible(ColumnType.ROW_TYPE, mainColumn.getDataType(), subFact.getType(i), visible);
       }
     }
 
@@ -443,6 +534,26 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     applyVisibilityParametersToAllColumns();
   }
 
+  private void toggleLipidAnnotations(boolean applyVisibility) {
+    final var lipidMatches = getMainColumnEntry(LipidMatchListType.class);
+    if (lipidMatches == null) {
+      return;
+    }
+    final boolean visible = !rowTypesParameter.isDataTypeVisible(lipidMatches.getValue());
+
+    setColumnVisibilityAndSubColumns(lipidMatches.getValue(), false, false);
+
+    setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, null, visible);
+    setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, LipidMatchListType.class, visible);
+    setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, AnnotationSummaryType.class, visible);
+    setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, LipidSpectrumType.class, visible);
+    setVisible(ColumnType.ROW_TYPE, LipidMatchListType.class, IonAdductType.class, visible);
+
+    if (applyVisibility) {
+      applyVisibilityParametersToAllColumns();
+    }
+  }
+
   private Boolean toggleSpectralLibAnnotations(boolean applyVisibility) {
     final var columnEntry = getMainColumnEntry(SpectralLibraryMatchesType.class);
     if (columnEntry == null) {
@@ -460,14 +571,9 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     // basic
     setVisible(ColumnType.ROW_TYPE, parentType, SpectralLibraryMatchesType.class, toggledState);
     setVisible(ColumnType.ROW_TYPE, parentType, IonAdductType.class, toggledState);
-    setVisible(ColumnType.ROW_TYPE, parentType, FormulaType.class, toggledState);
-    setVisible(ColumnType.ROW_TYPE, parentType, SmilesStructureType.class, toggledState);
-    setVisible(ColumnType.ROW_TYPE, parentType, PrecursorMZType.class, toggledState);
-    setVisible(ColumnType.ROW_TYPE, parentType, NeutralMassType.class, toggledState);
+    setVisible(ColumnType.ROW_TYPE, parentType, MolecularStructureType.class, toggledState);
     setVisible(ColumnType.ROW_TYPE, parentType, SimilarityType.class, toggledState);
-    setVisible(ColumnType.ROW_TYPE, parentType, MatchingSignalsType.class, toggledState);
-
-    // csv compound database
+    setVisible(ColumnType.ROW_TYPE, parentType, AnnotationSummaryType.class, toggledState);
 
     if (applyVisibility) {
       applyVisibilityParametersToAllColumns();
@@ -499,15 +605,44 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     setVisible(ColumnType.ROW_TYPE, mainType, CompoundAnnotationScoreType.class, toggledState);
     setVisible(ColumnType.ROW_TYPE, mainType, FormulaType.class, toggledState);
     setVisible(ColumnType.ROW_TYPE, mainType, IonTypeType.class, toggledState);
-    setVisible(ColumnType.ROW_TYPE, mainType, SmilesStructureType.class, toggledState);
-    setVisible(ColumnType.ROW_TYPE, mainType, PrecursorMZType.class, toggledState);
+    setVisible(ColumnType.ROW_TYPE, mainType, MolecularStructureType.class, toggledState);
     setVisible(ColumnType.ROW_TYPE, mainType, MzPpmDifferenceType.class, toggledState);
-    setVisible(ColumnType.ROW_TYPE, mainType, NeutralMassType.class, toggledState);
 
     if (applyVisibility) {
       applyVisibilityParametersToAllColumns();
     }
     return toggledState;
+  }
+
+  public void showPreferredAnnotationOnly() {
+    final var dbMatches = getMainColumnEntry(CompoundDatabaseMatchesType.class);
+    if (dbMatches != null) {
+      setColumnVisibilityAndSubColumns(dbMatches.getValue(), false, false);
+    }
+    final var specMatches = getMainColumnEntry(SpectralLibraryMatchesType.class);
+    if (specMatches != null) {
+      setColumnVisibilityAndSubColumns(specMatches.getValue(), false, false);
+    }
+    final var lipidMatches = getMainColumnEntry(LipidMatchListType.class);
+    if (lipidMatches != null) {
+      setColumnVisibilityAndSubColumns(lipidMatches.getValue(), false, false);
+    }
+    final var preferredAnnotations = getMainColumnEntry(PreferredAnnotationType.class);
+    if (preferredAnnotations != null) {
+      setColumnVisibilityAndSubColumns(preferredAnnotations.getValue(), false);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, null, true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, PreferredAnnotationType.class,
+          true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, AnnotationSummaryType.class,
+          true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, FormulaType.class, true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, IonTypeType.class, true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, MolecularStructureType.class,
+          true);
+      setVisible(ColumnType.ROW_TYPE, PreferredAnnotationType.class, ScoreType.class, true);
+    }
+
+    applyVisibilityParametersToAllColumns();
   }
 
   private void addContextMenuItem(FeatureTableColumnMenuHelper contextMenuHelper, String title,
@@ -550,20 +685,201 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
   /**
    * Listens to update the table if a row is added/removed to/from the feature list.
    */
-  @Override
-  public void onChanged(final Change<? extends FeatureListRow> c) {
-    c.next();
-    if (!(c.wasAdded() || c.wasRemoved())) {
-      return;
-    }
-
+  public void updateRows() {
     FxThread.runLater(() -> {
-      // create new list - filtering is applied automatically and table items updated
-      final List<TreeItem<ModularFeatureListRow>> newRows = featureListProperty.get().getRows()
-          .stream().map(row -> new TreeItem<>((ModularFeatureListRow) row)).toList();
+      final TreeItem<ModularFeatureListRow> selectedRow = table.getSelectionModel()
+          .getSelectedItem();
+      table.getSelectionModel().clearSelection(); // leads to npe or index out of bound
+      // discard child filtered lists of the previous tree before rebuilding
+      childFilteredLists.clear();
+      // make sure we are listening to the active compound list's rows (it may have been created or
+      // replaced after the feature list was first shown)
+      rewireCompoundListRowsListener();
+      final ModularFeatureList flist = getFeatureList();
+      if (flist == null) {
+        rowItems.clear();
+        return;
+      }
+      final List<TreeItem<ModularFeatureListRow>> newRows;
+
+      final CompoundRowSelection selection = compoundRowSelection.get();
+      final CompoundList compoundList = flist.getCompoundList();
+      if (selection != null && compoundList != null) {
+        if (selection == CompoundRowSelection.COMPOUNDS) {
+          newRows = compoundList.getRowsCopy().stream().map(this::createTreeRow).toList();
+        } else {
+          // ALL_MAJOR_IONS or ALL_ISOTOPES: flat list of member rows
+          // TODO check if we want to show isotopes again as tree
+          newRows = compoundList.getRowsCopy(selection).stream()
+              .map(row -> new TreeItem<>((ModularFeatureListRow) row)).toList();
+        }
+      } else {
+        // create new list - filtering is applied automatically and table items updated
+        // work with copy of rows as rows may change during stream throwing exception
+        final List<FeatureListRow> rows = flist.getRowsCopy();
+        newRows = rows.stream().map(row -> new TreeItem<>((ModularFeatureListRow) row)).toList();
+      }
+
       rowItems.setAll(newRows);
+
+      // a freshly built tree has new (unfiltered) child lists; re-apply the active filter so the
+      // new rows immediately reflect it (children hidden / parents expanded as needed).
+      applyCurrentRowFilter();
+
+      if (selectedRow != null) {
+        FeatureTableFXUtil.selectAndScrollTo(selectedRow.getValue(), this);
+      }
+
+      // this applies the last sorting the the new rows
       table.sort();
     });
+  }
+
+  /**
+   * Collapse every expandable row so only the top-level (compound) rows remain visible. No-op for
+   * flat feature tables that have no member children.
+   */
+  public void collapseAllRows() {
+    FxThread.runLater(() -> {
+      for (final TreeItem<ModularFeatureListRow> item : rowItems) {
+        item.setExpanded(false);
+      }
+    });
+  }
+
+  /**
+   * Expand every top-level row so all member children become visible.
+   */
+  public void expandAllRows() {
+    FxThread.runLater(() -> {
+      for (final TreeItem<ModularFeatureListRow> item : rowItems) {
+        item.setExpanded(true);
+      }
+    });
+  }
+
+  /**
+   * Keep {@link #rowsChangedListener} attached to the active compound list's rows so compound-row
+   * deletions / edits (which mutate {@link CompoundList#getRows()} rather than the flat
+   * feature-list rows) refresh the table. Idempotent: only re-attaches when the compound list
+   * reference actually changed (including becoming null).
+   */
+  private void rewireCompoundListRowsListener() {
+    final ModularFeatureList flist = getFeatureList();
+    final CompoundList current = flist == null ? null : flist.getCompoundList();
+    if (current == listenedCompoundList) {
+      return;
+    }
+    if (listenedCompoundList != null) {
+      listenedCompoundList.getRows().removeListener(rowsChangedListener);
+    }
+    listenedCompoundList = current;
+    if (current != null) {
+      current.getRows().addListener(rowsChangedListener);
+    }
+  }
+
+  private TreeItem<ModularFeatureListRow> createTreeRow(ModularCompoundRow compound) {
+    final TreeItem<ModularFeatureListRow> root = new TreeItem<>(compound);
+
+    // back the children by a filtered list so "filter children" can hide non-matching members
+    // while keeping TreeItem identity (selection / expansion) stable.
+    final ObservableList<TreeItem<ModularFeatureListRow>> members = FXCollections.observableArrayList();
+    for (CompoundFeatureMember member : compound.getCompoundMembers()) {
+      members.add(new TreeItem<>((ModularFeatureListRow) member.row()));
+    }
+    final FilteredList<TreeItem<ModularFeatureListRow>> filteredMembers = new FilteredList<>(
+        members);
+    Bindings.bindContent(root.getChildren(), filteredMembers);
+    childFilteredLists.add(filteredMembers);
+    return root;
+  }
+
+  /**
+   * Apply a row filter to the tree. The non-RT filters are evaluated on both the top-level rows and
+   * their member children: a compound row is kept when it matches itself or when any of its members
+   * match (in which case it is expanded so the match is visible). RT is special and only ever
+   * filters the top-level rows.
+   *
+   * @param filter         the filter to apply, or null to clear filtering
+   * @param filterChildren when true, non-matching member rows are hidden; otherwise all members of
+   *                       a retained compound stay visible
+   */
+  public void applyTreeRowFilter(@Nullable final TableFeatureListRowFilter filter,
+      final boolean filterChildren) {
+    this.currentRowFilter = filter;
+    this.filterChildren = filterChildren;
+    applyCurrentRowFilter();
+    // changing the filter predicate re-populates the filtered list but does not re-trigger the
+    // TreeTableView's active column sort — re-apply it so rows stay sorted by the active sorter.
+    table.sort();
+  }
+
+  /**
+   * (Re)apply {@link #currentRowFilter} / {@link #filterChildren} to the current tree. Child
+   * predicates are set first so that the top-level predicate sees the already-filtered children.
+   */
+  private void applyCurrentRowFilter() {
+    final TableFeatureListRowFilter filter = currentRowFilter;
+
+    // 1) children: hidden only when filtering children is on and a filter is present
+    final Predicate<TreeItem<ModularFeatureListRow>> childPredicate;
+    if (filter == null || !filterChildren) {
+      childPredicate = _ -> true;
+    } else {
+      childPredicate = child -> {
+        final ModularFeatureListRow row = child.getValue();
+        return row != null && filter.matchesAllExceptRT(row);
+      };
+    }
+    for (final FilteredList<TreeItem<ModularFeatureListRow>> children : childFilteredLists) {
+      children.setPredicate(childPredicate);
+    }
+
+    // 2) top level: RT on the top row, plus self-or-any-child match for the non-RT filters
+    filteredRowItems.setPredicate(item -> {
+      if (filter == null) {
+        return true;
+      }
+      final ModularFeatureListRow row = item.getValue();
+      if (row == null) {
+        return false;
+      }
+      if (!filter.matchesRT(row)) {
+        return false;
+      }
+      return filter.matchesAllExceptRT(row) || anyChildMatchesNonRt(item, filter);
+    });
+
+    // 3) expand compounds that are kept only because a member matched, so the match is visible
+    if (filter != null) {
+      for (final TreeItem<ModularFeatureListRow> item : rowItems) {
+        final ModularFeatureListRow row = item.getValue();
+        if (row == null) {
+          continue;
+        }
+        if (filter.matchesRT(row) && !filter.matchesAllExceptRT(row) && anyChildMatchesNonRt(item,
+            filter)) {
+          item.setExpanded(true);
+        }
+      }
+    }
+  }
+
+  /**
+   * @return true if any (currently visible) member of {@code item} passes the non-RT filters. When
+   * "filter children" is on the non-matching members are already hidden, so a match still implies a
+   * visible member; when off all members are present and searched.
+   */
+  private static boolean anyChildMatchesNonRt(@NotNull final TreeItem<ModularFeatureListRow> item,
+      @NotNull final TableFeatureListRowFilter filter) {
+    for (final TreeItem<ModularFeatureListRow> child : item.getChildren()) {
+      final ModularFeatureListRow row = child.getValue();
+      if (row != null && filter.matchesAllExceptRT(row)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -587,14 +903,30 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     // add main column for row types to show name of feature list
     TreeTableColumn<ModularFeatureListRow, String> rowCol = new TreeTableColumn<>();
 
+    String totalRowsStr;
+    if (flist.getCompoundList() != null) {
+      totalRowsStr = String.format("%d compound rows; %d total rows",
+          flist.getCompoundList().size(), flist.getRows().size());
+    } else {
+      totalRowsStr = String.format("%d total rows", flist.getRows().size());
+    }
+
     // Add raw data file label
-    Label headerLabel = new Label(flist.getName());
+    final ObservableValue<String> title = Bindings.size(getFilteredRowItems()).map(
+        nrows -> "%d filtered rows (%s) in %s".formatted(nrows.intValue(), totalRowsStr,
+            flist.getName()));
+    Label headerLabel = FxLabels.newLabel(title);
+
     if (flist.getRawDataFiles().size() == 1) {
       RawDataFile raw = flist.getRawDataFiles().get(0);
       headerLabel.setTextFill(raw.getColor());
-      headerLabel.setGraphic(new ImageView(FxIconUtil.getFileIcon(raw.getColor())));
+      headerLabel.setGraphic(FxIconUtil.getFileIconNode(raw.getColor()));
     }
     rowCol.setGraphic(headerLabel);
+
+    if (flist.getCompoundList() != null) {
+      addColumn(rowCol, DataTypes.get(CompoundIdType.class));
+    }
 
     // add row types
     featureList.getRowTypes().forEach(dataType -> addColumn(rowCol, dataType));
@@ -603,6 +935,19 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
 
     // finally add row column to table
     table.getColumns().add(rowCol);
+
+    // set the default sorting to the previous column or if none selected to the HeightType column
+    if (table.getSortOrder().isEmpty()) {
+      // Find the HeightType column and set it as the default sort column
+      for (TreeTableColumn<ModularFeatureListRow, ?> column : rowCol.getColumns()) {
+        ColumnID columnId = newColumnMap.get(column);
+        if (columnId != null && columnId.getDataType() instanceof HeightType) {
+          column.setSortType(TreeTableColumn.SortType.DESCENDING);
+          table.getSortOrder().add(column);
+          break;
+        }
+      }
+    }
 
     // add features
     addFeaturesColumns();
@@ -684,6 +1029,14 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
 
     if (dataType instanceof ExpandableType) {
       setupExpandableColumn(dataType, col, ColumnType.ROW_TYPE, null);
+    }
+
+    // only offer the normalized option in the box plot header if this feature list has the
+    // normalized feature type - the box plots use the per sample feature values
+    if (col instanceof MetadataHeaderColumn<?, ?> metadataHeader
+        && dataType instanceof AbstractBoxPlotType boxPlotType) {
+      final AbundanceMeasure normalized = boxPlotType.getNormalizedAbundanceMeasure();
+      metadataHeader.setNormVisible(getFeatureList().hasFeatureType(normalized.type()));
     }
 
     // Add row column
@@ -897,7 +1250,7 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
       // Add raw data file label
       Label headerLabel = new Label(dataFile.getName());
       headerLabel.setTextFill(dataFile.getColor());
-      headerLabel.setGraphic(new ImageView(FxIconUtil.getFileIcon(dataFile.getColor())));
+      headerLabel.setGraphic(FxIconUtil.getFileIconNode(dataFile.getColor()));
       sampleCol.setGraphic(headerLabel);
 
       // Add sub columns of feature
@@ -951,9 +1304,9 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
 
   private void handleClickOnCell(final TreeTablePosition<ModularFeatureListRow, ?> focusedCell,
       final TreeTableColumn<ModularFeatureListRow, ?> tableColumn, final MouseEvent e) {
-    logger.fine("Handle click on table cell");
 
-    if (e.getClickCount() >= 2 && e.getButton() == MouseButton.PRIMARY) {
+    // changed to exactly two clicks - otherwise 3 clicks trigger 2 events with 2 and 3 clicks
+    if (e.getClickCount() == 2 && e.getButton() == MouseButton.PRIMARY) {
       if (getFeatureList() == null) {
         return;
       }
@@ -990,6 +1343,7 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
             id.getDataType().equals(dataType) ? null : id.getDataType();
 
         final ModularFeatureListRow row = table.getSelectionModel().getSelectedItem().getValue();
+
         final Runnable runnable = (dataType.getDoubleClickAction(this, row, files, superDataType,
             cellValue));
         if (runnable != null) {
@@ -1106,6 +1460,18 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     return featureListProperty;
   }
 
+  public ObjectProperty<@Nullable CompoundRowSelection> compoundRowSelectionProperty() {
+    return compoundRowSelection;
+  }
+
+  public @Nullable CompoundRowSelection getCompoundRowSelection() {
+    return compoundRowSelection.get();
+  }
+
+  public void setCompoundRowSelection(@Nullable CompoundRowSelection selection) {
+    compoundRowSelection.set(selection);
+  }
+
   /**
    * Initialises a listener to update the tables' contents to the current feature list. Also adds
    * and removes the row changed listener.
@@ -1144,8 +1510,10 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
 
     // remove the old listener
     if (oldFeatureList != null) {
-      oldFeatureList.getRows().removeListener(this);
+      oldFeatureList.getRows().removeListener(rowsChangedListener);
     }
+    // detach/attach the compound-list rows listener for the new feature list (handles null too)
+    rewireCompoundListRowsListener();
     if (newFeatureList == null) {
       return;
     }
@@ -1154,6 +1522,11 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     // too many samples slow down the table - therefore do not show sample specific columns then
     sampleColVisibleParameter.setValue(
         newFeatureList.getNumberOfRawDataFiles() <= SAMPLE_COLUMNS_THRESHOLD);
+
+    // decision: prefer compound list if available when a new feature list is loaded
+    compoundRowSelection.set(
+        newFeatureList.hasCompoundList() ? CompoundRowSelection.COMPOUNDS : null);
+
     addColumns(newFeatureList);
     // first check if feature list is too large
     applyDefaultColumnVisibilities();
@@ -1161,16 +1534,10 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
       showCompactChromatographyColumns();
     }
 
-    // add rows sorted by descending height
-    final List<FeatureListRow> sortedRows = newFeatureList.getRows().stream()
-        .sorted(Comparator.comparingDouble(FeatureListRow::getMaxHeight).reversed()).toList();
-
-    final List<TreeItem<ModularFeatureListRow>> newRows = sortedRows.stream()
-        .map(row -> new TreeItem<>((ModularFeatureListRow) row)).toList();
-    rowItems.setAll(newRows);
+    updateRows();
 
     // reflect the changes to the feature list in the table
-    newFeatureList.getRows().addListener(this);
+    newFeatureList.getRows().addListener(rowsChangedListener);
   }
 
   /**
@@ -1225,9 +1592,16 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     applyVisibilityParametersToAllColumns();
   }
 
-  private void setVisible(ColumnType columnType, @NotNull String parentUniqueId,
-      @Nullable String subColUniqueId, boolean visible) {
-    String key = ColumnID.buildUniqueIdString(columnType, parentUniqueId, subColUniqueId);
+  private void setVisible(ColumnType columnType, @NotNull Class<? extends DataType<?>> parentType,
+      @Nullable Class<? extends DataType<?>> subtype, boolean visible) {
+    setVisible(columnType, DataTypes.get(parentType),
+        subtype != null ? DataTypes.get(subtype) : null, visible);
+  }
+
+  private void setVisible(ColumnType columnType, @NotNull DataType<?> parentType,
+      @Nullable DataType<?> subtype, boolean visible) {
+    String key = ColumnID.buildUniqueIdString(columnType, parentType.getUniqueID(),
+        subtype != null ? subtype.getUniqueID() : null);
     if (columnType == ColumnType.ROW_TYPE) {
       rowTypesParameter.setDataTypeVisible(key, visible);
     } else {
@@ -1235,20 +1609,15 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
     }
   }
 
-  private void setVisible(ColumnType columnType, @NotNull Class<? extends DataType<?>> parentClass,
-      @Nullable Class<? extends DataType<?>> subtype, boolean visible) {
-    final DataType<?> subType = subtype != null ? DataTypes.get(subtype) : null;
-    final DataType<?> parentType = DataTypes.get(parentClass);
-    setVisible(columnType, parentType.getUniqueID(), subType != null ? subType.getUniqueID() : null,
-        visible);
-  }
-
   public void closeTable() {
     final ModularFeatureList flist = featureListProperty.get();
     if (flist == null) {
       return;
     }
-    flist.getRows().removeListener(this);
+    flist.getRows().removeListener(rowsChangedListener);
+    if (listenedCompoundList != null) {
+      listenedCompoundList.getRows().removeListener(rowsChangedListener);
+    }
     flist.onFeatureTableFxClosed();
   }
 
@@ -1367,5 +1736,17 @@ public class FeatureTableFX extends BorderPane implements ListChangeListener<Fea
 
   public ParameterSet getParameters() {
     return parameters;
+  }
+
+  public FeatureTableOwner getTableOwner() {
+    return tableOwner.get();
+  }
+
+  public ObjectProperty<FeatureTableOwner> tableOwnerProperty() {
+    return tableOwner;
+  }
+
+  public void setTableOwner(FeatureTableOwner tableOwner) {
+    this.tableOwner.set(tableOwner);
   }
 }

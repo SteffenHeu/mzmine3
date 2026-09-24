@@ -1,8 +1,7 @@
 name: PR Test Build
 
 on:
-  pull_request:
-    branches: [ "master", "actions-test" ]
+  pull_request: # all branches
 
 jobs:
   gradle_build:
@@ -19,7 +18,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
-          java-version: '25.0.1'
+          java-version: '26.0.1'
 #          cache: 'gradle'  # now done with gradle
 
       - name: Setup Gradle

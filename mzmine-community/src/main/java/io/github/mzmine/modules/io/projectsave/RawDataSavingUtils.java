@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,13 +30,12 @@ import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.MZmineModuleCategory;
 import io.github.mzmine.modules.MZmineProcessingModule;
-import io.github.mzmine.modules.MZmineProcessingStep;
 import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.modules.impl.MZmineProcessingStepImpl;
+import io.github.mzmine.modules.io.import_spectral_library.SpectralLibraryImportParameters;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.ParameterUtils;
-import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNamesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
@@ -222,7 +221,8 @@ public class RawDataSavingUtils {
       // merge file names and selected raw data files
       if (mergedParam instanceof FileNamesParameter fnp) {
         Set<File> files = new LinkedHashSet<>(); // set so we don't have to bother with duplicates
-        if (module.getModuleCategory() == MZmineModuleCategory.RAWDATAIMPORT) {
+        if (module.getModuleCategory() == MZmineModuleCategory.RAWDATAIMPORT && !fnp.getName()
+            .equals(SpectralLibraryImportParameters.dataBaseFiles.getName())) {
           // check if the files still exist in the project
           files.addAll(Arrays.stream(((FileNamesParameter) param1).getValue()).filter(
               f -> new RawDataFilePlaceholder(f.getName(), f.getAbsolutePath()).getMatchingFile()
@@ -281,41 +281,20 @@ public class RawDataSavingUtils {
    *                                  longer queue only appends additional steps.
    * @return true or false.
    */
-  public static boolean queuesEqual(BatchQueue q1, BatchQueue q2, boolean skipFileParameters,
-      boolean skipRawDataFileParameters, boolean allowSubsets) {
+  public static boolean queuesEqual(@NotNull final BatchQueue q1, @NotNull final BatchQueue q2,
+      final boolean skipFileParameters, final boolean skipRawDataFileParameters,
+      final boolean allowSubsets) {
     if (q1.size() != q2.size() && !allowSubsets) {
       return false;
     }
 
     for (int i = 0; i < q1.size() && i < q2.size(); i++) {
-      if (!processingStepEquals(q1.get(i), q2.get(i), skipFileParameters,
+      if (!ParameterUtils.equalValues(q1.get(i), q2.get(i), skipFileParameters,
           skipRawDataFileParameters)) {
         return false;
       }
     }
 
-    return true;
-  }
-
-  private static boolean processingStepEquals(MZmineProcessingStep<?> step1,
-      MZmineProcessingStep<?> step2, boolean skipFileParameters,
-      boolean skipRawDataFileParameters) {
-
-    if (!step1.getModule().equals(step2.getModule())) {
-      logger.finest("Modules " + step1.getModule().getClass().getName() + " is not equal to "
-          + step2.getModule().getClass().getName());
-      return false;
-    }
-
-    final var parameterSet1 = step1.getParameterSet();
-    final var parameterSet2 = step2.getParameterSet();
-
-    if (!ParameterUtils.equalValues(parameterSet1, parameterSet2, skipFileParameters,
-        skipRawDataFileParameters)) {
-      logger.finest(
-          "Queues are not equal. Parameter sets of step " + step1.getModule() + " are not equal.");
-      return false;
-    }
     return true;
   }
 

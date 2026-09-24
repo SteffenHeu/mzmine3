@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -57,6 +57,7 @@ import io.github.mzmine.datamodel.features.types.numbers.MobilityRangeType;
 import io.github.mzmine.datamodel.features.types.numbers.MobilityType;
 import io.github.mzmine.datamodel.features.types.numbers.RTRangeType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
+import io.github.mzmine.datamodel.features.types.numbers.SampleRsdType;
 import io.github.mzmine.datamodel.features.types.numbers.TailingFactorType;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -80,7 +81,9 @@ public class DataTypeUtils {
       // needed next to each other for switching between RTType and RTRangeType
       RTType.class, RTRangeType.class, //
       MZType.class, MZRangeType.class, //
-      HeightType.class, AreaType.class,
+      HeightType.class, AreaType.class, //
+      // main type of all RSD columns, they are its sub columns
+      SampleRsdType.class, //
       // added CommentType as default in 4.8 to transition away from ManualAnnotationType
       CommentType.class, FeatureShapeType.class, AreaBoxPlotType.class, HeightBoxPlotType.class);
 

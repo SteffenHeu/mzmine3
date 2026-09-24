@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,16 +30,23 @@ import io.github.mzmine.datamodel.ImagingRawDataFile;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.featuredata.IonMobilogramTimeSeries;
+import io.github.mzmine.datamodel.features.annotationpriority.AnnotationSummary;
+import io.github.mzmine.datamodel.features.annotationpriority.AnnotationSummarySortConfig;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundList;
+import io.github.mzmine.datamodel.features.compoundlist.CompoundRowSelection;
+import io.github.mzmine.datamodel.features.compoundlist.MissingCompoundListException;
 import io.github.mzmine.datamodel.features.correlation.R2RMap;
 import io.github.mzmine.datamodel.features.correlation.R2RNetworkingMaps;
-import io.github.mzmine.datamodel.features.correlation.RowGroup;
 import io.github.mzmine.datamodel.features.correlation.RowsRelationship;
 import io.github.mzmine.datamodel.features.correlation.RowsRelationship.Type;
+import io.github.mzmine.datamodel.features.preferences.FeatureListPreferences;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.LinkedGraphicalType;
 import io.github.mzmine.datamodel.features.types.numbers.RTType;
 import io.github.mzmine.modules.MZmineModule;
+import io.github.mzmine.modules.dataprocessing.filter_featurelistpreferences.FeatureListPreferencesModule;
+import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingModule;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.util.DataTypeUtils;
 import java.time.Instant;
@@ -72,8 +79,7 @@ public interface FeatureList {
   /**
    * @return Short descriptive name for the feature list
    */
-  @NotNull
-  String getName();
+  @NotNull String getName();
 
   /**
    * Change the name of this feature list
@@ -220,6 +226,46 @@ public interface FeatureList {
   }
 
   /**
+   * Get list of rows depending on which level: Compounds, all major ions (first level), all
+   * isotopes (second level)
+   *
+   * @return unmodifiable view of compound rows.
+   */
+  default @NotNull List<? extends FeatureListRow> getRowsCopy(
+      @NotNull CompoundRowSelection selection) throws MissingCompoundListException {
+    final CompoundList cl = getCompoundList();
+    if (cl != null) {
+      return cl.getRowsCopy(selection);
+    }
+    if (selection == CompoundRowSelection.COMPOUNDS) {
+      throw new MissingCompoundListException(this);
+    }
+
+    // this is used in export modules where we export either all rows or all compounds or just one level
+    return getRowsCopy();
+  }
+
+  /**
+   * Number of rows Get list of rows depending on which level: Compounds, all major ions (first
+   * level), all feature list rows
+   *
+   * @return number of rows (either compound rows
+   */
+  default int getNumberOfCompoundSelectionRows(@NotNull CompoundRowSelection selection)
+      throws MissingCompoundListException {
+    final CompoundList cl = getCompoundList();
+    if (cl != null) {
+      return cl.getNumberOfCompoundRows(selection);
+    }
+    if (selection == CompoundRowSelection.COMPOUNDS) {
+      throw new MissingCompoundListException(this);
+    }
+
+    // this is used in export modules where we export either all rows or all compounds or just one level
+    return getNumberOfRows();
+  }
+
+  /**
    * Clear all rows and set new rows - then apply default sorting
    *
    * @param rows new rows to set
@@ -304,8 +350,7 @@ public interface FeatureList {
    * @return The scans used to build this feature list. For ion mobility data, the frames are
    * returned.
    */
-  @Nullable
-  List<? extends Scan> getSeletedScans(@NotNull RawDataFile file);
+  @Nullable List<? extends Scan> getSeletedScans(@NotNull RawDataFile file);
 
   /**
    * Returns all rows with average retention time within given range
@@ -426,19 +471,6 @@ public interface FeatureList {
   }
 
   /**
-   * List of RowGroups group features based on different methods
-   *
-   * @return
-   */
-  List<RowGroup> getGroups();
-
-  /**
-   * List of RowGroups group features based on different methods
-   */
-  void setGroups(List<RowGroup> groups);
-
-
-  /**
    * Short cut to get the MS1 correlation map of grouped features
    *
    * @return the map for {@link Type#MS1_FEATURE_CORR}
@@ -481,8 +513,7 @@ public interface FeatureList {
    *
    * @return a map that stores different relationship maps
    */
-  @NotNull
-  R2RNetworkingMaps getRowMaps();
+  @NotNull R2RNetworkingMaps getRowMaps();
 
   /**
    * Maps {@link Feature} DataType listeners, e.g., for calculating the mean values for a DataType
@@ -490,16 +521,14 @@ public interface FeatureList {
    *
    * @return map of feature DataType listeners
    */
-  @NotNull
-  Map<DataType<?>, List<DataTypeValueChangeListener<?>>> getFeatureTypeChangeListeners();
+  @NotNull Map<DataType<?>, List<DataTypeValueChangeListener<?>>> getFeatureTypeChangeListeners();
 
   /**
    * Maps {@link FeatureListRow} DataType listeners, e.g., for graphical representations
    *
    * @return map of feature DataType listeners
    */
-  @NotNull
-  Map<DataType<?>, List<DataTypeValueChangeListener<?>>> getRowTypeChangeListeners();
+  @NotNull Map<DataType<?>, List<DataTypeValueChangeListener<?>>> getRowTypeChangeListeners();
 
   /**
    * @param row
@@ -552,6 +581,80 @@ public interface FeatureList {
   void applyDefaultRowsSorting();
 
   void clearRows();
+
+  /**
+   * @param excluded true to exclude this feature list from batch last
+   */
+  void setExcludedFromBatchLast(boolean excluded);
+
+  /**
+   * @return true if this feature list should never be used as batch last feature list
+   */
+  boolean isExcludedFromBatchLastSelection();
+
+  /**
+   * This counter allows a quick comparison if the last used {@link AnnotationSummarySortConfig} in
+   * classes like {@link AnnotationSummary} is still the same to
+   * {@link #getAnnotationSortConfig()}.
+   * <p>
+   * This is useful to precompute scores so that they are only computed once, especially during
+   * sorting.
+   *
+   * @return version as modification counter
+   */
+  int getAnnotationSortConfigVersion();
+
+  /**
+   * The annotation sorting config is initialized by its default
+   * {@link AnnotationSummarySortConfig#DEFAULT} and changed by
+   * {@link PreferredAnnotationRankingModule}.
+   * <p>
+   * The version counter {@link #getAnnotationSortConfigVersion()} signals if the internal config
+   * has changed.
+   *
+   * @return the annotation sorting config
+   */
+  @NotNull AnnotationSummarySortConfig getAnnotationSortConfig();
+
+  /**
+   * The annotation sorting config is initialized by its default
+   * {@link AnnotationSummarySortConfig#DEFAULT} and changed by
+   * {@link PreferredAnnotationRankingModule}.
+   * <p>
+   * The version counter {@link #getAnnotationSortConfigVersion()} signals if the internal config
+   * has changed.
+   */
+  void setAnnotationSortConfig(@NotNull AnnotationSummarySortConfig annotationSortConfig);
+
+  /**
+   * The preferences are initialized with {@link FeatureListPreferences#createDefault()} in the
+   * constructor and may be redefined by the {@link FeatureListPreferencesModule}. They are saved
+   * and loaded with the project.
+   *
+   * @return the user defined preferences of this feature list
+   */
+  @NotNull FeatureListPreferences getPreferences();
+
+  /**
+   * Replaces the preferences of this feature list, see {@link #getPreferences()}.
+   */
+  void setPreferences(@NotNull FeatureListPreferences preferences);
+
+  // --- Structural versioning for compound list invalidation ---
+
+  /**
+   * Incremented on every structural change (add / remove / replace rows).
+   */
+  long getStructuralVersion();
+
+  @Nullable CompoundList getCompoundList();
+
+  void setCompoundList(@Nullable CompoundList cl);
+
+  default boolean hasCompoundList() {
+    final CompoundList cl = getCompoundList();
+    return cl != null && !cl.isStale();
+  }
 
   /**
    * TODO: extract interface and rename to AppliedMethod. Not doing it now to avoid merge

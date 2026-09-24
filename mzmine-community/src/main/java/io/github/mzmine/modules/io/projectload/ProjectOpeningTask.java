@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,15 +25,13 @@
 
 package io.github.mzmine.modules.io.projectload;
 
-import com.google.common.io.CountingInputStream;
 import com.vdurmont.semver4j.Semver;
-import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.io.projectload.version_3_0.FeatureListLoadTask;
 import io.github.mzmine.modules.io.projectsave.ProjectSavingTask;
 import io.github.mzmine.modules.io.projectsave.RawDataFileSaveHandler;
+import io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataProjectIO;
 import io.github.mzmine.parameters.ParameterSet;
-import io.github.mzmine.project.ProjectManager;
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.project.impl.MZmineProjectImpl;
 import io.github.mzmine.taskcontrol.AbstractTask;
@@ -44,6 +42,7 @@ import io.github.mzmine.util.MemoryMapStorage;
 import io.github.mzmine.util.StreamCopy;
 import io.github.mzmine.util.exceptions.ExceptionUtils;
 import io.github.mzmine.util.files.FileAndPathUtil;
+import io.github.mzmine.util.io.CountingInputStream;
 import io.github.mzmine.util.io.SemverVersionReader;
 import java.io.BufferedReader;
 import java.io.File;
@@ -55,7 +54,6 @@ import java.time.Instant;
 import java.util.Enumeration;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -64,8 +62,11 @@ import org.jetbrains.annotations.NotNull;
 public class ProjectOpeningTask extends AbstractTask {
 
   private static final Logger logger = Logger.getLogger(ProjectOpeningTask.class.getName());
+  private final boolean mergeOntoExisting;
+  private final boolean keepCurrentLibraries;
 
   private File openFile;
+  private final ParameterSet parameters;
   private MZmineProjectImpl newProject;
 
   private RawDataFileOpenHandler rawDataFileOpenHandler;
@@ -84,11 +85,9 @@ public class ProjectOpeningTask extends AbstractTask {
   public ProjectOpeningTask(ParameterSet parameters, @NotNull Instant moduleCallDate) {
     super(null, moduleCallDate);
     this.openFile = parameters.getParameter(ProjectLoaderParameters.projectFile).getValue();
-  }
-
-  public ProjectOpeningTask(File openFile, @NotNull Instant moduleCallDate) {
-    super(null, moduleCallDate);
-    this.openFile = openFile;
+    this.parameters = parameters;
+    mergeOntoExisting = parameters.getValue(ProjectLoaderParameters.mergeOntoExisting);
+    keepCurrentLibraries = parameters.getValue(ProjectLoaderParameters.keepLibraries);
   }
 
   /**
@@ -131,26 +130,24 @@ public class ProjectOpeningTask extends AbstractTask {
   public void run() {
 
     try {
-      // Check if existing raw data files are present
-      ProjectManager projectManager = ProjectService.getProjectManager();
-      if (projectManager.getCurrentProject().getDataFiles().length > 0) {
-        boolean confirm = DialogLoggerUtil.showDialogYesNo("Replace existing project?",
-            "Loading the project will replace the existing raw data files and feature lists. Do you want to proceed?");
-
-        if (confirm) {
-          cancel();
-          return;
-        }
-      }
 
       logger.info("Started opening project " + openFile);
       setStatus(TaskStatus.PROCESSING);
 
-      newProject = new MZmineProjectImpl();
-      newProject.setProjectFile(openFile);
-      newProject.setStandalone(false); // set to false by default, we check for existing files later
-      GUIUtils.closeAllWindows();
-      projectManager.setCurrentProject(newProject);
+      if (!mergeOntoExisting) {
+        ProjectService.getProjectManager().clearProject();
+        newProject = (MZmineProjectImpl) ProjectService.getProject();
+        newProject.setProjectFile(openFile);
+        newProject.setStandalone(
+            false); // set to false by default, we check for existing files later
+        GUIUtils.closeAllWindows();
+        ProjectService.getProjectManager().setCurrentProject(newProject);
+      } else {
+        newProject = (MZmineProjectImpl) ProjectService.getProject();
+      }
+      if (!keepCurrentLibraries) {
+        newProject.clearSpectralLibrary();
+      }
 
       ZipFile zipFile = new ZipFile(openFile);
       Enumeration<? extends ZipEntry> entries = zipFile.entries();
@@ -197,6 +194,9 @@ public class ProjectOpeningTask extends AbstractTask {
         }
 
       }
+
+      currentLoadedObjectName = "Project metadata";
+      ProjectMetadataProjectIO.loadFromZip(zipFile);
 
       loadFeatureList(zipFile);
 
@@ -277,7 +277,7 @@ public class ProjectOpeningTask extends AbstractTask {
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
       projectVersionString = reader.readLine();
     }
-    if(projectVersionString == null) {
+    if (projectVersionString == null) {
       throw new IOException("Cannot open mzmine project due to a missing version specification.");
     }
 
@@ -314,8 +314,7 @@ public class ProjectOpeningTask extends AbstractTask {
 //    peakListOpenHandler = new PeakListOpenHandler_3_0_old(dataFilesIDMap);
 //    userParameterOpenHandler = new UserParameterOpenHandler_3_0(newProject, dataFilesIDMap);
 
-    rawDataFileOpenHandler = RawDataFileOpenHandler.forVersion(projectVersion,
-        getModuleCallDate());
+    rawDataFileOpenHandler = RawDataFileOpenHandler.forVersion(projectVersion, getModuleCallDate());
   }
 
   /**

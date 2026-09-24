@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -27,8 +27,12 @@ package io.github.mzmine.datamodel.features.types.numbers;
 
 import io.github.mzmine.datamodel.features.RowBinding;
 import io.github.mzmine.datamodel.features.SimpleRowBinding;
+import io.github.mzmine.datamodel.features.types.DataType;
+import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.modifiers.BindingsType;
 import io.github.mzmine.datamodel.features.types.numbers.abstr.FloatType;
+import io.github.mzmine.javafx.components.factories.TableColumns;
+import io.github.mzmine.javafx.components.util.TextLabelMeasurementUtil;
 import io.github.mzmine.main.MZmineCore;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -81,8 +85,24 @@ public class HeightType extends FloatType {
     return List.of(new SimpleRowBinding(this, BindingsType.MAX));
   }
 
+  @NotNull
+  @Override
+  public List<DataType> createDefaultMappedRowTypes() {
+    // the RSD of all abundance types are sub columns of this single main type
+    return List.of(DataTypes.get(SampleRsdType.class));
+  }
+
   @Override
   public boolean getDefaultVisibility() {
     return true;
+  }
+
+
+  @Override
+  public double getPrefColumnWidth() {
+    // number otherwise smaller than header
+    // setting pref width makes table open faster due to less calculations needed
+    return TextLabelMeasurementUtil.measureWidth(
+        getHeaderString() + TableColumns.EXTRA_WIDTH_MARGIN);
   }
 }

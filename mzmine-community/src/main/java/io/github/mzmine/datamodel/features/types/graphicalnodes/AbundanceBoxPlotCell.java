@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -28,30 +28,31 @@ package io.github.mzmine.datamodel.features.types.graphicalnodes;
 import io.github.mzmine.datamodel.AbundanceMeasure;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
 import io.github.mzmine.datamodel.features.types.modifiers.GraphicalColumType;
-import io.github.mzmine.javafx.properties.PropertyUtils;
 import io.github.mzmine.modules.dataanalysis.rowsboxplot.RowsBoxplotController;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.control.ContentDisplay;
-import javafx.scene.control.TreeTableCell;
 import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class AbundanceBoxPlotCell extends
-    TreeTableCell<ModularFeatureListRow, ModularFeatureListRow> {
+    SkipMeasurementTreeCell<ModularFeatureListRow, ModularFeatureListRow> {
 
   private final RowsBoxplotController boxPlot;
   private final Region view;
 
-  public AbundanceBoxPlotCell(@NotNull ObjectProperty<@Nullable MetadataColumn<?>> groupingColumn,
-      AbundanceMeasure abundanceMeasure) {
-    super();
+  public AbundanceBoxPlotCell(int id,
+      @NotNull ObjectProperty<@Nullable MetadataColumn<?>> groupingColumn,
+      @NotNull ObservableValue<AbundanceMeasure> abundanceMeasure) {
+    super(id);
 
     boxPlot = new RowsBoxplotController();
     setMinHeight(GraphicalColumType.DEFAULT_GRAPHICAL_CELL_HEIGHT);
-    boxPlot.abundanceMeasureProperty().set(abundanceMeasure);
+    // the measure may switch between raw and normalized values in the column header
+    boxPlot.abundanceMeasureProperty().bind(abundanceMeasure);
     boxPlot.groupingColumnProperty().bindBidirectional(groupingColumn);
 
     boxPlot.showCategoryAxisLabelProperty().set(false);
@@ -59,17 +60,17 @@ public class AbundanceBoxPlotCell extends
     boxPlot.showColumnAxisLabelsProperty().set(false);
     view = boxPlot.buildView();
 
-    PropertyUtils.onChange(() -> {
-      final ModularFeatureListRow row = itemProperty().get();
-      if (row != null && !isEmpty()) {
-        boxPlot.selectedRowsProperty().set(List.of(row));
-        setGraphic(view);
-      } else {
-        boxPlot.selectedRowsProperty().set(List.of());
-        setGraphic(null);
-      }
-    }, itemProperty(), emptyProperty());
-
     setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+  }
+
+  @Override
+  protected void updateContent(ModularFeatureListRow row, boolean empty) {
+    if (row != null && !empty) {
+      boxPlot.selectedRowsProperty().set(List.of(row));
+      setGraphic(view);
+    } else {
+      boxPlot.selectedRowsProperty().set(List.of());
+      setGraphic(null);
+    }
   }
 }

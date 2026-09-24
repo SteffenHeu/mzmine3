@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -25,17 +25,14 @@
 
 package io.github.mzmine.gui.chartbasics.simplechart.providers.impl.spectra;
 
-import com.google.common.collect.Range;
-import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.MassSpectrum;
-import io.github.mzmine.datamodel.MassSpectrumType;
+import io.github.mzmine.datamodel.impl.SimpleMassSpectrum;
 import io.github.mzmine.gui.chartbasics.simplechart.providers.PlotXYDataProvider;
+import io.github.mzmine.javafx.util.FxColorUtil;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.taskcontrol.TaskStatus;
-import io.github.mzmine.javafx.util.FxColorUtil;
 import java.awt.Color;
 import java.text.NumberFormat;
-import java.util.Iterator;
 import javafx.beans.property.Property;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,75 +60,7 @@ public class MassSpectrumProvider implements PlotXYDataProvider {
 
   public MassSpectrumProvider(double[] mzs, double[] intensities, String seriesKey, Color color) {
     this.color = color;
-    this.spectrum = new MassSpectrum() {
-      @Override
-      public int getNumberOfDataPoints() {
-        return mzs.length;
-      }
-
-      @Override
-      public MassSpectrumType getSpectrumType() {
-        return null;
-      }
-
-      @Override
-      public double[] getMzValues(@NotNull double[] dst) {
-        return new double[0]; // Local implementation only so this does not matter
-      }
-
-      @Override
-      public double[] getIntensityValues(@NotNull double[] dst) {
-        return new double[0]; // Local implementation only so this does not matter
-      }
-
-      @Override
-      public double getMzValue(int index) {
-        return mzs[index];
-      }
-
-      @Override
-      public double getIntensityValue(int index) {
-        return intensities[index];
-      }
-
-      @Nullable
-      @Override
-      public Double getBasePeakMz() {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public Double getBasePeakIntensity() {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public Integer getBasePeakIndex() {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public Range<Double> getDataPointMZRange() {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public Double getTIC() {
-        return null;
-      }
-
-      @NotNull
-      @Override
-      public Iterator<DataPoint> iterator() {
-        return null;
-      }
-
-    };
-
+    this.spectrum = new SimpleMassSpectrum(mzs, intensities);
     mzFormat = MZmineCore.getConfiguration().getMZFormat();
     intensityFormat = MZmineCore.getConfiguration().getIntensityFormat();
     this.seriesKey = seriesKey;
@@ -170,7 +99,7 @@ public class MassSpectrumProvider implements PlotXYDataProvider {
 
   @Override
   public void computeValues(Property<TaskStatus> status) {
-
+    // nothing to do
   }
 
   @Override
@@ -191,5 +120,16 @@ public class MassSpectrumProvider implements PlotXYDataProvider {
   @Override
   public double getComputationFinishedPercentage() {
     return 1d;
+  }
+
+  /**
+   * @return true if computed. Providers that are precomputed may use true always
+   */
+  public boolean isComputed() {
+    return true;
+  }
+
+  public MassSpectrum getSpectrum() {
+    return spectrum;
   }
 }

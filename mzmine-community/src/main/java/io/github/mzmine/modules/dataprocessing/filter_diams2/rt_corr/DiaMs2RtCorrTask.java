@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -54,16 +55,13 @@ import io.github.mzmine.datamodel.msms.ActivationMethod;
 import io.github.mzmine.datamodel.msms.DDAMsMsInfo;
 import io.github.mzmine.datamodel.msms.IonMobilityMsMsInfo;
 import io.github.mzmine.datamodel.msms.MsMsInfo;
-import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ADAPChromatogramBuilderParameters;
-import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderModule;
 import io.github.mzmine.modules.dataprocessing.featdet_adapchromatogrambuilder.ModularADAPChromatogramBuilderTask;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrParameters;
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrTask;
 import io.github.mzmine.modules.dataprocessing.group_metacorrelate.correlation.FeatureCorrelationUtil.DIA;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
-import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelectionType;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.project.impl.IMSRawDataFileImpl;
@@ -73,7 +71,6 @@ import io.github.mzmine.taskcontrol.operations.AbstractTaskSubProcessor;
 import io.github.mzmine.util.IonMobilityUtils;
 import io.github.mzmine.util.collections.BinarySearch;
 import io.github.mzmine.util.collections.BinarySearch.DefaultTo;
-import io.github.mzmine.util.collections.EmptyIndexRange;
 import io.github.mzmine.util.collections.IndexRange;
 import io.github.mzmine.util.scans.ScanUtils;
 import io.github.mzmine.util.scans.SpectraMerging;
@@ -140,20 +137,10 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
     numRows = flist.getNumberOfRows();
     this.mainTask = mainTask;
 
-    adapParameters = MZmineCore.getConfiguration()
-        .getModuleParameters(ModularADAPChromatogramBuilderModule.class).cloneParameterSet();
     final RawDataFilesSelection adapFiles = new RawDataFilesSelection(
-        RawDataFilesSelectionType.SPECIFIC_FILES);
-    adapFiles.setSpecificFiles(flist.getRawDataFiles().toArray(new RawDataFile[0]));
-    adapParameters.setParameter(ADAPChromatogramBuilderParameters.dataFiles, adapFiles);
-    adapParameters.setParameter(ADAPChromatogramBuilderParameters.scanSelection, ms2ScanSelection);
-    adapParameters.setParameter(ADAPChromatogramBuilderParameters.minimumConsecutiveScans,
-        minCorrPoints);
-    adapParameters.setParameter(ADAPChromatogramBuilderParameters.mzTolerance, mzTolerance);
-    adapParameters.setParameter(ADAPChromatogramBuilderParameters.suffix, "chroms");
-    adapParameters.setParameter(ADAPChromatogramBuilderParameters.minGroupIntensity,
-        minMs2Intensity / 5);
-    adapParameters.setParameter(ADAPChromatogramBuilderParameters.minHighestPoint, minMs2Intensity);
+        flist.getRawDataFiles().toArray(new RawDataFile[0]));
+    adapParameters = ADAPChromatogramBuilderParameters.create(adapFiles, ms2ScanSelection,
+        minCorrPoints, mzTolerance, "chroms", minMs2Intensity / 5, minMs2Intensity, false);
   }
 
   /**
@@ -257,15 +244,15 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
     }
 
     PseudoSpectrum mostIntense = correlatedMs2s.stream()
-        .max(Comparator.comparing(ps -> Objects.requireNonNullElse(ps.getTIC(), 0d))).orElse(null);
+        .max(Comparator.comparing(PseudoSpectrum::getTIC)).orElse(null);
     if (mostIntense == null) {
       return null;
     }
 
     // only compare ions with other spectra that have at least 25% of the tic of the most intense
-    final double minTic = Objects.requireNonNullElse(mostIntense.getTIC(), 0d) * 0.25;
+    final double minTic = mostIntense.getTIC() * 0.25;
     final List<@NotNull PseudoSpectrum> minTicSpectra = correlatedMs2s.stream()
-        .filter(ms2 -> Objects.requireNonNullElse(ms2.getTIC(), 0d) >= minTic).toList();
+        .filter(ms2 -> ms2.getTIC() >= minTic).toList();
 
     DoubleArrayList mzs = new DoubleArrayList();
     DoubleArrayList intensities = new DoubleArrayList();
@@ -401,8 +388,7 @@ public class DiaMs2RtCorrTask extends AbstractTaskSubProcessor {
       final IndexRange ms2CorrelatedIndexRange = BinarySearch.indexRange(
           correlationRange.lowerEndpoint(), correlationRange.upperEndpoint(),
           ms2Eic.getNumberOfValues(), ms2Eic::getRetentionTime);
-      if (ms2CorrelatedIndexRange.equals(EmptyIndexRange.INSTANCE)
-          || ms2CorrelatedIndexRange.min() == -1) {
+      if (ms2CorrelatedIndexRange.equals(IndexRange.EMPTY) || ms2CorrelatedIndexRange.min() == -1) {
         continue;
       }
 

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2004-2024 The MZmine Development Team
- *
+ * Copyright (c) 2004-2026 The mzmine Development Team
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -57,6 +56,25 @@ public class FxThread {
   }
 
   /**
+   * Always defers execution to the next JavaFX pulse, even when already on the JavaFX thread. Use
+   * this instead of {@link #runLater(Runnable)} whenever the runnable mutates the scene graph
+   * (adding/removing children, replacing content) and may be triggered from a callback that itself
+   * runs inside a CSS or layout pass. {@link #runLater(Runnable)} executes inline on the JavaFX
+   * thread, so such a mutation can happen while {@link javafx.scene.Parent#layout()} is iterating a
+   * cached snapshot of its children, which throws an {@link IndexOutOfBoundsException}.
+   *
+   * @param r runnable to run on the JavaFX thread, never inline
+   */
+  public static void runOnNextPulse(Runnable r) {
+    if (DesktopService.isHeadLess()) {
+      // no pulses in headless mode - keep the same semantics as runLater
+      r.run();
+    } else {
+      Platform.runLater(r);
+    }
+  }
+
+  /**
    * @param r runnable to either run directly or on the JavaFX thread
    */
   public static void runLaterEnsureFxInitialized(Runnable r) {
@@ -64,7 +82,7 @@ public class FxThread {
       r.run();
     } else {
       if (!isFxInitialized) {
-        initJavaFxInHeadlessMode();
+        initJavaFx();
       }
       Platform.runLater(r);
     }
@@ -86,7 +104,7 @@ public class FxThread {
    */
   public static void runOnFxThreadAndWait(@NotNull Runnable action, boolean forceFxThread) {
     if (!isFxInitialized) {
-      initJavaFxInHeadlessMode();
+      initJavaFx();
     }
     // is headless mode or already runs synchronously on JavaFX thread
     if ((DesktopService.isHeadLess() && !forceFxThread) || Platform.isFxApplicationThread()) {
@@ -112,14 +130,20 @@ public class FxThread {
   }
 
   /**
-   * Might be needed for graphics export in headless batch mode
+   * Initializes the JavaFX toolkit once so JavaFX tasks can run without the standard launcher.
    */
-  public static void initJavaFxInHeadlessMode() {
+  public static synchronized void initJavaFx() {
     if (isFxInitialized) {
       return;
     }
-    Platform.startup(() -> {
-    });
+
+    try {
+      Platform.startup(() -> {
+      });
+    } catch (IllegalStateException ignored) {
+      // decision: if another bootstrap path already started JavaFX, only sync our state flag.
+    }
+
     isFxInitialized = true;
   }
 }
