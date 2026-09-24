@@ -41,19 +41,18 @@ import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.Border;
-import javafx.scene.layout.GridPane;
+import javafx.scene.layout.FlowPane;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Reusable feature-table cell for the checkbox grid of a {@link TagDataType}.
+ * Reusable feature-table cell for the tag checkboxes of a {@link TagDataType}. Checkboxes wrap to
+ * the column width.
  */
 public class TagTreeTableCell extends TreeTableCell<ModularFeatureListRow, Object> {
 
-  private static final int GRID_WIDTH = 3;
-
   private final @NotNull TagDataType type;
-  private final @NotNull GridPane grid = new GridPane();
+  private final @NotNull FlowPane flow = new FlowPane(2, 1);
   private final @NotNull List<CheckBox> checkBoxes = new ArrayList<>();
   private final @NotNull List<BooleanProperty> tagStates = new ArrayList<>();
 
@@ -64,17 +63,19 @@ public class TagTreeTableCell extends TreeTableCell<ModularFeatureListRow, Objec
   public TagTreeTableCell(@NotNull final TagDataType type) {
     this.type = type;
 
-    grid.setAlignment(Pos.CENTER);
-    grid.setHgap(2);
-    grid.setVgap(1);
+    flow.setAlignment(Pos.CENTER);
     setAlignment(Pos.CENTER);
     setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-    grid.backgroundProperty().bind(Bindings.createObjectBinding(() -> Background.EMPTY));
-    grid.borderProperty().bind(Bindings.createObjectBinding(() -> Border.EMPTY));
+    flow.backgroundProperty().bind(Bindings.createObjectBinding(() -> Background.EMPTY));
+    flow.borderProperty().bind(Bindings.createObjectBinding(() -> Border.EMPTY));
+    // wrap at the cell content width so the row height follows the column width
+    flow.prefWrapLengthProperty().bind(Bindings.createDoubleBinding(
+        () -> Math.max(0, getWidth() - snappedLeftInset() - snappedRightInset()), widthProperty(),
+        paddingProperty()));
 
-    // Keep one grid for the lifetime of the virtualized cell and only switch its visibility.
+    // Keep one pane for the lifetime of the virtualized cell and only switch its visibility.
     graphicProperty().bind(
-        Bindings.createObjectBinding(() -> isEmpty() ? null : grid, emptyProperty()));
+        Bindings.createObjectBinding(() -> isEmpty() ? null : flow, emptyProperty()));
   }
 
   @Override
@@ -109,10 +110,8 @@ public class TagTreeTableCell extends TreeTableCell<ModularFeatureListRow, Objec
       final CheckBox checkBox = checkBoxes.get(index);
       final String label = labels.get(index);
       TagCheckBoxFactory.setLabel(checkBox, label);
-      GridPane.setColumnIndex(checkBox, index % GRID_WIDTH);
-      GridPane.setRowIndex(checkBox, index / GRID_WIDTH);
     }
-    grid.getChildren().setAll(checkBoxes);
+    flow.getChildren().setAll(checkBoxes);
   }
 
   private void addCheckBox(final int tagIndex) {
