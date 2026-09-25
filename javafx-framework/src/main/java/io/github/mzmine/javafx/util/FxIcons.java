@@ -104,7 +104,7 @@ public enum FxIcons implements IconCodeSupplier {
       case PLUS -> "bi-plus";
       case PLUS_CIRCLE -> "bi-plus-circle";
       case COLUMNS_DOTS -> "bi-three-dots";
-      case LIGHTBULB -> "bi-lightbulb";
+      case LIGHTBULB -> "bi-lightbulb-fill";
       case QUESTIONMARK -> "bi-question-circle";
       case ARROW_IN_RIGHT -> "bi-box-arrow-in-right";
       case LINK -> "bi-link-45deg";

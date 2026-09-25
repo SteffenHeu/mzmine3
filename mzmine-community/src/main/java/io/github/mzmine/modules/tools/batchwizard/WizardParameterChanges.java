@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.tools.batchwizard;
 
+import io.github.mzmine.javafx.util.FxIcons;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.UserParameter;
@@ -98,6 +99,15 @@ public record WizardParameterChanges(@NotNull WizardParameterChanges.Source sour
         case NONE -> "None";
         case ESTIMATION -> "Estimation";
         case OPTIMIZATION -> "Optimization";
+      };
+    }
+
+    @Nullable
+    public FxIcons icon() {
+      return switch (this) {
+        case NONE -> null;
+        case ESTIMATION -> FxIcons.LIGHTBULB;
+        case OPTIMIZATION -> FxIcons.GRAPH_UP;
       };
     }
   }

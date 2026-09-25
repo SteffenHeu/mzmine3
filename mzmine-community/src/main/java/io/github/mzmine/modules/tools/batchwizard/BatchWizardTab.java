@@ -350,7 +350,9 @@ public class BatchWizardTab extends SimpleTab {
       final Node component = paramPane.getDecorationTarget(change.parameter());
       if (component != null) {
         final Subscription removeSubscription = FxValidation.markChanged(component,
-            change.formatTooltip(parameterChanges.source().toString()));
+            change.formatTooltip(parameterChanges.source().toString()),
+            parameterChanges.source().icon(),
+            ConfigService.getDefaultColorPalette().getPositiveColor());
         changeHighlightSubscriptions.add(removeSubscription);
       }
     }
@@ -505,17 +507,16 @@ public class BatchWizardTab extends SimpleTab {
     final Button save = FxButtons.createSaveButton("Save presets", this::saveLocalWizardSequence);
     final Button load = FxButtons.createLoadButton("Load presets",
         this::chooseAndLoadLocalSequence);
-    final Button estimate = FxButtons.createButton("Estimate parameters", FxIcons.LIGHTBULB,
+    final Button estimate = FxButtons.createButton("Estimate parameters", Source.ESTIMATION.icon(),
         "Derive wizard parameters from the same representative files used for optimization and "
             + "show their statistics", this::estimateParametersFromFiles);
     estimate.disableProperty().bind(parameterEstimationRunning);
-    final Button optimize = FxButtons.createButton("Optimize parameters", FxIcons.GRAPH_UP, null,
-        this::runOptimizer);
+    final Button optimize = FxButtons.createButton("Optimize parameters",
+        Source.OPTIMIZATION.icon(), null, this::runOptimizer);
 
-    final FlowPane batchButtons = FxLayout.newFlowPane(Pos.CENTER, Insets.EMPTY, createBatch, save,
-        load);
-    final FlowPane optimizerButtons = FxLayout.newFlowPane(Pos.CENTER, Insets.EMPTY, estimate,
-        optimize);
+    final HBox batchButtons = FxLayout.newHBox(Pos.CENTER, Insets.EMPTY, createBatch, save, load,
+        localPresetsButton);
+    final HBox optimizerButtons = FxLayout.newHBox(Pos.CENTER, Insets.EMPTY, estimate, optimize);
     final VBox buttonPane = FxLayout.newVBox(Pos.CENTER, Insets.EMPTY, batchButtons,
         optimizerButtons);
 
@@ -722,9 +723,8 @@ public class BatchWizardTab extends SimpleTab {
     // auto-enable/disable advanced mode based on loaded customization state
     // listenersActive is false here, so the advancedMode listener does not trigger createParameterPanes again
     boolean customizationEnabled = partialSequence.get(WizardPart.CUSTOMIZATION)
-        .filter(p -> p instanceof CustomizationWizardParameters).map(
-            p -> ((CustomizationWizardParameters) p).getValue(
-                CustomizationWizardParameters.enabled)).orElse(false);
+        .filter(p -> p instanceof CustomizationWizardParameters)
+        .map(p -> p.getValue(CustomizationWizardParameters.enabled)).orElse(false);
     advancedMode.set(customizationEnabled);
 
     // apply preset filters so that combos show the correct options
