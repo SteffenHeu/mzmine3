@@ -41,6 +41,7 @@ import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.batchmode.BatchModeModule;
 import io.github.mzmine.modules.batchmode.BatchModeParameters;
 import io.github.mzmine.modules.batchmode.BatchQueue;
+import io.github.mzmine.modules.tools.batchwizard.WizardParameterChanges.Source;
 import io.github.mzmine.modules.tools.batchwizard.io.LocalWizardSequenceFile;
 import io.github.mzmine.modules.tools.batchwizard.io.WizardSequenceIOUtils;
 import io.github.mzmine.modules.tools.batchwizard.io.WizardSequenceSaveModule;
@@ -115,8 +116,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Subscription;
 import org.controlsfx.control.ToggleSwitch;
-import org.controlsfx.control.decoration.Decoration;
-import org.controlsfx.control.decoration.Decorator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -348,11 +347,11 @@ public class BatchWizardTab extends SimpleTab {
       return;
     }
     for (final WizardParameterChange change : changes) {
-      final Node component = paramPane.getComponentForParameter(change.parameter());
+      final Node component = paramPane.getDecorationTarget(change.parameter());
       if (component != null) {
-        final Decoration decoration = FxValidation.markChanged(component,
-            change.formatTooltip(parameterChanges.source()));
-        changeHighlightSubscriptions.add(() -> Decorator.removeDecoration(component, decoration));
+        final Subscription removeSubscription = FxValidation.markChanged(component,
+            change.formatTooltip(parameterChanges.source().toString()));
+        changeHighlightSubscriptions.add(removeSubscription);
       }
     }
     // customization tab header already holds the enable checkbox as graphic
@@ -513,9 +512,15 @@ public class BatchWizardTab extends SimpleTab {
     final Button optimize = FxButtons.createButton("Optimize parameters", FxIcons.GRAPH_UP, null,
         this::runOptimizer);
 
+    final FlowPane batchButtons = FxLayout.newFlowPane(Pos.CENTER, Insets.EMPTY, createBatch, save,
+        load);
+    final FlowPane optimizerButtons = FxLayout.newFlowPane(Pos.CENTER, Insets.EMPTY, estimate,
+        optimize);
+    final VBox buttonPane = FxLayout.newVBox(Pos.CENTER, Insets.EMPTY, batchButtons,
+        optimizerButtons);
+
     instrumentComboBoxPane.getChildren()
-        .addAll(createSpacer(), new Label("="), createSpacer(), createBatch, save, load,
-            localPresetsButton, estimate, optimize);
+        .addAll(createSpacer(), new Label("="), createSpacer(), buttonPane);
 
     schemaPane = new HBox(0);
     schemaPane.setAlignment(Pos.CENTER);
@@ -568,8 +573,8 @@ public class BatchWizardTab extends SimpleTab {
     }
 
     final BatchOptimizationMainTask optimizer = new BatchOptimizationMainTask(
-        MemoryMapStorage.forRawDataFile(), Instant.now(), optimizerFiles,
-        metadataFile, this, optimizerParam);
+        MemoryMapStorage.forRawDataFile(), Instant.now(), optimizerFiles, metadataFile, this,
+        optimizerParam);
     TaskService.getController().addTask(optimizer);
   }
 
@@ -624,7 +629,7 @@ public class BatchWizardTab extends SimpleTab {
       // decision: estimation replaces previous customization with the newly estimated overrides.
       sequenceSteps.get(WizardPart.CUSTOMIZATION).ifPresent(WizardStepParameters::resetToDefaults);
       result.estimates().applyEstimates(sequenceSteps);
-      parameterChanges = WizardParameterChanges.diff(before, sequenceSteps, "parameter estimation");
+      parameterChanges = WizardParameterChanges.diff(before, sequenceSteps, Source.ESTIMATION);
       advancedMode.set(sequenceSteps.get(WizardPart.CUSTOMIZATION)
           .map(step -> step.getValue(CustomizationWizardParameters.overrides))
           .map(overrides -> !overrides.isEmpty()).orElse(false));
@@ -688,7 +693,7 @@ public class BatchWizardTab extends SimpleTab {
    *                        optimization". null to not highlight and clear previous highlights
    */
   public void applyPartialSequence(@NotNull final WizardSequence partialSequence,
-      @Nullable final String changeSource) {
+      @Nullable final WizardParameterChanges.Source changeSource) {
     setListenersActive(false);
 
     // keep old parameters before applying sequence
@@ -711,7 +716,8 @@ public class BatchWizardTab extends SimpleTab {
     sequenceSteps.apply(correctPartialSequence);
     // decision: loading presets (no change source) overrides values, so previous highlights are cleared
     parameterChanges = before == null ? WizardParameterChanges.empty()
-        : WizardParameterChanges.diff(before, sequenceSteps, changeSource);
+        : WizardParameterChanges.diff(before, sequenceSteps,
+            Objects.requireNonNullElse(changeSource, Source.NONE));
 
     // auto-enable/disable advanced mode based on loaded customization state
     // listenersActive is false here, so the advancedMode listener does not trigger createParameterPanes again

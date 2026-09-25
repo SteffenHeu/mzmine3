@@ -41,18 +41,11 @@ import org.jetbrains.annotations.Nullable;
  * @param source  what changed the values, e.g., "parameter estimation"
  * @param changes the changed parameters
  */
-public record WizardParameterChanges(@NotNull String source,
+public record WizardParameterChanges(@NotNull WizardParameterChanges.Source source,
                                      @NotNull List<WizardParameterChange> changes) {
 
-  private static final WizardParameterChanges EMPTY = new WizardParameterChanges("", List.of());
-
-  public WizardParameterChanges {
-    changes = List.copyOf(changes);
-  }
-
-  public static @NotNull WizardParameterChanges empty() {
-    return EMPTY;
-  }
+  private static final WizardParameterChanges EMPTY = new WizardParameterChanges(Source.ESTIMATION,
+      List.of());
 
   /**
    * Compares all user parameters of the steps in after with the steps of the same
@@ -64,7 +57,7 @@ public record WizardParameterChanges(@NotNull String source,
    * @return all parameters that were added or have a different value
    */
   public static @NotNull WizardParameterChanges diff(@NotNull WizardSequence before,
-      @NotNull WizardSequence after, @NotNull String source) {
+      @NotNull WizardSequence after, @NotNull WizardParameterChanges.Source source) {
     final List<WizardParameterChange> changes = new ArrayList<>();
     for (final WizardStepParameters afterStep : after) {
       final WizardPart part = afterStep.getPart();
@@ -86,6 +79,27 @@ public record WizardParameterChanges(@NotNull String source,
       }
     }
     return new WizardParameterChanges(source, changes);
+  }
+
+  public WizardParameterChanges {
+    changes = List.copyOf(changes);
+  }
+
+  public static @NotNull WizardParameterChanges empty() {
+    return EMPTY;
+  }
+
+  public enum Source {
+    NONE, ESTIMATION, OPTIMIZATION;
+
+    @Override
+    public String toString() {
+      return switch (this) {
+        case NONE -> "None";
+        case ESTIMATION -> "Estimation";
+        case OPTIMIZATION -> "Optimization";
+      };
+    }
   }
 
   /**

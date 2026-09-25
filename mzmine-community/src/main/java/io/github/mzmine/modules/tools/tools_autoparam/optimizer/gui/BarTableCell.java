@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -24,33 +25,23 @@
 
 package io.github.mzmine.modules.tools.tools_autoparam.optimizer.gui;
 
-import io.github.mzmine.javafx.components.factories.FxLabels;
-import io.github.mzmine.javafx.components.factories.TableColumns;
 import io.github.mzmine.javafx.components.util.FxLayout;
-import io.github.mzmine.javafx.util.FxFileChooser;
 import java.text.NumberFormat;
 import java.util.Objects;
 import java.util.logging.Logger;
-import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn.CellDataFeatures;
-import javafx.scene.layout.Background;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-import javafx.util.Callback;
-import org.jmol.c.HB;
 import org.moeaframework.core.Solution;
 
 public class BarTableCell extends TableCell<Solution, Number> {

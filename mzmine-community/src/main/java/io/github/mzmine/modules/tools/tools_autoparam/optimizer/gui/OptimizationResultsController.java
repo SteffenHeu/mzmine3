@@ -47,6 +47,7 @@ import io.github.mzmine.modules.batchmode.BatchModeParameters;
 import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.modules.batchmode.BatchTask;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardTab;
+import io.github.mzmine.modules.tools.batchwizard.WizardParameterChanges.Source;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
@@ -160,7 +161,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
     if (stage != null) {
       stage.setTitle("Optimization Results");
       final String selectionMessage = preferred == null ? "" : preferred.getNumberOfObjectives() > 1
-                                                               ? " The solution with the best average rank across all scores was selected."
+          ? " The solution with the best average rank across all scores was selected."
           : " The highest ranked solution was selected.";
       DialogLoggerUtil.showDialog(AlertType.INFORMATION, stage, "Optimization finished",
           "Parameter optimization has finished." + selectionMessage, true);
@@ -237,7 +238,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
     sequence.get(WizardPart.DATA_IMPORT).ifPresent(sequence::remove);
     wizardTab.getTabPane().getSelectionModel().select(wizardTab);
-    wizardTab.applyPartialSequence(sequence, "parameter optimization");
+    wizardTab.applyPartialSequence(sequence, Source.OPTIMIZATION);
   }
 
   public void openInBatch() {
@@ -261,7 +262,7 @@ public class OptimizationResultsController extends FxController<OptimizationResu
 
     sequence.get(WizardPart.DATA_IMPORT).ifPresent(sequence::remove);
     wizardTab.getTabPane().getSelectionModel().select(wizardTab);
-    wizardTab.applyPartialSequence(sequence, "parameter optimization");
+    wizardTab.applyPartialSequence(sequence, Source.OPTIMIZATION);
 
     final WizardSequence sequenceSteps = wizardTab.getSequence();
 
