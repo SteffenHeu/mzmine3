@@ -28,10 +28,15 @@ package io.github.mzmine.modules.tools.tools_autoparam.optimizer.execution;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
+import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterDefinition;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterEstimationContext;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterEstimationTestData;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.PreparedParameter;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.PreparedParameterSet;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ValueOrigin;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.WizardParameterDefinition;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.domain.OrdinalIntegerVariable;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.metrics.SweepMetric;
@@ -103,6 +108,49 @@ class WizardOptimizationProblemParameterTest {
           .getValue(IonInterfaceHplcWizardParameters.interSampleRTTolerance)
           .getToleranceInMinutes());
     }
+  }
+
+  @Test
+  void applyingASolutionKeepsUnrelatedWizardValuesAndMatchesTheEvaluatedValues() {
+    final ParameterEstimationContext context = context();
+    final PreparedParameterSet prepared = PreparedParameterSet.prepare(context);
+    final List<ParameterDefinition<?>> selected = List.of(
+        ParameterEstimationTestData.MINIMUM_FEATURE_HEIGHT);
+    final WizardOptimizationProblem problem = problem(context, prepared, selected);
+
+    // move the optimized value away from its estimate, so the test sees the solution value
+    final Solution solution = problem.newSolution();
+    final RealVariable variable = (RealVariable) solution.getVariable(0);
+    variable.setValue((variable.getLowerBound() + variable.getUpperBound()) / 2);
+    final WizardSequence evaluated = problem.createWizardSequenceFromSolution(solution);
+
+    final WizardSequence wizard = context().sequence();
+    final WizardStepParameters ionInterface = wizard.get(WizardPart.ION_INTERFACE).orElseThrow();
+    final int userIsomers =
+        ionInterface.getValue(IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram) + 7;
+    ionInterface.setParameter(IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram,
+        userIsomers);
+
+    problem.applySolutionToWizard(solution, wizard);
+
+    Assertions.assertEquals(userIsomers,
+        ionInterface.getValue(IonInterfaceHplcWizardParameters.maximumIsomersInChromatogram));
+    for (final PreparedParameter<?> parameter : prepared.parameters()) {
+      final boolean estimated = parameter.origin() != ValueOrigin.PRESET_DEFAULT;
+      if (!(parameter.definition() instanceof WizardParameterDefinition<?> definition) || (
+          !estimated && !selected.contains(definition))) {
+        continue;
+      }
+      final WizardStepParameters evaluatedStep = evaluated.get(definition.part()).orElseThrow();
+      final WizardStepParameters appliedStep = wizard.get(definition.part()).orElseThrow();
+      Assertions.assertTrue(appliedStep.getParameter(definition.parameter())
+              .valueEquals(evaluatedStep.getParameter(definition.parameter())),
+          () -> definition.name() + " differs from the evaluated value");
+    }
+    Assertions.assertTrue(wizard.get(WizardPart.MS).orElseThrow()
+        .getParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance).valueEquals(
+            evaluated.get(WizardPart.MS).orElseThrow()
+                .getParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance)));
   }
 
   @Test

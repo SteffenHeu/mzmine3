@@ -175,7 +175,7 @@ final class OptimizationBatchEvaluator {
     if (!benchmarkFeatures.isEmpty()) {
       final List<FeatureListRow> rows = featureList.getRowsCopy();
       rows.sort(Comparator.comparing(FeatureListRow::getAverageMZ));
-      solution.setAttribute("Target features",
+      solution.setAttribute(WizardOptimizationProblem.ATTR_BENCHMARK_FEATURES,
           benchmarkFeatures.stream().parallel().mapToLong(record -> record.getNumMatches(rows))
               .sum());
     }

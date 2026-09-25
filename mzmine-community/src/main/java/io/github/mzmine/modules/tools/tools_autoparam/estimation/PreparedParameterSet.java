@@ -58,8 +58,20 @@ public record PreparedParameterSet(@NotNull List<PreparedParameter<?>> parameter
    * Applies measured estimates and heuristics, preserving unrelated current wizard edits.
    */
   public void applyEstimates(@NotNull WizardSequence sequence) {
+    applyEstimates(sequence, Set.of());
+  }
+
+  /**
+   * Applies measured estimates and heuristics except for the excluded parameters, preserving
+   * unrelated current wizard edits.
+   *
+   * @param excluded parameters that are set by another source, e.g., the optimizer
+   */
+  public void applyEstimates(@NotNull WizardSequence sequence,
+      @NotNull Set<ParameterDefinition<?>> excluded) {
     for (final PreparedParameter<?> parameter : parameters) {
-      if (parameter.origin() != ValueOrigin.PRESET_DEFAULT) {
+      if (parameter.origin() != ValueOrigin.PRESET_DEFAULT && !excluded.contains(
+          parameter.definition())) {
         parameter.applyInitialValue(sequence);
       }
     }

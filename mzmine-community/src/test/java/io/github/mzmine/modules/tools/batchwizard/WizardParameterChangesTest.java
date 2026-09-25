@@ -25,6 +25,7 @@
 
 package io.github.mzmine.modules.tools.batchwizard;
 
+import io.github.mzmine.modules.tools.batchwizard.WizardParameterChanges.Source;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassSpectrometerWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.factories.IonInterfaceWizardParameterFactory;
@@ -61,7 +62,7 @@ class WizardParameterChangesTest {
   void identicalSequencesHaveNoChanges() {
     final WizardSequence before = sequence();
     final WizardParameterChanges changes = WizardParameterChanges.diff(before, copy(before),
-        "test");
+        Source.ESTIMATION);
     Assertions.assertTrue(changes.isEmpty(), () -> "Unexpected changes " + changes.changes());
   }
 
@@ -75,7 +76,8 @@ class WizardParameterChangesTest {
     ms.setParameter(MassSpectrometerWizardParameters.minimumFeatureHeight, oldHeight * 3);
     ms.setParameter(MassSpectrometerWizardParameters.scanToScanMzTolerance, newTolerance);
 
-    final WizardParameterChanges changes = WizardParameterChanges.diff(before, after, "test");
+    final WizardParameterChanges changes = WizardParameterChanges.diff(before, after,
+        Source.ESTIMATION);
 
     final Set<String> changedNames = changes.changes().stream()
         .map(change -> change.parameter().getName()).collect(Collectors.toSet());

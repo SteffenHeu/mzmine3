@@ -269,7 +269,9 @@ public class BatchOptimizationMainTask extends AbstractTask {
         estimationContext, singlePassEstimates, params, externalStatus, totalBatchExecutions,
         stopSearchRequested::get);
     problem = optimizationProblem;
-    if (DesktopService.isGUI()) {
+    final boolean showExtendedStatistics = params.getValue(
+        OptimizerParameters.showExtendedStatistics);
+    if (DesktopService.isGUI() && showExtendedStatistics) {
       final List<DataFileStatistics> dashboardStats = List.copyOf(stats);
       FxThread.runLater(() -> MZmineCore.getDesktop().addTab(new SimpleTab("Auto Param Statistics",
           new DataFileStatisticsDashboardPane(dashboardStats,
@@ -312,8 +314,8 @@ public class BatchOptimizationMainTask extends AbstractTask {
           controller.refreshEvaluatedSolutions();
         }
       });
-      showLiveResultsWindow(tab, optimizationProblem, singlePassSolution, resultsController,
-          completedResult);
+      showLiveResultsWindow(tab, optimizationProblem, singlePassSolution, showExtendedStatistics,
+          resultsController, completedResult);
     }
 
     final List<Solution> injected = switch (optimizerOption) {
@@ -391,12 +393,14 @@ public class BatchOptimizationMainTask extends AbstractTask {
 
   private void showLiveResultsWindow(@NotNull BatchWizardTab resultTab,
       @NotNull WizardOptimizationProblem optimizationProblem, @NotNull Solution singlePassSolution,
+      final boolean showExtendedStatistics,
       @NotNull AtomicReference<OptimizationResultsController> resultsController,
       @NotNull AtomicReference<NondominatedPopulation> completedResult) {
     FxThread.runLater(() -> {
       final Stage stage = new Stage();
       final OptimizationResultsController controller = new OptimizationResultsController(resultTab,
-          optimizationProblem, singlePassSolution, stage, this::requestStopSearch);
+          optimizationProblem, singlePassSolution, showExtendedStatistics, stage,
+          this::requestStopSearch);
       resultsController.set(controller);
       controller.refreshEvaluatedSolutions();
       final NondominatedPopulation alreadyCompleted = completedResult.get();
@@ -413,8 +417,11 @@ public class BatchOptimizationMainTask extends AbstractTask {
       stage.show();
       final double screenWidth = Screen.getPrimary().getBounds().getWidth();
       final double screenHeight = Screen.getPrimary().getBounds().getHeight();
-      stage.setWidth(Math.min(1400d, screenWidth * 0.9d));
-      stage.setHeight(Math.min(900d, screenHeight * 0.85d));
+      // the compact view sizes the stage to its table columns when shown
+      if (showExtendedStatistics) {
+        stage.setWidth(Math.min(1400d, screenWidth * 0.9d));
+        stage.setHeight(Math.min(900d, screenHeight * 0.85d));
+      }
       stage.centerOnScreen();
     });
   }

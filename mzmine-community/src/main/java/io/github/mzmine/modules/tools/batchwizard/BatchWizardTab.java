@@ -70,6 +70,7 @@ import io.github.mzmine.taskcontrol.TaskService;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.javafx.FxMenuUtil;
 import io.github.mzmine.util.javafx.MZmineIconUtils;
 import io.mzio.links.MzioMZmineLinks;
 import java.io.File;
@@ -83,6 +84,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -96,6 +98,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBase;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SingleSelectionModel;
@@ -508,9 +511,13 @@ public class BatchWizardTab extends SimpleTab {
     final Button load = FxButtons.createLoadButton("Load presets",
         this::chooseAndLoadLocalSequence);
     final Button estimate = FxButtons.createButton("Estimate parameters", Source.ESTIMATION.icon(),
-        "Derive wizard parameters from the same representative files used for optimization and "
-            + "show their statistics", this::estimateParametersFromFiles);
+        "Derive wizard parameters from the same representative files used for optimization.\n"
+            + "Right click to also show the data file statistics.",
+        () -> estimateParametersFromFiles(false));
     estimate.disableProperty().bind(parameterEstimationRunning);
+    estimate.setContextMenu(new ContextMenu(
+        FxMenuUtil.newMenuItem("Estimate parameters and show statistics",
+            () -> estimateParametersFromFiles(true))));
     final Button optimize = FxButtons.createButton("Optimize parameters",
         Source.OPTIMIZATION.icon(), null, this::runOptimizer);
 
@@ -579,7 +586,10 @@ public class BatchWizardTab extends SimpleTab {
     TaskService.getController().addTask(optimizer);
   }
 
-  private void estimateParametersFromFiles() {
+  /**
+   * @param showStatistics opens the data file statistics dashboard after applying the estimates
+   */
+  private void estimateParametersFromFiles(final boolean showStatistics) {
     if (parameterEstimationRunning.get()) {
       return;
     }
@@ -604,7 +614,7 @@ public class BatchWizardTab extends SimpleTab {
     final WizardSequence sequenceSnapshot = copySequence(sequenceSteps);
     final WizardParameterEstimationTask task = new WizardParameterEstimationTask(
         MemoryMapStorage.forRawDataFile(), Instant.now(), estimateFiles, metadataFile,
-        sequenceSnapshot, this::applyParameterEstimationResult);
+        sequenceSnapshot, result -> applyParameterEstimationResult(result, showStatistics));
     parameterEstimationRunning.set(true);
     task.addTaskStatusListener((_, newStatus, _) -> {
       if (!newStatus.isUnmodifiable()) {
@@ -620,17 +630,39 @@ public class BatchWizardTab extends SimpleTab {
     TaskService.getController().addTask(task);
   }
 
-  private void applyParameterEstimationResult(@NotNull WizardParameterEstimationResult result) {
-    // Preserve unrelated edits made while the background task was running.
+  private void applyParameterEstimationResult(@NotNull WizardParameterEstimationResult result,
+      final boolean showStatistics) {
+    applyParameterValues(sequence -> result.estimates().applyEstimates(sequence),
+        Source.ESTIMATION);
+    if (!showStatistics) {
+      return;
+    }
+    MZmineCore.getDesktop().addTab(new SimpleTab("Data File Statistics",
+        new DataFileStatisticsDashboardPane(result.statistics(), result.interSampleRtStatistics(),
+            result.context().massDetectorType())));
+  }
+
+  /**
+   * Applies estimated or optimized values to the current wizard sequence. Only the parameters set
+   * by the applier change, all other current wizard values are kept. Changed parameters are
+   * highlighted with the given source.
+   *
+   * @param applier sets the new values on the current wizard sequence
+   * @param source  the source to highlight the changed parameters with
+   */
+  public void applyParameterValues(@NotNull Consumer<WizardSequence> applier,
+      @NotNull Source source) {
+    // Preserve unrelated edits made while a background task was running.
     updateAllParametersFromUi();
     final WizardSequence before = copySequence(sequenceSteps);
     final boolean previousListenersActive = listenersActive;
     setListenersActive(false);
     try {
-      // decision: estimation replaces previous customization with the newly estimated overrides.
+      // decision: estimation and optimization replace previous customization with their own
+      // overrides, so overrides of a previous run do not linger
       sequenceSteps.get(WizardPart.CUSTOMIZATION).ifPresent(WizardStepParameters::resetToDefaults);
-      result.estimates().applyEstimates(sequenceSteps);
-      parameterChanges = WizardParameterChanges.diff(before, sequenceSteps, Source.ESTIMATION);
+      applier.accept(sequenceSteps);
+      parameterChanges = WizardParameterChanges.diff(before, sequenceSteps, source);
       advancedMode.set(sequenceSteps.get(WizardPart.CUSTOMIZATION)
           .map(step -> step.getValue(CustomizationWizardParameters.overrides))
           .map(overrides -> !overrides.isEmpty()).orElse(false));
@@ -638,9 +670,6 @@ public class BatchWizardTab extends SimpleTab {
     } finally {
       setListenersActive(previousListenersActive);
     }
-    MZmineCore.getDesktop().addTab(new SimpleTab("Data File Statistics",
-        new DataFileStatisticsDashboardPane(result.statistics(), result.interSampleRtStatistics(),
-            result.context().massDetectorType())));
   }
 
   private static @NotNull WizardSequence copySequence(@NotNull WizardSequence source) {

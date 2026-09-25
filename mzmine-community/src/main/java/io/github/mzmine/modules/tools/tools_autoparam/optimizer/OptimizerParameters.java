@@ -40,6 +40,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.Optimizer
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.search.PatternSearchOptimizerParameters;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.ImportTypeParameter;
@@ -98,9 +99,16 @@ public class OptimizerParameters extends SimpleParameterSet {
       "Parameters to optimize", "Select which parameters should be optimized.", ALL_SOLUTIONS,
       new ArrayList<>(DEFAULT_SOLUTIONS));
 
+  public static final BooleanParameter showExtendedStatistics = new BooleanParameter(
+      "Show extended statistics", """
+      Shows the data file statistics dashboard and all evaluated solutions with their diagnostic \
+      attributes in the results window.
+      If disabled, only the raw data estimate and the current best solutions are shown with their \
+      parameter values and optimization targets.""", false);
+
   public OptimizerParameters() {
     super(benchmarkFeatureTypes, benchmarkFeaturesFile, optimizers, iterations,
-        maxShapeRejectionFactor, paramToOptimize);
+        maxShapeRejectionFactor, paramToOptimize, showExtendedStatistics);
   }
 
   /**
@@ -128,6 +136,7 @@ public class OptimizerParameters extends SimpleParameterSet {
     param.setParameter(iterations, numIterations);
     param.setParameter(maxShapeRejectionFactor, false);
     param.setParameter(paramToOptimize, new ArrayList<>(DEFAULT_SOLUTIONS));
+    param.setParameter(showExtendedStatistics, false);
     return param;
   }
 

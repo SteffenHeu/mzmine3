@@ -37,6 +37,7 @@ import io.github.mzmine.modules.tools.tools_autoparam.estimation.FeatureRecord;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterDefinition;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.ParameterEstimationContext;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.PreparedParameterSet;
+import io.github.mzmine.modules.tools.tools_autoparam.estimation.ValueOrigin;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.domain.OrdinalIntegerVariable;
 import io.github.mzmine.modules.tools.tools_autoparam.estimation.domain.SearchScale;
 import io.github.mzmine.modules.tools.tools_autoparam.optimizer.OptimizerParameters;
@@ -89,6 +90,11 @@ public class WizardOptimizationProblem extends AbstractProblem implements Search
    * Wall-clock time of this proposal's batch queue. Zero when no batch ran because of a cache hit.
    */
   public static final String ATTR_BATCH_RUNTIME_SECONDS = "Runtime / s";
+  /**
+   * Number of benchmark features from the user-supplied file that were matched in the result. Only
+   * set when a benchmark features file was supplied.
+   */
+  public static final String ATTR_BENCHMARK_FEATURES = "Target features";
   private static final Logger logger = Logger.getLogger(WizardOptimizationProblem.class.getName());
   /**
    * Whether the result was taken from {@link #evaluationCache} instead of running a batch. Kept
@@ -378,6 +384,33 @@ public class WizardOptimizationProblem extends AbstractProblem implements Search
           mzSampleToSampleTolerance);
     }
     return wizardSequence;
+  }
+
+  /**
+   * Applies only the estimated and optimized values of a solution to an existing wizard sequence,
+   * the same way as applying the raw data estimates. All other parameters keep their current
+   * values. The applied values equal the ones the solution was evaluated with in
+   * {@link #createWizardSequenceFromSolution(Solution)}.
+   * <p>
+   * assumption: parameters with a {@link ValueOrigin#PRESET_DEFAULT} value that were not optimized
+   * are not estimates and are therefore left unchanged.
+   *
+   * @param solution the solution to apply
+   * @param sequence the wizard sequence to modify
+   */
+  public void applySolutionToWizard(@NotNull Solution solution, @NotNull WizardSequence sequence) {
+    preparedParameters.applyEstimates(sequence, Set.copyOf(paramToOptimize));
+    for (final IndexedParameter<?> parameter : indexedParameters) {
+      parameter.applyToWizard(solution, sequence);
+    }
+
+    if (mzSampleToSampleTolerance != null) {
+      sequence.get(WizardPart.MS)
+          .filter(ms -> ms.hasParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance))
+          .ifPresent(
+              ms -> ms.setParameter(MassSpectrometerWizardParameters.sampleToSampleMzTolerance,
+                  mzSampleToSampleTolerance));
+    }
   }
 
   @Override
