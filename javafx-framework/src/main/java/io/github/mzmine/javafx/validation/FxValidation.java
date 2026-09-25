@@ -32,11 +32,12 @@ import java.util.function.Predicate;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Control;
 import javafx.scene.control.TextInputControl;
-import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.util.Subscription;
 import org.controlsfx.control.decoration.Decoration;
-import org.controlsfx.control.decoration.Decorator;
 import org.controlsfx.validation.Severity;
 import org.controlsfx.validation.ValidationResult;
 import org.controlsfx.validation.ValidationSupport;
@@ -44,6 +45,7 @@ import org.controlsfx.validation.decoration.CompoundValidationDecoration;
 import org.controlsfx.validation.decoration.StyleClassValidationDecoration;
 import org.controlsfx.validation.decoration.ValidationDecoration;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class FxValidation {
 
@@ -58,37 +60,87 @@ public class FxValidation {
   }
 
   /**
-   * Adds a message icon with tooltip to any node, e.g., a parameter component that is a layout
-   * pane. {@link ValidationSupport} only works on {@link Control}s with a value extractor.
+   * Adds a message icon with tooltip to any node. {@link ValidationSupport} only works on
+   * {@link Control}s with a value extractor. Use
+   * {@link DecorationTargetProvider#findDecorationTarget(Node)} to find a suitable target within a
+   * composite component.
    * <p>
    * The decoration is intentionally not flagged as a validation decoration so that
    * {@link ValidationSupport#redecorate()} on the same node does not remove it.
    * <p>
-   * {@link Pane} targets are decorated relative to their visible children, as components often grow
-   * with the window and the graphic would otherwise be placed far away from the actual inputs.
+   * May be called before the target is shown, the decoration is then added once the target is part
+   * of a scene.
    *
-   * @return the decoration to remove it later via
-   * {@link Decorator#removeDecoration(Node, Decoration)}
+   * @param target a {@link Parent}, usually a {@link Control}
+   * @return subscription to remove the decoration
    */
-  public static @NotNull Decoration addMessageDecoration(@NotNull Node target,
+  public static @NotNull Subscription addMessageDecoration(@NotNull Node target,
       @NotNull Severity severity, @NotNull String message, @NotNull Pos pos) {
-    final Node graphic = ICON_DECORATOR.createDecorationNode(severity, message);
-    final Decoration decoration =
-        target instanceof Pane ? new ContentAlignedGraphicDecoration(graphic, pos)
-            : new TooltipFixGraphicDecoration(graphic, pos);
-    Decorator.addDecoration(target, decoration);
-    return decoration;
+    return addMessageDecoration(target, severity, message, pos, null);
+  }
+
+  /**
+   * Same as {@link #addMessageDecoration(Node, Severity, String, Pos)} with a custom icon color.
+   *
+   * @param target a {@link Parent}, usually a {@link Control}
+   * @param color  icon color, e.g., the positive or negative color of a color palette. null for the
+   *               default color of the severity
+   * @return subscription to remove the decoration
+   */
+  public static @NotNull Subscription addMessageDecoration(@NotNull Node target,
+      @NotNull Severity severity, @NotNull String message, @NotNull Pos pos,
+      @Nullable Color color) {
+    final Decoration decoration = new TooltipFixGraphicDecoration(
+        ICON_DECORATOR.createDecorationNode(severity, message, color), pos);
+    return SceneAwareDecoration.add(target, decoration);
   }
 
   /**
    * Marks a node with a checkmark, e.g., to show that its value was changed automatically.
    *
+   * @param target  a {@link Parent}, usually a {@link Control}
    * @param message tooltip message
-   * @return the decoration to remove it later via
-   * {@link Decorator#removeDecoration(Node, Decoration)}
+   * @return subscription to remove the decoration
    */
-  public static @NotNull Decoration markChanged(@NotNull Node target, @NotNull String message) {
-    return addMessageDecoration(target, Severity.OK, message, Pos.TOP_LEFT);
+  public static @NotNull Subscription markChanged(@NotNull Node target, @NotNull String message) {
+    return markChanged(target, message, null);
+  }
+
+  /**
+   * Marks a node with a checkmark, e.g., to show that its value was changed automatically.
+   *
+   * @param target  a {@link Parent}, usually a {@link Control}
+   * @param message tooltip message
+   * @param color   icon color, e.g., the positive color of a color palette. null for the default
+   * @return subscription to remove the decoration
+   */
+  public static @NotNull Subscription markChanged(@NotNull Node target, @NotNull String message,
+      @Nullable Color color) {
+    return addMessageDecoration(target, Severity.OK, message, Pos.TOP_RIGHT, color);
+  }
+
+  /**
+   * Marks a node with an error icon, e.g., to show that its value is invalid.
+   *
+   * @param target  a {@link Parent}, usually a {@link Control}
+   * @param message tooltip message
+   * @return subscription to remove the decoration
+   */
+  public static @NotNull Subscription markError(@NotNull Node target, @NotNull String message) {
+    return markError(target, message, null);
+  }
+
+  /**
+   * Marks a node with an error icon, e.g., to show that its value is invalid.
+   *
+   * @param target  a {@link Parent}, usually a {@link Control}
+   * @param message tooltip message
+   * @param color   icon color, e.g., the negative color of a color palette. null for the default
+   * @return subscription to remove the decoration
+   */
+  public static @NotNull Subscription markError(@NotNull Node target, @NotNull String message,
+      @Nullable Color color) {
+    return addMessageDecoration(target, Severity.ERROR, message, Pos.TOP_RIGHT, color);
   }
 
   public static void registerErrorValidator(@NotNull Control field,
