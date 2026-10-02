@@ -75,7 +75,6 @@ import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.formul
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.formula.prediction.FormulaPredictionIonNetworkModule;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingModule;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.refinement.IonNetworkRefinementModule;
-import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.relations.IonNetRelationsModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
 import io.github.mzmine.modules.dataprocessing.id_localcsvsearch.LocalCSVDatabaseSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_ms2search.Ms2SearchModule;
@@ -108,6 +107,7 @@ import io.github.mzmine.modules.io.import_feature_networks.ImportFeatureNetworks
 import io.github.mzmine.modules.io.projectload.ProjectLoadModule;
 import io.github.mzmine.modules.io.projectsave.ProjectSaveAsModule;
 import io.github.mzmine.modules.io.projectsave.ProjectSaveModule;
+import io.github.mzmine.modules.io.spectral_library_from_matches.MatchesSubsetLibraryModule;
 import io.github.mzmine.modules.io.spectraldbsubmit.batch.LibraryBatchGenerationModule;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardModule;
 import io.github.mzmine.modules.tools.isotopepatternpreview.IsotopePatternPreviewModule;
@@ -300,9 +300,9 @@ public abstract class AbstractWorkspace implements Workspace {
   protected Menu buildDefaultFeatureGroupingSubMenu() {
     final Menu groupingMenu = addModuleMenuItems("Feature grouping", CorrelateGroupingModule.class,
         IonNetworkingModule.class, MainSpectralNetworkingModule.class, AddIonNetworkingModule.class,
-        IonNetworkRefinementModule.class, IonNetRelationsModule.class,
-        FormulaPredictionIonNetworkModule.class, CreateAvgNetworkFormulasModule.class,
-        IonNetworkMSMSCheckModule.class, ClearIonIdentitiesModule.class);
+        IonNetworkRefinementModule.class, FormulaPredictionIonNetworkModule.class,
+        CreateAvgNetworkFormulasModule.class, IonNetworkMSMSCheckModule.class,
+        ClearIonIdentitiesModule.class);
     groupingMenu.getItems().add(new SeparatorMenuItem());
     addModuleMenuItems(groupingMenu, CompoundGrouperModule.class,
         ConfigCompoundRepresentationModule.class);
@@ -357,8 +357,7 @@ public abstract class AbstractWorkspace implements Workspace {
         MassvoltammogramFromFeatureListModule.class);
     addSeparator(featureVis);
     addModuleMenuItems(featureVis, "Lipids", LipidAnnotationQCDashboardModule.class,
-        EquivalentCarbonNumberModule.class,
-        LipidAnnotationSummaryModule.class);
+        EquivalentCarbonNumberModule.class, LipidAnnotationSummaryModule.class);
     addModuleMenuItems(featureVis, "Dashboards", CompoundDashboardModule.class,
         IntegrationDashboardModule.class, LipidAnnotationQCDashboardModule.class,
         StatsDasboardModule.class);
@@ -376,7 +375,8 @@ public abstract class AbstractWorkspace implements Workspace {
     addModuleMenuItems(menu, GlobalIonLibrariesModule.class, IsotopePatternPreviewModule.class,
         QualityParametersModule.class);
     addModuleMenuItems(menu, "Libraries", LibraryAnalysisCSVExportModule.class,
-        MsMsQualityExportModule.class, MergeLibrariesModule.class);
+        MsMsQualityExportModule.class, MatchesSubsetLibraryModule.class,
+        MergeLibrariesModule.class);
     addModuleMenuItems(menu, "timsTOF fleX", TimsTOFMaldiAcquisitionModule.class,
         SimsefImagingSchedulerModule.class);
     return menu;

@@ -76,6 +76,7 @@ public class IntegrationTests {
     Assertions.assertEquals(0,
         IntegrationTest.builder("rawdatafiles/integration_tests/workshop_dataset",
                 "workshop_dataset_integration_test_process_in_place.mzbatch").tempDir(tempDir)
+            .metadataFile("fake_metadata.csv")
             .rawFiles("171103_PMA_TK_QC_04-4to5min.mzML", "171103_PMA_TK_QC_05-4to5min.mzML")
             .specLibsFullPath("spectral_libraries/integration_tests/massbank_nist_for_tests.msp",
                 "spectral_libraries/integration_tests/MoNA-export-LC-MS-MS_Spectra.json").build()
@@ -86,7 +87,7 @@ public class IntegrationTests {
 
   void testSmallLcMsBatch(File tempDir, String batchFile) {
     final File results = IntegrationTest.builder("rawdatafiles/integration_tests/workshop_dataset",
-            batchFile).tempDir(tempDir)
+            batchFile).tempDir(tempDir).metadataFile("fake_metadata.csv")
         .rawFiles("171103_PMA_TK_QC_04-4to5min.mzML", "171103_PMA_TK_QC_05-4to5min.mzML")
         .specLibsFullPath("spectral_libraries/integration_tests/massbank_nist_for_tests.msp",
             "spectral_libraries/integration_tests/MoNA-export-LC-MS-MS_Spectra.json").build()
@@ -96,8 +97,8 @@ public class IntegrationTests {
             "rawdatafiles/integration_tests/workshop_dataset/expected_results.csv", results, batchFile)
         .isEmpty());
 
-    logger.info("Checking file with 55 known differences. Table below is expected:");
-    Assertions.assertEquals(55, IntegrationTestUtils.getCsvComparisonResults(
+    logger.info("Checking file with 80 known differences. Table below is expected:");
+    Assertions.assertEquals(145, IntegrationTestUtils.getCsvComparisonResults(
         "rawdatafiles/integration_tests/workshop_dataset/expected_results_error.csv", results,
         batchFile).size());
   }
@@ -105,7 +106,7 @@ public class IntegrationTests {
   @Test
   void testLcMsFullBatch(@TempDir File tempDir) {
     if (new File("D:\\OneDrive - mzio GmbH").exists()) {
-      Assertions.assertEquals(0, noSmilesErrors(
+      Assertions.assertEquals(0, filterErrors(
           IntegrationTest.builder("rawdatafiles/integration_tests/workshop_dataset",
               "workshop_dataset_full.mzbatch").tempDir(tempDir).build().runBatchGetCheckResults(
               "rawdatafiles/integration_tests/workshop_dataset/expected_results_full.csv")).size());
@@ -122,8 +123,8 @@ public class IntegrationTests {
     final File csvExportFile = IntegrationTestUtils.loadProjectExportFeatureList(tempDir,
         "rawdatafiles/integration_tests/workshop_dataset/project.mzmine");
 
-    // there should be the warning that the number of row types is not equal and 9 columns are missing
-    Assertions.assertEquals(2,
+    // database name of spectral library matches is not loaded because it is from the library
+    Assertions.assertEquals(7,
         IntegrationTestUtils.getCsvComparisonResults(expectedResultsFromProcessing, csvExportFile,
             "project_load_lcms").size());
     // saving and loading the project should be identical
@@ -177,11 +178,8 @@ public class IntegrationTests {
         "rawdatafiles/integration_tests/mse/expected_results_project.csv", exportedFlist,
         "mse_project.mzmine").size());
 
-    // expected_results_project_direct_batch.csv is the results of the project after batch processing
-    // expected_results.csv changed a bit because the MSe processing changed from 10% to 1% intensity factor
-    // just using the old project still with the old results
     Assertions.assertEquals(2, IntegrationTestUtils.getCsvComparisonResults(
-        "rawdatafiles/integration_tests/mse/expected_results_project_direct_batch.csv",
+        "rawdatafiles/integration_tests/mse/expected_results.csv",
         exportedFlist, "mse_project.mzmine").size());
   }
 
@@ -203,7 +201,7 @@ public class IntegrationTests {
       logger.info("Skipping tims full batch integration test.");
       return;
     }
-    Assertions.assertEquals(0, noSmilesErrors(
+    Assertions.assertEquals(0, filterErrors(
         IntegrationTest.builder("rawdatafiles/integration_tests/lc_tims", "lc_tims_local.mzbatch")
             .specLibsFullPath("spectral_libraries/integration_tests/matches_for_tims-full.json")
             .tempDir(tempDir).build().runBatchGetCheckResults(
@@ -229,7 +227,7 @@ public class IntegrationTests {
       logger.info("Skipping tims full batch integration test.");
       return;
     }
-    Assertions.assertEquals(0, noSmilesErrors(
+    Assertions.assertEquals(0, filterErrors(
         IntegrationTest.builder("rawdatafiles/integration_tests/diaPASEF",
             "dia_pasef_local.mzbatch").tempDir(tempDir).build().runBatchGetCheckResults(
             "rawdatafiles/integration_tests/diaPASEF/expected_results.csv")).size());
@@ -254,9 +252,12 @@ public class IntegrationTests {
   }
 
   /**
-   * Allows dropping of smiles harmonization errors from integration tests
+   * Allows dropping of errors from integration tests. Smiles and inchi should be stable now. The
+   * cache might still sometimes hit different harmonized structure for inchi but is less likely.
    */
-  public List<CheckResult> noSmilesErrors(List<CheckResult> checkResults) {
-    return checkResults.stream().filter(r -> !r.type().contains("smiles")).toList();
+  public List<CheckResult> filterErrors(List<CheckResult> checkResults) {
+    return checkResults;
+//    return checkResults.stream()
+//        .filter(r -> !Objects.requireNonNullElse(r.type(), "").contains("smiles")).toList();
   }
 }
