@@ -39,6 +39,7 @@ import io.github.mzmine.util.maths.Weighting;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -47,17 +48,19 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Experimental variant of {@link LocalMaxMassDetector} with an adaptive centroid m/z calculation,
  * kept separate so it can be profiled against the baseline. Detection (maxima, edges) is identical;
- * only the per-peak m/z estimation changes, with a three-way branch applied to intense peaks:
+ * only the per-peak m/z estimation changes:
  * <ol>
- *   <li><b>Flat top / detector saturation</b> (a run of near-maximum points): the geometric center
- *   of the plateau (mean m/z of the near-max points), ignoring an apex spike on the plateau edge.</li>
- *   <li><b>Sharp and asymmetric</b>: an apex-centered least-squares parabola vertex, which tracks
- *   the mode and avoids the tail bias of the weighted centroid.</li>
+ *   <li><b>Detector saturation</b> (apex at or above the saturation threshold, only if a threshold
+ *   is set): the mode of an exponentially modified Gaussian fitted to the saturated core and a few
+ *   flank points, with the fitted height bounded by the raw apex (see {@link EmgFitter}). Saturated
+ *   TOF peaks are distorted without a flat top, so the threshold and not the peak shape decides.</li>
+ *   <li><b>Sharp and asymmetric</b> intense peaks: an apex-centered least-squares parabola vertex,
+ *   which tracks the mode and avoids the tail bias of the weighted centroid.</li>
  *   <li><b>Otherwise</b>: the baseline weighted centroid (intensity-weighted mean over the symmetric
  *   window above {@link #MZ_WEIGHTING_THRESHOLD}).</li>
  * </ol>
  * Weak peaks always use the weighted centroid (the fits are unstable at low S/N and the bias is
- * small there).
+ * small there). A failed saturation fit falls back to the other branches.
  */
 public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedIntensitiesProvider {
 
@@ -72,18 +75,15 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
   private static final Weighting mzWeighting = Weighting.LINEAR;
 
   // Adaptive centroid tuning
-  // only intense peaks get the fit / plateau treatment; weak peaks keep the weighted centroid
+  // only intense peaks get the parabola treatment; weak peaks keep the weighted centroid
   private static final double ADAPTIVE_MIN_PERCENT_BASE = 1.0;
   // apex left/right point-count ratio above which a peak is treated as asymmetric (-> parabola)
   private static final double ASYMMETRY_THRESHOLD = 1.5;
   // number of points (apex +/- (N-1)/2) used for the apex-centered parabola
   private static final int PARABOLA_POINTS = 5;
-  // a run of at least this many near-equal high points is treated as a saturated plateau
-  private static final int FLAT_TOP_MIN_POINTS = 3;
-  // consecutive points within this fraction of the apex height count as "equal" (clipping)
-  private static final double SATURATION_TOL = 0.005;
-  // a saturation plateau must sit at or above this fraction of the apex height
-  private static final double SATURATION_MIN_FRACTION = 0.90;
+  // saturation fit window: the saturated core plus this many non-zero points on each flank
+  private static final int SATURATION_FLANK_POINTS = 3;
+  private static final int SATURATION_MIN_FIT_POINTS = 3;
 
   /**
    * Minimum peak length in points excluding zeros
@@ -92,6 +92,12 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
 
   private final double noiseLevel;
   private final AbundanceMeasure intensityCalculation;
+
+  /**
+   * Raw intensity from which on profile points are distorted by detector saturation. Peaks reaching
+   * it get the EMG fit. {@link Double#POSITIVE_INFINITY} disables the saturation branch.
+   */
+  private final double saturationThreshold;
 
   /**
    * Optional preprocessing of the intensities (e.g. smoothing) before maximum and edge detection.
@@ -123,10 +129,21 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
   public AdaptiveLocalMaxMassDetector(final double noiseLevel,
       final AbundanceMeasure intensityCalculation, final int minNonZeroDp,
       final @NotNull MassDetectorPreprocessor preprocessor) {
+    this(noiseLevel, intensityCalculation, minNonZeroDp, preprocessor, Double.POSITIVE_INFINITY);
+  }
+
+  /**
+   * @param saturationThreshold raw intensity from which on peaks are treated as saturated and get
+   *                            the EMG fit, {@link Double#POSITIVE_INFINITY} to disable
+   */
+  public AdaptiveLocalMaxMassDetector(final double noiseLevel,
+      final AbundanceMeasure intensityCalculation, final int minNonZeroDp,
+      final @NotNull MassDetectorPreprocessor preprocessor, final double saturationThreshold) {
     this.noiseLevel = noiseLevel;
     this.intensityCalculation = intensityCalculation;
     this.minNonZeroDp = minNonZeroDp;
     this.preprocessor = preprocessor;
+    this.saturationThreshold = saturationThreshold;
   }
 
   /**
@@ -517,28 +534,29 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
   }
 
   /**
-   * Three-way adaptive m/z. For peaks below {@link #ADAPTIVE_MIN_PERCENT_BASE} of the base peak the
-   * weighted centroid is kept (fits are unstable at low S/N). For intense peaks: a saturated
-   * plateau uses the plateau center; a sharp asymmetric peak uses an apex-centered parabola;
-   * everything else keeps the weighted centroid. Any degenerate fit falls back to the weighted
-   * centroid.
+   * Three-way adaptive m/z. A peak reaching the saturation threshold uses the mode of an EMG fit.
+   * For other peaks below {@link #ADAPTIVE_MIN_PERCENT_BASE} of the base peak the weighted centroid
+   * is kept (fits are unstable at low S/N). For intense peaks: a sharp asymmetric peak uses an
+   * apex-centered parabola; everything else keeps the weighted centroid. Any degenerate fit falls
+   * back to the next branch.
    */
   private double adaptiveCentroidMz(final double[] mzs, final double[] intensities,
       final int startIdx, final int endIdx, final int peakMaxIdx, final double maxIntensity,
       final double weightedCentroidMz) {
 
+    // 1. detector saturation -> mode of an EMG fitted to the saturated core and the flanks
+    if (maxIntensity >= saturationThreshold) {
+      final double saturated = saturatedEmgMode(mzs, intensities, startIdx, endIdx, peakMaxIdx,
+          maxIntensity);
+      if (!Double.isNaN(saturated)) {
+        return saturated;
+      }
+    }
+
     final boolean intenseEnough =
         maxIntensity >= spectrumBaseIntensity * (ADAPTIVE_MIN_PERCENT_BASE / 100.0);
     if (!intenseEnough) {
       return weightedCentroidMz;
-    }
-
-    // 1. flat top / detector saturation -> center of the clipped plateau (a run of near-equal high
-    // points), robust to a noise spike sitting just above the plateau
-    final double plateau = saturationPlateauCenter(mzs, intensities, startIdx, endIdx,
-        maxIntensity);
-    if (!Double.isNaN(plateau)) {
-      return plateau;
     }
 
     // 2. sharp and asymmetric -> apex-centered parabola vertex
@@ -560,45 +578,81 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
   }
 
   /**
-   * Center (mean m/z) of the longest run of consecutive near-equal high points - the clipped top of
-   * a saturated peak. A point joins the run only if it is at or above
-   * {@link #SATURATION_MIN_FRACTION} of the apex and within {@link #SATURATION_TOL} of the previous
-   * point's intensity, so a single apex spike sitting above the plateau is excluded. Returns NaN if
-   * no run of at least {@link #FLAT_TOP_MIN_POINTS} points exists (i.e. not a flat top).
+   * Mode of an EMG fitted to the saturated core of the peak (all points at or above the saturation
+   * threshold) and {@link #SATURATION_FLANK_POINTS} non-zero points on each side, limited to the
+   * peak edges. All points have the same weight, the fitted height is bounded by the raw apex
+   * because saturation only lowers the apex. Returns NaN if both flanks have no unsaturated point,
+   * the fit fails or its mode leaves the fit window.
    */
-  private static double saturationPlateauCenter(final double[] mzs, final double[] intensities,
-      final int startIdx, final int endIdx, final double maxIntensity) {
-    final double minLevel = maxIntensity * SATURATION_MIN_FRACTION;
-    final double tol = maxIntensity * SATURATION_TOL;
-
-    int bestStart = -1;
-    int bestLen = 0;
-    int i = startIdx;
-    while (i < endIdx) {
-      if (intensities[i] < minLevel) {
-        i++;
-        continue;
+  private double saturatedEmgMode(final double[] mzs, final double[] intensities,
+      final int startIdx, final int endIdx, final int peakMaxIdx, final double maxIntensity) {
+    int coreStart = -1;
+    int coreEnd = -1;
+    for (int i = startIdx; i < endIdx; i++) {
+      if (intensities[i] >= saturationThreshold) {
+        if (coreStart < 0) {
+          coreStart = i;
+        }
+        coreEnd = i;
       }
-      int j = i + 1;
-      while (j < endIdx && intensities[j] >= minLevel
-          && Math.abs(intensities[j] - intensities[j - 1]) <= tol) {
-        j++;
-      }
-      if (j - i > bestLen) {
-        bestLen = j - i;
-        bestStart = i;
-      }
-      i = j;
     }
-
-    if (bestLen < FLAT_TOP_MIN_POINTS) {
+    if (coreStart < 0) {
       return Double.NaN;
     }
-    double sum = 0;
-    for (int k = bestStart; k < bestStart + bestLen; k++) {
-      sum += mzs[k];
+    int from = coreStart;
+    for (int added = 0; from > startIdx && added < SATURATION_FLANK_POINTS; ) {
+      from--;
+      if (intensities[from] > 0) {
+        added++;
+      }
     }
-    return sum / bestLen;
+    int to = coreEnd;
+    for (int added = 0; to < endIdx - 1 && added < SATURATION_FLANK_POINTS; ) {
+      to++;
+      if (intensities[to] > 0) {
+        added++;
+      }
+    }
+
+    final DoubleArrayList fitMzs = new DoubleArrayList();
+    final DoubleArrayList fitIntensities = new DoubleArrayList();
+    double coreMzSum = 0;
+    int core = 0;
+    int unsaturatedLeft = 0;
+    int unsaturatedRight = 0;
+    for (int i = from; i <= to; i++) {
+      if (intensities[i] <= 0) {
+        continue;
+      }
+      fitMzs.add(mzs[i]);
+      fitIntensities.add(intensities[i]);
+      if (intensities[i] >= saturationThreshold) {
+        coreMzSum += mzs[i];
+        core++;
+      } else if (i < peakMaxIdx) {
+        unsaturatedLeft++;
+      } else {
+        unsaturatedRight++;
+      }
+    }
+    // sigma and tau need unsaturated points on both flanks
+    if (fitMzs.size() < SATURATION_MIN_FIT_POINTS || unsaturatedLeft == 0
+        || unsaturatedRight == 0) {
+      return Double.NaN;
+    }
+
+    final double low = fitMzs.getDouble(0);
+    final double high = fitMzs.getDouble(fitMzs.size() - 1);
+    final double[] weights = new double[fitMzs.size()];
+    Arrays.fill(weights, 1);
+    // start at the center of the saturated core, width estimate from the window
+    final EmgFitter.Fit fit = EmgFitter.fit(fitMzs.toDoubleArray(), fitIntensities.toDoubleArray(),
+        weights, coreMzSum / core, Math.max(1e-6, (high - low) / 6), maxIntensity * 1.2,
+        maxIntensity);
+    if (fit == null || Double.isNaN(fit.mode()) || fit.mode() < low || fit.mode() > high) {
+      return Double.NaN;
+    }
+    return fit.mode();
   }
 
   /**

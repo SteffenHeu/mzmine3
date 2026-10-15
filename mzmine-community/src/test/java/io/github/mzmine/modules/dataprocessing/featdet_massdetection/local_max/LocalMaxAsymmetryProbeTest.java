@@ -90,7 +90,8 @@ class LocalMaxAsymmetryProbeTest {
         VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
         WatersLockmassParameters.createDefault(),
         VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
-        VendorImportParameters.DEFAULT_AGILENT_OPTION);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION,
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
 
     try (final AgilentDataAccess access = new AgilentDataAccess(file, vendorParam, null, null)) {
       Assumptions.assumeTrue(access.isIms(), "Expected an IMS .d file");
@@ -258,7 +259,8 @@ class LocalMaxAsymmetryProbeTest {
         VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
         WatersLockmassParameters.createDefault(),
         VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
-        VendorImportParameters.DEFAULT_AGILENT_OPTION);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION,
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
 
     final int warmup = 3;
     final int measured = 7;
@@ -357,7 +359,8 @@ class LocalMaxAsymmetryProbeTest {
         VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
         WatersLockmassParameters.createDefault(),
         VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
-        VendorImportParameters.DEFAULT_AGILENT_OPTION);
+        VendorImportParameters.DEFAULT_AGILENT_OPTION,
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
 
     try (final AgilentDataAccess access = new AgilentDataAccess(file, vendorParam, null, null)) {
       Assumptions.assumeTrue(access.isIms(), "Expected an IMS .d file");

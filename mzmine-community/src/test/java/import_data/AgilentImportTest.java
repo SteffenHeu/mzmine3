@@ -135,7 +135,8 @@ public class AgilentImportTest {
     return VendorImportParameters.create(vendorCentroiding,
         MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
         WatersLockmassParameters.createDefault(), true,
-        new ComboWithComboInputValue<>(importOption, centroidSource));
+        new ComboWithComboInputValue<>(importOption, centroidSource),
+        VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
   }
 
   // ------------------------------------------------------------------------------------- IMS ---
