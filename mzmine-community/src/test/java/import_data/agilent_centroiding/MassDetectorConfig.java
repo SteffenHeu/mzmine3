@@ -11,8 +11,11 @@ import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.L
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxSavitzkyGolayModule;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxSavitzkyGolayParameters;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -27,7 +30,16 @@ import org.jetbrains.annotations.NotNull;
  *                (saturation-aware detectors derive their threshold from it)
  */
 public record MassDetectorConfig(@NotNull String name,
-                                 @NotNull BiFunction<SpectrumLevel, FileIntensityMaxima, MassDetector> factory) {
+                                 @NotNull BiFunction<SpectrumLevel, FileIntensityMaxima, MassDetector> factory,
+                                 boolean wholeFrame) {
+
+  /**
+   * Detector that centroids every mobility scan independently
+   */
+  public MassDetectorConfig(@NotNull final String name,
+      @NotNull final BiFunction<SpectrumLevel, FileIntensityMaxima, MassDetector> factory) {
+    this(name, factory, false);
+  }
 
   /**
    * Minimum number of non-zero points per peak, same as the import auto-centroiding.
@@ -44,6 +56,21 @@ public record MassDetectorConfig(@NotNull String name,
    * highest raw intensity of the file in the respective dimension.
    */
   public static final double EMG_SATURATION_FRACTION = 0.5;
+  /**
+   * EMG saturation thresholds as fraction of the abundance limit of the file
+   * ({@code FrameSpecAbundLimit}, mobility scans only).
+   */
+  public static final double[] LIMIT_FRACTIONS = {0.4, 0.5};
+  /**
+   * Saturation threshold of production: fraction of the abundance limit
+   */
+  public static final double PRODUCTION_LIMIT_FRACTION = AdaptiveLocalMaxMassDetector.SATURATION_LIMIT_FRACTION;
+  /**
+   * m/z tolerances to follow a saturated ion into the neighbouring mobility scans
+   */
+  public static final Map<String, MZTolerance> FLANK_TOLERANCES = new LinkedHashMap<>(
+      Map.of("0.005da", new MZTolerance(0.005, 0), "0.01da", new MZTolerance(0.01, 0),
+          "0.02da", new MZTolerance(0.02, 0), "10ppm", new MZTolerance(0, 10)));
 
   public @NotNull MassDetector create(@NotNull final SpectrumLevel level,
       @NotNull final FileIntensityMaxima maxima) {
@@ -73,6 +100,37 @@ public record MassDetectorConfig(@NotNull String name,
         (level, maxima) -> new AdaptiveLocalMaxMassDetector(0, AbundanceMeasure.Height,
             MIN_POINTS, new LocalMaxNoSmoothingModule(),
             EMG_SATURATION_FRACTION * maxima.max(level))));
+    // EMG threshold from the abundance limit of the file, mobility scans only
+    for (final double fraction : LIMIT_FRACTIONS) {
+      configs.add(new MassDetectorConfig(
+          String.format(Locale.ROOT, "adaptive_local_max_emg_limit%.1f", fraction),
+          (level, maxima) -> new AdaptiveLocalMaxMassDetector(0, AbundanceMeasure.Height,
+              MIN_POINTS, new LocalMaxNoSmoothingModule(),
+              maxima.limitThreshold(level, fraction))));
+    }
+
+    // mobility flank consolidation of saturated peaks, all mobility scans of a frame at once
+    // (getMobilityScanMassValues), threshold 0.5 x abundance limit
+    configs.add(new MassDetectorConfig("production_adaptive_flank_limit0.5",
+        (level, maxima) -> new AdaptiveLocalMaxMassDetector(0, AbundanceMeasure.Height,
+            MIN_POINTS, new LocalMaxNoSmoothingModule(),
+            maxima.limitThreshold(level, PRODUCTION_LIMIT_FRACTION)), true));
+    for (final var tolerance : FLANK_TOLERANCES.entrySet()) {
+      configs.add(new MassDetectorConfig("flank_local_max_" + tolerance.getKey(),
+          (level, maxima) -> new FlankConsolidatingDetector(
+              new LocalMaxMassDetector(0, AbundanceMeasure.Height, MIN_POINTS,
+                  new LocalMaxNoSmoothingModule()),
+              maxima.limitThreshold(level, PRODUCTION_LIMIT_FRACTION), tolerance.getValue()),
+          true));
+      configs.add(new MassDetectorConfig("flank_adaptive_emg_" + tolerance.getKey(),
+          (level, maxima) -> {
+            final double threshold = maxima.limitThreshold(level, PRODUCTION_LIMIT_FRACTION);
+            return new FlankConsolidatingDetector(
+                new AdaptiveLocalMaxMassDetector(0, AbundanceMeasure.Height, MIN_POINTS,
+                    new LocalMaxNoSmoothingModule(), threshold), threshold,
+                tolerance.getValue());
+          }, true));
+    }
     return configs;
   }
 

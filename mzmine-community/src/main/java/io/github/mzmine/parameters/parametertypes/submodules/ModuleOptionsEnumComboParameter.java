@@ -121,6 +121,16 @@ public class ModuleOptionsEnumComboParameter<EnumType extends Enum<EnumType> & M
     return parametersMap.get(option);
   }
 
+  /**
+   * Replaces the parameter set instance of an option, e.g., with a specialized parameter set class.
+   * Use before an editing component is created; {@link #setEmbeddedParameters(ParameterSet)} only
+   * copies values into the existing instance.
+   */
+  public void replaceOptionParameters(@NotNull final EnumType option,
+      @NotNull final ParameterSet parameters) {
+    parametersMap.put(option, parameters);
+  }
+
   @Override
   public ParameterSet getEmbeddedParameters() {
     return getEmbeddedParameters(selectedValue);

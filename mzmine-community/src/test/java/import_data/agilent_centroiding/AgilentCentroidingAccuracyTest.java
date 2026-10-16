@@ -133,7 +133,7 @@ public class AgilentCentroidingAccuracyTest {
       }
     }
 
-    final FileIntensityMaxima maxima = FileIntensityMaxima.of(profileFrames.values());
+    final FileIntensityMaxima maxima = FileIntensityMaxima.of(profileFrames.values(), rawFile);
     for (final Map.Entry<Integer, SimpleFrame> e : profileFrames.entrySet()) {
       final List<TargetIndexEntry> frameEntries = byFrame.get(e.getKey());
       measurements.addAll(
@@ -142,9 +142,9 @@ public class AgilentCentroidingAccuracyTest {
       measurements.addAll(evaluateMobilogram(frameEntries, e.getValue(), maxima));
     }
     logger.info(("Evaluated %d targets in %d frames of %s (%d s), max intensity frame %.0f, "
-        + "mobility scan %.0f").formatted(entries.size(), byFrame.size(), rawFile.getName(),
-        (System.currentTimeMillis() - start) / 1000, maxima.frameMax(),
-        maxima.mobilityScanMax()));
+        + "mobility scan %.0f, abundance limit %.0f").formatted(entries.size(), byFrame.size(),
+        rawFile.getName(), (System.currentTimeMillis() - start) / 1000, maxima.frameMax(),
+        maxima.mobilityScanMax(), maxima.mobilityScanAbundanceLimit()));
     return measurements;
   }
 
@@ -176,6 +176,14 @@ public class AgilentCentroidingAccuracyTest {
           .getMassValues(profileFrame);
       final MassDetector scanDetector = config.create(SpectrumLevel.MOBILITY_SCAN, maxima);
       final Map<Integer, double[][]> scanCentroids = new HashMap<>();
+      if (config.wholeFrame()) {
+        // all mobility scans of the frame at once, like the import and the mass detection task
+        final List<double[][]> all = scanDetector.getMobilityScanMassValues(
+            profileFrame.getMobilityScans());
+        for (int i = 0; i < all.size(); i++) {
+          scanCentroids.put(i, all.get(i));
+        }
+      }
       for (final TargetIndexEntry entry : entries) {
         measurements.add(
             CentroidMeasurement.match(entry, SpectrumLevel.FRAME, config.name(), frameCentroids,

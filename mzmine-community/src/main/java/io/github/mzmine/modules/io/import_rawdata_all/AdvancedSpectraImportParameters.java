@@ -27,6 +27,7 @@ package io.github.mzmine.modules.io.import_rawdata_all;
 import com.google.common.collect.Range;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectors;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.AdaptiveLocalMaxImportParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.MassDetectorWizardOptions;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
@@ -48,14 +49,12 @@ public class AdvancedSpectraImportParameters extends SimpleParameterSet {
           MZmineCore.getConfiguration().getMZFormat()), false);
 
   public static final OptionalParameter<ModuleOptionsEnumComboParameter<MassDetectors>> msMassDetection = new OptionalParameter<>(
-      new ModuleOptionsEnumComboParameter<>("MS1 detector (Advanced)",
-          "Algorithm to use on MS1 scans for mass detection and its parameters",
-          MassDetectors.FACTOR_OF_LOWEST), false);
+      createDetectorCombo("MS1 detector (Advanced)",
+          "Algorithm to use on MS1 scans for mass detection and its parameters"), false);
 
   public static final OptionalParameter<ModuleOptionsEnumComboParameter<MassDetectors>> ms2MassDetection = new OptionalParameter<>(
-      new ModuleOptionsEnumComboParameter<>("MS2 detector (Advanced)",
-          "Algorithm to use on MS2 scans for mass detection and its parameters",
-          MassDetectors.FACTOR_OF_LOWEST), false);
+      createDetectorCombo("MS2 detector (Advanced)",
+          "Algorithm to use on MS2 scans for mass detection and its parameters"), false);
 
   public static final BooleanParameter denormalizeMSnScans = new BooleanParameter(
       "Denormalize fragment scans (traps)", """
@@ -67,6 +66,20 @@ public class AdvancedSpectraImportParameters extends SimpleParameterSet {
 
   public AdvancedSpectraImportParameters() {
     super(scanFilter, mzRange, msMassDetection, ms2MassDetection, denormalizeMSnScans);
+  }
+
+  /**
+   * Mass detector selection for the import. The import processors only see the spectral arrays, so
+   * the adaptive local maximum detector gets parameters without the saturation threshold options
+   * that need the raw data file.
+   */
+  private static @NotNull ModuleOptionsEnumComboParameter<MassDetectors> createDetectorCombo(
+      @NotNull final String name, @NotNull final String description) {
+    final ModuleOptionsEnumComboParameter<MassDetectors> combo = new ModuleOptionsEnumComboParameter<>(
+        name, description, MassDetectors.FACTOR_OF_LOWEST);
+    combo.replaceOptionParameters(MassDetectors.LOCAL_MAX_ADAPTIVE,
+        new AdaptiveLocalMaxImportParameters().cloneParameterSet());
+    return combo;
   }
 
   /**

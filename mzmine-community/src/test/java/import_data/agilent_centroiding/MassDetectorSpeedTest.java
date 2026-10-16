@@ -55,11 +55,17 @@ public class MassDetectorSpeedTest {
       {"MSV000088206", "M1_T46_357_2000_positive.d"}};
 
   /**
-   * @param threshold saturation threshold of the EMG branch for this dimension
+   * @param threshold   saturation threshold of the EMG branch for this dimension
+   * @param wholeFrames spectra are frames, their mobility scans are centroided together with
+   *                    {@link MassDetector#getMobilityScanMassValues(List)} (production path)
    */
   private record Workload(@NotNull String name, @NotNull List<? extends MassSpectrum> spectra,
-                          double threshold) {
+                          double threshold, boolean wholeFrames) {
 
+    Workload(@NotNull final String name, @NotNull final List<? extends MassSpectrum> spectra,
+        final double threshold) {
+      this(name, spectra, threshold, false);
+    }
   }
 
   @BeforeAll
@@ -82,7 +88,8 @@ public class MassDetectorSpeedTest {
       if (frames.isEmpty()) {
         continue;
       }
-      final FileIntensityMaxima maxima = FileIntensityMaxima.of(frames);
+      final FileIntensityMaxima maxima = FileIntensityMaxima.of(frames,
+          dataset.resolve(file[1]));
       final List<MassSpectrum> scans = new ArrayList<>();
       for (final SimpleFrame frame : frames) {
         for (int i = 0; i < frame.getNumberOfMobilityScans(); i++) {
@@ -93,7 +100,10 @@ public class MassDetectorSpeedTest {
       for (final Workload workload : List.of(
           new Workload(fileName + " frames", frames, SATURATION_FRACTION * maxima.frameMax()),
           new Workload(fileName + " mobility scans", scans,
-              SATURATION_FRACTION * maxima.mobilityScanMax()))) {
+              SATURATION_FRACTION * maxima.mobilityScanMax()),
+          new Workload(fileName + " mobility scans per frame (flank)", frames,
+              maxima.limitThreshold(SpectrumLevel.MOBILITY_SCAN,
+                  MassDetectorConfig.PRODUCTION_LIMIT_FRACTION), true))) {
         report.append(timeWorkload(workload));
         workloads++;
       }
@@ -126,7 +136,14 @@ public class MassDetectorSpeedTest {
         final MassDetector detector = factory.supplier().get();
         final long start = System.nanoTime();
         for (final MassSpectrum spectrum : workload.spectra()) {
-          sink += detector.getMassValues(spectrum)[0].length;
+          if (workload.wholeFrames()) {
+            for (final double[][] values : detector.getMobilityScanMassValues(
+                ((SimpleFrame) spectrum).getMobilityScans())) {
+              sink += values[0].length;
+            }
+          } else {
+            sink += detector.getMassValues(spectrum)[0].length;
+          }
         }
         final long elapsed = System.nanoTime() - start;
         if (round >= WARMUP_ROUNDS) {

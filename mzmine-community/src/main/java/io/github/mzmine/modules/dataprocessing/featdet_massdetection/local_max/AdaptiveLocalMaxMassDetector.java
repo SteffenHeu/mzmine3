@@ -26,21 +26,29 @@
 package io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max;
 
 import io.github.mzmine.datamodel.AbundanceMeasure;
+import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.MassSpectrum;
 import io.github.mzmine.datamodel.MassSpectrumType;
+import io.github.mzmine.datamodel.MobilityScan;
+import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.SimpleRange.SimpleIntegerRange;
+import io.github.mzmine.datamodel.features.rawfiletypes.MobilityScanAbundanceLimitType;
+import io.github.mzmine.datamodel.features.rawfiletypes.MobilityScanAbundanceLimits;
 import io.github.mzmine.datamodel.impl.SimpleMassSpectrum;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetector;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.MassDetectorPreprocessor;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.PreprocessedIntensitiesProvider;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.collections.IndexRange;
 import io.github.mzmine.util.maths.Weighting;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -84,6 +92,18 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
   // saturation fit window: the saturated core plus this many non-zero points on each flank
   private static final int SATURATION_FLANK_POINTS = 3;
   private static final int SATURATION_MIN_FIT_POINTS = 3;
+  /**
+   * Saturation threshold as fraction of the abundance limit (raw file metadata) or of the
+   * saturation plateau (auto). Benchmarked on Agilent 6560 data, isotope ratios distort from ~0.4-0.5
+   * x limit.
+   */
+  public static final double SATURATION_LIMIT_FRACTION = 0.5;
+  /**
+   * m/z tolerance to follow a saturated ion into the neighbouring mobility scans, see
+   * {@link MobilityFlankConsolidator}
+   */
+  // decision: absolute tolerance, compared with ppm based tolerances in the Agilent benchmark
+  public static final MZTolerance FLANK_TOLERANCE = new MZTolerance(0.01, 0);
 
   /**
    * Minimum peak length in points excluding zeros
@@ -98,6 +118,28 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
    * it get the EMG fit. {@link Double#POSITIVE_INFINITY} disables the saturation branch.
    */
   private final double saturationThreshold;
+
+  /**
+   * Source of the saturation threshold for mobility scans from the parameters, applied only in
+   * {@link #getMobilityScanMassValues(List)}, never to frames. Overrides
+   * {@link #saturationThreshold} for mobility scans unless off.
+   */
+  private final @NotNull SaturationThresholdValue mobilityScanSaturation;
+
+  /**
+   * Threshold of the spectrum currently being processed: {@link #saturationThreshold} or the
+   * resolved {@link #mobilityScanSaturation} during {@link #getMobilityScanMassValues(List)}.
+   */
+  // decision: mutable per-call state like spectrumBaseIntensity, the detector is not thread safe
+  private double currentSaturationThreshold;
+
+  /**
+   * Raw file and its auto-derived thresholds per ms level, see {@link SaturationPlateauEstimator}
+   */
+  private @Nullable RawDataFile autoThresholdFile;
+  private final @NotNull Map<Integer, Double> autoThresholds = new HashMap<>();
+  private boolean warnedMissingRawFile;
+  private boolean warnedMissingLimit;
 
   /**
    * Optional preprocessing of the intensities (e.g. smoothing) before maximum and edge detection.
@@ -139,6 +181,22 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
   public AdaptiveLocalMaxMassDetector(final double noiseLevel,
       final AbundanceMeasure intensityCalculation, final int minNonZeroDp,
       final @NotNull MassDetectorPreprocessor preprocessor, final double saturationThreshold) {
+    this(noiseLevel, intensityCalculation, minNonZeroDp, preprocessor, saturationThreshold,
+        SaturationThresholdValue.OFF);
+  }
+
+  /**
+   * @param saturationThreshold    raw intensity from which on peaks of all spectra are treated as
+   *                               saturated, {@link Double#POSITIVE_INFINITY} to disable
+   * @param mobilityScanSaturation saturation threshold source for mobility scans only, see
+   *                               {@link #getMobilityScanMassValues(List)}
+   */
+  public AdaptiveLocalMaxMassDetector(final double noiseLevel,
+      final AbundanceMeasure intensityCalculation, final int minNonZeroDp,
+      final @NotNull MassDetectorPreprocessor preprocessor, final double saturationThreshold,
+      final @NotNull SaturationThresholdValue mobilityScanSaturation) {
+    this.mobilityScanSaturation = mobilityScanSaturation;
+    this.currentSaturationThreshold = saturationThreshold;
     this.noiseLevel = noiseLevel;
     this.intensityCalculation = intensityCalculation;
     this.minNonZeroDp = minNonZeroDp;
@@ -192,16 +250,147 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
   @Override
   public MassDetector create(final ParameterSet params) {
     final LocalMaxSmoothingOptions smoothingOption = params.getValue(
-        LocalMaxMassDetectorParameters.smoothing);
+        AdaptiveLocalMaxMassDetectorParameters.smoothing);
     final ParameterSet smoothingParams = params.getEmbeddedParameterValue(
-        LocalMaxMassDetectorParameters.smoothing);
+        AdaptiveLocalMaxMassDetectorParameters.smoothing);
     final MassDetectorPreprocessor preprocessor = smoothingOption.createPreprocessor(
         smoothingParams);
 
     return new AdaptiveLocalMaxMassDetector(
-        params.getValue(LocalMaxMassDetectorParameters.noiseLevel),
-        params.getValue(LocalMaxMassDetectorParameters.intensityCalculation),
-        params.getValue(LocalMaxMassDetectorParameters.minNumberOfDp), preprocessor);
+        params.getValue(AdaptiveLocalMaxMassDetectorParameters.noiseLevel),
+        params.getValue(AdaptiveLocalMaxMassDetectorParameters.intensityCalculation),
+        params.getValue(AdaptiveLocalMaxMassDetectorParameters.minNumberOfDp), preprocessor,
+        Double.POSITIVE_INFINITY,
+        params.getValue(AdaptiveLocalMaxMassDetectorParameters.saturationThreshold));
+  }
+
+  /**
+   * Applies the saturation threshold of the parameters (manual, raw file metadata or auto) to the
+   * mobility scans of one frame. Frames and other spectra use {@link #getMassValues(MassSpectrum)}
+   * without it.
+   */
+  @Override
+  public @NotNull List<double[][]> getMobilityScanMassValues(
+      @NotNull final List<? extends MassSpectrum> mobilityScans) {
+    final double threshold = resolveMobilityScanThreshold(mobilityScans);
+    currentSaturationThreshold = threshold;
+    try {
+      final List<double[][]> values = new ArrayList<>(mobilityScans.size());
+      if (Double.isInfinite(threshold)) {
+        for (final MassSpectrum mobilityScan : mobilityScans) {
+          values.add(getMassValues(mobilityScan));
+        }
+        return values;
+      }
+
+      // saturated centroids (EMG mode) are corrected with the unsaturated flanks of the same ion
+      final List<double[]> mzs = new ArrayList<>(mobilityScans.size());
+      final List<double[]> heights = new ArrayList<>(mobilityScans.size());
+      for (final MassSpectrum mobilityScan : mobilityScans) {
+        final List<LocalMaxPeak> peaks = new ArrayList<>();
+        final double[][] scanValues = centroid(mobilityScan, peaks);
+        values.add(scanValues);
+        mzs.add(scanValues[0]);
+        heights.add(peaks.stream().mapToDouble(LocalMaxPeak::height).toArray());
+      }
+      final List<double[]> corrected = MobilityFlankConsolidator.consolidate(mzs, heights,
+          threshold, FLANK_TOLERANCE);
+      for (int i = 0; i < corrected.size(); i++) {
+        if (corrected.get(i) != mzs.get(i)) {
+          values.set(i, sortByMz(corrected.get(i), values.get(i)[1]));
+        }
+      }
+      return values;
+    } finally {
+      currentSaturationThreshold = saturationThreshold;
+    }
+  }
+
+  /**
+   * @return [mzs, intensities] sorted by m/z, the input arrays if already sorted
+   */
+  private static double[][] sortByMz(final double[] mzs, final double[] intensities) {
+    if (MobilityFlankConsolidator.isSorted(mzs)) {
+      return new double[][]{mzs, intensities};
+    }
+    final Integer[] order = new Integer[mzs.length];
+    for (int i = 0; i < order.length; i++) {
+      order[i] = i;
+    }
+    Arrays.sort(order, (a, b) -> Double.compare(mzs[a], mzs[b]));
+    final double[] sortedMzs = new double[mzs.length];
+    final double[] sortedIntensities = new double[mzs.length];
+    for (int i = 0; i < order.length; i++) {
+      sortedMzs[i] = mzs[order[i]];
+      sortedIntensities[i] = intensities[order[i]];
+    }
+    return new double[][]{sortedMzs, sortedIntensities};
+  }
+
+  /**
+   * @return the saturation threshold for these mobility scans of one frame
+   */
+  private double resolveMobilityScanThreshold(
+      @NotNull final List<? extends MassSpectrum> mobilityScans) {
+    final SaturationThresholdOption option = mobilityScanSaturation.option();
+    if (option == SaturationThresholdOption.OFF || mobilityScans.isEmpty()) {
+      return saturationThreshold;
+    }
+    if (option == SaturationThresholdOption.MANUAL) {
+      return mobilityScanSaturation.manual() > 0 ? mobilityScanSaturation.manual()
+          : Double.POSITIVE_INFINITY;
+    }
+
+    // metadata and auto need the raw file, the import processors only pass arrays
+    if (!(mobilityScans.getFirst() instanceof MobilityScan first)
+        || !(first.getDataFile() instanceof IMSRawDataFile file)) {
+      if (!warnedMissingRawFile) {
+        warnedMissingRawFile = true;
+        logger.warning(
+            "Saturation threshold option %s needs the raw data file, saturation handling is off".formatted(
+                option));
+      }
+      return Double.POSITIVE_INFINITY;
+    }
+    final int msLevel = first.getFrame().getMSLevel();
+
+    return switch (option) {
+      case OFF, MANUAL -> throw new IllegalStateException("Handled above");
+      case RAW_FILE_METADATA -> {
+        final MobilityScanAbundanceLimits limits = file.getFileMetadata()
+            .get(MobilityScanAbundanceLimitType.class);
+        final double limit = limits == null ? Double.NaN : limits.forMsLevel(msLevel);
+        if (Double.isNaN(limit)) {
+          if (!warnedMissingLimit) {
+            warnedMissingLimit = true;
+            logger.warning(("No mobility scan abundance limit in the metadata of %s for MS%d, "
+                + "saturation handling is off").formatted(file.getName(), msLevel));
+          }
+          yield Double.POSITIVE_INFINITY;
+        }
+        yield SATURATION_LIMIT_FRACTION * limit;
+      }
+      case AUTO -> autoThreshold(file, msLevel);
+    };
+  }
+
+  /**
+   * @return {@link #SATURATION_LIMIT_FRACTION} of the saturation plateau of the file or infinity
+   * if the file has no plateau, cached per raw file and ms level
+   */
+  private double autoThreshold(@NotNull final IMSRawDataFile file, final int msLevel) {
+    if (autoThresholdFile != file) {
+      autoThresholdFile = file;
+      autoThresholds.clear();
+    }
+    return autoThresholds.computeIfAbsent(msLevel, level -> {
+      final double plateau = SaturationPlateauEstimator.estimatePlateau(file, level);
+      final double threshold = Double.isNaN(plateau) ? Double.POSITIVE_INFINITY
+          : SATURATION_LIMIT_FRACTION * plateau;
+      logger.info("Auto saturation threshold of %s MS%d mobility scans: %.0f (plateau %.0f)".formatted(
+          file.getName(), level, threshold, plateau));
+      return threshold;
+    });
   }
 
   @Override
@@ -211,6 +400,15 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
 
   @Override
   public double[][] getMassValues(final MassSpectrum spectrum) {
+    return centroid(spectrum, null);
+  }
+
+  /**
+   * @param peakSink receives one peak per centroid in the same order (apex height for the
+   *                 saturation handling), or null
+   */
+  private double[][] centroid(final MassSpectrum spectrum,
+      @Nullable final List<LocalMaxPeak> peakSink) {
     final PreparedSpectrum prepared = prepareSpectrum(spectrum);
     if (prepared == null) {
       return new double[2][0];
@@ -221,7 +419,7 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
 
     for (final IndexRange range : prepared.ranges()) {
       findAndCentroidPeaks(prepared.mzs(), prepared.detectIntensities(), prepared.origIntensities(),
-          range, prepared.absMinIntensity(), resultMzs, resultIntensities, null);
+          range, prepared.absMinIntensity(), resultMzs, resultIntensities, peakSink);
     }
 
     final double[][] result = new double[2][];
@@ -545,7 +743,7 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
       final double weightedCentroidMz) {
 
     // 1. detector saturation -> mode of an EMG fitted to the saturated core and the flanks
-    if (maxIntensity >= saturationThreshold) {
+    if (maxIntensity >= currentSaturationThreshold) {
       final double saturated = saturatedEmgMode(mzs, intensities, startIdx, endIdx, peakMaxIdx,
           maxIntensity);
       if (!Double.isNaN(saturated)) {
@@ -589,7 +787,7 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
     int coreStart = -1;
     int coreEnd = -1;
     for (int i = startIdx; i < endIdx; i++) {
-      if (intensities[i] >= saturationThreshold) {
+      if (intensities[i] >= currentSaturationThreshold) {
         if (coreStart < 0) {
           coreStart = i;
         }
@@ -626,7 +824,7 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
       }
       fitMzs.add(mzs[i]);
       fitIntensities.add(intensities[i]);
-      if (intensities[i] >= saturationThreshold) {
+      if (intensities[i] >= currentSaturationThreshold) {
         coreMzSum += mzs[i];
         core++;
       } else if (i < peakMaxIdx) {
@@ -716,7 +914,7 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
 
   @Override
   public @Nullable Class<? extends ParameterSet> getParameterSetClass() {
-    return LocalMaxMassDetectorParameters.class;
+    return AdaptiveLocalMaxMassDetectorParameters.class;
   }
 
   @Override

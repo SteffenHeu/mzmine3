@@ -44,6 +44,7 @@ import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.RawDataFileUtils;
 import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -109,6 +110,8 @@ public class AgilentImportTask extends AbstractTask implements RawDataImportTask
         processor)) {
 
       dataFile = da.createDataFile();
+      dataFile.setStartTimeStamp(da.getAcqDate());
+      da.applyToFileMetadata(dataFile.getFileMetadata());
       final boolean readScans = da.isIms() || da.hasMsScans();
       totalItems = !readScans ? 0 : (da.isIms() ? da.getFrameCount() : da.getScanCount());
 
@@ -168,6 +171,8 @@ public class AgilentImportTask extends AbstractTask implements RawDataImportTask
 
       dataFile.getAppliedMethods()
           .add(new SimpleFeatureListAppliedMethod(module, parameters, getModuleCallDate()));
+      // acquisition m/z + RT range and file format, after all scans were added
+      RawDataFileUtils.addAdditionalFileMetadata(dataFile);
 
       if (isCanceled()) {
         return;

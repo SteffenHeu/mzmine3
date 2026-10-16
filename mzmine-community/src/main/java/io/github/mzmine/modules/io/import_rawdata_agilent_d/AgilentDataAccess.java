@@ -32,6 +32,20 @@ import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.MobilityType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.featuredata.OtherFeatureUtils;
+import io.github.mzmine.datamodel.features.ModularDataModel;
+import io.github.mzmine.datamodel.features.rawfiletypes.AcquisitionSoftwareType;
+import io.github.mzmine.datamodel.features.rawfiletypes.AcquisitionSoftwareVersionType;
+import io.github.mzmine.datamodel.features.rawfiletypes.InstrumentModelType;
+import io.github.mzmine.datamodel.features.rawfiletypes.InstrumentSerialNumberType;
+import io.github.mzmine.datamodel.features.rawfiletypes.InstrumentVendorType;
+import io.github.mzmine.datamodel.features.rawfiletypes.IonSourcesType;
+import io.github.mzmine.datamodel.features.rawfiletypes.MassAnalyzersType;
+import io.github.mzmine.datamodel.features.rawfiletypes.OperatorNameType;
+import io.github.mzmine.datamodel.features.rawfiletypes.SampleDescriptionType;
+import io.github.mzmine.datamodel.features.rawfiletypes.SampleNameType;
+import io.github.mzmine.datamodel.features.types.abstr.StringListType;
+import io.github.mzmine.datamodel.features.types.abstr.StringType;
+import io.github.mzmine.datamodel.features.types.annotations.AcquisitionMethodType;
 import io.github.mzmine.datamodel.features.types.otherdectectors.ChromatogramTypeType;
 import io.github.mzmine.datamodel.features.types.otherdectectors.WavelengthType;
 import io.github.mzmine.datamodel.impl.BuildingMobilityScan;
@@ -55,8 +69,10 @@ import io.github.mzmine.gui.preferences.AgilentCentroidingOption;
 import io.github.mzmine.gui.preferences.AgilentImportOptions;
 import io.github.mzmine.gui.preferences.VendorImportParameters;
 import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithComboInputValue;
+import io.github.mzmine.datamodel.features.rawfiletypes.MobilityScanAbundanceLimitType;
+import io.github.mzmine.datamodel.features.rawfiletypes.MobilityScanAbundanceLimits;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.AdaptiveLocalMaxMassDetector;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxGaussianModule;
-import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxMassDetector;
 import io.github.mzmine.modules.dataprocessing.id_ccscalibration.CCSCalibration;
 import io.github.mzmine.modules.dataprocessing.id_ccscalibration.DriftTubeCCSCalibration;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.ScanImportProcessorConfig;
@@ -67,12 +83,15 @@ import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.project.impl.IMSRawDataFileImpl;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.date.DateTimeUtils;
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.DoubleUnaryOperator;
 import java.util.logging.Logger;
@@ -107,11 +126,22 @@ public class AgilentDataAccess implements AutoCloseable {
   /**
    * if import option is {@link AgilentImportOptions#AGILENT_READER_AUTO_CENTROID} and
    * {@link AgilentDataAccess#requestCentroid}, centroiding will be applied using the
-   * {@code imsCentroider}
+   * {@code frameCentroider} and the {@link #mobilityScanCentroiders}
    */
   private final AgilentImportOptions importOption;
-  private final LocalMaxMassDetector imsCentroider = new LocalMaxMassDetector(0,
+  // decision: adaptive local maximum (benchmarked on Agilent 6560 IMS data), same smoothing as the
+  // previous local maximum centroider
+  /**
+   * Centroids frames (total frame spectra) and non-IMS scans. No saturation handling, the abundance
+   * limit only applies to mobility scans.
+   */
+  private final AdaptiveLocalMaxMassDetector frameCentroider = new AdaptiveLocalMaxMassDetector(0,
       AbundanceMeasure.Height, 3, new LocalMaxGaussianModule(7));
+  /**
+   * Centroids mobility scans per ms level, with the saturation threshold derived from the mobility
+   * scan abundance limit of the first frame of this ms level.
+   */
+  private final Map<Integer, AdaptiveLocalMaxMassDetector> mobilityScanCentroiders = new HashMap<>();
 
   // cached "open" response
   private final boolean isIms;
@@ -124,6 +154,8 @@ public class AgilentDataAccess implements AutoCloseable {
   private final double beta;
   private final boolean hasMrm;
   private final boolean hasMsScans;
+  // cached "fileMetadata" response
+  private @Nullable JsonNode fileMetadata;
 
   public AgilentDataAccess(@NotNull File rawFile, @NotNull VendorImportParameters vendorParam,
       @Nullable MemoryMapStorage storage, @Nullable ScanImportProcessorConfig processor) {
@@ -204,6 +236,88 @@ public class AgilentDataAccess implements AutoCloseable {
   }
 
   /**
+   * @return the file level metadata from the bridge, requested once and cached
+   */
+  private @NotNull JsonNode fileMetadata() {
+    if (fileMetadata == null) {
+      fileMetadata = client.send(Map.of("op", "fileMetadata"));
+    }
+    return fileMetadata;
+  }
+
+  /**
+   * @return the acquisition date and time, null if not available. Recent files store UTC, which is
+   * converted by {@link DateTimeUtils#parse(String)}, old files an unzoned local time.
+   */
+  public @Nullable LocalDateTime getAcqDate() {
+    final String date = text(fileMetadata(), "acquisitionDateTime");
+    if (date == null) {
+      return null;
+    }
+    try {
+      return DateTimeUtils.parse(date);
+    } catch (RuntimeException e) {
+      logger.fine("Cannot parse acquisition date '%s' of file %s".formatted(date,
+          rawFile.getName()));
+      return null;
+    }
+  }
+
+  /**
+   * Sets the file level metadata of the bridge (sample, operator, instrument, acquisition) to the
+   * raw file metadata. Mirrors {@code MassLynxDataAccess#applyToFileMetadata}.
+   */
+  public void applyToFileMetadata(@NotNull final ModularDataModel metadata) {
+    final JsonNode node = fileMetadata();
+    // decision: the sample ID is the sample name if no name was entered
+    final String sampleName = text(node, "sampleName");
+    setText(metadata, SampleNameType.class,
+        sampleName != null ? sampleName : text(node, "sampleId"));
+    setText(metadata, SampleDescriptionType.class, text(node, "sampleDescription"));
+    setText(metadata, OperatorNameType.class, text(node, "operatorName"));
+    setText(metadata, InstrumentModelType.class, text(node, "instrumentModel"));
+    setText(metadata, InstrumentSerialNumberType.class, text(node, "instrumentSerialNumber"));
+    setText(metadata, InstrumentVendorType.class, text(node, "instrumentVendor"));
+    setText(metadata, AcquisitionSoftwareType.class, text(node, "acquisitionSoftware"));
+    setText(metadata, AcquisitionSoftwareVersionType.class,
+        text(node, "acquisitionSoftwareVersion"));
+    setText(metadata, AcquisitionMethodType.class, text(node, "acquisitionMethod"));
+    setList(metadata, IonSourcesType.class, node.get("ionSources"));
+    setList(metadata, MassAnalyzersType.class, node.get("massAnalyzers"));
+  }
+
+  private static @Nullable String text(@NotNull JsonNode node, @NotNull String field) {
+    final JsonNode value = node.get(field);
+    if (value == null || !value.isTextual() || value.asText().isBlank()) {
+      return null;
+    }
+    return value.asText().strip();
+  }
+
+  private static void setText(@NotNull ModularDataModel metadata,
+      @NotNull Class<? extends StringType> type, @Nullable String value) {
+    if (value != null) {
+      metadata.set(type, value);
+    }
+  }
+
+  private static void setList(@NotNull ModularDataModel metadata,
+      @NotNull Class<? extends StringListType> type, @Nullable JsonNode array) {
+    if (array == null || !array.isArray() || array.isEmpty()) {
+      return;
+    }
+    final List<String> values = new ArrayList<>(array.size());
+    for (final JsonNode value : array) {
+      if (value.isTextual() && !value.asText().isBlank()) {
+        values.add(value.asText().strip());
+      }
+    }
+    if (!values.isEmpty()) {
+      metadata.set(type, List.copyOf(values));
+    }
+  }
+
+  /**
    * Reads one IMS frame: the Total Frame Spectrum becomes the {@link SimpleFrame}, the per-bin
    * mobility scans its {@link BuildingMobilityScan}s. Returns null if filtered out by the scan
    * selection.
@@ -215,6 +329,10 @@ public class AgilentDataAccess implements AutoCloseable {
     final PolarityType polarity = parsePolarity(mtd.path("polarity").asText(null));
     // MS level comes from the frame's fragmentation class (All-Ions high-energy -> MS2)
     final int msLevel = mtd.path("msLevel").asInt(1);
+    // TOF transients summed per mobility scan and the max possible abundance of a mobility scan
+    // point (detector saturation level, not for the TFS); 0 / NaN when not stored
+    final int mobilityScanTransients = mtd.path("mobilityScanTransients").asInt(0);
+    final double mobilityScanAbundLimit = abundanceLimit(mtd, "mobilityScanAbundLimit");
 
     if (filteredOut(
         new SimpleBuildingScan(0, msLevel, polarity, MassSpectrumType.PROFILE, rt, 0, 0))) {
@@ -229,11 +347,12 @@ public class AgilentDataAccess implements AutoCloseable {
     double[] mzs = client.readBlob(numPoints);
     double[] intensities = client.readBlob(numPoints);
 
-    if (!centroided && requestCentroid
-        && importOption == AgilentImportOptions.AGILENT_READER_AUTO_CENTROID) {
+    final boolean mzmineCentroiding =
+        requestCentroid && importOption == AgilentImportOptions.AGILENT_READER_AUTO_CENTROID;
+    if (!centroided && mzmineCentroiding) {
       final SimpleMassSpectrum preCentroid = new SimpleMassSpectrum(mzs, intensities,
           MassSpectrumType.PROFILE);
-      final double[][] centroidedSpectrum = imsCentroider.getMassValues(preCentroid);
+      final double[][] centroidedSpectrum = frameCentroider.getMassValues(preCentroid);
       mzs = centroidedSpectrum[0];
       intensities = centroidedSpectrum[1];
       centroided = true;
@@ -253,29 +372,54 @@ public class AgilentDataAccess implements AutoCloseable {
       frame.addMassList(new ScanPointerMassList(frame));
     }
 
+    // the limit of the first frame per ms level is stored in the raw file metadata
+    final double fileAbundLimit = updateMobilityScanAbundanceLimit(file, msLevel,
+        mobilityScanAbundLimit);
+
     // --- mobility scans for this frame --- mobility scans are always profile if they come from the API.
-    final MassSpectrumType mobType = spectrumType(
-        requestCentroid && importOption == AgilentImportOptions.AGILENT_READER_AUTO_CENTROID,
-        msLevel);
+    final MassSpectrumType mobType = spectrumType(mzmineCentroiding, msLevel);
     final JsonNode mob = client.send(Map.of("op", "mobilityScans", "frameId", frameId));
     final int numMobScans = mob.path("numScans").asInt(0);
     final JsonNode pointsPerScan = mob.get("pointsPerScan");
-    final List<BuildingMobilityScan> mobScans = new ArrayList<>(numMobScans);
+    final List<SimpleSpectralArrays> mobilityScanData = new ArrayList<>(numMobScans);
+    double maxMobilityScanIntensity = 0;
     for (int i = 0; i < numMobScans; i++) {
       final int pts = pointsPerScan.get(i).asInt(0);
-      double[] mobMz = client.readBlob(pts);
-      double[] mobIntensity = client.readBlob(pts);
-
-      if (requestCentroid && importOption == AgilentImportOptions.AGILENT_READER_AUTO_CENTROID) {
-        final SimpleMassSpectrum preCentroid = new SimpleMassSpectrum(mobMz, mobIntensity,
-            MassSpectrumType.PROFILE);
-        final double[][] centroidedSpectrum = imsCentroider.getMassValues(preCentroid);
-        mobMz = centroidedSpectrum[0];
-        mobIntensity = centroidedSpectrum[1];
+      final double[] mobMz = client.readBlob(pts);
+      final double[] mobIntensity = client.readBlob(pts);
+      for (final double intensity : mobIntensity) {
+        maxMobilityScanIntensity = Math.max(maxMobilityScanIntensity, intensity);
       }
+      mobilityScanData.add(new SimpleSpectralArrays(mobMz, mobIntensity));
+    }
 
-      final var mobMeta = new SimpleBuildingScan(0, msLevel, polarity, mobType, rt, 0, 0);
-      final SimpleSpectralArrays data = applyProcessor(mobMeta, mobMz, mobIntensity);
+    if (!Double.isNaN(fileAbundLimit) && maxMobilityScanIntensity > fileAbundLimit) {
+      // TODO separate PR: warn and disable the saturation handling for this file. The metadata does
+      //  not match the data, e.g., PNNL PreProcessor output keeps the transients and abundance
+      //  limit of the raw file although the intensities were summed.
+    }
+
+    if (mzmineCentroiding) {
+      final List<SimpleMassSpectrum> profiles = new ArrayList<>(numMobScans);
+      for (final SimpleSpectralArrays data : mobilityScanData) {
+        profiles.add(
+            new SimpleMassSpectrum(data.mzs(), data.intensities(), MassSpectrumType.PROFILE));
+      }
+      // all mobility scans of the frame at once
+      final List<double[][]> centroidedScans = mobilityScanCentroider(msLevel,
+          fileAbundLimit).getMobilityScanMassValues(profiles);
+      mobilityScanData.clear();
+      for (final double[][] values : centroidedScans) {
+        mobilityScanData.add(new SimpleSpectralArrays(values[0], values[1]));
+      }
+    }
+
+    final var mobMeta = new SimpleBuildingScan(0, msLevel, polarity, mobType, rt, 0, 0);
+    final List<SimpleSpectralArrays> processed = applyMobilityScanProcessor(mobMeta,
+        mobilityScanData);
+    final List<BuildingMobilityScan> mobScans = new ArrayList<>(processed.size());
+    for (int i = 0; i < processed.size(); i++) {
+      final SimpleSpectralArrays data = processed.get(i);
       mobScans.add(new BuildingMobilityScan(i, data.mzs(), data.intensities(), mobType));
     }
 
@@ -300,6 +444,9 @@ public class AgilentDataAccess implements AutoCloseable {
     final float rt = (float) mtd.path("rtMin").asDouble(0);
     final PolarityType polarity = parsePolarity(mtd.path("polarity").asText(null));
     final double precursorMz = mtd.path("precursorMz").asDouble(0);
+    // max possible abundance of a scan point (detector saturation level); NaN when not stored.
+    // MHDAC has no transient count for non-IMS files.
+    final double abundLimit = abundanceLimit(mtd, "abundLimit");
 
     if (filteredOut(new SimpleBuildingScan(0, msLevel, polarity, MassSpectrumType.PROFILE, rt,
         (float) precursorMz, 0))) {
@@ -558,6 +705,64 @@ public class AgilentDataAccess implements AutoCloseable {
     return mz > 0 && width > 0 ? Range.closed(mz - width / 2, mz + width / 2) : null;
   }
 
+  /**
+   * Stores the mobility scan abundance limit of this ms level in the raw file metadata if it is not
+   * set yet.
+   *
+   * @return the limit of the file for this ms level (from the first frame of the ms level), NaN if
+   * unknown
+   */
+  private static double updateMobilityScanAbundanceLimit(@NotNull final IMSRawDataFileImpl file,
+      final int msLevel, final double frameLimit) {
+    final MobilityScanAbundanceLimits limits = Objects.requireNonNullElse(
+        file.getFileMetadata().get(MobilityScanAbundanceLimitType.class),
+        MobilityScanAbundanceLimits.UNKNOWN);
+    final double fileLimit = limits.forMsLevel(msLevel);
+    if (Double.isNaN(fileLimit)) {
+      if (!Double.isNaN(frameLimit)) {
+        file.getFileMetadata().set(MobilityScanAbundanceLimitType.class,
+            limits.withMsLevel(msLevel, frameLimit));
+      }
+      return frameLimit;
+    }
+    if (!Double.isNaN(frameLimit) && Double.compare(fileLimit, frameLimit) != 0) {
+      // TODO separate PR: warn that the abundance limit changes within the frames of this ms level,
+      //  the limit (and saturation threshold) of the first frame is used.
+    }
+    return fileLimit;
+  }
+
+  /**
+   * @param abundanceLimit mobility scan abundance limit of the file for this ms level, NaN if
+   *                       unknown
+   * @return the centroider of this ms level, with the saturation threshold derived from the
+   * abundance limit of the first frame of this ms level
+   */
+  private @NotNull AdaptiveLocalMaxMassDetector mobilityScanCentroider(final int msLevel,
+      final double abundanceLimit) {
+    return mobilityScanCentroiders.computeIfAbsent(msLevel, level -> {
+      final double threshold = Double.isNaN(abundanceLimit) ? Double.POSITIVE_INFINITY
+          : AdaptiveLocalMaxMassDetector.SATURATION_LIMIT_FRACTION * abundanceLimit;
+      logger.finest("Mobility scan saturation threshold of %s MS%d: %.0f".formatted(
+          rawFile.getName(), level, threshold));
+      return new AdaptiveLocalMaxMassDetector(0, AbundanceMeasure.Height, 3,
+          new LocalMaxGaussianModule(7), threshold);
+    });
+  }
+
+  /**
+   * Processes all mobility scans of a frame together, see
+   * {@link io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.MsProcessor#processMobilityScans}.
+   */
+  private @NotNull List<SimpleSpectralArrays> applyMobilityScanProcessor(
+      @NotNull final SimpleBuildingScan meta,
+      @NotNull final List<SimpleSpectralArrays> mobilityScans) {
+    if (processor == null || !processor.hasProcessors()) {
+      return mobilityScans;
+    }
+    return processor.processor().processMobilityScans(meta, mobilityScans);
+  }
+
   private SimpleSpectralArrays applyProcessor(@NotNull SimpleBuildingScan meta, double[] mzs,
       double[] intensities) {
     final SimpleSpectralArrays arrays = new SimpleSpectralArrays(mzs, intensities);
@@ -591,6 +796,15 @@ public class AgilentDataAccess implements AutoCloseable {
 
   private static Range<Double> mzRange(double[] mzs) {
     return mzs.length > 0 ? Range.closed(mzs[0], mzs[mzs.length - 1]) : Range.closed(0d, 0d);
+  }
+
+  /**
+   * Abundance limit from the bridge mtd. The SDK reports 0 or NaN when the file does not store it,
+   * both mapped to NaN.
+   */
+  private static double abundanceLimit(@NotNull JsonNode mtd, @NotNull String field) {
+    final double limit = mtd.path(field).asDouble(Double.NaN);
+    return limit > 0 ? limit : Double.NaN;
   }
 
   private static PolarityType parsePolarity(@Nullable String polarity) {
