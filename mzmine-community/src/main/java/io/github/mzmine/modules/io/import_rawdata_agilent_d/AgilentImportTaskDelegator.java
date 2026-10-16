@@ -42,15 +42,18 @@ import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
 import java.time.Instant;
 import java.util.List;
+import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Decides whether an Agilent {@code .d} file is imported via the native AgilentBridge or via
- * MSConvert, based on {@link MZminePreferences#agilentImportChoice}, and launches the matching
- * task. Modeled on {@code MassLynxImportTaskDelegator}.
+ * Decides whether an Agilent {@code .d} file is imported via the native
+ * AgilentBridge or MSConvert, based on {@link MZminePreferences#agilentImportChoice}, and launches
+ * the matching task. Modeled on {@code MassLynxImportTaskDelegator}.
  */
 public class AgilentImportTaskDelegator extends AbstractSimpleTask implements RawDataImportTask {
+
+  private static final Logger logger = Logger.getLogger(AgilentImportTaskDelegator.class.getName());
 
   private final RawDataImportTask actualTask;
 
@@ -63,10 +66,25 @@ public class AgilentImportTaskDelegator extends AbstractSimpleTask implements Ra
 
     final AgilentImportOptions importChoice = ConfigService.getPreference(
         MZminePreferences.agilentImportChoice).getSelectedOption();
-    actualTask = importChoice == AgilentImportOptions.MSCONVERT ? new MSConvertImportTask(storage,
-        moduleCallDate, file, processorConfig, project, moduleClass, parameters)
-        : new AgilentImportTask(storage, moduleCallDate, file, moduleClass, parameters, project,
-            processorConfig);
+    actualTask = switch (importChoice) {
+      case MSCONVERT -> new MSConvertImportTask(storage, moduleCallDate, file, processorConfig,
+          project, moduleClass, parameters);
+      case CUSTOM -> {
+        final AgilentReaderTaskFactory factory = AgilentReaderTaskFactory.registered();
+        if (factory != null) {
+          yield factory.create(storage, moduleCallDate, file, moduleClass, parameters, project,
+              processorConfig);
+        }
+        logger.warning(
+            "The mzio Agilent reader is not available in this mzmine edition, using the native AgilentReader for "
+                + file.getName());
+        yield new AgilentImportTask(storage, moduleCallDate, file, moduleClass, parameters,
+            project, processorConfig);
+      }
+      case AGILENT_READER, AGILENT_READER_AUTO_CENTROID ->
+          new AgilentImportTask(storage, moduleCallDate, file, moduleClass, parameters, project,
+              processorConfig);
+    };
 
     // cancel the underlying task if this task is canceled
     this.addTaskStatusListener((_, newStatus, _) -> actualTask.setStatus(newStatus));

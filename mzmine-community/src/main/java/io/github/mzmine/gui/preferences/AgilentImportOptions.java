@@ -26,6 +26,7 @@
 package io.github.mzmine.gui.preferences;
 
 import io.github.mzmine.datamodel.utils.UniqueIdSupplier;
+import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.AdaptiveLocalMaxMassDetector;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxMassDetector;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxSmoothingOptions;
 import java.util.Arrays;
@@ -33,15 +34,16 @@ import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Selects how Agilent {@code .d} files are imported: via the native AgilentReader subprocess or by
- * conversion through MSConvert.
+ * Selects how Agilent {@code .d} files are imported: via the platform independent mzio reader, the
+ * native AgilentReader subprocess or by conversion through MSConvert.
  */
 public enum AgilentImportOptions implements UniqueIdSupplier {
-  AGILENT_READER, AGILENT_READER_AUTO_CENTROID, MSCONVERT;
+  CUSTOM, AGILENT_READER, AGILENT_READER_AUTO_CENTROID, MSCONVERT;
 
   @Override
   public @NotNull String getUniqueID() {
     return switch (this) {
+      case CUSTOM -> "custom_reader";
       case AGILENT_READER -> "agilent_reader";
       case AGILENT_READER_AUTO_CENTROID -> "agilent_reader_auto_centroid_ims";
       case MSCONVERT -> "msconvert";
@@ -51,6 +53,7 @@ public enum AgilentImportOptions implements UniqueIdSupplier {
   @Override
   public String toString() {
     return switch (this) {
+      case CUSTOM -> "Native (custom reader, all platforms)";
       case AGILENT_READER -> "Native (AgilentReader)";
       case AGILENT_READER_AUTO_CENTROID -> "Native (AgilentReader, auto-centroid IMS)";
       case MSCONVERT -> "MSConvert";
@@ -58,11 +61,25 @@ public enum AgilentImportOptions implements UniqueIdSupplier {
   }
 
   public boolean isNative() {
-    return this == AGILENT_READER || this == AGILENT_READER_AUTO_CENTROID;
+    return this == CUSTOM || this == AGILENT_READER || this == AGILENT_READER_AUTO_CENTROID;
+  }
+
+  /**
+   * @return true if mzmine centroids the mobility scans (and profile frames) of IMS files when
+   * "vendor centroiding" is enabled
+   */
+  public boolean isMzmineImsCentroiding() {
+    return this == CUSTOM || this == AGILENT_READER_AUTO_CENTROID;
   }
 
   public String getDescriptions() {
     return switch (this) {
+      case CUSTOM -> """
+          Import Agilent .d files with the custom reader, which reads the files directly on all
+          platforms (no vendor library). Falls back to the native AgilentReader if unavailable
+          otherwise. If "vendor centroiding" is enabled, the stored centroids or the profile data
+          centroided by the %s are used; IMS mobility scans are centroided together per frame
+          (mobility-aware saturation handling).""".formatted(AdaptiveLocalMaxMassDetector.NAME);
       case AGILENT_READER ->
           "Import Agilent .d files using the native Agilent reader (Windows only)";
       case AGILENT_READER_AUTO_CENTROID -> """

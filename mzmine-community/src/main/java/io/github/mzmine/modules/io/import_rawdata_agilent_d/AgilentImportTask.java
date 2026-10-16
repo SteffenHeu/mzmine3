@@ -56,9 +56,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Imports a single Agilent {@code .d} file (regular MS or ion mobility) by talking to the
- * AgilentBridge subprocess through {@link AgilentDataAccess}. Modeled on
- * {@code MassLynxImportTask}. One task imports exactly one file.
+ * Imports a single Agilent {@code .d} file (regular MS or ion mobility) through an
+ * {@link AgilentRawDataAccess}: by default the AgilentBridge subprocess ({@link AgilentDataAccess}),
+ * the mzio reader in mzmine pro. Modeled on {@code MassLynxImportTask}. One task imports exactly
+ * one file.
  */
 public class AgilentImportTask extends AbstractTask implements RawDataImportTask {
 
@@ -73,6 +74,8 @@ public class AgilentImportTask extends AbstractTask implements RawDataImportTask
   private final MZmineProject project;
   @Nullable
   private final ScanImportProcessorConfig processor;
+  @NotNull
+  private final AgilentRawDataAccessFactory dataAccessFactory;
 
   private long totalItems = 0;
   private long loadedItems = 0;
@@ -81,12 +84,24 @@ public class AgilentImportTask extends AbstractTask implements RawDataImportTask
   public AgilentImportTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
       File rawFile, @NotNull Class<? extends MZmineModule> module, @NotNull ParameterSet parameters,
       @NotNull MZmineProject project, @Nullable ScanImportProcessorConfig processor) {
+    this(storage, moduleCallDate, rawFile, module, parameters, project, processor,
+        AgilentDataAccess::new);
+  }
+
+  /**
+   * @param dataAccessFactory opens the file, e.g. with the native AgilentReader or the mzio reader
+   */
+  public AgilentImportTask(@Nullable MemoryMapStorage storage, @NotNull Instant moduleCallDate,
+      File rawFile, @NotNull Class<? extends MZmineModule> module, @NotNull ParameterSet parameters,
+      @NotNull MZmineProject project, @Nullable ScanImportProcessorConfig processor,
+      @NotNull AgilentRawDataAccessFactory dataAccessFactory) {
     super(storage, moduleCallDate);
     this.rawFile = rawFile;
     this.module = module;
     this.parameters = parameters;
     this.project = project;
     this.processor = processor;
+    this.dataAccessFactory = dataAccessFactory;
   }
 
   @Override
@@ -106,7 +121,7 @@ public class AgilentImportTask extends AbstractTask implements RawDataImportTask
     final VendorImportParameters vendorParameters = parameters.getValue(
         AllSpectralDataImportParameters.vendorOptions);
 
-    try (final AgilentDataAccess da = new AgilentDataAccess(rawFile, vendorParameters, storage,
+    try (final AgilentRawDataAccess da = dataAccessFactory.open(rawFile, vendorParameters, storage,
         processor)) {
 
       dataFile = da.createDataFile();

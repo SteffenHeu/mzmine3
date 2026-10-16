@@ -53,7 +53,7 @@ public class VendorImportParameters extends SimpleParameterSet {
           """, ThermoImportOptions.getOptionsForOs(), DEFAULT_THERMO_IMPORT),
       createJumpToPrefButton(VendorImportParameters.thermoImportChoice.getName()));*/
   public static final MassLynxImportOptions DEFAULT_WATERS_OPTION = MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING;
-  public static final AgilentImportOptions DEFAULT_AGILENT_READER = AgilentImportOptions.AGILENT_READER_AUTO_CENTROID;
+  public static final AgilentImportOptions DEFAULT_AGILENT_READER = AgilentImportOptions.CUSTOM;
   public static final AgilentCentroidingOption DEFAULT_AGILENT_CENTROIDING = AgilentCentroidingOption.PREFER_STORED;
   public static final ComboWithComboInputValue<AgilentImportOptions, AgilentCentroidingOption> DEFAULT_AGILENT_OPTION = new ComboWithComboInputValue<>(
       DEFAULT_AGILENT_READER, DEFAULT_AGILENT_CENTROIDING);
@@ -77,14 +77,14 @@ public class VendorImportParameters extends SimpleParameterSet {
       createJumpToPrefButton("Waters MassLynx data import"));
 
   // Main combo selects the import path (AgilentImportOptions); the embedded centroiding combo is
-  // shown only for the two native reader options and hidden for the MSConvert path. The embedded
+  // shown only for the native reader options and hidden for the MSConvert path. The embedded
   // combo carries the parameter name (see EmbeddedParameter#getName).
   public static final ComponentWrapperParameter<ComboWithComboInputValue<AgilentImportOptions, AgilentCentroidingOption>, ComboWithComboInputParameter<AgilentImportOptions, AgilentCentroidingOption>> agilentImportChoice = new ComponentWrapperParameter<>(
       new ComboWithComboInputParameter<>(new ComboParameter<>("Agilent .d data import", """
-          Select if Agilent .d data files shall be imported via the native AgilentReader or
-          MSConvert, and (for the native reader) how centroids are produced. The native
-          AgilentReader reads regular MS and ion mobility (.d) data directly via a bundled Windows
-          helper; MSConvert converts to mzML first. Centroiding is only applied when "Try vendor
+          Select if Agilent .d data files shall be imported via the mzio reader, the native
+          AgilentReader or MSConvert, and (for the native readers) how centroids are produced. The
+          mzio reader reads regular MS and ion mobility (.d) data directly on all platforms, the
+          AgilentReader via a bundled Windows helper; MSConvert converts to mzML first. Centroiding is only applied when "Try vendor
           centroiding" is enabled; the centroid source then selects stored vendor centroids vs.
           recentroiding the profile.
           
@@ -92,8 +92,8 @@ public class VendorImportParameters extends SimpleParameterSet {
           
           %s""".formatted(AgilentImportOptions.getTooltip(), AgilentCentroidingOption.getTooltip()),
           AgilentCentroidingOption.values(), DEFAULT_AGILENT_CENTROIDING),
-          AgilentImportOptions.values(), List.of(AgilentImportOptions.AGILENT_READER,
-          AgilentImportOptions.AGILENT_READER_AUTO_CENTROID),
+          AgilentImportOptions.values(), List.of(AgilentImportOptions.CUSTOM,
+          AgilentImportOptions.AGILENT_READER, AgilentImportOptions.AGILENT_READER_AUTO_CENTROID),
           new ComboWithComboInputValue<>(DEFAULT_AGILENT_READER, DEFAULT_AGILENT_CENTROIDING)),
       createJumpToPrefButton("Agilent .d data import"));
 
