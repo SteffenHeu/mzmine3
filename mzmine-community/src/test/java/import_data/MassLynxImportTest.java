@@ -127,7 +127,7 @@ public class MassLynxImportTest {
   @Test
   public void testProfileNonIms() throws Exception {
     final File ddaNonIms = new File(
-        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Waters\\LC-MS DDA\\pos\\050325_029.raw");
+        "D:\\OneDrive - mzio GmbH\\Example data - Documents\\Waters\\LC-MS DDA\\pos\\050325_029.raw");
     if (!ddaNonIms.exists()) {
       return;
     }
@@ -170,7 +170,7 @@ public class MassLynxImportTest {
   @Test
   public void testCentroidNonIms() throws Exception {
     final File ddaNonIms = new File(
-        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Waters\\LC-MS DDA\\pos\\050325_029.raw");
+        "D:\\OneDrive - mzio GmbH\\Example data - Documents\\Waters\\LC-MS DDA\\pos\\050325_029.raw");
     if (!ddaNonIms.exists()) {
       return;
     }
@@ -213,7 +213,7 @@ public class MassLynxImportTest {
   @Test
   public void testProfileIms() throws Exception {
     final File mseIms = new File(
-        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Waters\\LC-IMS-MS MSe\\20250303_FuncTest2_SST_POS_006R.raw");
+        "D:\\OneDrive - mzio GmbH\\Example data - Documents\\Waters\\LC-IMS-MS MSe\\20250303_FuncTest2_SST_POS_006R.raw");
     if (!mseIms.exists()) {
       return;
     }
@@ -267,7 +267,7 @@ public class MassLynxImportTest {
   @Test
   public void testCentroidIms() throws Exception {
     final File mseIms = new File(
-        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Waters\\LC-IMS-MS MSe\\20250303_FuncTest2_SST_POS_006R.raw");
+        "D:\\OneDrive - mzio GmbH\\Example data - Documents\\Waters\\LC-IMS-MS MSe\\20250303_FuncTest2_SST_POS_006R.raw");
     if (!mseIms.exists()) {
       return;
     }
@@ -321,7 +321,7 @@ public class MassLynxImportTest {
   @Test
   public void testAdvancedCentroiding() throws Exception {
     final File mseIms = new File(
-        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Waters\\LC-IMS-MS MSe\\20250303_FuncTest2_SST_POS_006R.raw");
+        "D:\\OneDrive - mzio GmbH\\Example data - Documents\\Waters\\LC-IMS-MS MSe\\20250303_FuncTest2_SST_POS_006R.raw");
     if (!mseIms.exists()) {
       return;
     }
@@ -355,7 +355,7 @@ public class MassLynxImportTest {
   @Test
   public void testAlreadyCentroided() throws Exception {
     final File alreadyCentroided = new File(
-        "D:\\OneDrive - mzio GmbH\\mzio\\Example data\\Waters\\mse_20180205_0125.raw");
+        "D:\\OneDrive - mzio GmbH\\Example data - Documents\\Waters\\mse_20180205_0125.raw");
     if (!alreadyCentroided.exists()) {
       return;
     }
