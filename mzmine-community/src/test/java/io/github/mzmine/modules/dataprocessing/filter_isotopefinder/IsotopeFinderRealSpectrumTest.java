@@ -64,6 +64,8 @@ class IsotopeFinderRealSpectrumTest {
   private static final double SEARCHED_MZ_Z2 = 667.31073;
   private static final String RESOURCE_Z3 = "isotopefinder/realdata/ms1_1306p2721.tsv";
   private static final double SEARCHED_MZ_Z3 = 1306.2721;
+  private static final String RESOURCE_Z1_DENSE = "isotopefinder/realdata/ms1_450p3219.tsv";
+  private static final double SEARCHED_MZ_Z1_DENSE = 450.32188;
   // real-data settings from the reported cases: wide tolerance, high max charge
   private static final MZTolerance TOL = new MZTolerance(0.008, 25);
   private static final int MAX_CHARGE = 15;
@@ -173,6 +175,35 @@ class IsotopeFinderRealSpectrumTest {
       assertTrue(contains(best, seed),
           "pattern does not contain the searched signal, seed " + seed + ": " + describe(best));
     }
+  }
+
+  /**
+   * A dense MS1 scan where the searched z=1 signal (450.3219) is NOT the most intense candidate: the
+   * downward candidate walk chains through a signal at nearly every nominal mass and reaches a 3.8x
+   * stronger, unrelated cluster at 426.358. The reported bug emitted 210 signals from 423.2-450.35,
+   * all BELOW the searched signal, and missed its own clear M+1 (451.3248, 31%) and M+2 (452.3272,
+   * 5.7%). Run with the defaults of the automatic isotope finder.
+   */
+  @Test
+  void forwardIsotopesOfWeakerSignalInDenseSpectrum() throws IOException {
+    final MassSpectrum spectrum = loadSpectrum(RESOURCE_Z1_DENSE);
+    final AutomaticIsotopeFinderParameters params = new AutomaticIsotopeFinderParameters();
+    AutomaticIsotopeFinderParameters.setDefaults(params);
+    final IsotopeFinderEngine engine = IsotopeFinderEngineFactory.create(
+        AutomaticIsotopeFinderParameters.toCarbonModelParameters(params), "Automatic");
+
+    final DetectionResult result = engine.detect(spectrum, SEARCHED_MZ_Z1_DENSE, 3622718.25,
+        PolarityType.POSITIVE);
+    assertNotNull(result, "no isotope pattern detected for the searched signal");
+    assertEquals(1, result.bestCharge(), "wrong charge for the searched envelope");
+    final IsotopePattern best = result.patterns().getFirst();
+    assertTrue(contains(best, SEARCHED_MZ_Z1_DENSE),
+        "pattern does not contain the searched signal: " + describe(best));
+    assertTrue(contains(best, 451.32484), "M+1 missing: " + describe(best));
+    assertTrue(contains(best, 452.32724), "M+2 missing: " + describe(best));
+    // the unrelated, stronger cluster 24 Da below must not be part of this feature's pattern
+    assertTrue(best.getMzValue(0) > SEARCHED_MZ_Z1_DENSE - 5,
+        "pattern reaches into an unrelated cluster: " + describe(best));
   }
 
   private static void assertPatternsAroundSearchedSignal(@NotNull final MassSpectrum spectrum,
