@@ -34,6 +34,7 @@ import io.github.mzmine.javafx.components.factories.FxTextFlows;
 import io.github.mzmine.modules.dataprocessing.featdet_masscalibration2.gui.MassCalibrationPreviewPane;
 import io.github.mzmine.parameters.dialogs.ParameterDialogWithPreviewPanes;
 import io.github.mzmine.parameters.dialogs.ParameterSetupDialog;
+import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
@@ -42,6 +43,7 @@ import io.github.mzmine.parameters.parametertypes.submodules.ModuleOptionsEnumCo
 import io.github.mzmine.util.ExitCode;
 import javafx.application.Platform;
 import javafx.scene.layout.Region;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MassCalibrationParameters extends SimpleParameterSet {
@@ -84,5 +86,10 @@ public class MassCalibrationParameters extends SimpleParameterSet {
         hyperlinkText("Keller et. al.", "https://doi.org/10.1016/j.aca.2008.04.043"),
         text(" and/or "), hyperlinkText("Hawkes et. al.", " https://doi.org/10.1002/lom3.10364"),
         text("."));
+  }
+
+  @Override
+  public @NotNull IonMobilitySupport getIonMobilitySupport() {
+    return IonMobilitySupport.SUPPORTED;
   }
 }

@@ -144,7 +144,8 @@ public class MassCalibrationTask extends AbstractTask {
               getModuleCallDate()));
     } catch (MissingMassListException e) {
       setErrorMessage(
-          "A selected scan has no mass list. Run mass detection before mass calibration.");
+          "Cannot apply mass calibration to a scan without a mass list. Apply mass detection to all scans first. "
+              + e.getMessage());
       setStatus(TaskStatus.ERROR);
       return;
     } catch (Exception e) {
