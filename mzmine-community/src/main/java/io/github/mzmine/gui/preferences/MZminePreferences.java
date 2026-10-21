@@ -36,6 +36,7 @@ import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.KeepInMemory;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.io.download.AssetGroup;
+import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.datamodel.TdfPressureCompensation;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.UserParameter;
 import io.github.mzmine.parameters.dialogs.GroupedParameterSetupDialog;
@@ -44,6 +45,7 @@ import io.github.mzmine.parameters.dialogs.GroupedParameterSetupPane.ParameterGr
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.BooleanParameter;
 import io.github.mzmine.parameters.parametertypes.ComboParameter;
+import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithComboInputParameter;
 import io.github.mzmine.parameters.parametertypes.FontSpecs;
 import io.github.mzmine.parameters.parametertypes.HiddenParameter;
 import io.github.mzmine.parameters.parametertypes.OptOutParameter;
@@ -241,10 +243,14 @@ public class MZminePreferences extends SimpleParameterSet {
       .cloneParameter();
   public static final ComboParameter<MassLynxImportOptions> massLynxImportChoice = VendorImportParameters.massLynxImportChoice.getEmbeddedParameter()
       .cloneParameter();
-  public static final ComboParameter<AgilentImportOptions> agilentImportChoice = VendorImportParameters.agilentImportChoice.getEmbeddedParameter()
+  public static final ComboWithComboInputParameter<AgilentImportOptions, AgilentCentroidingOption> agilentImportChoice = VendorImportParameters.agilentImportChoice.getEmbeddedParameter()
       .cloneParameter();
   public static final BooleanParameter excludeThermoExceptionMasses = VendorImportParameters.excludeThermoExceptionMasses.getEmbeddedParameter()
       .cloneParameter();
+  public static final ComboParameter<TdfPressureCompensation> brukerPressureComp = VendorImportParameters.applyTimsPressureCompensation.getEmbeddedParameter()
+      .cloneParameter();
+
+
   public static final HiddenParameter<Boolean> showTempFolderAlert = new HiddenParameter<>(
       new BooleanParameter("Show temp alert", "Show temp folder alert", true));
   public static final HiddenParameter<String> username = new HiddenParameter<>(
@@ -297,7 +303,7 @@ public class MZminePreferences extends SimpleParameterSet {
             // conversion, data handling
             applyVendorCentroiding, watersLockmass, massLynxImportChoice, agilentImportChoice,
             msConvertPath, keepConvertedFile, thermoRawFileParserPath,
-            excludeThermoExceptionMasses},
+            excludeThermoExceptionMasses, brukerPressureComp},
         "https://mzmine.github.io/mzmine_documentation/performance.html#preferences");
 
     darkModeProperty.subscribe(state -> {
@@ -333,7 +339,7 @@ public class MZminePreferences extends SimpleParameterSet {
             imageTransformation, imageNormalization, windowSettings), //
         new ParameterGroup("MS data import", applyVendorCentroiding, massLynxImportChoice,
             agilentImportChoice, watersLockmass, msConvertPath, keepConvertedFile,
-            thermoRawFileParserPath, excludeThermoExceptionMasses) //
+            thermoRawFileParserPath, excludeThermoExceptionMasses, brukerPressureComp) //
     );
     // imsModuleWarnings, showTempFolderAlert, showQuickStart  are hidden parameters
 
@@ -568,6 +574,11 @@ public class MZminePreferences extends SimpleParameterSet {
       final FullProxyConfig config = new FullProxyConfig(ProxyConfigOption.MANUAL_PROXY,
           new ManualProxyConfig(type, address, port, List.of()));
       ProxyUtils.applyConfig(config);
+    }
+
+    if (!loadedParams.containsKey(brukerPressureComp.getName())) {
+      getParameter(brukerPressureComp).setValue(
+          VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
     }
   }
 

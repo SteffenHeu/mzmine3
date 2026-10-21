@@ -27,6 +27,7 @@ package io.github.mzmine.modules.io.import_rawdata_wiff2;
 
 import com.sun.jna.Platform;
 import io.github.mzmine.util.DotNetUtils;
+import io.github.mzmine.util.ShellUtils;
 import io.github.mzmine.util.concurrent.CloseableReentrantReadWriteLock;
 import io.github.mzmine.util.concurrent.CloseableResourceLock;
 import io.github.mzmine.util.files.FileAndPathUtil;
@@ -47,6 +48,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

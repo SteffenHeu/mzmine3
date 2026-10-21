@@ -51,8 +51,10 @@ import io.github.mzmine.datamodel.otherdetectors.OtherFeature;
 import io.github.mzmine.datamodel.otherdetectors.OtherFeatureImpl;
 import io.github.mzmine.datamodel.otherdetectors.OtherTimeSeriesDataImpl;
 import io.github.mzmine.datamodel.otherdetectors.SimpleOtherTimeSeries;
+import io.github.mzmine.gui.preferences.AgilentCentroidingOption;
 import io.github.mzmine.gui.preferences.AgilentImportOptions;
 import io.github.mzmine.gui.preferences.VendorImportParameters;
+import io.github.mzmine.parameters.parametertypes.combowithinput.ComboWithComboInputValue;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxGaussianModule;
 import io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max.LocalMaxMassDetector;
 import io.github.mzmine.modules.dataprocessing.id_ccscalibration.CCSCalibration;
@@ -129,12 +131,19 @@ public class AgilentDataAccess implements AutoCloseable {
     this.storage = storage;
     this.processor = processor;
     this.requestCentroid = vendorParam.getValue(VendorImportParameters.applyVendorCentroiding);
-    this.importOption = vendorParam.getValue(VendorImportParameters.agilentImportChoice);
+    final ComboWithComboInputValue<AgilentImportOptions, AgilentCentroidingOption> agilentSettings = vendorParam.getValue(
+        VendorImportParameters.agilentImportChoice);
+    this.importOption = agilentSettings.getSelectedOption();
+
+    // The general profile-vs-centroid decision stays with "Try vendor centroiding": when off we
+    // request "none" (profile); when on, the centroid source selects stored vs. recentroided.
+    final AgilentCentroidingOption centroiding = agilentSettings.getEmbeddedValue() != null
+        ? agilentSettings.getEmbeddedValue() : AgilentCentroidingOption.PREFER_STORED;
+    final String centroidMode = requestCentroid ? centroiding.getWireCentroidMode() : "none";
 
     this.client = new AgilentReaderClient();
     final JsonNode open = client.send(
-        Map.of("op", "open", "path", rawFile.getAbsolutePath(), "requestCentroid",
-            requestCentroid));
+        Map.of("op", "open", "path", rawFile.getAbsolutePath(), "centroidMode", centroidMode));
 
     this.isIms = open.path("isIms").asBoolean(false);
     this.numScans = open.path("numScans").asLong(0);
@@ -635,7 +644,8 @@ public class AgilentDataAccess implements AutoCloseable {
     QP("QuarternaryPump"), //
     CP("CapillaryPump"), //
     NP("NanoPump"), //
-    LFP("LowFlowPump"),
+    LFP("LowFlowPump"), //
+    UIB2("UIB2"), // "Universal interface box"
     ;
 
     /**
@@ -710,7 +720,7 @@ public class AgilentDataAccess implements AutoCloseable {
     @NotNull
     static AnalogUnit fromDevice(AnalogDevice device) {
       return switch (device) {
-        case TCC, ECD, NP, BP, QP, CP, LFP, IP, ELSD, FD -> UNKNOWN;
+        case TCC, ECD, NP, BP, QP, CP, LFP, IP, ELSD, FD, UIB2 -> UNKNOWN;
         case DAD, VWD, MWD -> ABSORBANCE;
         case FID -> PICO_AMPERE;
         case TCD -> TEMPERATURE;
