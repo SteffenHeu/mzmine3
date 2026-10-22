@@ -1,3 +1,28 @@
+/*
+ * Copyright (c) 2004-2026 The mzmine Development Team
+ *
+ * Permission is hereby granted, free of charge, to any person
+ * obtaining a copy of this software and associated documentation
+ * files (the "Software"), to deal in the Software without
+ * restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following
+ * conditions:
+ *
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package io.github.mzmine.modules.dataprocessing.featdet_massdetection.local_max;
 
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
@@ -36,9 +61,9 @@ public class SaturationThresholdParameter extends
 
   private static @NotNull DoubleParameter createEmbeddedParameter() {
     return new DoubleParameter("Saturation threshold (mobility scans)", """
-        Raw intensity of a mobility scan data point from which on profile peaks are treated as \
-        saturated by the detector. Saturated peaks are centroided by the mode of an exponentially \
-        modified Gaussian fit to the saturated core and the flanks. Only applies to mobility scans, \
+        Raw intensity of a mobility scan data point from which on profile peaks are treated as
+        saturated by the detector. Saturated peaks are centroided by the mode of an exponentially
+        modified Gaussian fit to the saturated core and the flanks. Only applies to mobility scans,
         not to frames.
         Off: no saturation handling.
         Manual: the entered raw intensity.
