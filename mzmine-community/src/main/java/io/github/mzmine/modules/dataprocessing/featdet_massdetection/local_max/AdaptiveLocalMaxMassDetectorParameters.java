@@ -36,7 +36,7 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Parameters of the {@link AdaptiveLocalMaxMassDetector}: the local maximum parameters and the
- * saturation threshold of mobility scans.
+ * detector saturation threshold.
  */
 public class AdaptiveLocalMaxMassDetectorParameters extends SimpleParameterSet {
 

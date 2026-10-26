@@ -33,9 +33,9 @@ import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Source of the detector saturation threshold for mobility scans: off, manual input, raw file
- * metadata or derived from the data. The available options can be restricted, e.g., the import
- * cannot access the raw file metadata or all mobility scans of the file.
+ * Source of the detector saturation threshold: off, manual input, raw file metadata or derived from
+ * the data. The available options can be restricted, e.g., the import cannot access the raw file
+ * metadata or all spectra of the file.
  */
 public class SaturationThresholdParameter extends
     ComboWithInputParameter<SaturationThresholdOption, SaturationThresholdValue, DoubleParameter> {
@@ -60,18 +60,21 @@ public class SaturationThresholdParameter extends
   }
 
   private static @NotNull DoubleParameter createEmbeddedParameter() {
-    return new DoubleParameter("Saturation threshold (mobility scans)", """
-        Raw intensity of a mobility scan data point from which on profile peaks are treated as
-        saturated by the detector. Saturated peaks are centroided by the mode of an exponentially
-        modified Gaussian fit to the saturated core and the flanks. Only applies to mobility scans,
-        not to frames.
+    return new DoubleParameter("Saturation threshold", """
+        Raw intensity of a data point from which on profile peaks are treated as saturated by the
+        detector. Saturated peaks are centroided by the mode of an exponentially modified Gaussian
+        fit to the saturated core and the flanks. In mobility scans, saturated centroids are also
+        corrected with the unsaturated neighbouring mobility scans of the same ion.
         Off: no saturation handling.
-        Manual: the entered raw intensity.
-        Raw file metadata: 0.5 x mobility scan abundance limit of the raw file (e.g., Agilent), \
-        not available during import.
-        Auto: 0.5 x the highest mobility scan intensity of the file if it occurs repeatedly \
-        (saturation plateau), not available during import.""", new DecimalFormat("0"), 0d, 0d,
-        null);
+        Manual: the entered raw intensity for all processed spectra. Use separate mass detection \
+        steps with the scan filters for different values of frames and mobility scans.
+        Raw file metadata (else auto): 0.5 x mobility scan abundance limit of the raw file \
+        (e.g., Agilent) for mobility scans. Auto if the file has no limit and for frames and \
+        other scans. Not available during import.
+        Auto: 0.5 x the highest base peak of the mobility scans or other scans of the MS level if \
+        it occurs repeatedly (saturation plateau). Frames: 0.5 x the highest frame base peak of \
+        the MS level, only if the mobility scans of this MS level have a saturation plateau. \
+        Not available during import.""", new DecimalFormat("0"), 0d, 0d, null);
   }
 
   /**
