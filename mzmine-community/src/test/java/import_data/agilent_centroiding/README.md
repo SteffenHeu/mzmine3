@@ -63,6 +63,8 @@ Run the tests with a large heap, e.g. with a gradle init script
 3. Diagnostics:
    - `SaturationProfileScanTest`: raw apex heights of M and M+1 per mobility scan and the intensity
      maxima per file (`saturation_profile_scans.csv`, `saturation_file_maxima.csv`).
+   - `SaturationPlateauProbeTest`: the auto saturation plateau of frames and mobility scans per
+     file and MS level, over all frames (`saturation_plateaus.csv`, ~24 min).
    - `MassDetectorSpeedTest`: processing time per spectrum (logged).
    - `CentroidingExampleExportTest`: raw profile and centroids of the peaks listed in
      `centroiding_results/plot_examples.csv` (`dataset, raw_file, target, level`), written to

@@ -179,6 +179,44 @@ set:
 - Speed (`MassDetectorSpeedTest`, mobility scans of all indexed frames): production path 1.12-1.14 x
   local max on the LC files (per-scan adaptive + EMG 1.08-1.10 x).
 
+## Implemented: saturation threshold for frames and scans (2026-10-26)
+
+- The saturation threshold parameter ("Saturation threshold", formerly "... (mobility scans)")
+  now applies to all spectra. `AdaptiveLocalMaxMassDetector.resolveThreshold` resolves it per
+  spectrum type (mobility scans vs. frames and other scans), ms level and file, cached per file.
+  The mass detection task passes a `ScanDataAccess`, its current scan carries the file.
+- Manual: the same raw value for all spectra. Different values for frames and mobility scans need
+  separate mass detection steps with the scan type filter (decision: no per-type manual values).
+- Raw file metadata (else auto): the mobility scan abundance limit for mobility scans, auto if the
+  file has no limit and always for frames and other scans (decision: no new metadata for non-IMS
+  scans, the limit of the Agilent readers stays an import-only input).
+- Auto: `SaturationPlateauEstimator.estimateMobilityScanPlateau` (mobility scans) or
+  `estimateScanPlateau` (`file.getScans()` of non-IMS files), same 10 scans within 1 % rule.
+  First implemented with the frames like non-IMS scans, replaced by the frame rule below because
+  frames show no plateau.
+- Plateau on the benchmark data (`SaturationPlateauProbeTest`, all frames, profile): no frame
+  plateau in any file (1-7 frames within 1 % of the frame maximum, Agilent tune mix raw 9 of 123).
+  Mobility scan plateaus as before in the native saturated files (28-614 scans, 0.95-0.96 x
+  limit) and none in the weak / demultiplexed files (C2M 9, C4M 8). So auto never enables the EMG
+  on frames of these files; frames of the native saturated files reach 0.4-3.5 M (vs. 52k
+  mobility scan limit).
+- Frame EMG with a relative threshold (`adaptive_local_max_emg_f0.5`, 0.5 x frame maximum of the
+  file, benchmark `20261026_095217`): saturated targets median 2.38 -> 2.03 ppm, p95 5.65 -> 5.15
+  ppm vs. adaptive without EMG; asymmetric 1.60 -> 1.66 ppm, all 2.00 -> 1.99 ppm.
+- Benchmark `20261026_095217` with the changed detector: identical to `20261016_154531` (all
+  configs use the fixed constructor threshold).
+- **Frame rule (decision, replaces the frame plateau):** with raw file metadata and auto, frames
+  count as saturated if the mobility scans of the same file and ms level have a saturation plateau
+  (`estimateMobilityScanPlateau`, also if the metadata has a limit). Threshold = 0.5 x highest frame
+  base peak of the ms level (`SaturationPlateauEstimator.maxScanBasePeak`), otherwise off. Offline
+  estimate from `20261026_095217` (f0.5 frame EMG only in files with an MS1 mobility scan
+  plateau, adaptive without EMG elsewhere): saturated median / p95 2.41 / 5.64 -> 2.04 / 5.08
+  ppm (ungated 2.10 / 5.08), asymmetric 1.61 -> 1.62, all 2.01 -> 1.95. The benchmark maximum
+  is taken over the indexed frames only, not all frames.
+- Spectra without raw file (import arrays): only Off and Manual, as before.
+- Negative controls (Bruker timsTOF urine, SCIEX ZenoTOF plasma, Waters DDA, profile import): one
+  scan base peak within 1 % of the maximum per MS level, no plateau, no saturation handling.
+
 Remaining work:
 - Separate PR: the two Agilent reader TODOs (limit change warning, wrong-metadata guard action).
 - Auto plateau: tune `MIN_PLATEAU_SCANS` / `PLATEAU_TOLERANCE` on more files (borderline cases
