@@ -419,10 +419,22 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
    * Frames sum the mobility scans and show no saturation plateau of their own. They count as
    * saturated if the mobility scans of the same ms level have a saturation plateau, the threshold
    * is then {@link #SATURATION_LIMIT_FRACTION} x the highest frame base peak of the ms level. Same
-   * rule for raw file metadata and auto.
+   * rule for raw file metadata, auto and the Agilent import.
+   *
+   * @param mobilityScanPlateau  saturation plateau of the mobility scan base peaks of the ms level
+   *                             (see {@link SaturationPlateauEstimator#estimatePlateau(double[])}),
+   *                             NaN if there is none
+   * @param highestFrameBasePeak highest frame base peak of the ms level
+   * @return the frame saturation threshold, infinity if the frames are not saturated
    */
   // decision: gated relative threshold, benchmark 20261026_095217 saturated frame targets median
   // 2.41 -> 2.04 ppm, the ungated relative threshold hurt unsaturated files
+  public static double frameSaturationThreshold(final double mobilityScanPlateau,
+      final double highestFrameBasePeak) {
+    return Double.isNaN(mobilityScanPlateau) || !(highestFrameBasePeak > 0)
+        ? Double.POSITIVE_INFINITY : SATURATION_LIMIT_FRACTION * highestFrameBasePeak;
+  }
+
   private double frameThreshold(@NotNull final IMSRawDataFile file, final int msLevel) {
     if (Double.isNaN(mobilityScanPlateau(file, msLevel))) {
       logger.info(
@@ -431,8 +443,8 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
       return Double.POSITIVE_INFINITY;
     }
     final double maxBasePeak = SaturationPlateauEstimator.maxScanBasePeak(file, msLevel);
-    final double threshold =
-        maxBasePeak > 0 ? SATURATION_LIMIT_FRACTION * maxBasePeak : Double.POSITIVE_INFINITY;
+    final double threshold = frameSaturationThreshold(mobilityScanPlateau(file, msLevel),
+        maxBasePeak);
     logger.info(
         "Saturation threshold of %s MS%d frames: %.0f (highest frame base peak %.0f)".formatted(
             file.getName(), msLevel, threshold, maxBasePeak));
