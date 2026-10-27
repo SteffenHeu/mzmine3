@@ -87,8 +87,11 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
   // Adaptive centroid tuning
   // only intense peaks get the parabola treatment; weak peaks keep the weighted centroid
   private static final double ADAPTIVE_MIN_PERCENT_BASE = 1.0;
-  // apex left/right point-count ratio above which a peak is treated as asymmetric (-> parabola)
+  // half-width ratio at ASYMMETRY_HEIGHT_FRACTION above which a peak is asymmetric (-> parabola)
   private static final double ASYMMETRY_THRESHOLD = 1.5;
+  // decision: 10 % of the apex like the EP asymmetry factor. TOF tails show low on the peak,
+  // half height missed tailing saturated frames (benchmark 2026-10-27).
+  private static final double ASYMMETRY_HEIGHT_FRACTION = 0.1;
   // number of points (apex +/- (N-1)/2) used for the apex-centered parabola
   private static final int PARABOLA_POINTS = 5;
   // saturation fit window: the saturated core plus this many non-zero points on each flank
@@ -820,11 +823,10 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
     }
 
     // 2. sharp and asymmetric -> apex-centered parabola vertex
-    final int leftPoints = peakMaxIdx - startIdx;
-    final int rightPoints = endIdx - 1 - peakMaxIdx;
-    final int lo = Math.min(leftPoints, rightPoints);
-    final int hi = Math.max(leftPoints, rightPoints);
-    final boolean asymmetric = lo == 0 || (double) hi / lo >= ASYMMETRY_THRESHOLD;
+    // decision: asymmetry from the peak widths, not from the point counts between the edges. The
+    // edges can reach far into the baseline and move with smoothing.
+    final double asymmetry = widthAsymmetry(mzs, intensities, startIdx, endIdx, peakMaxIdx);
+    final boolean asymmetric = Double.isNaN(asymmetry) || asymmetry >= ASYMMETRY_THRESHOLD;
     if (asymmetric) {
       final double fit = apexParabolaVertexMz(mzs, intensities, peakMaxIdx, startIdx, endIdx,
           PARABOLA_POINTS);
@@ -913,6 +915,73 @@ public class AdaptiveLocalMaxMassDetector implements MassDetector, PreprocessedI
       return Double.NaN;
     }
     return fit.mode();
+  }
+
+  /**
+   * Ratio of the wider to the narrower half-width at {@link #ASYMMETRY_HEIGHT_FRACTION} of the apex
+   * (>= 1). The apex position is the vertex of the parabola through the apex and its neighbors, so
+   * the sampling position of the apex point does not change the ratio. The crossings of the height
+   * level are interpolated linearly.
+   *
+   * @return the asymmetry or NaN if one side does not fall below the level within the edges
+   */
+  private static double widthAsymmetry(final double[] mzs, final double[] intensities,
+      final int startIdx, final int endIdx, final int peakMaxIdx) {
+    final double level = intensities[peakMaxIdx] * ASYMMETRY_HEIGHT_FRACTION;
+    double leftMz = Double.NaN;
+    for (int i = peakMaxIdx; i > startIdx; i--) {
+      if (intensities[i - 1] < level) {
+        leftMz = interpolateMz(mzs[i - 1], intensities[i - 1], mzs[i], intensities[i], level);
+        break;
+      }
+    }
+    double rightMz = Double.NaN;
+    for (int i = peakMaxIdx; i < endIdx - 1; i++) {
+      if (intensities[i + 1] < level) {
+        rightMz = interpolateMz(mzs[i], intensities[i], mzs[i + 1], intensities[i + 1], level);
+        break;
+      }
+    }
+    final double apexMz = threePointVertexMz(mzs, intensities, peakMaxIdx, startIdx, endIdx);
+    final double left = apexMz - leftMz;
+    final double right = rightMz - apexMz;
+    if (!(left > 0 && right > 0)) {
+      return Double.NaN;
+    }
+    return Math.max(left, right) / Math.min(left, right);
+  }
+
+  /**
+   * m/z where the line between two points reaches the intensity level
+   */
+  private static double interpolateMz(final double mz1, final double int1, final double mz2,
+      final double int2, final double level) {
+    return int1 == int2 ? (mz1 + mz2) / 2 : mz1 + (level - int1) / (int2 - int1) * (mz2 - mz1);
+  }
+
+  /**
+   * Vertex of the parabola through the apex and its two neighbors, the apex m/z if the apex is at
+   * an edge or the vertex leaves the three points.
+   */
+  private static double threePointVertexMz(final double[] mzs, final double[] intensities,
+      final int i, final int startIdx, final int endIdx) {
+    if (i <= startIdx || i >= endIdx - 1) {
+      return mzs[i];
+    }
+    final double x0 = mzs[i - 1], x1 = mzs[i], x2 = mzs[i + 1];
+    final double y0 = intensities[i - 1], y1 = intensities[i], y2 = intensities[i + 1];
+    final double denominator = (x0 - x1) * (x0 - x2) * (x1 - x2);
+    if (denominator == 0) {
+      return x1;
+    }
+    final double a = (x2 * (y1 - y0) + x1 * (y0 - y2) + x0 * (y2 - y1)) / denominator;
+    final double b =
+        (x2 * x2 * (y0 - y1) + x1 * x1 * (y2 - y0) + x0 * x0 * (y1 - y2)) / denominator;
+    if (a >= 0) {
+      return x1;
+    }
+    final double vertex = -b / (2 * a);
+    return vertex >= x0 && vertex <= x2 ? vertex : x1;
   }
 
   /**
