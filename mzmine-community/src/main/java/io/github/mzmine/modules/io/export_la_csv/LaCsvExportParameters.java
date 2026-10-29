@@ -28,25 +28,31 @@ package io.github.mzmine.modules.io.export_la_csv;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.StringParameter;
+import io.github.mzmine.parameters.parametertypes.combowithinput.FieldSeparator;
+import io.github.mzmine.parameters.parametertypes.combowithinput.FieldSeparatorOption;
+import io.github.mzmine.parameters.parametertypes.combowithinput.FieldSeparatorParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileSelectionType;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsParameter;
 import io.github.mzmine.util.files.ExtensionFilters;
-import java.util.Collections;
 
 public class LaCsvExportParameters extends SimpleParameterSet {
 
   public static final FileNameParameter path = new FileNameParameter("Path",
-      "Path the exported features will be stored to",
-      Collections.singletonList(ExtensionFilters.CSV), FileSelectionType.SAVE);
+      "Path the exported features will be stored to", ExtensionFilters.CSV_TSV_EXPORT,
+      FileSelectionType.SAVE);
 
   public static final StringParameter features = new StringParameter("Feature ID's",
       "Comma seperated list of ID's for features to be exported");
 
   public static final FeatureListsParameter featureList = new FeatureListsParameter("feature List",
-      "The feature list to be exportted", 1, 1);
+      "The feature list to be exported", 1, 1);
+
+  public static final FieldSeparatorParameter separator = new FieldSeparatorParameter("Separator",
+      "The separator used to separate fields in the CSV file", FieldSeparatorOption.WRITE_OPTIONS,
+      FieldSeparator.COMMA);
 
   public LaCsvExportParameters() {
-    super(new Parameter[]{featureList, features, path});
+    super(featureList, features, path, separator);
   }
 }

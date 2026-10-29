@@ -31,21 +31,22 @@ import io.github.mzmine.datamodel.featuredata.IonTimeSeries;
 import io.github.mzmine.datamodel.featuredata.IonTimeSeriesUtils;
 import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList;
+import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.parameters.ParameterSet;
+import io.github.mzmine.parameters.parametertypes.combowithinput.FieldSeparator;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
+import io.github.mzmine.util.CSVParsingUtils;
+import io.github.mzmine.util.files.FileAndPathUtil;
+import io.github.mzmine.util.io.WriterOptions;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.DecimalFormat;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -62,6 +63,8 @@ public class LaCsvExportTask extends AbstractTask {
   private final FeatureList featureList;
   private final ArrayList<Integer> ids;
   private final File file;
+  private final char separatorChar;
+  private final FieldSeparator separator;
 
   //Task Progress
   private int numRawDataFiles;
@@ -73,6 +76,8 @@ public class LaCsvExportTask extends AbstractTask {
     featureList = parameters.getValue(LaCsvExportParameters.featureList)
         .getMatchingFeatureLists()[0];
     file = parameters.getValue(LaCsvExportParameters.path).getAbsoluteFile();
+    separator = parameters.getValue(LaCsvExportParameters.separator);
+    separatorChar = separator.separatorChar();
 
     String stringOfIds = parameters.getValue(LaCsvExportParameters.features);
     ids = new ArrayList<>();
@@ -114,12 +119,17 @@ public class LaCsvExportTask extends AbstractTask {
     numProcessedRawDataFiles = 0;
 
     //Create directory for output files
-    Path filePath = Paths.get(FilenameUtils.removeExtension(file.getAbsolutePath()));
-    try {
-      Files.createDirectory(filePath);
-    } catch (IOException e) {
-      e.printStackTrace();
-      logger.log(Level.WARNING, e.getMessage());
+    File directoryPath = new File(FilenameUtils.removeExtension(file.getAbsolutePath()));
+
+    FileAndPathUtil.createDirectory(directoryPath);
+
+    final List<FeatureListRow> rows = new ArrayList<>();
+
+    for (Integer id : ids) {
+      FeatureListRow row = featureList.findRowByID(id);
+      if (row != null) {
+        rows.add(row);
+      }
     }
 
     for (int j = 0; j < numRawDataFiles; j++) {
@@ -132,8 +142,11 @@ public class LaCsvExportTask extends AbstractTask {
       List<IonTimeSeries<Scan>> eics = new ArrayList<>();
 
 //      Extracting all wanted features from the feature list for the current raw data file.
-      for (Integer id : ids) {
-        features.add(featureList.findRowByID(id).getFeature(file));
+      for (FeatureListRow row : rows) {
+        Feature feature = row.getFeature(file);
+        if (feature != null) {
+          features.add(feature);
+        }
       }
 
       //Extracting EICs from selected features
@@ -152,65 +165,63 @@ public class LaCsvExportTask extends AbstractTask {
       }
 
       //Number of scans for formatting csv file.
-      List<Scan> ms1Scans = Arrays.asList(ScanSelection.MS1.getMatchingScans(file));
-      int numScans = ScanSelection.MS1.getMatchingScans(file).length;
+      final List<Scan> ms1Scans = Arrays.asList(ScanSelection.MS1.getMatchingScans(file));
+      final int numScans = ScanSelection.MS1.getMatchingScans(file).length;
+      //Writing file
+      final String rawDataFileName = file.getFileName();
 
-      try {
-
-        //Writing file
-        String rawDataFileName = file.getFileName();
-        FileWriter writer = new FileWriter(filePath + File.separator + rawDataFileName + ".csv");
+      final List<String> header = new ArrayList<>();
+      final File exportFile = new File(directoryPath,
+          FileAndPathUtil.safePathEncode(rawDataFileName) + separator.getSelectedOption()
+              .getExportFileExtension());
+      try (var writer = CSVParsingUtils.createDefaultWriter(exportFile, separatorChar,
+          WriterOptions.REPLACE)) {
 
         //CSV file header
-        writer.write("rt");
-        writer.append(";");
-
-        for (Integer id : ids) {
-
-          double mz = featureList.findRowByID(id).getAverageMZ();
-          DecimalFormat decimalFormat = new DecimalFormat("0.0000");
-
-          writer.write(decimalFormat.format(mz) + "(ID" + id + ")");
-          writer.append(";");
+        header.add("rt");
+        for (Feature feature : features) {
+          final var row = feature.getRow();
+          StringBuilder b = new StringBuilder(String.format(
+              Locale.ROOT, "%d,%.4f", row.getID(), row.getAverageMZ()));
+          if (row.getPreferredAnnotation() != null) {
+            b.append(",%s".formatted(row.getPreferredAnnotation().toString()));
+          }
+          header.add(b.toString());
         }
-        writer.append("\n");
+        writer.writeNext(header.toArray(String[]::new), false);
 
         //Writing EIC data
+        final String[] line = new String[header.size()];
         for (int i = 0; i < numScans; i++) {
-
+          Arrays.fill(line, null);
           //RT for row
           float rt = ms1Scans.get(i).getRetentionTime();
-          writer.write(String.valueOf(rt));
-          writer.append(";");
+          line[0] = String.valueOf(rt);
 
           //Intensities for features
           for (int k = 0; k < features.size(); k++) {
-
             Feature feature = features.get(k);
 
             //Writing 0 if feature is not present in raw data file
             if (feature == null) {
-              writer.write("0.0");
-              writer.append(";");
+              line[k + 1] = "0.0";
             }
             //Writing intensity value otherwise
             else {
               double intensity = eics.get(k).getIntensity(i);
-              writer.write(String.valueOf(intensity));
-              writer.append(";");
+              line[k + 1] = String.valueOf(intensity);
             }
           }
-          writer.append("\n");
+          writer.writeNext(line, false);
         }
 
         writer.flush();
-        writer.close();
       }
 
       //IOException des FileWriter.
       catch (IOException e) {
-        e.printStackTrace();
-        logger.log(Level.WARNING, e.getMessage());
+        error(e.getMessage(), e);
+        return;
       }
 
       //Task progress

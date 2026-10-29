@@ -113,4 +113,12 @@ public enum FieldSeparatorOption implements UniqueIdSupplier {
       case CUSTOM -> false; // only used as fallback
     };
   }
+
+  public String getExportFileExtension() {
+    return switch (this) {
+      case AUTO, COMMA, SEMICOLON -> ".csv";
+      case TAB -> ".tsv";
+      case SPACE, CUSTOM -> ".txt";
+    };
+  }
 }

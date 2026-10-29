@@ -27,6 +27,7 @@ package io.github.mzmine.modules.io.export_la_csv;
 
 import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.modules.MZmineModuleCategory;
+import io.github.mzmine.modules.MZmineProcessingModule;
 import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.Task;
@@ -36,7 +37,7 @@ import java.util.Collection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class LaCsvExportModule implements MZmineRunnableModule {
+public class LaCsvExportModule implements MZmineProcessingModule {
 
   @Override
   public @NotNull ExitCode runModule(@NotNull MZmineProject project,
