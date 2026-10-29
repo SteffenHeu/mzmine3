@@ -47,6 +47,7 @@ import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.modules.dataanalysis.compounddashboard.CompoundDashboardTab;
 import io.github.mzmine.modules.dataanalysis.statsdashboard.StatsDasboardModule;
+import io.github.mzmine.modules.dataprocessing.filter_featurelistpreferences.FeatureListPreferencesModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.library_to_featurelist.SpectralLibraryToFeatureListModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.library_to_featurelist.SpectralLibraryToFeatureListParameters;
 import io.github.mzmine.modules.io.export_merge_libraries.MergeLibrariesModule;
@@ -56,10 +57,8 @@ import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashbo
 import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashboardParameters;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModule;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardParameters;
-import io.github.mzmine.modules.visualization.fx3d.Fx3DVisualizerModule;
-import io.github.mzmine.modules.visualization.fx3d.Fx3DVisualizerParameters;
-import io.github.mzmine.modules.visualization.image.ImageVisualizerModule;
-import io.github.mzmine.modules.visualization.image.ImageVisualizerParameters;
+import io.github.mzmine.modules.visualization.intensitymap.IntensityMap2DModule;
+import io.github.mzmine.modules.visualization.intensitymap.IntensityMap3DModule;
 import io.github.mzmine.modules.visualization.msms.MsMsVisualizerModule;
 import io.github.mzmine.modules.visualization.projectmetadata.color.ColorByMetadataModule;
 import io.github.mzmine.modules.visualization.raw_data_summary.RawDataSummaryModule;
@@ -70,8 +69,6 @@ import io.github.mzmine.modules.visualization.rawdataoverview.RawDataOverviewWin
 import io.github.mzmine.modules.visualization.rawdataoverviewims.IMSRawDataOverviewModule;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerModule;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerParameters;
-import io.github.mzmine.modules.visualization.twod.TwoDVisualizerModule;
-import io.github.mzmine.modules.visualization.twod.TwoDVisualizerParameters;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
@@ -111,7 +108,6 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -181,6 +177,8 @@ public class MainWindowController {
   public MenuItem openFeatureListMenuItem;
   @FXML
   public MenuItem showFeatureListSummaryMenuItem;
+  @FXML
+  public MenuItem setFeatureListPreferencesMenuItem;
   @FXML
   public MenuItem featureListsRenameMenuItem;
   @FXML
@@ -640,18 +638,6 @@ public class MainWindowController {
     MZmineCore.runMZmineModule(IMSRawDataOverviewModule.class, parameters);
   }
 
-  public void handleShowImageViewer(Event event) {
-    logger.finest("Activated Show image viewer");
-    var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
-    ParameterSet parameters = MZmineCore.getConfiguration()
-        .getModuleParameters(ImageVisualizerModule.class);
-    parameters.getParameter(RawDataOverviewParameters.rawDataFiles)
-        .setValue(RawDataFilesSelectionType.SPECIFIC_FILES,
-            selectedFiles.toArray(new RawDataFile[0]));
-    MZmineCore.runMZmineModule(ImageVisualizerModule.class, parameters);
-  }
-
-
   public void handleShowMsSpectrum(Event event) {
     logger.finest("Activated Show MS spectrum menu item");
     var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
@@ -668,44 +654,17 @@ public class MainWindowController {
 
   public void handleShow2DPlot(Event event) {
     logger.finest("Activated Show 2D plot menu item");
-    var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
-    ParameterSet parameters = MZmineCore.getConfiguration()
-        .getModuleParameters(TwoDVisualizerModule.class);
-    parameters.getParameter(TwoDVisualizerParameters.dataFiles)
-        .setValue(RawDataFilesSelectionType.SPECIFIC_FILES,
-            selectedFiles.toArray(new RawDataFile[0]));
-    ExitCode exitCode = parameters.showSetupDialog(true);
-    if (exitCode == ExitCode.OK) {
-      MZmineCore.runMZmineModule(TwoDVisualizerModule.class, parameters);
-    }
+    IntensityMap3DModule.showSelectedFiles(IntensityMap2DModule.class, true);
   }
 
   public void handleShow3DPlot(Event event) {
     logger.finest("Activated Show 3D plot menu item");
-    var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
-    ParameterSet parameters = MZmineCore.getConfiguration()
-        .getModuleParameters(Fx3DVisualizerModule.class);
-    parameters.getParameter(Fx3DVisualizerParameters.dataFiles)
-        .setValue(RawDataFilesSelectionType.SPECIFIC_FILES,
-            selectedFiles.toArray(new RawDataFile[0]));
-    ExitCode exitCode = parameters.showSetupDialog(true);
-    if (exitCode == ExitCode.OK) {
-      MZmineCore.runMZmineModule(Fx3DVisualizerModule.class, parameters);
-    }
+    IntensityMap3DModule.showSelectedFiles(IntensityMap3DModule.class, true);
   }
 
   public void handleShowImage(Event event) {
     logger.finest("Activated Show image menu item");
-    var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
-    ParameterSet parameters = MZmineCore.getConfiguration()
-        .getModuleParameters(ImageVisualizerModule.class);
-    parameters.getParameter(ImageVisualizerParameters.rawDataFiles)
-        .setValue(RawDataFilesSelectionType.SPECIFIC_FILES,
-            selectedFiles.toArray(new RawDataFile[0]));
-    ExitCode exitCode = parameters.showSetupDialog(true);
-    if (exitCode == ExitCode.OK) {
-      MZmineCore.runMZmineModule(ImageVisualizerModule.class, parameters);
-    }
+    IntensityMap3DModule.showSelectedFiles(IntensityMap2DModule.class, false);
   }
 
   public void handleShowMsMsPlot(Event event) {
@@ -821,47 +780,35 @@ public class MainWindowController {
   }
 
   public void handleShowFeatureListSummary(Event event) {
-    FXMLLoader loader = new FXMLLoader(getClass().getResource("FeatureListSummary.fxml"));
-
     List<FeatureList> selectedValues = featureListsList.getSelectedItems();
     for (FeatureList selectedValue : selectedValues) {
-      try {
-        AnchorPane pane = loader.load();
-        Stage stage = new Stage();
-        stage.setTitle("Feature list summary - " + selectedValue.getName());
-        stage.getIcons().add(FxIconUtil.loadImageFromResources("mzmineIcon.png"));
-        stage.setScene(new Scene(pane));
-        stage.getScene().getStylesheets()
-            .addAll(MZmineCore.getDesktop().getMainWindow().getScene().getStylesheets());
-        FeatureListSummaryController controller = loader.getController();
-        controller.setFeatureList((ModularFeatureList) selectedValue);
-        stage.show();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      final FeatureListSummaryController controller = new FeatureListSummaryController();
+      controller.setFeatureList((ModularFeatureList) selectedValue);
+      showSummaryStage("Feature list summary - " + selectedValue.getName(), controller.buildView());
     }
   }
 
-  public void handleShowFileSummary(Event event) {
-    FXMLLoader loader = new FXMLLoader(getClass().getResource("FeatureListSummary.fxml"));
+  public void handleSetFeatureListPreferences(Event event) {
+    FeatureListPreferencesModule.showSetupAndApply(featureListsList.getSelectedItems());
+  }
 
+  public void handleShowFileSummary(Event event) {
     List<RawDataFile> selectedValues = getRawDataList().getSelectedItems();
     for (RawDataFile selectedValue : selectedValues) {
-      try {
-        AnchorPane pane = loader.load();
-        Stage stage = new Stage();
-        stage.setTitle("MS data file list summary - " + selectedValue.getName());
-        stage.getIcons().add(FxIconUtil.loadImageFromResources("mzmineIcon.png"));
-        stage.setScene(new Scene(pane));
-        stage.getScene().getStylesheets()
-            .addAll(MZmineCore.getDesktop().getMainWindow().getScene().getStylesheets());
-        FeatureListSummaryController controller = loader.getController();
-        controller.setRawDataFile(selectedValue);
-        stage.show();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      final FeatureListSummaryController controller = new FeatureListSummaryController();
+      controller.setRawDataFile(selectedValue);
+      showSummaryStage("MS data file summary - " + selectedValue.getName(), controller.buildView());
     }
+  }
+
+  private void showSummaryStage(@NotNull String title, @NotNull Region content) {
+    final Stage stage = new Stage();
+    stage.setTitle(title);
+    stage.getIcons().add(FxIconUtil.loadImageFromResources("mzmineIcon.png"));
+    stage.setScene(new Scene(content));
+    stage.getScene().getStylesheets()
+        .addAll(MZmineCore.getDesktop().getMainWindow().getScene().getStylesheets());
+    stage.show();
   }
 
   public void handleShowIntegrationDashboard(Event event) {

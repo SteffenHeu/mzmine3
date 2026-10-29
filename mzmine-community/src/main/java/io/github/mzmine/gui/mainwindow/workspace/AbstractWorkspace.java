@@ -75,7 +75,6 @@ import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.formul
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.formula.prediction.FormulaPredictionIonNetworkModule;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.ionidnetworking.IonNetworkingModule;
 import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.refinement.IonNetworkRefinementModule;
-import io.github.mzmine.modules.dataprocessing.id_ion_identity_networking.relations.IonNetRelationsModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
 import io.github.mzmine.modules.dataprocessing.id_localcsvsearch.LocalCSVDatabaseSearchModule;
 import io.github.mzmine.modules.dataprocessing.id_ms2search.Ms2SearchModule;
@@ -108,6 +107,7 @@ import io.github.mzmine.modules.io.import_feature_networks.ImportFeatureNetworks
 import io.github.mzmine.modules.io.projectload.ProjectLoadModule;
 import io.github.mzmine.modules.io.projectsave.ProjectSaveAsModule;
 import io.github.mzmine.modules.io.projectsave.ProjectSaveModule;
+import io.github.mzmine.modules.io.spectral_library_from_matches.MatchesSubsetLibraryModule;
 import io.github.mzmine.modules.io.spectraldbsubmit.batch.LibraryBatchGenerationModule;
 import io.github.mzmine.modules.tools.batchwizard.BatchWizardModule;
 import io.github.mzmine.modules.tools.isotopepatternpreview.IsotopePatternPreviewModule;
@@ -120,10 +120,10 @@ import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDash
 import io.github.mzmine.modules.visualization.equivalentcarbonnumberplot.EquivalentCarbonNumberModule;
 import io.github.mzmine.modules.visualization.feat_histogram.FeatureHistogramPlotModule;
 import io.github.mzmine.modules.visualization.frames.FrameVisualizerModule;
-import io.github.mzmine.modules.visualization.fx3d.Fx3DVisualizerModule;
 import io.github.mzmine.modules.visualization.histo_feature_correlation.FeatureCorrelationHistogramModule;
-import io.github.mzmine.modules.visualization.image.ImageVisualizerModule;
 import io.github.mzmine.modules.visualization.injection_time.InjectTimeAnalysisModule;
+import io.github.mzmine.modules.visualization.intensitymap.IntensityMap2DModule;
+import io.github.mzmine.modules.visualization.intensitymap.IntensityMap3DModule;
 import io.github.mzmine.modules.visualization.intensityplot.IntensityPlotModule;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotModule;
 import io.github.mzmine.modules.visualization.lipidannotationsummary.LipidAnnotationSummaryModule;
@@ -133,15 +133,16 @@ import io.github.mzmine.modules.visualization.msms.MsMsVisualizerModule;
 import io.github.mzmine.modules.visualization.network_overview.FeatureNetworkOverviewModule;
 import io.github.mzmine.modules.visualization.otherdetectors.multidetector.MultidetectorVisualizerModule;
 import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataTab;
+import io.github.mzmine.modules.visualization.projectmetadata.extract.SampleMetadataExtractionModule;
 import io.github.mzmine.modules.visualization.raw_data_summary.RawDataSummaryModule;
 import io.github.mzmine.modules.visualization.rawdataoverview.RawDataOverviewModule;
 import io.github.mzmine.modules.visualization.rawdataoverviewims.IMSRawDataOverviewModule;
+import io.github.mzmine.modules.visualization.rawfilemetadata.AcquisitionMetadataTab;
 import io.github.mzmine.modules.visualization.scan_histogram.CorrelatedFeaturesMzHistogramModule;
 import io.github.mzmine.modules.visualization.scan_histogram.ScanHistogramModule;
 import io.github.mzmine.modules.visualization.scatterplot.ScatterPlotVisualizerModule;
 import io.github.mzmine.modules.visualization.spectra.msn_tree.MSnTreeVisualizerModule;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerModule;
-import io.github.mzmine.modules.visualization.twod.TwoDVisualizerModule;
 import io.github.mzmine.modules.visualization.vankrevelendiagram.VanKrevelenDiagramModule;
 import io.github.mzmine.util.javafx.FxMenuUtil;
 import io.github.mzmine.util.javafx.ModuleMenuItem;
@@ -233,6 +234,9 @@ public abstract class AbstractWorkspace implements Workspace {
     addMenuItem(menu, "Sample metadata",
         () -> MZmineCore.getDesktop().addTab(new ProjectMetadataTab()), KeyCode.M,
         KeyCombination.SHORTCUT_DOWN);
+    addMenuItem(menu, AcquisitionMetadataTab.TITLE,
+        () -> MZmineCore.getDesktop().addTab(new AcquisitionMetadataTab()), null);
+    addModuleMenuItems(menu, SampleMetadataExtractionModule.class);
     addSeparator(menu);
     addMenuItem(menu, "Set preferences",
         () -> MZmineCore.getConfiguration().getPreferences().showSetupDialog(true), KeyCode.P,
@@ -298,9 +302,9 @@ public abstract class AbstractWorkspace implements Workspace {
   protected Menu buildDefaultFeatureGroupingSubMenu() {
     final Menu groupingMenu = addModuleMenuItems("Feature grouping", CorrelateGroupingModule.class,
         IonNetworkingModule.class, MainSpectralNetworkingModule.class, AddIonNetworkingModule.class,
-        IonNetworkRefinementModule.class, IonNetRelationsModule.class,
-        FormulaPredictionIonNetworkModule.class, CreateAvgNetworkFormulasModule.class,
-        IonNetworkMSMSCheckModule.class, ClearIonIdentitiesModule.class);
+        IonNetworkRefinementModule.class, FormulaPredictionIonNetworkModule.class,
+        CreateAvgNetworkFormulasModule.class, IonNetworkMSMSCheckModule.class,
+        ClearIonIdentitiesModule.class);
     groupingMenu.getItems().add(new SeparatorMenuItem());
     addModuleMenuItems(groupingMenu, CompoundGrouperModule.class,
         ConfigCompoundRepresentationModule.class);
@@ -331,12 +335,12 @@ public abstract class AbstractWorkspace implements Workspace {
     final Menu menu = new Menu("Visualization");
 
     final Menu rawDataVis = FxMenuUtil.addModuleMenuItems(menu, "Raw data",
-        RawDataOverviewModule.class, IMSRawDataOverviewModule.class, ImageVisualizerModule.class,
-        SpectraVisualizerModule.class, FrameVisualizerModule.class);
+        RawDataOverviewModule.class, IMSRawDataOverviewModule.class, SpectraVisualizerModule.class,
+        FrameVisualizerModule.class);
 
     addSeparator(rawDataVis);
-    addModuleMenuItems(rawDataVis, ChromatogramVisualizerModule.class, TwoDVisualizerModule.class,
-        Fx3DVisualizerModule.class, MsMsVisualizerModule.class,
+    addModuleMenuItems(rawDataVis, ChromatogramVisualizerModule.class, IntensityMap2DModule.class,
+        IntensityMap3DModule.class, MsMsVisualizerModule.class,
         MassvoltammogramFromFileModule.class);
     addSeparator(rawDataVis);
     addModuleMenuItems(rawDataVis, RawDataSummaryModule.class, ScanHistogramModule.class,
@@ -355,8 +359,7 @@ public abstract class AbstractWorkspace implements Workspace {
         MassvoltammogramFromFeatureListModule.class);
     addSeparator(featureVis);
     addModuleMenuItems(featureVis, "Lipids", LipidAnnotationQCDashboardModule.class,
-        EquivalentCarbonNumberModule.class,
-        LipidAnnotationSummaryModule.class);
+        EquivalentCarbonNumberModule.class, LipidAnnotationSummaryModule.class);
     addModuleMenuItems(featureVis, "Dashboards", CompoundDashboardModule.class,
         IntegrationDashboardModule.class, LipidAnnotationQCDashboardModule.class,
         StatsDasboardModule.class);
@@ -374,7 +377,8 @@ public abstract class AbstractWorkspace implements Workspace {
     addModuleMenuItems(menu, GlobalIonLibrariesModule.class, IsotopePatternPreviewModule.class,
         QualityParametersModule.class);
     addModuleMenuItems(menu, "Libraries", LibraryAnalysisCSVExportModule.class,
-        MsMsQualityExportModule.class, MergeLibrariesModule.class);
+        MsMsQualityExportModule.class, MatchesSubsetLibraryModule.class,
+        MergeLibrariesModule.class);
     addModuleMenuItems(menu, "timsTOF fleX", TimsTOFMaldiAcquisitionModule.class,
         SimsefImagingSchedulerModule.class);
     return menu;
@@ -441,7 +445,7 @@ public abstract class AbstractWorkspace implements Workspace {
         () -> UserAuthStore.removeUserFile(CurrentUserService.getUser()));
     addMenuItem(menu, "Open users directory", getWorkspaceMenuHelper()::openUsersDirectory);
     addMenuItem(menu, "Manage user online",
-        () -> DesktopService.getDesktop().openWebPage(MzioMZmineLinks.USER_CONSOLE.getUrl()));
+        () -> DesktopService.getDesktop().openWebPage(MzioMZmineLinks.ACCOUNT_CONSOLE.getUrl()));
     return menu;
   }
 

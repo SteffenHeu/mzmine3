@@ -30,6 +30,7 @@ import io.github.mzmine.gui.preferences.MZminePreferences;
 import io.github.mzmine.util.StringUtils;
 import io.github.mzmine.util.files.FileAndPathUtil;
 import io.mzio.mzmine.startup.MZmineCoreArgumentParser;
+import io.mzio.mzmine.startup.MZmineExit;
 import io.mzio.users.client.UserAuthStore;
 import io.mzio.users.gui.fx.LoginOptions;
 import io.mzio.users.gui.fx.UsersController;
@@ -64,7 +65,6 @@ class ArgsToConfigUtils {
 
     // parse args temp dir after config was loaded, so we can override
     checkAndOverrideArgsTempDir(argsParser);
-    applyTempDirFromConfiguration();
     TmpFileCleanup.runCleanup(); // clean temp files in new dir
 
     checkAndOverrideArgsUser(argsParser);
@@ -79,35 +79,25 @@ class ArgsToConfigUtils {
   }
 
   static void checkAndOverrideArgsTempDir(MZmineCoreArgumentParser argsParser) {
-    // override temp directory
-    final File tempDirectory = argsParser.getTempDirectory();
-    if (tempDirectory != null) {
-      // needs to be accessible
-      if (FileAndPathUtil.createDirectory(tempDirectory)) {
-        ConfigService.getPreferences().setParameter(MZminePreferences.tempDirectory, tempDirectory);
-      } else {
-        logger.log(Level.WARNING,
-            "Cannot create or access temp file directory that was set via program argument: "
-                + tempDirectory.getAbsolutePath());
-      }
+    final File[] tempDirectories = argsParser.getTempDirectories();
+    if (tempDirectories == null) {
+      return;
     }
+    // set and get actual temp directories, excluding .mzmine folder
+    final File[] usableDirectories = FileAndPathUtil.setTempDirs(tempDirectories);
+    if (usableDirectories.length > 0) {
+      ConfigService.getPreferences()
+          .setParameter(MZminePreferences.tempDirectory, usableDirectories);
+    }
+    logger.finest(() -> "Working temporary directory is " + FileAndPathUtil.getTempDir());
   }
 
   static void checkAndHandleArgsUserLoginOptions(MZmineCoreArgumentParser argsParser) {
     final boolean isCliBatchProcessing = argsParser.getBatchFile() != null;
 
-    // login user by cli direct password
-    if (argsParser.isCliLoginPassword()) {
-      if (commandLineLogin(isCliBatchProcessing, LoginOptions.CONSOLE_ENTER_CREDENTIALS)) {
-        return;
-      }
-    }
-
-    // login user if cli option
-    if (argsParser.isCliLogin()) {
-      if (commandLineLogin(isCliBatchProcessing, LoginOptions.CONSOLE)) {
-        return;
-      }
+    // login user by cli-token
+    if (argsParser.isCliLoginToken()) {
+      commandLineLogin(isCliBatchProcessing, LoginOptions.CLI_TOKEN);
     }
   }
 
@@ -126,7 +116,7 @@ class ArgsToConfigUtils {
       }
     } catch (Exception exception) {
       logger.warning("Issue while reading keep in memory option from CLI argument");
-      System.exit(1);
+      MZmineExit.exit(1);
       return;
     }
 
@@ -225,7 +215,7 @@ class ArgsToConfigUtils {
       DesktopService.getDesktop().displayMessage(
           "Requires user login. Open mzmine GUI and login to a user. Then provide the user file as command line argument -user path/user.mzuser");
       if (!isCliBatchProcessing) {
-        System.exit(1);
+        MZmineExit.exit(1);
         return true;
       }
     }
@@ -237,43 +227,16 @@ class ArgsToConfigUtils {
       if (!ConfigService.saveUserConfig()) {
         logger.severe(
             "Failed to save user config after login. A solution may be to delete the .mzconfig file in the system user directory /.mzmine/");
-        System.exit(1);
+        MZmineExit.exit(1);
         return true;
       } else {
         logger.info("User login successful, user configuration is saved with the new user "
             + currentUserName);
-        System.exit(0);
+        MZmineExit.exit(0);
         return true;
       }
     }
     return false;
   }
 
-  static void applyTempDirFromConfiguration() {
-    final File tempDir = ConfigService.getConfiguration().getPreferences()
-        .getParameter(MZminePreferences.tempDirectory).getValue();
-    if (tempDir == null) {
-      logger.warning(
-          () -> "Invalid temporary directory. Defaulting to system temp directory. %s".formatted(
-              System.getProperty("java.io.tmpdir")));
-      return;
-    }
-
-    if (!tempDir.exists()) {
-      if (!tempDir.mkdirs()) {
-        logger.warning(
-            () -> "Could not create temporary directory %s. Defaulting to system temp directory. %s".formatted(
-                tempDir.getAbsolutePath(), System.getProperty("java.io.tmpdir")));
-        return;
-      }
-    }
-
-    if (tempDir.isDirectory()) {
-      FileAndPathUtil.setTempDir(tempDir.getAbsoluteFile());
-      logger.finest(() -> "Default temporary directory is %s".formatted(
-          System.getProperty("java.io.tmpdir")));
-      logger.finest(() -> "Working temporary directory is %s".formatted(
-          FileAndPathUtil.getTempDir().toString()));
-    }
-  }
 }

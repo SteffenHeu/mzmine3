@@ -36,6 +36,7 @@ import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.KeepInMemory;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.io.download.AssetGroup;
+import io.github.mzmine.modules.io.import_rawdata_bruker_tdf.datamodel.TdfPressureCompensation;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.UserParameter;
 import io.github.mzmine.parameters.dialogs.GroupedParameterSetupDialog;
@@ -51,7 +52,7 @@ import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.StringParameter;
 import io.github.mzmine.parameters.parametertypes.WindowSettingsParameter;
 import io.github.mzmine.parameters.parametertypes.colorpalette.ColorPaletteParameter;
-import io.github.mzmine.parameters.parametertypes.filenames.DirectoryParameter;
+import io.github.mzmine.parameters.parametertypes.filenames.DirectoryListParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameParameter;
 import io.github.mzmine.parameters.parametertypes.filenames.FileNameWithDownloadParameter;
 import io.github.mzmine.parameters.parametertypes.paintscale.PaintScalePaletteParameter;
@@ -177,12 +178,18 @@ public class MZminePreferences extends SimpleParameterSet {
   public static final BooleanParameter presentationMode = new BooleanParameter("Presentation mode",
       "If checked, fonts in the mzmine gui will be enlarged. The chart fonts are still controlled by the chart theme.",
       false);
-  public static final DirectoryParameter tempDirectory = new DirectoryParameter(
-      "Temporary file directory", "Directory where temporary files"
-      + " will be stored. Directory should be located on a drive with fast read and write "
-      + "(e.g., an SSD). Requires a restart of mzmine to take effect (the program argument --temp "
-      + "overrides this parameter, if set: --temp D:\\your_tmp_dir\\)",
-      System.getProperty("java.io.tmpdir"));
+  public static final DirectoryListParameter tempDirectory = new DirectoryListParameter(
+      "Temporary file directory", """
+      Directories where temporary files will be stored, in priority order.
+      Click the field to reorder or remove directories; use + to add a directory.
+      Use drives with fast read and write access (e.g., SSDs). mzmine keeps using a directory while
+      its drive has at least 10 GB of usable space beyond the new file. Otherwise, or if a file
+      cannot be created, it checks the list from the beginning and uses the first working
+      directory with enough space. Changes apply to newly created files.
+      The mzmine settings folder (.mzmine in the user directory) cannot be used.
+      The program argument --temp overrides this list, e.g., --temp D:\\temp --temp E:\\temp.
+      You may repeat --temp or separate paths with ; (Windows) or : (Linux, macOS).
+      Quote paths with spaces.""", FileAndPathUtil.getTempDirs());
   public static final ComboParameter<KeepInMemory> memoryOption = new ComboParameter<>(
       "Keep in memory", String.format(
       "Specifies the objects that are kept in memory rather than memory mapping "
@@ -243,6 +250,10 @@ public class MZminePreferences extends SimpleParameterSet {
       .cloneParameter();
   public static final BooleanParameter excludeThermoExceptionMasses = VendorImportParameters.excludeThermoExceptionMasses.getEmbeddedParameter()
       .cloneParameter();
+  public static final ComboParameter<TdfPressureCompensation> brukerPressureComp = VendorImportParameters.applyTimsPressureCompensation.getEmbeddedParameter()
+      .cloneParameter();
+
+
   public static final HiddenParameter<Boolean> showTempFolderAlert = new HiddenParameter<>(
       new BooleanParameter("Show temp alert", "Show temp folder alert", true));
   public static final HiddenParameter<String> username = new HiddenParameter<>(
@@ -294,7 +305,8 @@ public class MZminePreferences extends SimpleParameterSet {
             showTempFolderAlert, username, showQuickStart, siriusCountWarningOptOut,
             // conversion, data handling
             applyVendorCentroiding, watersLockmass, massLynxImportChoice, msConvertPath,
-            keepConvertedFile, thermoRawFileParserPath, excludeThermoExceptionMasses},
+            keepConvertedFile, thermoRawFileParserPath, excludeThermoExceptionMasses,
+            brukerPressureComp},
         "https://mzmine.github.io/mzmine_documentation/performance.html#preferences");
 
     darkModeProperty.subscribe(state -> {
@@ -330,7 +342,7 @@ public class MZminePreferences extends SimpleParameterSet {
             imageTransformation, imageNormalization, windowSettings), //
         new ParameterGroup("MS data import", applyVendorCentroiding, massLynxImportChoice,
             watersLockmass, msConvertPath, keepConvertedFile, thermoRawFileParserPath,
-            excludeThermoExceptionMasses) //
+            excludeThermoExceptionMasses, brukerPressureComp) //
     );
     // imsModuleWarnings, showTempFolderAlert, showQuickStart  are hidden parameters
 
@@ -388,13 +400,11 @@ public class MZminePreferences extends SimpleParameterSet {
 
     updateGuiFormat();
 
-    final File tempDir = getValue(MZminePreferences.tempDirectory);
-    if (tempDir != null && tempDir.isDirectory()) {
-      if (!tempDir.exists()) {
-        tempDir.mkdirs();
-      }
-      FileAndPathUtil.setTempDir(tempDir);
-    }
+    final File[] tempDirs = getValue(MZminePreferences.tempDirectory);
+    // removes the .mzmine dir, returns without disk access if the list did not change
+    final File[] actuallySetTemp = FileAndPathUtil.setTempDirs(tempDirs);
+    setParameter(MZminePreferences.tempDirectory, actuallySetTemp);
+
     // delete temp files as soon as possible
     FileAndPathUtil.setEarlyTempFileCleanup(getValue(MZminePreferences.deleteTempFiles));
 
@@ -566,6 +576,11 @@ public class MZminePreferences extends SimpleParameterSet {
           new ManualProxyConfig(type, address, port, List.of()));
       ProxyUtils.applyConfig(config);
     }
+
+    if (!loadedParams.containsKey(brukerPressureComp.getName())) {
+      getParameter(brukerPressureComp).setValue(
+          VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
+    }
   }
 
   private void updateSystemProxySettings() {
@@ -621,10 +636,16 @@ public class MZminePreferences extends SimpleParameterSet {
   @Override
   public boolean checkParameterValues(Collection<String> errorMessages,
       boolean skipRawDataAndFeatureListParameters) {
-    final boolean superCheck = super.checkParameterValues(errorMessages,
-        skipRawDataAndFeatureListParameters);
+    boolean valid = super.checkParameterValues(errorMessages, skipRawDataAndFeatureListParameters);
 
-    return superCheck;
+    for (File dir : getValue(MZminePreferences.tempDirectory)) {
+      if (FileAndPathUtil.isInMzmineDir(dir)) {
+        errorMessages.add(
+            "The mzmine settings folder cannot be used as temporary file directory: " + dir);
+        valid = false;
+      }
+    }
+    return valid;
   }
 
   @Override
