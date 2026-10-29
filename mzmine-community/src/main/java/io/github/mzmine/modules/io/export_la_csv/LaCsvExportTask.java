@@ -182,7 +182,7 @@ public class LaCsvExportTask extends AbstractTask {
         for (Feature feature : features) {
           final var row = feature.getRow();
           StringBuilder b = new StringBuilder(String.format(
-              Locale.ROOT, "%d,%.4f", row.getID(), row.getAverageMZ()));
+              Locale.ROOT, "ID%d,mz%.4f", row.getID(), row.getAverageMZ()));
           if (row.getPreferredAnnotation() != null) {
             b.append(",%s".formatted(row.getPreferredAnnotation().toString()));
           }
