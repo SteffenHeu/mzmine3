@@ -43,6 +43,7 @@ import io.github.mzmine.datamodel.msms.MsMsInfo;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.MathUtils;
@@ -67,6 +68,7 @@ class ImsToRawDataFileTask extends AbstractTask {
   private final double maxTicRsdDeviation;
   private final int totalMobilityScans;
   private int processedMobilityScans;
+  private @NotNull MZTolerance mergeTolerance;
 
   ImsToRawDataFileTask(@NotNull MZmineProject project, @NotNull IMSRawDataFile sourceFile,
       @NotNull ParameterSet parameters, @Nullable MemoryMapStorage storage,
@@ -80,6 +82,7 @@ class ImsToRawDataFileTask extends AbstractTask {
     selectedFrames = scanSelection.getMatchingScans(sourceFile.getFrames());
     mobilityScansToMerge = parameters.getValue(ImsToRawDataFileParameters.mobilityScansToMerge);
     maxTicRsdDeviation = parameters.getValue(ImsToRawDataFileParameters.maxTicRsdDeviation);
+    mergeTolerance = parameters.getValue(ImsToRawDataFileParameters.mergeTolerance);
     totalMobilityScans = selectedFrames.stream().mapToInt(Frame::getNumberOfMobilityScans).sum();
   }
 
@@ -116,8 +119,7 @@ class ImsToRawDataFileTask extends AbstractTask {
         final float nextFrameRt = getNextFrameRt(selectedFrames, frameIndex);
         final int numMobilityScans = frame.getNumberOfMobilityScans();
 
-        for (int mobilityScanIndex = 0; mobilityScanIndex < numMobilityScans;
-            mobilityScanIndex++) {
+        for (int mobilityScanIndex = 0; mobilityScanIndex < numMobilityScans; mobilityScanIndex++) {
           if (isCanceled()) {
             return;
           }
@@ -172,8 +174,8 @@ class ImsToRawDataFileTask extends AbstractTask {
     final Range<Double> scanningMzRange = group.stream().map(TimedMobilityScan::scan)
         .map(MobilityScan::getScanningMZRange).filter(range -> range != null).reduce(Range::span)
         .orElse(null);
-    final MassSpectrumType spectrumType = group.size() == 1 ? representative.getSpectrumType()
-        : MassSpectrumType.CENTROIDED;
+    final MassSpectrumType spectrumType =
+        group.size() == 1 ? representative.getSpectrumType() : MassSpectrumType.CENTROIDED;
 
     return new SimpleScan(newFile, scanNumber, representative.getMSLevel(), rt,
         toRegularMsMsInfo(representative.getMsMsInfo()), data[0], data[1], spectrumType,
@@ -181,7 +183,7 @@ class ImsToRawDataFileTask extends AbstractTask {
         representative.getInjectionTime());
   }
 
-  private static double[][] mergeData(@NotNull List<TimedMobilityScan> group) {
+  private double[][] mergeData(@NotNull List<TimedMobilityScan> group) {
     if (group.size() == 1) {
       final MobilityScan scan = group.getFirst().scan();
       return new double[][]{scan.getMzValues(new double[0]),
@@ -189,9 +191,7 @@ class ImsToRawDataFileTask extends AbstractTask {
     }
 
     final List<MobilityScan> scans = group.stream().map(TimedMobilityScan::scan).toList();
-    final var tolerance = scans.getFirst().getMSLevel() == 1 ? SpectraMerging.defaultMs1MergeTol
-        : SpectraMerging.defaultMs2MergeTol;
-    return SpectraMerging.calculatedMergedMzsAndIntensities(scans, tolerance,
+    return SpectraMerging.calculatedMergedMzsAndIntensities(scans, mergeTolerance,
         IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, null);
   }
 

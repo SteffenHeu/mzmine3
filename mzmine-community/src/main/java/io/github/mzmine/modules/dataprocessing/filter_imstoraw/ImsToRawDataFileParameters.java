@@ -33,6 +33,7 @@ import io.github.mzmine.parameters.parametertypes.DoubleParameter;
 import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelectionParameter;
+import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParameter;
 import org.jetbrains.annotations.NotNull;
 
 public class ImsToRawDataFileParameters extends SimpleParameterSet {
@@ -51,9 +52,12 @@ public class ImsToRawDataFileParameters extends SimpleParameterSet {
           + "(RSDs) below the mean TIC. High-TIC scans are not removed.",
       MZmineCore.getConfiguration().getScoreFormat(), 3d, 0d, Double.MAX_VALUE);
 
+  public static final MZToleranceParameter mergeTolerance = new MZToleranceParameter(
+      "Merge tolerance (Mobility scan to mobility scan)",
+      "Tolerance for mspectral m/zs in individual mobility scans", 0.01, 20);
+
   public ImsToRawDataFileParameters() {
-    super(new Parameter[]{rawDataFiles, scanSelection, mobilityScansToMerge,
-        maxTicRsdDeviation});
+    super(rawDataFiles, scanSelection, mergeTolerance, mobilityScansToMerge, maxTicRsdDeviation);
   }
 
   @Override
