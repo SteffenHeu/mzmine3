@@ -67,6 +67,7 @@ class ImsToRawDataFileTask extends AbstractTask {
   private final int mobilityScansToMerge;
   private final double maxTicRsdDeviation;
   private final int totalMobilityScans;
+  private final int minDetectionsPerBin;
   private int processedMobilityScans;
   private @NotNull MZTolerance mergeTolerance;
 
@@ -83,6 +84,7 @@ class ImsToRawDataFileTask extends AbstractTask {
     mobilityScansToMerge = parameters.getValue(ImsToRawDataFileParameters.mobilityScansToMerge);
     maxTicRsdDeviation = parameters.getValue(ImsToRawDataFileParameters.maxTicRsdDeviation);
     mergeTolerance = parameters.getValue(ImsToRawDataFileParameters.mergeTolerance);
+    minDetectionsPerBin = parameters.getValue(ImsToRawDataFileParameters.minDetectionsPerBin);
     totalMobilityScans = selectedFrames.stream().mapToInt(Frame::getNumberOfMobilityScans).sum();
   }
 
@@ -192,7 +194,7 @@ class ImsToRawDataFileTask extends AbstractTask {
 
     final List<MobilityScan> scans = group.stream().map(TimedMobilityScan::scan).toList();
     return SpectraMerging.calculatedMergedMzsAndIntensities(scans, mergeTolerance,
-        IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, null);
+        IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, minDetectionsPerBin);
   }
 
   static List<SimpleScan> filterLowTicScans(@NotNull List<SimpleScan> scans,

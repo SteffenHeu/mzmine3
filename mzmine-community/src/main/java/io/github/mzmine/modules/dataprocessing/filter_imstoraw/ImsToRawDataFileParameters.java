@@ -26,7 +26,6 @@
 package io.github.mzmine.modules.dataprocessing.filter_imstoraw;
 
 import io.github.mzmine.main.MZmineCore;
-import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.IonMobilitySupport;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
 import io.github.mzmine.parameters.parametertypes.DoubleParameter;
@@ -56,8 +55,14 @@ public class ImsToRawDataFileParameters extends SimpleParameterSet {
       "Merge tolerance (Mobility scan to mobility scan)",
       "Tolerance for mspectral m/zs in individual mobility scans", 0.01, 20);
 
+  public static final IntegerParameter minDetectionsPerBin = new IntegerParameter(
+      "Minimum detections per bn",
+      "The minimum number of detections in a bin to include it in the merged scan.", 1, 1,
+      Integer.MAX_VALUE);
+
   public ImsToRawDataFileParameters() {
-    super(rawDataFiles, scanSelection, mergeTolerance, mobilityScansToMerge, maxTicRsdDeviation);
+    super(rawDataFiles, scanSelection, mergeTolerance, mobilityScansToMerge, minDetectionsPerBin,
+        maxTicRsdDeviation);
   }
 
   @Override
