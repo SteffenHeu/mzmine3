@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2022 The MZmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -32,6 +32,8 @@ import io.github.mzmine.datamodel.featuredata.IonTimeSeriesUtils;
 import io.github.mzmine.datamodel.features.Feature;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
+import io.github.mzmine.datamodel.identities.iontype.IonType.IonTypeStringFlavor;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.combowithinput.FieldSeparator;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelection;
@@ -47,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -181,10 +184,14 @@ public class LaCsvExportTask extends AbstractTask {
         header.add("rt");
         for (Feature feature : features) {
           final var row = feature.getRow();
-          StringBuilder b = new StringBuilder(String.format(
-              Locale.ROOT, "ID%d,mz%.4f", row.getID(), row.getAverageMZ()));
-          if (row.getPreferredAnnotation() != null) {
-            b.append(",%s".formatted(row.getPreferredAnnotation().toString()));
+          StringBuilder b = new StringBuilder(
+              String.format(Locale.ROOT, "ID%d,mz%.4f", row.getID(), row.getAverageMZ()));
+          final FeatureAnnotation annotation = row.getPreferredAnnotation();
+          if (annotation != null) {
+            b.append(",%s,%s,%.2f".formatted(annotation.getCompoundName(),
+                annotation.getAdductType() != null ? annotation.getAdductType()
+                    .toString(IonTypeStringFlavor.SIMPLE_DEFAULT) : "",
+                Objects.requireNonNullElse(annotation.getScore(), 0f)));
           }
           header.add(b.toString());
         }
