@@ -70,6 +70,7 @@ class ImsToRawDataFileTask extends AbstractTask {
   private final int minDetectionsPerBin;
   private int processedMobilityScans;
   private @NotNull MZTolerance mergeTolerance;
+  private @Nullable Double inputNoiseLevel;
 
   ImsToRawDataFileTask(@NotNull MZmineProject project, @NotNull IMSRawDataFile sourceFile,
       @NotNull ParameterSet parameters, @Nullable MemoryMapStorage storage,
@@ -85,7 +86,57 @@ class ImsToRawDataFileTask extends AbstractTask {
     maxTicRsdDeviation = parameters.getValue(ImsToRawDataFileParameters.maxTicRsdDeviation);
     mergeTolerance = parameters.getValue(ImsToRawDataFileParameters.mergeTolerance);
     minDetectionsPerBin = parameters.getValue(ImsToRawDataFileParameters.minDetectionsPerBin);
+    Double noiseLevel = parameters.getValue(ImsToRawDataFileParameters.inputNoiseLevel);
+    inputNoiseLevel =
+        noiseLevel > 0 ? noiseLevel : null; // disable noise level check in case no level is given
     totalMobilityScans = selectedFrames.stream().mapToInt(Frame::getNumberOfMobilityScans).sum();
+  }
+
+  static List<SimpleScan> filterLowTicScans(@NotNull List<SimpleScan> scans,
+      double maxRsdDeviation) {
+    if (scans.size() < 2) {
+      return scans;
+    }
+
+    final double[] tics = scans.stream().mapToDouble(scan -> scan.getTIC()).toArray();
+    final double meanTic = MathUtils.calcAvg(tics);
+    final double relativeStandardDeviation = MathUtils.calcRelativeStd(tics);
+    if (!(meanTic > 0d) || !Double.isFinite(relativeStandardDeviation)
+        || relativeStandardDeviation == 0d) {
+      return scans;
+    }
+
+    final double minimumTic = meanTic * (1d - maxRsdDeviation * relativeStandardDeviation);
+    return scans.stream().filter(scan -> scan.getTIC() >= minimumTic).toList();
+  }
+
+  private static @Nullable MsMsInfo toRegularMsMsInfo(@Nullable MsMsInfo info) {
+    if (!(info instanceof IonMobilityMsMsInfo)) {
+      return info;
+    }
+    if (info instanceof DDAMsMsInfo ddaInfo) {
+      return new DDAMsMsInfoImpl(ddaInfo.getIsolationMz(), ddaInfo.getPrecursorCharge(),
+          ddaInfo.getActivationEnergy(), null, null, ddaInfo.getMsLevel(),
+          ddaInfo.getActivationMethod(), ddaInfo.getIsolationWindow());
+    }
+    return new DIAMsMsInfoImpl(info.getActivationEnergy(), null, info.getMsLevel(),
+        info.getActivationMethod(), info.getIsolationWindow());
+  }
+
+  static float interpolateRt(float frameRt, float nextFrameRt, int mobilityScanIndex,
+      int totalMobilityScans) {
+    return frameRt + (float) mobilityScanIndex / totalMobilityScans * (nextFrameRt - frameRt);
+  }
+
+  private static float getNextFrameRt(@NotNull List<? extends Frame> frames, int frameIndex) {
+    if (frameIndex + 1 < frames.size()) {
+      return frames.get(frameIndex + 1).getRetentionTime();
+    }
+    if (frameIndex > 0) {
+      final float currentRt = frames.get(frameIndex).getRetentionTime();
+      return currentRt + currentRt - frames.get(frameIndex - 1).getRetentionTime();
+    }
+    return frames.get(frameIndex).getRetentionTime();
   }
 
   @Override
@@ -194,54 +245,8 @@ class ImsToRawDataFileTask extends AbstractTask {
 
     final List<MobilityScan> scans = group.stream().map(TimedMobilityScan::scan).toList();
     return SpectraMerging.calculatedMergedMzsAndIntensities(scans, mergeTolerance,
-        IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, null, null, minDetectionsPerBin);
-  }
-
-  static List<SimpleScan> filterLowTicScans(@NotNull List<SimpleScan> scans,
-      double maxRsdDeviation) {
-    if (scans.size() < 2) {
-      return scans;
-    }
-
-    final double[] tics = scans.stream().mapToDouble(scan -> scan.getTIC()).toArray();
-    final double meanTic = MathUtils.calcAvg(tics);
-    final double relativeStandardDeviation = MathUtils.calcRelativeStd(tics);
-    if (!(meanTic > 0d) || !Double.isFinite(relativeStandardDeviation)
-        || relativeStandardDeviation == 0d) {
-      return scans;
-    }
-
-    final double minimumTic = meanTic * (1d - maxRsdDeviation * relativeStandardDeviation);
-    return scans.stream().filter(scan -> scan.getTIC() >= minimumTic).toList();
-  }
-
-  private static @Nullable MsMsInfo toRegularMsMsInfo(@Nullable MsMsInfo info) {
-    if (!(info instanceof IonMobilityMsMsInfo)) {
-      return info;
-    }
-    if (info instanceof DDAMsMsInfo ddaInfo) {
-      return new DDAMsMsInfoImpl(ddaInfo.getIsolationMz(), ddaInfo.getPrecursorCharge(),
-          ddaInfo.getActivationEnergy(), null, null, ddaInfo.getMsLevel(),
-          ddaInfo.getActivationMethod(), ddaInfo.getIsolationWindow());
-    }
-    return new DIAMsMsInfoImpl(info.getActivationEnergy(), null, info.getMsLevel(),
-        info.getActivationMethod(), info.getIsolationWindow());
-  }
-
-  static float interpolateRt(float frameRt, float nextFrameRt, int mobilityScanIndex,
-      int totalMobilityScans) {
-    return frameRt + (float) mobilityScanIndex / totalMobilityScans * (nextFrameRt - frameRt);
-  }
-
-  private static float getNextFrameRt(@NotNull List<? extends Frame> frames, int frameIndex) {
-    if (frameIndex + 1 < frames.size()) {
-      return frames.get(frameIndex + 1).getRetentionTime();
-    }
-    if (frameIndex > 0) {
-      final float currentRt = frames.get(frameIndex).getRetentionTime();
-      return currentRt + currentRt - frames.get(frameIndex - 1).getRetentionTime();
-    }
-    return frames.get(frameIndex).getRetentionTime();
+        IntensityMergingType.SUMMED, SpectraMerging.DEFAULT_CENTER_FUNCTION, inputNoiseLevel, null,
+        minDetectionsPerBin);
   }
 
   private record TimedMobilityScan(@NotNull MobilityScan scan, float rt) {
