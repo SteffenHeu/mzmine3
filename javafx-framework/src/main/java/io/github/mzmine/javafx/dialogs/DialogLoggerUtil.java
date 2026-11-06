@@ -35,6 +35,7 @@ import io.github.mzmine.javafx.dialogs.NotificationService.NotificationType;
 import io.github.mzmine.javafx.properties.PropertyUtils;
 import io.github.mzmine.javafx.util.FxTextUtils;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -120,7 +121,7 @@ public class DialogLoggerUtil {
       if (Platform.isFxApplicationThread()) {
         // directly call modal show
         // this way the dialog appear on screen even if long
-        createAlert(AlertType.INFORMATION, null, title, content).showAndWait();
+        createAlert(AlertType.INFORMATION, null, Objects.requireNonNullElse(title, ""), content).showAndWait();
       } else {
         // calling from a different thread
         // very long dialogs may appear off screen because the thread is blocked right away
