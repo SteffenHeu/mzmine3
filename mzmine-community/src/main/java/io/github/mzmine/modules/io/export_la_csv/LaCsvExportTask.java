@@ -56,6 +56,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.FilenameUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class LaCsvExportTask extends AbstractTask {
 
@@ -64,10 +65,11 @@ public class LaCsvExportTask extends AbstractTask {
 
   //  Parameters
   private final FeatureList featureList;
-  private final ArrayList<Integer> ids;
   private final File file;
   private final char separatorChar;
   private final FieldSeparator separator;
+  private final @Nullable String stringOfIds;
+  private final ParameterSet parameters;
 
   //Task Progress
   private int numRawDataFiles;
@@ -79,23 +81,10 @@ public class LaCsvExportTask extends AbstractTask {
     featureList = parameters.getValue(LaCsvExportParameters.featureList)
         .getMatchingFeatureLists()[0];
     file = parameters.getValue(LaCsvExportParameters.path).getAbsoluteFile();
-    separator = parameters.getValue(LaCsvExportParameters.separator);
+    this.parameters = parameters;
+    separator = this.parameters.getValue(LaCsvExportParameters.separator);
     separatorChar = separator.separatorChar();
-
-    String stringOfIds = parameters.getValue(LaCsvExportParameters.features);
-    ids = new ArrayList<>();
-
-    Pattern pattern = Pattern.compile("\\d+");
-    Matcher matcher = pattern.matcher(stringOfIds);
-
-    while (matcher.find()) {
-      try {
-        ids.add(Integer.parseInt(matcher.group()));
-      } catch (NumberFormatException e) {
-        e.printStackTrace();
-        logger.log(Level.WARNING, e.getMessage());
-      }
-    }
+    stringOfIds = parameters.getEmbeddedParameterValueIfSelectedOrElse(LaCsvExportParameters.features, null);
   }
 
   @Override
@@ -122,17 +111,33 @@ public class LaCsvExportTask extends AbstractTask {
     numProcessedRawDataFiles = 0;
 
     //Create directory for output files
-    File directoryPath = new File(FilenameUtils.removeExtension(file.getAbsolutePath()));
+    final File directoryPath = new File(FilenameUtils.removeExtension(file.getAbsolutePath()));
 
     FileAndPathUtil.createDirectory(directoryPath);
-
     final List<FeatureListRow> rows = new ArrayList<>();
 
-    for (Integer id : ids) {
-      FeatureListRow row = featureList.findRowByID(id);
-      if (row != null) {
-        rows.add(row);
+    if(stringOfIds != null) {
+      final Pattern pattern = Pattern.compile("\\d+");
+      final Matcher matcher = pattern.matcher(stringOfIds);
+      final List<Integer> ids = new ArrayList<>();
+
+      while (matcher.find()) {
+        try {
+          ids.add(Integer.parseInt(matcher.group()));
+        } catch (NumberFormatException e) {
+          logger.log(Level.WARNING, e.getMessage());
+        }
       }
+
+      for (Integer id : ids) {
+        FeatureListRow row = featureList.findRowByID(id);
+        if (row != null) {
+          rows.add(row);
+        }
+      }
+    } else {
+      // export all rows in this case
+      rows.addAll(featureList.getRows());
     }
 
     for (int j = 0; j < numRawDataFiles; j++) {

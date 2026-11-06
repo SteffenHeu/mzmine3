@@ -25,8 +25,8 @@
 
 package io.github.mzmine.modules.io.export_la_csv;
 
-import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.impl.SimpleParameterSet;
+import io.github.mzmine.parameters.parametertypes.OptionalParameter;
 import io.github.mzmine.parameters.parametertypes.StringParameter;
 import io.github.mzmine.parameters.parametertypes.combowithinput.FieldSeparator;
 import io.github.mzmine.parameters.parametertypes.combowithinput.FieldSeparatorOption;
@@ -42,10 +42,10 @@ public class LaCsvExportParameters extends SimpleParameterSet {
       "Path the exported features will be stored to", ExtensionFilters.CSV_TSV_EXPORT,
       FileSelectionType.SAVE);
 
-  public static final StringParameter features = new StringParameter("Feature ID's",
-      "Comma seperated list of ID's for features to be exported");
+  public static final OptionalParameter<StringParameter> features = new OptionalParameter<>(new StringParameter("Feature ID's",
+      "Uncheck if all features shall be exported. Otherwise provide a comma seperated list of ID's for features to be exported."), false);
 
-  public static final FeatureListsParameter featureList = new FeatureListsParameter("feature List",
+  public static final FeatureListsParameter featureList = new FeatureListsParameter("Feature List",
       "The feature list to be exported", 1, 1);
 
   public static final FieldSeparatorParameter separator = new FieldSeparatorParameter("Separator",
