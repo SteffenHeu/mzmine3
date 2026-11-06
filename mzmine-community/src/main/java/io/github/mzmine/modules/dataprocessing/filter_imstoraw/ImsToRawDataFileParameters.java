@@ -33,6 +33,7 @@ import io.github.mzmine.parameters.parametertypes.IntegerParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesParameter;
 import io.github.mzmine.parameters.parametertypes.selectors.ScanSelectionParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZToleranceParameter;
+import java.text.DecimalFormat;
 import org.jetbrains.annotations.NotNull;
 
 public class ImsToRawDataFileParameters extends SimpleParameterSet {
@@ -60,9 +61,13 @@ public class ImsToRawDataFileParameters extends SimpleParameterSet {
       "The minimum number of detections in a bin to include it in the merged scan.", 1, 1,
       Integer.MAX_VALUE);
 
+  public static final DoubleParameter inputNoiseLevel = new DoubleParameter("Input noise level",
+      "Intensity a signal has to have to be considered during binning. Intensities > this noise level are considered. Useful to filter out electronic noise if the electronic noise level is known.",
+      new DecimalFormat("0E0"), 0d, 0d, Double.MAX_VALUE);
+
   public ImsToRawDataFileParameters() {
     super(rawDataFiles, scanSelection, mergeTolerance, mobilityScansToMerge, minDetectionsPerBin,
-        maxTicRsdDeviation);
+        inputNoiseLevel, maxTicRsdDeviation);
   }
 
   @Override
