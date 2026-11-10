@@ -165,6 +165,7 @@ public class ImportSpeedTestMain {
 
     ParameterSet paramDataImport = AllSpectralDataImportParameters.create(
         VendorImportParameters.create(true, MassLynxImportOptions.NATIVE_MZMINE_CENTROIDING, true,
+            VendorImportParameters.DEFAULT_SHIMADZU_OPTION,
             WatersLockmassParameters.createDefault(), true,
             VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION), files, null, null, advanced);
 

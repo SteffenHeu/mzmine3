@@ -59,7 +59,7 @@ public record FilesToImport(@NotNull List<String> filePaths,
   private static VendorImportParameters vendorParamNoCentroid = VendorImportParameters.create(false,
       VendorImportParameters.DEFAULT_WATERS_OPTION,
       VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
-      WatersLockmassParameters.createDefault(),
+      VendorImportParameters.DEFAULT_SHIMADZU_OPTION, WatersLockmassParameters.createDefault(),
       VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
       VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION);
 

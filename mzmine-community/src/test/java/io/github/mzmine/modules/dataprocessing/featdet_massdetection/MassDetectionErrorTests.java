@@ -144,6 +144,7 @@ public class MassDetectionErrorTests {
                 MassSpectrumType.ANY, MsLevelFilter.of(1), null), false),
         VendorImportParameters.create(false, VendorImportParameters.DEFAULT_WATERS_OPTION,
             VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
+            VendorImportParameters.DEFAULT_SHIMADZU_OPTION,
             WatersLockmassParameters.createDefault(),
             VendorImportParameters.DEFAULT_THERMO_EXCEPTION_SIGNALS,
             VendorImportParameters.DEFAULT_PRESSURE_COMPENSATION));
