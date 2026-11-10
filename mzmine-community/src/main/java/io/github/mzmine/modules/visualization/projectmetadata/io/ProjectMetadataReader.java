@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -30,6 +30,7 @@ import static io.github.mzmine.modules.visualization.projectmetadata.table.colum
 
 import com.opencsv.exceptions.CsvException;
 import io.github.mzmine.datamodel.RawDataFile;
+import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataColumnParameters.AvailableTypes;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
 import io.github.mzmine.modules.visualization.projectmetadata.table.columns.MetadataColumn;
@@ -37,17 +38,19 @@ import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlacehold
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.util.CSVParsingUtils;
 import io.github.mzmine.util.StringUtils;
-import io.github.mzmine.util.io.CSVUtils;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class ProjectMetadataReader {
 
@@ -57,6 +60,7 @@ public class ProjectMetadataReader {
   private final boolean removeAttributesPrefix;
   private final List<String> errors = new ArrayList<>();
   private final boolean usePlaceholderForMissingFiles;
+  private final @Nullable MZmineProject project;
   private String[] titles;
   private String[] descriptions;
   private AvailableTypes[] dataTypes;
@@ -67,9 +71,16 @@ public class ProjectMetadataReader {
 
   public ProjectMetadataReader(final boolean skipColOnError, final boolean removeAttributesPrefix,
       final boolean usePlaceholderForMissingFiles) {
+    this(skipColOnError, removeAttributesPrefix, usePlaceholderForMissingFiles, null);
+  }
+
+  /** Uses the supplied project for all file matching instead of the mutable global project. */
+  public ProjectMetadataReader(final boolean skipColOnError, final boolean removeAttributesPrefix,
+      final boolean usePlaceholderForMissingFiles, @Nullable final MZmineProject project) {
     this.skipColOnError = skipColOnError;
     this.removeAttributesPrefix = removeAttributesPrefix;
     this.usePlaceholderForMissingFiles = usePlaceholderForMissingFiles;
+    this.project = project;
   }
 
   @NotNull
@@ -85,7 +96,7 @@ public class ProjectMetadataReader {
     descriptions = null;
     dataTypes = null;
 
-    if (!usePlaceholderForMissingFiles && ProjectService.getProject().getNumberOfDataFiles() == 0) {
+    if (!usePlaceholderForMissingFiles && getProject().getNumberOfDataFiles() == 0) {
       errors.add("Import data files before importing metadata.");
       return null;
     }
@@ -93,10 +104,8 @@ public class ProjectMetadataReader {
     // different file formats are supported.
     // see test/resources/metadata
     // first two lines are optional (description / type) otherwise try to cast to type
-    char sep = CSVUtils.detectSeparatorFromName(file);
-
     try {
-      List<String[]> lines = CSVParsingUtils.readData(file, String.valueOf(sep));
+      List<String[]> lines = CSVParsingUtils.readData(file, CSVParsingUtils.AUTO_SEPARATOR);
 
       lines = extractRemoveHeaderTitlesAndTypes(lines);
       if (!errors.isEmpty()) {
@@ -156,20 +165,21 @@ public class ProjectMetadataReader {
           type = AvailableTypes.castToMostAppropriateType(columnData, data);
         }
 
-        MetadataColumn metaCol = forType(type, title, description);
-        metadata.addColumn(metaCol);
+        final MetadataColumn metaCol = forType(type, title, description);
 
         // not all raw data files might be imported - but more covered in the metadata sheet
+        final Map<RawDataFile, Object> columnValues = HashMap.newHashMap(data.length);
         for (int row = 0; row < data.length; row++) {
-          var rawFile = rawFiles[row];
+          final RawDataFile rawFile = rawFiles[row];
           if (rawFile != null) {
-            metadata.setValue(metaCol, rawFile, data[row]);
+            columnValues.put(rawFile, data[row]);
           }
         }
+        metadata.setValues(metaCol, columnValues);
       }
 
       logger.info("Metadata table: ");
-      var info = metadata.getData().keySet().stream()
+      var info = metadata.getColumns().stream()
           .map(col -> "Column %s of type %s".formatted(col.getTitle(), col.getType()))
           .collect(Collectors.joining("\n"));
 
@@ -272,7 +282,7 @@ public class ProjectMetadataReader {
   private RawDataFile[] findProjectRawFiles(final String[] fileNames) {
     // match raw data files with or without file format
     var rawFiles = Arrays.stream(fileNames).map(name -> {
-      final RawDataFile actualFile = ProjectService.getProject().getDataFileByName(name);
+      final RawDataFile actualFile = getProject().getDataFileByName(name);
       // may use placeholders instead of real files
       // mostly if loading is done as a precheck
       return actualFile == null && usePlaceholderForMissingFiles ? new RawDataFilePlaceholder(name,
@@ -291,6 +301,10 @@ public class ProjectMetadataReader {
               nMetadataFiles));
     }
     return rawFiles;
+  }
+
+  private @NotNull MZmineProject getProject() {
+    return project == null ? ProjectService.getProject() : project;
   }
 
 }

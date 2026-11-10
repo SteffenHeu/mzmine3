@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -53,7 +54,7 @@ import io.github.mzmine.javafx.util.FxIconUtil;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.main.StartupSplash;
-import io.github.mzmine.main.TmpFileCleanup;
+import io.github.mzmine.localbridge.DeepLinkRouter;
 import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.modules.batchmode.BatchModeParameters;
 import io.github.mzmine.modules.io.import_rawdata_all.AllSpectralDataImportModule;
@@ -71,6 +72,7 @@ import io.github.mzmine.taskcontrol.Task;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.GUIUtils;
 import io.github.mzmine.util.files.ExtensionFilters;
+import io.github.mzmine.util.files.FileAndPathUtil;
 import io.github.mzmine.util.io.SemverVersionReader;
 import io.github.mzmine.util.javafx.groupabletreeview.FeatureListByMetadataStrategy;
 import io.github.mzmine.util.javafx.groupabletreeview.FeatureListByProcessingStepStrategy;
@@ -83,6 +85,7 @@ import io.github.mzmine.util.spectraldb.entry.SpectralLibrary;
 import io.github.mzmine.util.web.WebUtils;
 import io.mzio.mzmine.gui.workspace.Workspace;
 import io.mzio.mzmine.gui.workspace.WorkspaceTags;
+import io.mzio.mzmine.startup.MZmineExit;
 import io.mzio.users.client.UserAuthStore;
 import io.mzio.users.gui.fx.UsersViewState;
 import io.mzio.users.user.CurrentUserService;
@@ -179,9 +182,9 @@ public class MZmineGUI implements MZmineDesktop, JavaFxDesktop {
       if (DialogLoggerUtil.showDialogYesNo("Exit mzmine", "Are you sure you want to exit?")) {
         // Quit the JavaFX thread
         Platform.exit();
-        // Call System.exit() because there are probably some background
+        // Call MZmineExit.exit() because there are probably some background
         // threads still running
-        System.exit(0);
+        MZmineExit.exit(0);
       }
     });
   }
@@ -301,7 +304,7 @@ public class MZmineGUI implements MZmineDesktop, JavaFxDesktop {
       @NotNull final GroupableTreeView<RawDataFile> rawDataList) {
     List<@NotNull GroupingStrategy<RawDataFile>> strategies = createRawDataStrategies();
     rawDataList.getAvailableStrategies().setAll(strategies);
-    // default: no grouping
+    // default: group by sample type, the project metadata always has this column
     rawDataList.setActiveStrategy(strategies.stream()
         .filter(strategy -> strategy.displayName().contains(MetadataColumn.SAMPLE_TYPE_HEADER))
         .findFirst().orElse(strategies.getFirst()));
@@ -641,7 +644,7 @@ public class MZmineGUI implements MZmineDesktop, JavaFxDesktop {
 
     // show message that temp folder should be setup
     if (preferences.getValue(MZminePreferences.showTempFolderAlert)) {
-      File tmpPath = preferences.getValue(MZminePreferences.tempDirectory);
+      File tmpPath = FileAndPathUtil.getTempDir();
       File userDir = FileUtils.getUserDirectory();
       if (tmpPath == null || !tmpPath.exists() || tmpPath.getAbsolutePath().toLowerCase()
           .contains("users") || tmpPath.equals(userDir)) {
@@ -655,6 +658,9 @@ public class MZmineGUI implements MZmineDesktop, JavaFxDesktop {
 
     // Activate project - bind it to the desktop's project tree
     MZmineGUI.activateProject(ProjectService.getProject());
+    // The scene and desktop are now available to the application-specific navigation handler.
+    DeepLinkRouter.markGuiReady();
+    DeepLinkRouter.dispatchPending();
 
     // Check for updated version
     NewVersionCheck NVC = new NewVersionCheck(CheckType.DESKTOP);
@@ -671,11 +677,6 @@ public class MZmineGUI implements MZmineDesktop, JavaFxDesktop {
 
     // check user in gui mode and show message now
     MZmineCore.checkUserRemainingDays(CurrentUserService.getUser());
-
-    // register shutdown hook only if we have GUI - we don't want to
-    // save configuration on exit if we only run a batch
-    Runtime.getRuntime().addShutdownHook(new ShutDownHook());
-    Runtime.getRuntime().addShutdownHook(new Thread(new TmpFileCleanup()));
   }
 
   private static void autoUpdatePreferencesByStageWindowSettings(Stage stage) {
@@ -785,8 +786,9 @@ public class MZmineGUI implements MZmineDesktop, JavaFxDesktop {
   }
 
   @Override
-  public void displayErrorMessage(String msg) {
-    displayMessage("Error", msg);
+  public void displayErrorMessage(final @NotNull String msg) {
+    logger.severe(msg);
+    DialogLoggerUtil.showErrorDialog("Error", msg);
   }
 
   @Override
@@ -970,7 +972,10 @@ public class MZmineGUI implements MZmineDesktop, JavaFxDesktop {
     mainWindowController.setActiveWorkspace(workspace, tags);
   }
 
-  public Workspace getActiveWorkspace() {
+  public @Nullable Workspace getActiveWorkspace() {
+    if (mainWindowController == null) {
+      return null;
+    }
     return mainWindowController.getActiveWorkspace();
   }
 }

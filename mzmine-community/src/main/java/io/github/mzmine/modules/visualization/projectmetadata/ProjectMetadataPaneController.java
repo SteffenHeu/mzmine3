@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -32,6 +32,7 @@ import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.visualization.projectmetadata.ProjectMetadataColumnParameters.AvailableTypes;
+import io.github.mzmine.modules.visualization.projectmetadata.extract.SampleMetadataExtractionModule;
 import io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataExportModule;
 import io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataImportModule;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
@@ -76,6 +77,11 @@ public class ProjectMetadataPaneController {
     tableModel = new MetadataTableModel(metadataTable, tableView);
   }
 
+  /** Reload columns and rows after an atomic metadata update. */
+  public void refresh() {
+    tableModel.createAndSetExistingColumns();
+  }
+
   public void setStage(Stage stage) {
     currentStage = stage;
     stage.setOnCloseRequest(we -> logger.info("Parameters are not updated"));
@@ -114,6 +120,18 @@ public class ProjectMetadataPaneController {
         case DATETIME -> new DateMetadataColumn(parameterTitle.getValue(), parameterDescriptionVal);
       };
       tableModel.createAndAddNewColumn(col);
+    }
+  }
+
+  @FXML
+  public void extractFromFileNames(ActionEvent ev) {
+    final ExitCode exitCode = MZmineCore.setupAndRunModule(SampleMetadataExtractionModule.class,
+        () -> {
+          logger.info("Extracted metadata from file names");
+          FxThread.runLater(() -> tableModel.createAndSetExistingColumns());
+        }, () -> logger.warning("Metadata extraction from file names failed"));
+    if (exitCode == ExitCode.ERROR) {
+      logger.warning("Setup of metadata extraction failed");
     }
   }
 

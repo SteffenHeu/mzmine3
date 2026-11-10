@@ -37,12 +37,18 @@ import io.github.mzmine.datamodel.features.SimpleFeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.compoundlist.CompoundList;
 import io.github.mzmine.datamodel.features.compoundlist.ModularCompoundFeature;
 import io.github.mzmine.datamodel.features.compoundlist.ModularCompoundRow;
+import io.github.mzmine.datamodel.features.correlation.R2RNetworkingMaps;
+import io.github.mzmine.datamodel.features.correlation.project_io.R2RNetworkingMapsLoader;
+import io.github.mzmine.datamodel.features.preferences.FeatureListPreferences;
+import io.github.mzmine.datamodel.features.settings.FeatureListSettings;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.numbers.IDType;
+import io.github.mzmine.datamodel.identities.iontype.project_io.IonNetworksLoader;
 import io.github.mzmine.main.MZmineCore;
 import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingModule;
 import io.github.mzmine.modules.dataprocessing.filter_sortannotations.PreferredAnnotationRankingParameters;
+import io.github.mzmine.modules.dataprocessing.norm_intensity.IntensityNormalizerModule;
 import io.github.mzmine.modules.io.projectload.CachedIMSRawDataFile;
 import io.github.mzmine.modules.io.projectsave.FeatureListSaveTask;
 import io.github.mzmine.parameters.ParameterUtils;
@@ -130,7 +136,8 @@ public class FeatureListLoadTask extends AbstractTask {
       ModularFeature feature, RawDataFile file) {
     if (type != null) {
       try {
-        return type.loadFromXML(reader, project, flist, row, feature, file);
+        return type.requiresFeatureListContext() ? type.loadFromXML(reader, project, flist, row,
+            feature, file) : type.loadFromXML(reader);
       } catch (Exception e) {
         logger.log(Level.WARNING, e,
             () -> "Error loading data type " + type.getHeaderString() + " in row (id=" + row.getID()
@@ -201,6 +208,11 @@ public class FeatureListLoadTask extends AbstractTask {
         }
         parseFeatureList(storage, project, flist, flistFile);
 
+        loadR2RNetworkingMaps(flist, flistFile);
+
+        // after the rows exist, they can be resolved by ID and get their ion identities back
+        loadIonNetworks(flist, flistFile);
+
         // TODO maybe remove so that ModularFeatureList.getFeatureList can be unmodifiable
         // disable buffering after the import (replace references to CachedIMSRawDataFiles with IMSRawDataFiles
         flist.replaceCachedFilesAndScans();
@@ -230,6 +242,37 @@ public class FeatureListLoadTask extends AbstractTask {
         flist -> flist.setExcludedFromBatchLast(!mostRecentStepFeatureLists.contains(flist)));
 
     setStatus(TaskStatus.FINISHED);
+  }
+
+  private void loadIonNetworks(ModularFeatureList flist, File flistFile) {
+    final File iinFile = new File(flistFile.toString()
+        .replace(FeatureListSaveTask.DATA_FILE_SUFFIX, FeatureListSaveTask.IIN_FILE_SUFFIX));
+    if (!iinFile.exists()) {
+      // older projects predate ion identity network persistence - silently skip
+      return;
+    }
+    try (InputStream in = new FileInputStream(iinFile)) {
+      IonNetworksLoader.load(in, flist);
+    } catch (IOException | XMLStreamException e) {
+      logger.log(Level.WARNING,
+          "Failed to load ion identity networks for feature list " + flist.getName(), e);
+    }
+  }
+
+  private void loadR2RNetworkingMaps(ModularFeatureList flist, File flistFile) {
+    final File r2rFile = new File(flistFile.toString()
+        .replace(FeatureListSaveTask.DATA_FILE_SUFFIX, FeatureListSaveTask.R2R_FILE_SUFFIX));
+    if (!r2rFile.exists()) {
+      // older projects predate R2R persistence — silently skip
+      return;
+    }
+    try (InputStream in = new FileInputStream(r2rFile)) {
+      final R2RNetworkingMaps maps = R2RNetworkingMapsLoader.load(in, flist);
+      flist.addRowMaps(maps);
+    } catch (IOException e) {
+      logger.log(Level.WARNING,
+          "Failed to load R2R networking maps for feature list " + flist.getName(), e);
+    }
   }
 
   private void parseFeatureList(MemoryMapStorage storage, MZmineProject project,
@@ -336,9 +379,8 @@ public class FeatureListLoadTask extends AbstractTask {
             reader.getAttributeValue(null, CONST.XML_COMPOUND_ID_ATTR));
         final ModularCompoundRow row = cl.findRowByCompoundId(compoundId);
         if (row == null) {
-          logger.log(Level.WARNING,
-              () -> "Skipping <compoundrow id=" + compoundId
-                  + "> because no stub was created for it (missing <ids>?)");
+          logger.log(Level.WARNING, () -> "Skipping <compoundrow id=" + compoundId
+              + "> because no stub was created for it (missing <ids>?)");
           // skip the element
           skipElement(reader, CONST.XML_COMPOUND_ROW_ELEMENT);
           continue;
@@ -516,6 +558,18 @@ public class FeatureListLoadTask extends AbstractTask {
       final Element metadataElement = (Element) (((NodeList) metadataExpr.evaluate(configuration,
           XPathConstants.NODESET)).item(0));
 
+      // preferences may be absent in projects saved before they were introduced
+      XPathExpression preferencesExpr = xpath.compile(
+          "//" + CONST.XML_ROOT_ELEMENT + "/" + CONST.XML_FLIST_PREFERENCES_ELEMENT);
+      final Element preferencesElement = (Element) (((NodeList) preferencesExpr.evaluate(
+          configuration, XPathConstants.NODESET)).item(0));
+
+      // settings may be absent in projects saved before they were introduced
+      XPathExpression settingsExpr = xpath.compile(
+          "//" + CONST.XML_ROOT_ELEMENT + "/" + CONST.XML_FLIST_SETTINGS_ELEMENT);
+      final Element settingsElement = (Element) (((NodeList) settingsExpr.evaluate(configuration,
+          XPathConstants.NODESET)).item(0));
+
       XPathExpression expr = xpath.compile(
           "//" + CONST.XML_ROOT_ELEMENT + "/" + CONST.XML_FLIST_APPLIED_METHODS_LIST_ELEMENT);
       NodeList nodelist = (NodeList) expr.evaluate(configuration, XPathConstants.NODESET);
@@ -590,6 +644,21 @@ public class FeatureListLoadTask extends AbstractTask {
         PreferredAnnotationRankingParameters param = (PreferredAnnotationRankingParameters) preferredAnnoationSorting.getParameters();
         flist.setAnnotationSortConfig(param.toConfig());
       }
+      final FeatureListPreferences preferences = FeatureListPreferences.loadFromXML(
+          preferencesElement);
+      // old projects do not have preferences (introduced mzmine 4.11)
+      if (preferences != null) {
+        flist.setPreferences(preferences);
+      }
+      final FeatureListSettings settings = FeatureListSettings.loadFromXML(settingsElement);
+      if (settings != null) {
+        flist.setSettings(settings);
+      } else {
+        // old projects stored the normalization functions only in the applied methods. Migrate once
+        flist.setSettings(FeatureListSettings.DEFAULT.withNormalization(
+            IntensityNormalizerModule.getLegacyNormalizationFromAppliedMethods(flist)
+                .withFunctionsOnly()));
+      }
       return flist;
     } catch (XPathExpressionException | ParserConfigurationException | SAXException |
              IOException e) {
@@ -610,6 +679,7 @@ public class FeatureListLoadTask extends AbstractTask {
       throw new IllegalStateException("Row ids do not match.");
     }
 
+    boolean featuresParsed = false;
     while (!(reader.getEventType() == XMLEvent.END_ELEMENT && reader.getLocalName()
         .equals(CONST.XML_ROW_ELEMENT)) && reader.hasNext()) {
       if (reader.next() == XMLEvent.START_ELEMENT) {
@@ -623,6 +693,7 @@ public class FeatureListLoadTask extends AbstractTask {
             continue;
           }
           parseFeature(reader, storage, project, flist, row, file);
+          featuresParsed = true;
         } else if (reader.getLocalName().equals(CONST.XML_DATA_TYPE_ELEMENT)) {
           DataType type = DataTypes.getTypeForId(
               reader.getAttributeValue(null, CONST.XML_DATA_TYPE_ID_ATTR));
@@ -640,6 +711,12 @@ public class FeatureListLoadTask extends AbstractTask {
           }
         }
       }
+    }
+
+    if (featuresParsed) {
+      // features were added without updating the row bindings - update once for the whole row.
+      // rows without features keep the loaded values, as before
+      flist.applyRowBindings(row);
     }
     rowCounter.getAndIncrement();
   }
@@ -679,6 +756,10 @@ public class FeatureListLoadTask extends AbstractTask {
     }
 
     DataTypeUtils.applyFeatureSpecificGraphicalTypes(feature);
-    row.addFeature(originalFile, feature);
+    // each row binding aggregates over all features of the row, so applying them per feature makes
+    // loading a row O(features^2). parseRow applies them once after all features were parsed.
+    // assumption: FeatureListSaveTask#writeRow writes all row data types before the features, so
+    // the loaded row values are overwritten by the bindings either way
+    row.addFeature(originalFile, feature, false);
   }
 }

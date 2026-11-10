@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -26,6 +27,7 @@ package io.github.mzmine.modules.tools.batchwizard.builders;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.modules.batchmode.BatchQueue;
+import io.github.mzmine.modules.dataprocessing.featdet_chromatogramdeconvolution.ResolvingDimension;
 import io.github.mzmine.modules.tools.batchwizard.WizardPart;
 import io.github.mzmine.modules.tools.batchwizard.WizardSequence;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.IonInterfaceHplcWizardParameters;
@@ -47,6 +49,7 @@ public class WizardBatchBuilderLcDDA extends BaseWizardBatchBuilder {
   protected final RTTolerance rtFwhm;
   protected final Boolean stableIonizationAcrossSamples;
   protected final Boolean rtSmoothing;
+  protected final boolean scanRtCorrection;
   protected final Boolean applySpectralNetworking;
   protected final File exportPath;
   protected final boolean isExportActive;
@@ -69,6 +72,8 @@ public class WizardBatchBuilderLcDDA extends BaseWizardBatchBuilder {
     rtFwhm = getValue(params, IonInterfaceHplcWizardParameters.approximateChromatographicFWHM);
     stableIonizationAcrossSamples = getValue(params,
         IonInterfaceHplcWizardParameters.stableIonizationAcrossSamples);
+    scanRtCorrection = dataFiles.length > 1 && Boolean.TRUE.equals(
+        getValue(params, IonInterfaceHplcWizardParameters.scanRtCorrection));
 
     // DDA workflow parameters
     params = steps.get(WizardPart.WORKFLOW);
@@ -89,8 +94,17 @@ public class WizardBatchBuilderLcDDA extends BaseWizardBatchBuilder {
     makeAndAddSmoothingStep(q, rtSmoothing, minRtDataPoints, false);
 
     var groupMs2Params = createMs2GrouperParameters();
-    makeAndAddRtLocalMinResolver(q, groupMs2Params, minRtDataPoints, cropRtRange, rtFwhm,
-        maxIsomersInRt);
+
+    Boolean useWavelet = false;/*steps.get(WizardPart.ION_INTERFACE)
+        .map(p -> p.getFactory() == IonInterfaceWizardParameterFactory.LC_WAVELET).orElse(false);*/
+
+    if (!useWavelet) {
+      makeAndAddRtLocalMinResolver(q, groupMs2Params, minRtDataPoints, cropRtRange, rtFwhm,
+          maxIsomersInRt);
+    } else {
+      makeAndAddWaveletRtResolver(q, minRtDataPoints, ResolvingDimension.RETENTION_TIME,
+          groupMs2Params);
+    }
 
     if (isImsActive) {
       makeAndAddImsExpanderStep(q);
@@ -102,6 +116,9 @@ public class WizardBatchBuilderLcDDA extends BaseWizardBatchBuilder {
     makeAndAddDeisotopingStep(q, intraSampleRtTol);
     makeAndAddFeatureFilterStep(q);
     makeAndAddIsotopeFinderStep(q);
+    if (scanRtCorrection) {
+      makeAndAddScanRtCorrectionStep(q, mzTolInterSample, interSampleRtTol);
+    }
     makeAndAddJoinAlignmentStep(q, interSampleRtTol);
     makeAndAddRowFilterStep(q);
     makeAndAddGapFillStep(q, interSampleRtTol, minRtDataPoints);

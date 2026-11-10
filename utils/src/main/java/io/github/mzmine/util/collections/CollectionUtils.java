@@ -25,6 +25,7 @@
 
 package io.github.mzmine.util.collections;
 
+import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -38,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collector;
@@ -63,10 +65,30 @@ public class CollectionUtils {
    * @param list any collection
    * @param <T>  the object to be mapped
    * @return Map object to index in collection. Uses map that is space optimized but does not retain
-   * order of the input sequence
+   * order of the input sequence. Keys without mapping return -1 as index value.
    */
   public static <T> Object2IntMap<T> indexMapUnordered(Collection<T> list) {
+    return indexMapUnordered(list, -1);
+  }
+
+  /**
+   * Map of the object to its index to avoid indexOf. This method will take any collection as input
+   * and this makes only sense if the collection has an order.
+   * <p>
+   * The resulting map does not conserve order of its entries compared to the input sequence. The
+   * map is optimized for memory.
+   *
+   * @param list               any collection
+   * @param defaultReturnValue returned for keys that are not in the collection. Use something
+   *                           outside of the valid index range, e.g., -1, so that unknown keys do
+   *                           not silently map to index 0
+   * @param <T>                the object to be mapped
+   * @return Map object to index in collection. Uses map that is space optimized but does not retain
+   * order of the input sequence
+   */
+  public static <T> Object2IntMap<T> indexMapUnordered(Collection<T> list, int defaultReturnValue) {
     Object2IntMap<T> map = new Object2IntOpenHashMap<>(list.size());
+    map.defaultReturnValue(defaultReturnValue);
     int i = 0;
     for (final T value : list) {
       map.put(value, i);
@@ -449,6 +471,23 @@ public class CollectionUtils {
     return items.stream().filter(item -> !uniques.add(item)).toList();
   }
 
+
+  public static <T> List<T> selectRandomElements(List<T> list, int num) {
+    final Random rand = new Random();
+    final List<T> copy = new ArrayList<>(list);
+    final List<T> result = new ArrayList<>(num);
+
+    while (result.size() < num && !copy.isEmpty()) {
+      int randomIndex = rand.nextInt(copy.size());
+      T randomElement = copy.get(randomIndex);
+      result.add(randomElement);
+      copy.remove(randomIndex);
+    }
+
+    return result;
+  }
+
+
   /**
    * Order independent check for equal content
    *
@@ -463,5 +502,56 @@ public class CollectionUtils {
     }
 
     return new HashSet<>(a).containsAll(b);
+  }
+
+  public static <T> List<T> combineUnique(List<T>... lists) {
+    int size = 0;
+    for (final List<? extends T> list : lists) {
+      size += list.size();
+    }
+
+    final HashSet<T> unique = HashSet.newHashSet(size);
+
+    final ArrayList<T> result = new ArrayList<>(size);
+    for (List<? extends T> list : lists) {
+      list.forEach(s -> {
+        if (s != null) {
+          if (unique.add(s)) {
+            result.add(s);
+          }
+        }
+      });
+    }
+    result.trimToSize();
+    return result;
+  }
+
+  /**
+   *
+   * @param lists any objects lists, will call toString on elements
+   * @return modifiable list of all strings in order of appearance in the lists
+   */
+  @NotNull
+  public static List<String> combineUniqueStrings(List<?>... lists) {
+    int size = 0;
+    for (final List<?> list : lists) {
+      size += list.size();
+    }
+
+    final Set<String> unique = HashSet.newHashSet(size);
+
+    final ArrayList<String> result = new ArrayList<>(size);
+    for (List<?> list : lists) {
+      list.forEach(o -> {
+        if (o != null) {
+          final String s = o.toString();
+          if (unique.add(s)) {
+            result.add(s);
+          }
+        }
+      });
+    }
+    result.trimToSize();
+    return result;
   }
 }

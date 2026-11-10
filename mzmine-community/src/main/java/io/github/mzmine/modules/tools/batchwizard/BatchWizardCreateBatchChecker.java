@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -39,6 +39,7 @@ import io.github.mzmine.modules.tools.batchwizard.subparameters.DataImportWizard
 import io.github.mzmine.modules.tools.batchwizard.subparameters.FilterWizardParameters;
 import io.github.mzmine.modules.tools.batchwizard.subparameters.WizardStepParameters;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
+import io.github.mzmine.modules.visualization.projectmetadata.SampleTypeFilter;
 import io.github.mzmine.modules.visualization.projectmetadata.io.ProjectMetadataReader;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTable;
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
@@ -54,7 +55,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.validation.constraints.Null;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -65,7 +65,8 @@ public class BatchWizardCreateBatchChecker {
 
   private final WizardSequence sequenceSteps;
 
-  private final List<String> errors = new ArrayList<>();
+  private final List<String> warnings = new ArrayList<>();
+  private boolean warningsChecked;
   private final @Nullable File metadata;
   private final File[] dataFiles;
   private final boolean rsdQcFilter;
@@ -99,8 +100,8 @@ public class BatchWizardCreateBatchChecker {
       return null;
     }
     if (metadata.getName().isBlank()) {
-      errors.add("Metadata file name is empty.");
-      errors.add("");
+      warnings.add("Metadata file name is empty.");
+      warnings.add("");
       return null;
     }
     try {
@@ -109,14 +110,14 @@ public class BatchWizardCreateBatchChecker {
       MetadataTable table = reader.readFile(metadata);
 
       if (!reader.getErrors().isEmpty()) {
-        errors.add("Issues when reading metadata file from path: " + metadata.getAbsolutePath());
-        errors.addAll(reader.getErrors());
-        errors.add("");
+        warnings.add("Issues when reading metadata file from path: " + metadata.getAbsolutePath());
+        warnings.addAll(reader.getErrors());
+        warnings.add("");
       }
       return table;
     } catch (Exception e) {
-      errors.add("Error reading metadata file: " + e.getMessage());
-      errors.add("");
+      warnings.add("Error reading metadata file: " + e.getMessage());
+      warnings.add("");
       logger.log(Level.WARNING, "Error reading metadata file: " + e.getMessage(), e);
     }
     return null;
@@ -128,19 +129,31 @@ public class BatchWizardCreateBatchChecker {
    * @return true if all checks run
    */
   public boolean checks() {
-
-    checkMetadataTableValid();
-    checkSampleFilterValid();
-    checkMinSamplesAnyGroup();
-    checkRsdQcFilter();
-
-    if (!errors.isEmpty()) {
+    final List<String> messages = warnings();
+    if (!messages.isEmpty()) {
       // continue? y/n
       return DialogLoggerUtil.showDialogYesNo("Warning", """
           %s
-          Continue anyway?""".formatted(String.join("\n", errors)));
+          Continue anyway?""".formatted(String.join("\n", messages)));
     }
     return true;
+  }
+
+  /**
+   * Returns the warnings that native batch creation shows before it builds a queue.
+   *
+   * <p>The result is cached because reading metadata can be expensive and callers may first show
+   * the warnings and then run {@link #checks()}.</p>
+   */
+  public @NotNull List<String> warnings() {
+    if (!warningsChecked) {
+      checkMetadataTableValid();
+      checkSampleFilterValid();
+      checkMinSamplesAnyGroup();
+      checkRsdQcFilter();
+      warningsChecked = true;
+    }
+    return warnings;
   }
 
   private void checkMetadataTableValid() {
@@ -157,9 +170,9 @@ public class BatchWizardCreateBatchChecker {
       }
     }
     if (!missingInMetadata.isEmpty()) {
-      errors.add("The following files are not present in the metadata file: %s".formatted(
+      warnings.add("The following files are not present in the metadata file: %s".formatted(
           String.join(", ", missingInMetadata)));
-      errors.add("");
+      warnings.add("");
     }
   }
 
@@ -175,8 +188,9 @@ public class BatchWizardCreateBatchChecker {
       return;
     }
 
-    // two files need to match the QC sample type
-    long rsdFilterMatched = Arrays.stream(dataFiles).map(f -> SampleType.ofString(f.getName()))
+    // two files need to match the QC sample type. Runs before data and metadata are imported, so
+    // the file name heuristic is all there is - the same one that seeds the metadata column later
+    long rsdFilterMatched = Arrays.stream(dataFiles).map(f -> SampleType.guessFromName(f.getName()))
         .filter(type -> type == SampleType.QC).count();
 
     if (rsdFilterMatched >= 2 || (table != null && checkAtLeastTwoQcSampleInMetadataTable())) {
@@ -184,7 +198,7 @@ public class BatchWizardCreateBatchChecker {
     }
 
     // qc issue
-    errors.add("""
+    warnings.add("""
         No QC samples found in the filenames or metadata file. Add _qc to the filename or define the metadata column as "%s" with value "%s".""".formatted(
         MetadataColumn.SAMPLE_TYPE_HEADER, SampleType.QC));
   }
@@ -199,18 +213,18 @@ public class BatchWizardCreateBatchChecker {
     final MinimumSamplesFilterConfig config = minSamplesAnyGroup.value();
 
     if (table == null) {
-      errors.add(
+      warnings.add(
           "Metadata file missing. To use %s (Filters tab), a metadata table needs to be imported. Define one in the Data tab.");
-      errors.add("");
+      warnings.add("");
       return;
     }
     final MetadataColumn<?> column = table.getColumnByName(config.columnName());
 
     if (column == null) {
-      errors.add("""
+      warnings.add("""
           Metadata column missing. To use using "%s" (Filters tab), the metadata file must contain a column named "%s".""".formatted(
           FilterWizardParameters.minNumberOfSamples.getName(), config.columnName()));
-      errors.add("");
+      warnings.add("");
       return;
     }
 
@@ -227,8 +241,8 @@ public class BatchWizardCreateBatchChecker {
             The minimum samples number of "%s" (Filters tab; %s) does not match the number of imported data files per group (max=%d). This may cause issues like empty feature lists.""".formatted(
             FilterWizardParameters.minNumberOfSamplesInAnyGroup.getName(), minSamples,
             maxGroupSize);
-        errors.add(error);
-        errors.add("");
+        warnings.add(error);
+        warnings.add("");
       }
     } catch (Exception e) {
       logger.log(Level.WARNING, "Error creating filter for %s (Filters tab).".formatted(
@@ -245,9 +259,12 @@ public class BatchWizardCreateBatchChecker {
 
     // actually imported raw data files
     final MetadataColumn<String> sampleTypeColumn = table.getSampleTypeColumn();
+    // the metadata value is authoritative - match it exactly (ignoring case), the same way the
+    // RSD filter this check is about will match it
+    final SampleTypeFilter qcFilter = SampleTypeFilter.qc();
     for (RawDataFile raw : nameFileMap.values()) {
       final String value = table.getValue(sampleTypeColumn, raw);
-      if (SampleType.ofString(value) == SampleType.QC) {
+      if (qcFilter.matchesValue(value)) {
         qcSamples++;
       }
       if (qcSamples >= 2) {
@@ -269,8 +286,8 @@ public class BatchWizardCreateBatchChecker {
       final String error = """
           The minimum samples of "%s" (Filters tab; %s) does not match the number of imported data files %d. This may cause issues like empty feature lists.""".formatted(
           FilterWizardParameters.minNumberOfSamples.getName(), minSamples, numFiles);
-      errors.add(error);
-      errors.add("");
+      warnings.add(error);
+      warnings.add("");
     }
   }
 }

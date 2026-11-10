@@ -26,7 +26,6 @@
 package io.github.mzmine.modules.dataprocessing.norm_intensity;
 
 import io.github.mzmine.datamodel.RawDataFile;
-import io.github.mzmine.modules.visualization.projectmetadata.SampleType;
 import io.github.mzmine.modules.visualization.projectmetadata.SampleTypeFilter;
 import io.github.mzmine.modules.visualization.projectmetadata.table.InterpolationWeights;
 import io.github.mzmine.modules.visualization.projectmetadata.table.InterpolationWeights.BinaryInterpolationWeights;
@@ -36,7 +35,6 @@ import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTabl
 import io.github.mzmine.modules.visualization.projectmetadata.table.MetadataTableUtils;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.UnknownNullability;
 
@@ -51,14 +49,12 @@ public class NormalizationFunctionUtils {
    */
   @NotNull
   public static List<RawDataFile> getReferenceSamplesOrThrow(boolean allowEmpty,
-      @NotNull SamplesBatch samplesBatch, List<SampleType> includedTypes) {
-    final var sampleTypeFilter = new SampleTypeFilter(includedTypes);
-    final List<RawDataFile> filtered = sampleTypeFilter.filterFiles(samplesBatch.getRaws());
+      @NotNull SamplesBatch samplesBatch, @NotNull SampleTypeFilter includedTypes) {
+    final List<RawDataFile> filtered = includedTypes.filterFiles(samplesBatch.getRaws());
     if (filtered.isEmpty() && !allowEmpty) {
       throw new IllegalStateException(
           "No reference files found for batch with ID %s for sample types: %s".formatted(
-              samplesBatch.getGroupMetadataValueStr(),
-              includedTypes.stream().map(SampleType::toString).collect(Collectors.joining(", "))));
+              samplesBatch.getGroupMetadataValueStr(), includedTypes));
     }
     return filtered;
   }
@@ -115,8 +111,8 @@ public class NormalizationFunctionUtils {
           if (previousFunction instanceof FactorNormalizationFunction prev
               && nextFunction instanceof FactorNormalizationFunction next) {
             // special case where simple factor functions can be turned into a new simple function
-            final double factor =
-                next.factor() * w.nextRun().weight() + prev.factor() * w.previousRun().weight();
+            final double factor = prev.factor() * w.previousRun().weight()
+                                  + next.factor() * w.nextRun().weight();
             yield new FactorNormalizationFunction(factor);
           } else {
             // saves both functions to interpolate, works for all cases

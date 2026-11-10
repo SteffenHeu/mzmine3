@@ -36,6 +36,14 @@ public class FxThread {
   private static final Logger logger = Logger.getLogger(FxThread.class.getName());
   private static boolean isFxInitialized = false;
 
+  /** Fails fast for synchronous UI methods that require the JavaFX application thread. */
+  public static void requireFxThread() {
+    if (!Platform.isFxApplicationThread()) {
+      throw new IllegalStateException(
+          "This operation requires the JavaFX application thread; use FxThread.runLater");
+    }
+  }
+
   public static boolean isFxInitialized() {
     return isFxInitialized;
   }
@@ -49,6 +57,25 @@ public class FxThread {
    */
   public static void runLater(Runnable r) {
     if (DesktopService.isHeadLess() || Platform.isFxApplicationThread()) {
+      r.run();
+    } else {
+      Platform.runLater(r);
+    }
+  }
+
+  /**
+   * Always defers execution to the next JavaFX pulse, even when already on the JavaFX thread. Use
+   * this instead of {@link #runLater(Runnable)} whenever the runnable mutates the scene graph
+   * (adding/removing children, replacing content) and may be triggered from a callback that itself
+   * runs inside a CSS or layout pass. {@link #runLater(Runnable)} executes inline on the JavaFX
+   * thread, so such a mutation can happen while {@link javafx.scene.Parent#layout()} is iterating a
+   * cached snapshot of its children, which throws an {@link IndexOutOfBoundsException}.
+   *
+   * @param r runnable to run on the JavaFX thread, never inline
+   */
+  public static void runOnNextPulse(Runnable r) {
+    if (DesktopService.isHeadLess()) {
+      // no pulses in headless mode - keep the same semantics as runLater
       r.run();
     } else {
       Platform.runLater(r);

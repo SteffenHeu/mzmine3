@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -38,8 +38,13 @@ import io.github.mzmine.datamodel.features.compoundlist.CompoundFeatureMember;
 import io.github.mzmine.datamodel.features.compoundlist.CompoundList;
 import io.github.mzmine.datamodel.features.compoundlist.ModularCompoundFeature;
 import io.github.mzmine.datamodel.features.compoundlist.ModularCompoundRow;
+import io.github.mzmine.datamodel.features.correlation.R2RNetworkingMaps;
+import io.github.mzmine.datamodel.features.correlation.project_io.R2RNetworkingMapsSaver;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.numbers.IDType;
+import io.github.mzmine.datamodel.identities.iontype.IonNetwork;
+import io.github.mzmine.datamodel.identities.iontype.IonNetworkLogic;
+import io.github.mzmine.datamodel.identities.iontype.project_io.IonNetworksSaver;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import io.github.mzmine.taskcontrol.AbstractTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
@@ -77,6 +82,8 @@ public class FeatureListSaveTask extends AbstractTask {
 
   public static final String METADATA_FILE_SUFFIX = "_metadata.xml";
   public static final String DATA_FILE_SUFFIX = "_data.xml";
+  public static final String R2R_FILE_SUFFIX = "_r2r.json";
+  public static final String IIN_FILE_SUFFIX = "_iin.xml";
   public static final String FLIST_FOLDER = "featurelists/";
   private static final Logger logger = Logger.getLogger(FeatureListSaveTask.class.getName());
   private static final IDType idType = new IDType();
@@ -103,6 +110,14 @@ public class FeatureListSaveTask extends AbstractTask {
     return FLIST_FOLDER + CONST.XML_FEATURE_LIST_ELEMENT + "_" + flistname + METADATA_FILE_SUFFIX;
   }
 
+  public static String getR2RFileName(String flistname) {
+    return FLIST_FOLDER + CONST.XML_FEATURE_LIST_ELEMENT + "_" + flistname + R2R_FILE_SUFFIX;
+  }
+
+  public static String getIinFileName(String flistname) {
+    return FLIST_FOLDER + CONST.XML_FEATURE_LIST_ELEMENT + "_" + flistname + IIN_FILE_SUFFIX;
+  }
+
   @Override
   public String getTaskDescription() {
     return "Saving feature list " + flist.getName();
@@ -123,7 +138,47 @@ public class FeatureListSaveTask extends AbstractTask {
 
     saveAppliedMethods();
 
+    saveR2RNetworkingMaps();
+
+    saveIonNetworks();
+
     setStatus(TaskStatus.FINISHED);
+  }
+
+  private boolean saveIonNetworks() {
+    // networks are only reachable through the ion identities of the rows, so derive them here
+    final List<IonNetwork> networks = IonNetworkLogic.getAllNetworksList(flist.getRows(), null,
+        false);
+    if (networks.isEmpty()) {
+      return true;
+    }
+    try {
+      zos.putNextEntry(new ZipEntry(getIinFileName(flist.getName())));
+      IonNetworksSaver.save(networks, zos);
+    } catch (IOException | XMLStreamException e) {
+      logger.log(Level.SEVERE,
+          "Failed to save ion identity networks for feature list " + flist.getName(), e);
+      setStatus(TaskStatus.ERROR);
+      return false;
+    }
+    return true;
+  }
+
+  private boolean saveR2RNetworkingMaps() {
+    final R2RNetworkingMaps maps = flist.getRowMaps();
+    if (maps.isEmpty()) {
+      return true;
+    }
+    try {
+      zos.putNextEntry(new ZipEntry(getR2RFileName(flist.getName())));
+      R2RNetworkingMapsSaver.save(maps, zos);
+    } catch (IOException e) {
+      logger.log(Level.SEVERE,
+          "Failed to save R2R networking maps for feature list " + flist.getName(), e);
+      setStatus(TaskStatus.ERROR);
+      return false;
+    }
+    return true;
   }
 
   private boolean saveAppliedMethods() {
@@ -175,6 +230,16 @@ public class FeatureListSaveTask extends AbstractTask {
     metadataElement.appendChild(nameElement);
     metadataElement.appendChild(dateElement);
     root.appendChild(metadataElement);
+
+    // write user defined preferences of this feature list
+    Element preferencesElement = document.createElement(CONST.XML_FLIST_PREFERENCES_ELEMENT);
+    flist.getPreferences().saveToXML(preferencesElement);
+    root.appendChild(preferencesElement);
+
+    // write settings of this feature list that were set by processing modules
+    Element settingsElement = document.createElement(CONST.XML_FLIST_SETTINGS_ELEMENT);
+    flist.getSettings().saveToXML(settingsElement);
+    root.appendChild(settingsElement);
 
     // write applied methods
     appliedMethodsList.setAttribute(CONST.XML_FLIST_NAME_ATTR, flist.getName());
@@ -312,7 +377,11 @@ public class FeatureListSaveTask extends AbstractTask {
     writer.writeAttribute(CONST.XML_DATA_TYPE_ID_ATTR, dataType.getUniqueID());
 
     try { // catch here, so we can easily debug and don't destroy the flist while saving in case an unexpected exception happens
-      dataType.saveToXML(writer, value, flist, row, feature, file);
+      if (dataType.requiresFeatureListContext()) {
+        dataType.saveToXML(writer, value, flist, row, feature, file);
+      } else {
+        dataType.saveToXML(writer, value);
+      }
     } catch (XMLStreamException e) {
       logger.log(Level.WARNING,
           "Error while writing data type " + dataType.getClass().getSimpleName() + " with value "

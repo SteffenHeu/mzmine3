@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2004-2026 The mzmine Development Team
+ *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
  * files (the "Software"), to deal in the Software without
@@ -53,6 +54,7 @@ import io.github.mzmine.modules.dataprocessing.filter_cropfilter.CropFilterModul
 import io.github.mzmine.modules.dataprocessing.filter_diams2.DiaMs2CorrModule;
 import io.github.mzmine.modules.dataprocessing.filter_duplicatefilter.DuplicateFilterModule;
 import io.github.mzmine.modules.dataprocessing.filter_featurefilter.FeatureFilterModule;
+import io.github.mzmine.modules.dataprocessing.filter_featurelistpreferences.FeatureListPreferencesModule;
 import io.github.mzmine.modules.dataprocessing.filter_groupms2.GroupMS2Module;
 import io.github.mzmine.modules.dataprocessing.filter_groupms2_refine.GroupedMs2RefinementModule;
 import io.github.mzmine.modules.dataprocessing.filter_ims_msms_refinement.ImsMs2RefinementModule;
@@ -76,6 +78,7 @@ import io.github.mzmine.modules.dataprocessing.id_ccscalibration.reference.Refer
 import io.github.mzmine.modules.dataprocessing.id_isotopepeakscanner.IsotopePeakScannerModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.library_to_featurelist.SpectralLibraryToFeatureListModule;
 import io.github.mzmine.modules.dataprocessing.norm_intensity.IntensityNormalizerModule;
+import io.github.mzmine.modules.dataprocessing.norm_remove_scanrtcal.RemoveScanRtCorrectionModule;
 import io.github.mzmine.modules.dataprocessing.norm_ri.RICalculationModule;
 import io.github.mzmine.modules.dataprocessing.norm_rtcalibration.RTCorrectionModule;
 import io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.ScanRtCorrectionModule;
@@ -88,16 +91,29 @@ import io.mzio.mzmine.gui.workspace.WorkspaceMenuHelper;
 import io.mzio.mzmine.gui.workspace.WorkspaceTags;
 import io.mzio.users.user.MZmineUser;
 import java.util.EnumSet;
+import java.util.function.Supplier;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class AcademicWorkspace extends AbstractWorkspace {
 
   public static final String uniqueId = "academic";
+
+  private final @NotNull Supplier<@Nullable Menu> additionalMenuFactory;
+
+  public AcademicWorkspace() {
+    this(() -> null);
+  }
+
+  /** Supplies a fresh optional menu on each rebuild, including after a user change. */
+  public AcademicWorkspace(final @NotNull Supplier<@Nullable Menu> additionalMenuFactory) {
+    this.additionalMenuFactory = additionalMenuFactory;
+  }
 
   @Override
   public String getName() {
@@ -110,7 +126,7 @@ public final class AcademicWorkspace extends AbstractWorkspace {
   }
 
   @Override
-  public MenuBar buildMainMenu(EnumSet<WorkspaceTags> tags) {
+  public @NotNull MenuBar buildMainMenu(final @NotNull EnumSet<WorkspaceTags> tags) {
     final MenuBar menuBar = new MenuBar();
 
     menuBar.getMenus().add(buildDefaultProjectMenu());
@@ -122,6 +138,10 @@ public final class AcademicWorkspace extends AbstractWorkspace {
     menuBar.getMenus().add(buildDefaultToolsMenu());
     menuBar.getMenus().add(buildDefaultWindowsMenu());
     menuBar.getMenus().add(buildDefaultUsersMenu());
+    final Menu additionalMenu = additionalMenuFactory.get();
+    if (additionalMenu != null) {
+      menuBar.getMenus().add(additionalMenu);
+    }
     final Menu workspaces = buildDefaultWorkspacesMenu();
     if (WorkspaceMenuHelper.getWorkspaces().size() > 1) {
       menuBar.getMenus().add(workspaces);
@@ -199,10 +219,12 @@ public final class AcademicWorkspace extends AbstractWorkspace {
     addModuleMenuItems(menu, "Gap filling/Recursive feature finding",
         MultiThreadPeakFinderModule.class, SameRangeGapFillerModule.class);
     addModuleMenuItems(menu, "Normalization", RTCorrectionModule.class,
-        ScanRtCorrectionModule.class, IntensityNormalizerModule.class, RICalculationModule.class);
+        ScanRtCorrectionModule.class, RemoveScanRtCorrectionModule.class,
+        IntensityNormalizerModule.class, RICalculationModule.class);
 
     menu.getItems().add(buildDefaultAnnotationSubMenu());
 
+    addModuleMenuItems(menu, "Preferences", FeatureListPreferencesModule.class);
     addModuleMenuItems(menu, "Statistics", StatsDasboardModule.class, VolcanoPlotModule.class,
         PCAModule.class, AnovaModule.class);
     return menu;
