@@ -143,6 +143,7 @@ public class MassDetectionErrorTests {
             new ScanSelection(Range.closed(584, 590), null, null, null, PolarityType.ANY,
                 MassSpectrumType.ANY, MsLevelFilter.of(1), null), false),
         VendorImportParameters.create(false, VendorImportParameters.DEFAULT_WATERS_OPTION,
+            VendorImportParameters.DEFAULT_SHIMADZU_OPTION,
             VendorImportParameters.DEFAULT_WATERS_LOCKMASS_ENABLED,
             VendorImportParameters.DEFAULT_SHIMADZU_OPTION,
             WatersLockmassParameters.createDefault(),
