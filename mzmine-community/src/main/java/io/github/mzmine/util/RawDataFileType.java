@@ -129,6 +129,7 @@ public enum RawDataFileType implements UniqueIdSupplier {
       case AGILENT_D -> "d_agilent";
       case AGILENT_D_IMS -> "d_agilent_ims";
       case SHIMADZU_LCD -> "lcd";
+      case SHIMADZU_QGD -> "qgd";
       case MBI -> "mbi";
       case MZML -> "mzml";
     };

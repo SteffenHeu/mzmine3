@@ -138,8 +138,8 @@ public class VendorImportParameters extends SimpleParameterSet {
   }
 
   public static VendorImportParameters createDefault() {
-    return create(DEFAULT_VENDOR_CENTROIDING, DEFAULT_WATERS_OPTION, DEFAULT_SHIMADZU_OPTION,
-        DEFAULT_WATERS_LOCKMASS_ENABLED, WatersLockmassParameters.createDefault(),
+    return create(DEFAULT_VENDOR_CENTROIDING, DEFAULT_WATERS_OPTION,
+        DEFAULT_WATERS_LOCKMASS_ENABLED, DEFAULT_SHIMADZU_OPTION, WatersLockmassParameters.createDefault(),
         DEFAULT_THERMO_EXCEPTION_SIGNALS, DEFAULT_PRESSURE_COMPENSATION);
   }
 
@@ -152,8 +152,8 @@ public class VendorImportParameters extends SimpleParameterSet {
     return create(preferences.getValue(MZminePreferences.applyVendorCentroiding),
         /*preferences.getValue(MZminePreferences.thermoImportChoice)*/
         preferences.getValue(MZminePreferences.massLynxImportChoice),
-        preferences.getValue(MZminePreferences.shimadzuImportChoice),
         preferences.getValue(MZminePreferences.watersLockmass),
+        preferences.getValue(MZminePreferences.shimadzuImportChoice),
         preferences.getParameter(MZminePreferences.watersLockmass).getEmbeddedParameters(),
         preferences.getValue(MZminePreferences.excludeThermoExceptionMasses),
         preferences.getValue(MZminePreferences.brukerPressureComp));
