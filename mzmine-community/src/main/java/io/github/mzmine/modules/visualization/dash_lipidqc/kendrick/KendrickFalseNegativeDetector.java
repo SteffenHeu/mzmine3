@@ -24,15 +24,11 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.kendrick;
 
-import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
-import static java.util.Objects.requireNonNullElse;
-
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.Scan;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationChainParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.ILipidAnnotation;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRule;
@@ -48,6 +44,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidCategories;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.utils.LipidFactory;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
@@ -85,14 +82,16 @@ public final class KendrickFalseNegativeDetector {
   private static final LipidFactory LIPID_FACTORY = new LipidFactory();
 
   private final @NotNull ModularFeatureList featureList;
-  private final @NotNull LipidAnalysisType lipidAnalysisType;
+  private final @NotNull LipidQcScoringSettings scoringSettings;
   private final @NotNull List<Ch2Model> ch2Models;
   private final @NotNull List<DbeModel> dbeModels;
 
   public KendrickFalseNegativeDetector(final @NotNull ModularFeatureList featureList) {
     this.featureList = featureList;
-    lipidAnalysisType = requireNonNullElse(LipidQcScoringUtils.detectLipidAnalysisType(featureList),
-        LipidAnalysisType.LC_REVERSED_PHASE);
+    // decision: candidates are scored with MS2 even if the annotation run skipped MS2, because MS2
+    // support is checked for every candidate
+    scoringSettings = LipidQcScoringSettings.fromFeatureListOrDefaults(featureList)
+        .withIncludeMs2Score(true);
     final List<AnnotatedPoint> annotatedPoints = collectAnnotatedPoints(featureList);
     ch2Models = buildCh2Models(annotatedPoints);
     dbeModels = buildDbeModels(annotatedPoints);
@@ -152,8 +151,8 @@ public final class KendrickFalseNegativeDetector {
     initialMatch.setComment("Potentially missed annotation inferred from Kendrick trend models.");
     final @Nullable MatchedLipid ms2MatchedSuggestion = tryMatchMs2(row, initialMatch);
     final MatchedLipid suggestion = ms2MatchedSuggestion != null ? ms2MatchedSuggestion : initialMatch;
-    final double overallScore = computeCombinedAnnotationScore(featureList, row, suggestion, true,
-        lipidAnalysisType.hasRetentionTimePattern(), lipidAnalysisType);
+    final double overallScore = LipidQcScoringUtils.computeCombinedAnnotationScore(featureList, row,
+        suggestion, scoringSettings);
     final String detail = "Predicted from %s; %s".formatted(bestCandidate.supportLabel(),
         String.join("; ", bestCandidate.details())) + (ms2MatchedSuggestion != null
         ? "; MS2 support found (" + ms2MatchedSuggestion.getMatchedFragments().size()

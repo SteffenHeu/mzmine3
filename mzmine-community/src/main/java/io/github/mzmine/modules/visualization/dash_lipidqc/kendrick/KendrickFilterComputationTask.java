@@ -32,6 +32,7 @@ import io.github.mzmine.gui.chartbasics.chartutils.paintscales.PaintScaleTransfo
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.kendrickmassplot.KendrickMassPlotXYZDataset;
 import java.awt.Color;
@@ -114,10 +115,13 @@ final class KendrickFilterComputationTask extends FxUpdateTask<KendrickPane> {
       case POTENTIAL_FALSE_POSITIVE -> {
         final Set<String> allowedClassNames = visibleRowIds.isEmpty() ? Set.of()
             : collectVisibleClassNames(featureList, visibleRowIds);
+        // resolve once, reading the applied method clones the parameter set
+        final LipidQcScoringSettings settings = LipidQcScoringSettings.fromFeatureListOrDefaults(
+            featureList);
         final KendrickSubsetDataset falsePositiveDataset = new KendrickSubsetDataset(baseDataset,
             row -> {
               if (KendrickFalsePositiveUtils.potentialFalsePositiveReason(featureList, row,
-                  includeRetentionTimeAnalysis) == null) {
+                  settings, includeRetentionTimeAnalysis) == null) {
                 return false;
               }
               if (visibleRowIds.isEmpty()) {

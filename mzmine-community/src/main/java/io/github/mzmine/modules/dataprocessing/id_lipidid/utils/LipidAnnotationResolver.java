@@ -26,7 +26,6 @@
 package io.github.mzmine.modules.dataprocessing.id_lipidid.utils;
 
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.clampToUnit;
-import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeCombinedAnnotationScore;
 import static io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.computeMs1Score;
 
 import io.github.mzmine.datamodel.features.FeatureListRow;
@@ -36,6 +35,8 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRuleType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ComponentWeights;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import java.util.ArrayList;
@@ -70,8 +71,7 @@ public class LipidAnnotationResolver {
   private final boolean includeMs2Score;
   private final boolean includeElutionOrderScore;
   private final double minimumOverallQualityScore;
-  private final @Nullable LipidAnalysisType lipidAnalysisType;
-  private final @Nullable ComponentWeights customQcWeights;
+  private final @NotNull LipidQcScoringSettings scoringSettings;
   private final @Nullable MZTolerance mzToleranceMS1;
 
   private int maximumIdNumber;
@@ -125,8 +125,12 @@ public class LipidAnnotationResolver {
     this.includeMs2Score = includeMs2Score;
     this.includeElutionOrderScore = includeElutionOrderScore;
     this.minimumOverallQualityScore = clampToUnit(minimumOverallQualityScore);
-    this.lipidAnalysisType = lipidAnalysisType;
-    this.customQcWeights = customQcWeights;
+    final LipidAnalysisType resolvedAnalysisType = Objects.requireNonNullElse(lipidAnalysisType,
+        LipidAnalysisType.LC_REVERSED_PHASE);
+    this.scoringSettings = new LipidQcScoringSettings(resolvedAnalysisType, includeMs2Score,
+        Objects.requireNonNullElseGet(customQcWeights,
+            () -> LipidQcScoringUtils.defaultComponentWeights(resolvedAnalysisType)),
+        mzToleranceMS1);
     this.mzToleranceMS1 = mzToleranceMS1;
     this.maximumIdNumber = -1;
   }
@@ -262,9 +266,12 @@ public class LipidAnnotationResolver {
   private double computeQualityScore(final @NotNull FeatureListRow featureListRow,
       final @NotNull MatchedLipid matchedLipid) {
     if (featureListRow.getFeatureList() instanceof ModularFeatureList modularFeatureList) {
-      return computeCombinedAnnotationScore(modularFeatureList, featureListRow, matchedLipid,
-          includeMs2Score, includeElutionOrderScore, lipidAnalysisType, customQcWeights,
-          mzToleranceMS1);
+      // decision: candidate collection runs per row before the full RT context exists, so the
+      // elution order is only scored if explicitly requested
+      return includeElutionOrderScore ? LipidQcScoringUtils.computeCombinedAnnotationScore(
+          modularFeatureList, featureListRow, matchedLipid, scoringSettings)
+          : LipidQcScoringUtils.computeCombinedAnnotationScore(featureListRow, matchedLipid,
+              scoringSettings, null);
     }
     return computePreFilterRankingScore(featureListRow, matchedLipid);
   }

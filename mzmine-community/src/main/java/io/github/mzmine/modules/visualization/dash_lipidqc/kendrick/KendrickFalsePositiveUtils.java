@@ -25,12 +25,12 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc.kendrick;
 
-
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,17 +50,19 @@ public final class KendrickFalsePositiveUtils {
   }
 
   /**
-   * Flags low configured overall quality and inconsistent retention trends.
+   * Flags a low overall quality score and inconsistent retention trends. The overall score is the
+   * stored score of the annotation, so the warning matches the exported score.
    *
-   * @param featureList                  feature list providing scoring settings and retention
-   *                                     context
-   * @param row                          row whose preferred lipid annotation is evaluated
-   * @param includeRetentionTimeAnalysis whether to evaluate retention-time QC
+   * @param featureList          feature list providing retention context
+   * @param row                  row whose preferred lipid annotation is evaluated
+   * @param settings             scoring settings, used for the elution-order mode and if no score
+   *                             is stored
+   * @param includeRtTrendChecks whether to report inconsistent retention trends
    * @return warning reasons, or {@code null} if no outlier criterion is met
    */
   public static @Nullable String potentialFalsePositiveReason(
       final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
-      final boolean includeRetentionTimeAnalysis) {
+      final @NotNull LipidQcScoringSettings settings, final boolean includeRtTrendChecks) {
     final @Nullable MatchedLipid match = LipidQcAnnotationSelectionUtils.getPreferredLipidMatch(
         row);
     if (match == null) {
@@ -68,11 +70,9 @@ public final class KendrickFalsePositiveUtils {
     }
 
     final List<String> reasons = new ArrayList<>();
-    final double overall = LipidQcScoringUtils.computeConfiguredAnnotationScore(featureList, row,
-        match, includeRetentionTimeAnalysis);
-    if (includeRetentionTimeAnalysis) {
+    if (includeRtTrendChecks) {
       final ElutionOrderMetrics elution = LipidQcScoringUtils.computeElutionOrderMetrics(
-          featureList, row, match);
+          featureList, row, match, settings.analysisType());
       if (elution.carbonsTrend().available()
           && elution.carbonsTrend().score() < OUTLIER_ELUTION_THRESHOLD) {
         reasons.add(
@@ -90,6 +90,8 @@ public final class KendrickFalsePositiveUtils {
                 OUTLIER_ELUTION_THRESHOLD * 100d));
       }
     }
+    final double overall = LipidQcScoringUtils.getOrComputeOverallQualityScore(featureList, row,
+        match, settings);
     if (overall < OUTLIER_OVERALL_THRESHOLD) {
       reasons.add("overall quality %.0f%% is below %.0f%%".formatted(overall * 100d,
           OUTLIER_OVERALL_THRESHOLD * 100d));
@@ -100,5 +102,4 @@ public final class KendrickFalsePositiveUtils {
     }
     return String.join("; ", reasons);
   }
-
 }

@@ -25,18 +25,14 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.scoring;
 
-import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.LipidFragmentationRuleRating;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidFragment;
-import io.github.mzmine.parameters.ParameterSet;
-import io.github.mzmine.parameters.ParameterUtils;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
 import io.github.mzmine.util.Comparators;
 import java.util.ArrayList;
@@ -204,88 +200,23 @@ public final class LipidQcScoringUtils {
   }
 
   /**
-   * Computes elution-order metrics for the feature list's detected lipid-analysis mode.
-   *
-   * @param featureList feature list that provides RT context and mode provenance
-   * @param row         selected row
-   * @param match       lipid annotation candidate for the row
-   * @return mode-specific elution metrics and combined score
-   */
-  public static @NotNull ElutionOrderMetrics computeElutionOrderMetrics(
-      final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match) {
-    return computeElutionOrderMetrics(featureList, row, match,
-        detectLipidAnalysisType(featureList));
-  }
-
-  /**
-   * Computes elution-order metrics for an explicit lipid-analysis mode.
+   * Computes elution-order metrics for a lipid-analysis mode.
    *
    * @param featureList  feature list that provides RT context
    * @param row          selected row
    * @param match        lipid annotation candidate for the row
-   * @param analysisType lipid-analysis mode; {@code null} falls back to reversed-phase LC
+   * @param analysisType lipid-analysis mode
    * @return mode-specific elution metrics and combined score
    */
   public static @NotNull ElutionOrderMetrics computeElutionOrderMetrics(
       final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match, final @Nullable LipidAnalysisType analysisType) {
-    final LipidAnalysisType resolvedAnalysisType = Objects.requireNonNullElse(analysisType,
-        LipidAnalysisType.LC_REVERSED_PHASE);
-    return switch (resolvedAnalysisType) {
+      final @NotNull MatchedLipid match, final @NotNull LipidAnalysisType analysisType) {
+    return switch (analysisType) {
       case LC_HILIC -> computeHilicElutionOrderMetrics(featureList, row, match);
       case LC_REVERSED_PHASE -> computeRpElutionOrderMetrics(featureList, row, match);
       case DIRECT_INFUSION, IMAGING ->
           createUnavailableElutionMetrics("Disabled for current lipid analysis mode");
     };
-  }
-
-  /**
-   * Detects lipid-analysis mode from the latest applied {@link LipidAnnotationModule} step.
-   *
-   * @param featureList feature list that contains applied methods
-   * @return detected analysis mode or {@code null} if not available
-   */
-  public static @Nullable LipidAnalysisType detectLipidAnalysisType(
-      final @NotNull ModularFeatureList featureList) {
-    final List<FeatureListAppliedMethod> appliedMethods = featureList.getAppliedMethods();
-    for (int i = appliedMethods.size() - 1; i >= 0; i--) {
-      final FeatureListAppliedMethod appliedMethod = appliedMethods.get(i);
-      if (!(appliedMethod.getModule() instanceof LipidAnnotationModule)) {
-        continue;
-      }
-      try {
-        return appliedMethod.getParameters()
-            .getParameter(LipidAnnotationParameters.lipidAnalysisType).getValue();
-      } catch (RuntimeException ignored) {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Detects MS1 matching tolerance from the latest applied {@link LipidAnnotationModule} step.
-   *
-   * @param featureList feature list that contains applied methods
-   * @return detected tolerance or {@code null} if unavailable
-   */
-  public static @Nullable MZTolerance detectMs1Tolerance(
-      final @NotNull ModularFeatureList featureList) {
-    final List<FeatureListAppliedMethod> appliedMethods = featureList.getAppliedMethods();
-    for (int i = appliedMethods.size() - 1; i >= 0; i--) {
-      final FeatureListAppliedMethod appliedMethod = appliedMethods.get(i);
-      if (!(appliedMethod.getModule() instanceof LipidAnnotationModule)) {
-        continue;
-      }
-      try {
-        return appliedMethod.getParameters().getParameter(LipidAnnotationParameters.mzTolerance)
-            .getValue();
-      } catch (RuntimeException ignored) {
-        return null;
-      }
-    }
-    return null;
   }
 
   private static @NotNull ElutionOrderMetrics computeRpElutionOrderMetrics(
@@ -573,203 +504,77 @@ public final class LipidQcScoringUtils {
   }
 
   /**
-   * Computes the overall annotation score with default settings: includes MS2 and elution-order
-   * contributions, using auto-detected analysis mode.
-   */
-  public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
-      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match) {
-    return computeCombinedAnnotationScore(featureList, row, match, true, true,
-        detectLipidAnalysisType(featureList));
-  }
-
-  /**
-   * Computes the overall annotation score with optional MS2 and elution-order components, using
-   * auto-detected analysis mode.
+   * Computes the overall annotation score with the given settings. The elution-order score is
+   * included if {@link LipidQcScoringSettings#includeElutionOrderScore()}.
    *
-   * @param includeMs2Score          true to include MS2 explained-intensity score
-   * @param includeElutionOrderScore true to include RT/elution-order score
-   */
-  public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
-      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
-      final boolean includeMs2Score, final boolean includeElutionOrderScore) {
-    return computeCombinedAnnotationScore(featureList, row, match, includeMs2Score,
-        includeElutionOrderScore, detectLipidAnalysisType(featureList));
-  }
-
-  /**
-   * Computes the overall annotation score for a specific analysis mode.
-   * <p>
-   * Final score = arithmetic mean of all enabled component scores.
-   *
-   * @param featureList              feature list used for context-dependent scores
-   * @param row                      selected row
-   * @param match                    annotation candidate
-   * @param includeMs2Score          true to include MS2 explained-intensity score
-   * @param includeElutionOrderScore true to include elution-order score
-   * @param analysisType             explicit analysis mode; {@code null} falls back to
-   *                                 auto-detection
+   * @param featureList feature list used for context-dependent scores
+   * @param row         row providing measured values and interference context
+   * @param match       annotation candidate
+   * @param settings    scoring settings
    * @return normalized combined score in {@code [0, 1]}
    */
   public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
       final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
-      final boolean includeMs2Score, final boolean includeElutionOrderScore,
-      final @Nullable LipidAnalysisType analysisType) {
-    return computeCombinedAnnotationScore(featureList, row, match, includeMs2Score,
-        includeElutionOrderScore, analysisType, null);
+      final @NotNull LipidQcScoringSettings settings) {
+    final @Nullable ElutionOrderMetrics elutionMetrics =
+        settings.includeElutionOrderScore() ? computeElutionOrderMetrics(featureList, row, match,
+            settings.analysisType()) : null;
+    return computeCombinedAnnotationScore(row, match, settings, elutionMetrics);
   }
 
   /**
-   * Computes the overall annotation score for a specific analysis mode and optional custom
-   * component weights.
-   */
-  public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
-      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
-      final boolean includeMs2Score, final boolean includeElutionOrderScore,
-      final @Nullable LipidAnalysisType analysisType,
-      final @Nullable ComponentWeights customComponentWeights) {
-    return computeCombinedAnnotationScore(featureList, row, match, includeMs2Score,
-        includeElutionOrderScore, analysisType, customComponentWeights, null);
-  }
-
-  /**
-   * Computes the overall annotation score for a specific analysis mode and optional custom
-   * component weights.
-   */
-  public static double computeCombinedAnnotationScore(final @NotNull ModularFeatureList featureList,
-      final @NotNull FeatureListRow row, final @NotNull MatchedLipid match,
-      final boolean includeMs2Score, final boolean includeElutionOrderScore,
-      final @Nullable LipidAnalysisType analysisType,
-      final @Nullable ComponentWeights customComponentWeights,
-      final @Nullable MZTolerance ms1Tolerance) {
-    final LipidAnalysisType resolvedAnalysisType =
-        analysisType != null ? analysisType : detectLipidAnalysisType(featureList);
-    final ComponentWeights componentWeights = Objects.requireNonNullElse(customComponentWeights,
-        defaultComponentWeights(resolvedAnalysisType));
-
-    final @Nullable MZTolerance resolvedMs1Tolerance =
-        ms1Tolerance != null ? ms1Tolerance : detectMs1Tolerance(featureList);
-    final double elutionOrderWeight;
-    final double elutionOrderScore;
-    if (includeElutionOrderScore) {
-      final ElutionOrderMetrics elutionMetrics = computeElutionOrderMetrics(featureList, row, match,
-          resolvedAnalysisType);
-      elutionOrderScore = elutionMetrics.combinedScore();
-      elutionOrderWeight = computeElutionOrderWeight(elutionMetrics, componentWeights);
-    } else {
-      elutionOrderScore = 0d;
-      elutionOrderWeight = componentWeights.elutionOrderWithTrendWeight();
-    }
-    return computeOverallQualityScore(row, match, elutionOrderScore, elutionOrderWeight,
-        includeMs2Score, includeElutionOrderScore, componentWeights, resolvedMs1Tolerance);
-  }
-
-  /**
-   * Computes QC quality using the latest lipid annotation settings, including custom weights and
-   * MS/MS inclusion. Lists without annotation provenance use the default weights and include
-   * MS/MS.
+   * Computes the overall annotation score with already computed elution-order metrics, so callers
+   * that also display the metrics compute them only once.
    *
-   * @param featureList              feature list containing the annotation settings
-   * @param row                      row providing measured values and interference context
-   * @param match                    lipid annotation to evaluate
-   * @param includeElutionOrderScore whether retention-time QC is enabled
-   * @return configured overall quality score in {@code [0, 1]}
+   * @param row            row providing measured values and interference context
+   * @param match          annotation candidate
+   * @param settings       scoring settings
+   * @param elutionMetrics metrics computed for {@link LipidQcScoringSettings#analysisType()};
+   *                       {@code null} excludes the elution-order score. Callers pass metrics
+   *                       whenever {@link LipidQcScoringSettings#includeElutionOrderScore()}
+   * @return normalized combined score in {@code [0, 1]}
    */
-  public static double computeConfiguredAnnotationScore(
+  public static double computeCombinedAnnotationScore(final @NotNull FeatureListRow row,
+      final @NotNull MatchedLipid match, final @NotNull LipidQcScoringSettings settings,
+      final @Nullable ElutionOrderMetrics elutionMetrics) {
+    final ComponentWeights componentWeights = settings.weights();
+    final double ms1Score = computeMs1Score(row, match, settings.ms1Tolerance());
+    final double ms2Score = computeMs2Score(match);
+    final double adductScore = computeAdductScore(row, match);
+    final double adductWeight = computeAdductWeight(row, match, componentWeights);
+    final double isotopeScore = computeIsotopeScore(row, match);
+    final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
+    final double interferenceScore = computeInterferenceScore(
+        interferenceMetrics.totalPenaltyCount());
+    final boolean includeElutionOrderScore = elutionMetrics != null;
+    final double elutionOrderScore = includeElutionOrderScore ? elutionMetrics.combinedScore() : 0d;
+    final double elutionOrderWeight =
+        includeElutionOrderScore ? computeElutionOrderWeight(elutionMetrics, componentWeights) : 0d;
+    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
+        interferenceScore, elutionOrderScore, settings.includeMs2Score(), includeElutionOrderScore,
+        componentWeights, adductWeight, elutionOrderWeight);
+  }
+
+  /**
+   * Returns the stored overall quality score of the annotation. The stored score is the score that
+   * was exported and used for filtering, it is frozen in the context of the annotation run or the
+   * last rescoring. Only computes the score if none was stored, e.g., for older projects or
+   * annotation candidates that were never added to the feature list.
+   *
+   * @param featureList feature list used for context-dependent scores
+   * @param row         row providing measured values and interference context
+   * @param match       annotation
+   * @param settings    scoring settings used if no score is stored
+   * @return overall quality score in {@code [0, 1]}
+   */
+  public static double getOrComputeOverallQualityScore(
       final @NotNull ModularFeatureList featureList, final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match, final boolean includeElutionOrderScore) {
-    final LipidAnalysisType analysisType = detectLipidAnalysisType(featureList);
-    final FeatureListAppliedMethod method = ParameterUtils.getLatestModuleCall(
-        featureList.getAppliedMethods(), LipidAnnotationModule.class);
-    boolean includeMs2Score = true;
-    ComponentWeights customWeights = null;
-    if (method != null) {
-      final ParameterSet parameters = method.getParameters();
-      includeMs2Score = parameters.tryGetParameter(LipidAnnotationParameters.searchForMSMSFragments)
-          .map(parameter -> parameter.getValue()).orElse(true);
-      customWeights = parameters.tryGetParameter(LipidAnnotationParameters.customQcWeights)
-          .filter(parameter -> Boolean.TRUE.equals(parameter.getValue()))
-          .map(parameter -> parameter.getEmbeddedParameters().toComponentWeights(analysisType))
-          .orElse(null);
+      final @NotNull MatchedLipid match, final @NotNull LipidQcScoringSettings settings) {
+    final @Nullable Float storedScore = match.getOverallQualityScore();
+    if (storedScore != null) {
+      return storedScore;
     }
-    return computeCombinedAnnotationScore(featureList, row, match, includeMs2Score,
-        includeElutionOrderScore, analysisType, customWeights, detectMs1Tolerance(featureList));
-  }
-
-  /**
-   * Computes the weighted overall quality score from normalized component scores.
-   * <p>
-   * All provided component scores are clamped to {@code [0, 1]} before weighting.
-   *
-   * @param ms1Score                 MS1 accuracy score
-   * @param ms2Score                 MS2 explained-intensity score
-   * @param adductScore              adduct agreement score
-   * @param isotopeScore             isotope similarity score
-   * @param interferenceScore        interference score
-   * @param elutionOrderScore        elution-order score
-   * @param includeMs2Score          true to include MS2 in the weighted mean
-   * @param includeElutionOrderScore true to include elution order in the weighted mean
-   * @return weighted mean score in {@code [0, 1]}
-   */
-  public static double computeWeightedQualityScore(final double ms1Score, final double ms2Score,
-      final double adductScore, final double isotopeScore, final double interferenceScore,
-      final double elutionOrderScore, final boolean includeMs2Score,
-      final boolean includeElutionOrderScore) {
-    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
-        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
-        WEIGHT_ADDUCT_MATCH, WEIGHT_ELUTION_ORDER_WITH_TREND);
-  }
-
-  /**
-   * Computes the weighted overall quality score from normalized component scores.
-   * <p>
-   * All provided component scores are clamped to {@code [0, 1]} before weighting.
-   *
-   * @param ms1Score                 MS1 accuracy score
-   * @param ms2Score                 MS2 explained-intensity score
-   * @param adductScore              adduct agreement score
-   * @param isotopeScore             isotope similarity score
-   * @param interferenceScore        interference score
-   * @param elutionOrderScore        elution-order score
-   * @param includeMs2Score          true to include MS2 in the weighted mean
-   * @param includeElutionOrderScore true to include elution order in the weighted mean
-   * @param adductWeight             adduct component weight applied for this evaluation
-   * @return weighted mean score in {@code [0, 1]}
-   */
-  public static double computeWeightedQualityScore(final double ms1Score, final double ms2Score,
-      final double adductScore, final double isotopeScore, final double interferenceScore,
-      final double elutionOrderScore, final boolean includeMs2Score,
-      final boolean includeElutionOrderScore, final double adductWeight) {
-    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
-        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
-        adductWeight, WEIGHT_ELUTION_ORDER_WITH_TREND);
-  }
-
-  /**
-   * Computes the weighted overall quality score from normalized component scores.
-   * <p>
-   * All provided component scores are clamped to {@code [0, 1]} before weighting.
-   *
-   * @param ms1Score                 MS1 accuracy score
-   * @param ms2Score                 MS2 explained-intensity score
-   * @param adductScore              adduct agreement score
-   * @param isotopeScore             isotope similarity score
-   * @param interferenceScore        interference score
-   * @param elutionOrderScore        elution-order score
-   * @param includeMs2Score          true to include MS2 in the weighted mean
-   * @param includeElutionOrderScore true to include elution order in the weighted mean
-   * @param adductWeight             adduct component weight applied for this evaluation
-   * @param elutionOrderWeight       elution-order component weight applied for this evaluation
-   * @return weighted mean score in {@code [0, 1]}
-   */
-  public static double computeWeightedQualityScore(final double ms1Score, final double ms2Score,
-      final double adductScore, final double isotopeScore, final double interferenceScore,
-      final double elutionOrderScore, final boolean includeMs2Score,
-      final boolean includeElutionOrderScore, final double adductWeight,
-      final double elutionOrderWeight) {
-    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
-        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
-        defaultComponentWeights(LipidAnalysisType.LC_REVERSED_PHASE), adductWeight,
-        elutionOrderWeight);
+    return computeCombinedAnnotationScore(featureList, row, match, settings);
   }
 
   /**
@@ -806,24 +611,6 @@ public final class LipidQcScoringUtils {
       weightSum += resolvedElutionWeight;
     }
     return weightSum <= 0d ? 0d : clampToUnit(weightedSum / weightSum);
-  }
-
-  private static double computeOverallQualityScore(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match, final double elutionOrderScore,
-      final double elutionOrderWeight, final boolean includeMs2Score,
-      final boolean includeElutionOrderScore, final @NotNull ComponentWeights componentWeights,
-      final @Nullable MZTolerance ms1Tolerance) {
-    final double ms1Score = computeMs1Score(row, match, ms1Tolerance);
-    final double ms2Score = computeMs2Score(match);
-    final double adductScore = computeAdductScore(row, match);
-    final double adductWeight = computeAdductWeight(row, match, componentWeights);
-    final double isotopeScore = computeIsotopeScore(row, match);
-    final InterferenceMetrics interferenceMetrics = computeInterferenceMetrics(row);
-    final double interferenceScore = computeInterferenceScore(
-        interferenceMetrics.totalPenaltyCount());
-    return computeWeightedQualityScore(ms1Score, ms2Score, adductScore, isotopeScore,
-        interferenceScore, elutionOrderScore, includeMs2Score, includeElutionOrderScore,
-        componentWeights, adductWeight, elutionOrderWeight);
   }
 
   public static double computeMs1Score(final @NotNull FeatureListRow row,
@@ -886,11 +673,6 @@ public final class LipidQcScoringUtils {
    * </ul>
    */
   public static double computeAdductWeight(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match) {
-    return computeAdductWeight(row, match, defaultComponentWeights(null));
-  }
-
-  public static double computeAdductWeight(final @NotNull FeatureListRow row,
       final @NotNull MatchedLipid match, final @NotNull ComponentWeights componentWeights) {
     if (row.getBestIonIdentity() == null || match.getIonizationType() == null) {
       return componentWeights.adductNoIonIdentityWeight();
@@ -908,10 +690,6 @@ public final class LipidQcScoringUtils {
    *   <li>If at least one trend model is available: {@code 30}</li>
    * </ul>
    */
-  public static double computeElutionOrderWeight(final @Nullable ElutionOrderMetrics metrics) {
-    return computeElutionOrderWeight(metrics, defaultComponentWeights(null));
-  }
-
   public static double computeElutionOrderWeight(final @Nullable ElutionOrderMetrics metrics,
       final @NotNull ComponentWeights componentWeights) {
     if (metrics == null) {
@@ -1025,88 +803,66 @@ public final class LipidQcScoringUtils {
 
   /**
    * Re-scores all lipid annotations in the feature list using the parameters from the last applied
-   * {@link LipidAnnotationModule} method. Intended for use after the user manually modifies
-   * annotations (e.g. removes entries in the lipid QC dashboard) so that stored scores remain
-   * consistent without requiring a full re-annotation run.
+   * {@link LipidAnnotationModule} method. Intended for use after annotations were modified (e.g.,
+   * removed in the lipid QC dashboard or by the cleanup module) so that stored scores reflect the
+   * current context. Never removes annotations.
    * <p>
    * If no {@link LipidAnnotationModule} entry is found in the applied methods the call is a no-op.
    *
    * @param featureList feature list whose annotations should be re-scored
    */
   public static void rescoreOverallQualityScores(final @NotNull ModularFeatureList featureList) {
-    final List<FeatureListAppliedMethod> methods = featureList.getAppliedMethods();
-    FeatureListAppliedMethod method = ParameterUtils.getLatestModuleCall(
-        featureList.getAppliedMethods(), LipidAnnotationModule.class);
-    if (method == null) {
+    final @Nullable LipidQcScoringSettings settings = LipidQcScoringSettings.fromFeatureList(
+        featureList);
+    if (settings == null) {
       return;
     }
-
-    try {
-
-      final ParameterSet param = method.getParameters();
-      final boolean includeMs2Score = Boolean.TRUE.equals(
-          param.getParameter(LipidAnnotationParameters.searchForMSMSFragments).getValue());
-      final LipidAnalysisType analysisType = param.getParameter(
-          LipidAnnotationParameters.lipidAnalysisType).getValue();
-      final boolean includeElutionOrderScore =
-          analysisType == null || analysisType.hasRetentionTimePattern();
-
-      final ComponentWeights customQcWeights =
-          param.getValue(LipidAnnotationParameters.customQcWeights) ? param.getParameter(
-                  LipidAnnotationParameters.customQcWeights).getEmbeddedParameters()
-              .toComponentWeights(analysisType) : null;
-
-      final MZTolerance mzTolerance = param.getParameter(LipidAnnotationParameters.mzTolerance)
-          .getValue();
-      computeAndStoreOverallQualityScores(featureList, includeMs2Score, includeElutionOrderScore,
-          analysisType, customQcWeights, mzTolerance);
-    } catch (Exception e) {
-      // silent, old parameter set version
-    }
+    computeAndStoreOverallQualityScores(featureList, settings, null);
   }
 
   /**
-   * Computes and stores overall quality scores for all lipid annotations in the feature list.
+   * Computes and stores overall quality scores for all lipid annotations in the feature list and
+   * optionally removes annotations below a minimum score.
    * <p>
    * This method should be called after all lipid annotations have been added to the feature list,
    * as it requires the complete context (all rows with annotations) to compute context-dependent
-   * scores like elution order trends and interference metrics.
+   * scores like elution order trends and interference metrics. All scores are computed before any
+   * annotation is removed, so the stored score is the score the filter decision was based on and
+   * the result does not depend on the row processing order.
    *
-   * @param featureList              feature list containing lipid annotations
-   * @param includeMs2Score          true to include MS2 explained-intensity score
-   * @param includeElutionOrderScore true to include elution-order score
-   * @param analysisType             lipid analysis mode or null for auto-detection
-   * @param customQcWeights          custom component weights or null for defaults
-   * @param mzTolerance              MS1 tolerance used for scoring or null for default
+   * @param featureList                feature list containing lipid annotations
+   * @param settings                   scoring settings
+   * @param minimumOverallQualityScore minimum score to keep an annotation or {@code null} to keep
+   *                                   all annotations
    */
   public static void computeAndStoreOverallQualityScores(
-      final @NotNull ModularFeatureList featureList, final boolean includeMs2Score,
-      final boolean includeElutionOrderScore, final @Nullable LipidAnalysisType analysisType,
-      final @Nullable ComponentWeights customQcWeights, final @Nullable MZTolerance mzTolerance) {
+      final @NotNull ModularFeatureList featureList, final @NotNull LipidQcScoringSettings settings,
+      final @Nullable Double minimumOverallQualityScore) {
     for (final FeatureListRow row : featureList.getRows()) {
-      final List<MatchedLipid> lipidMatches = row.getLipidMatches();
-      if (lipidMatches.isEmpty()) {
-        continue;
-      }
-      for (final MatchedLipid match : lipidMatches) {
-        final double score = computeCombinedAnnotationScore(featureList, row, match,
-            includeMs2Score, includeElutionOrderScore, analysisType, customQcWeights, mzTolerance);
+      for (final MatchedLipid match : row.getLipidMatches()) {
+        final double score = computeCombinedAnnotationScore(featureList, row, match, settings);
         match.setOverallQualityScore((float) clampToUnit(score));
       }
+    }
+    if (minimumOverallQualityScore == null) {
+      return;
+    }
+    // decision: filter only after all scores are frozen, see method docs
+    for (final FeatureListRow row : featureList.getRows()) {
+      filterLipidAnnotationsByOverallQualityScore(row, minimumOverallQualityScore);
     }
   }
 
   /**
    * Removes lipid annotations below a previously computed overall quality score threshold.
-   * <p>
-   * This method must only be called after scores for the complete feature list have been computed.
-   * Context-dependent scores such as elution order must be frozen before any annotations are
-   * removed, otherwise the result depends on row processing order.
+   *
+   * @param row                        row whose annotations are filtered
+   * @param minimumOverallQualityScore minimum score to keep an annotation
    */
-  public static void filterLipidAnnotationsByOverallQualityScore(
+  private static void filterLipidAnnotationsByOverallQualityScore(
       final @NotNull FeatureListRow row, final double minimumOverallQualityScore) {
     final float minimumScore = (float) clampToUnit(minimumOverallQualityScore);
-    if (minimumScore <= 0f) {
+    if (minimumScore <= 0f || row.getLipidMatches().isEmpty()) {
       return;
     }
     row.setLipidAnnotations(row.getLipidMatches().stream().filter(match -> {

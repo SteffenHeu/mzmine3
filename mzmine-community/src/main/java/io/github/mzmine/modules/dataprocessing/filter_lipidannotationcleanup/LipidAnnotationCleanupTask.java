@@ -32,6 +32,7 @@ import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.ILipidClass;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.taskcontrol.AbstractFeatureListTask;
 import io.github.mzmine.util.MemoryMapStorage;
@@ -57,7 +58,7 @@ public class LipidAnnotationCleanupTask extends AbstractFeatureListTask {
   private final @NotNull ModularFeatureList featureList;
   private final @NotNull List<IonizationPreference> ionizationPreferences;
   private final @NotNull MultiRowAnnotationCleanupRowHandlingMode rowHandlingMode;
-  private final LipidAnalysisType analysisType;
+  private final @NotNull LipidAnalysisType analysisType;
   private final @NotNull DuplicateAnnotationScopeFilter duplicateScope;
 
   protected LipidAnnotationCleanupTask(@Nullable final MemoryMapStorage storage,
@@ -110,8 +111,12 @@ public class LipidAnnotationCleanupTask extends AbstractFeatureListTask {
     final MultiRowAnnotationCleanupOptions options = new MultiRowAnnotationCleanupOptions(
         preferredIonByClass, Set.of(), false, rowHandlingMode, duplicateScope);
 
+    // decision: MS2 inclusion, weights and tolerance follow the latest lipid annotation, the
+    // analysis type is chosen in this module
+    final LipidQcScoringSettings settings = LipidQcScoringSettings.fromFeatureListOrDefaults(
+        featureList).withAnalysisType(analysisType);
     final MultiRowAnnotationCleanupPlan plan = MultiRowAnnotationCleanupPlanner.buildCleanupPlan(
-        featureList, analysisType, options);
+        featureList, settings, options);
 
     if (!plan.hasRemovals()) {
       logger.info("No multi-row lipid annotations to clean up in " + featureList.getName());

@@ -25,8 +25,6 @@
 
 package io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules;
 
-import static java.util.Objects.requireNonNullElse;
-
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.PolarityType;
@@ -43,7 +41,7 @@ import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidIon
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.custom_class.CustomLipidClass;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.custom_class.CustomLipidClassParameters;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ComponentWeights;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.AdvancedParametersParameter;
 import io.github.mzmine.parameters.parametertypes.tolerances.MZTolerance;
@@ -61,7 +59,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Task to search and annotate lipids in feature list
@@ -90,8 +87,7 @@ public class LipidAnnotationTask extends AbstractTask {
   private final IonizationType[] ionizationTypesToIgnore;
   private final ParameterSet parameters;
   private final FragmentScanSelection scanMergeSelect;
-  private final @NotNull LipidAnalysisType lipidAnalysisType;
-  private final @Nullable ComponentWeights customQcWeights;
+  private final @NotNull LipidQcScoringSettings scoringSettings;
 
   public LipidAnnotationTask(ParameterSet parameters, FeatureList featureList,
       @NotNull Instant moduleCallDate) {
@@ -115,19 +111,9 @@ public class LipidAnnotationTask extends AbstractTask {
     this.mzTolerance = parameters.getParameter(LipidAnnotationParameters.mzTolerance).getValue();
     Object[] selectedObjects = parameters.getParameter(LipidAnnotationParameters.lipidClasses)
         .getValue();
-    this.lipidAnalysisType = requireNonNullElse(
-        parameters.getParameter(LipidAnnotationParameters.lipidAnalysisType).getValue(),
-        LipidAnalysisType.LC_REVERSED_PHASE);
+    this.scoringSettings = LipidQcScoringSettings.fromParameters(parameters);
     this.minimumOverallQualityScore = parameters.getParameter(
         LipidAnnotationParameters.minimumOverallQualityScore).getValue();
-    if (parameters.getParameter(LipidAnnotationParameters.customQcWeights).getValue()) {
-      final LipidQcWeightParameters weightParameters = parameters.getParameter(
-          LipidAnnotationParameters.customQcWeights).getEmbeddedParameters();
-      this.customQcWeights = LipidQcWeightParameters.toComponentWeights(weightParameters,
-          lipidAnalysisType);
-    } else {
-      this.customQcWeights = null;
-    }
     this.searchForMSMSFragments = parameters.getParameter(
         LipidAnnotationParameters.searchForMSMSFragments).getValue();
     if (searchForMSMSFragments.booleanValue()) {
@@ -258,13 +244,8 @@ public class LipidAnnotationTask extends AbstractTask {
     logger.finest(
         "Computing overall lipid quality scores for " + featureList.getRows().size() + " rows");
     LipidQcScoringUtils.computeAndStoreOverallQualityScores((ModularFeatureList) featureList,
-        searchForMSMSFragments, lipidAnalysisType.hasRetentionTimePattern(), lipidAnalysisType,
-        customQcWeights, mzTolerance);
-    featureList.getRows().forEach(row -> {
-      LipidQcScoringUtils.filterLipidAnnotationsByOverallQualityScore(row,
-          minimumOverallQualityScore);
-      LipidQcScoringUtils.sortLipidAnnotationsByOverallScore(row);
-    });
+        scoringSettings, minimumOverallQualityScore);
+    featureList.getRows().forEach(LipidQcScoringUtils::sortLipidAnnotationsByOverallScore);
 
     // Add task description to featureList
     (featureList).addDescriptionOfAppliedTask(

@@ -25,12 +25,8 @@
 
 package io.github.mzmine.modules.visualization.dash_lipidqc;
 
-import io.github.mzmine.datamodel.features.FeatureList.FeatureListAppliedMethod;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationModule;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationParameters;
-import java.util.List;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,35 +51,10 @@ class LipidAnnotationQCDashboardInteractor {
   // ── model-property reactions ──────────────────────────────────────────────
 
   private void onFeatureListChanged(final @Nullable ModularFeatureList featureList) {
-    model.setRetentionTimeAnalysisEnabled(shouldIncludeRetentionTimeAnalysis(featureList));
+    // decision: no feature list behaves like a list without lipid annotation provenance
+    final LipidQcScoringSettings settings =
+        featureList == null ? LipidQcScoringSettings.defaults()
+            : LipidQcScoringSettings.fromFeatureListOrDefaults(featureList);
+    model.setRetentionTimeAnalysisEnabled(settings.includeElutionOrderScore());
   }
-
-  // ── business logic ────────────────────────────────────────────────────────
-
-  /**
-   * Determines whether retention time analysis should be included for the given feature list by
-   * inspecting the last lipid annotation applied method's analysis type.
-   */
-  private static boolean shouldIncludeRetentionTimeAnalysis(
-      final @Nullable ModularFeatureList featureList) {
-    if (featureList == null) {
-      return true;
-    }
-    final List<FeatureListAppliedMethod> appliedMethods = featureList.getAppliedMethods();
-    for (int i = appliedMethods.size() - 1; i >= 0; i--) {
-      final FeatureListAppliedMethod appliedMethod = appliedMethods.get(i);
-      if (!(appliedMethod.getModule() instanceof LipidAnnotationModule)) {
-        continue;
-      }
-      try {
-        final LipidAnalysisType analysisType = appliedMethod.getParameters()
-            .getParameter(LipidAnnotationParameters.lipidAnalysisType).getValue();
-        return analysisType == null || analysisType.hasRetentionTimePattern();
-      } catch (RuntimeException ignored) {
-        return true;
-      }
-    }
-    return true;
-  }
-
 }

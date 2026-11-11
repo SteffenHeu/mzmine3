@@ -34,10 +34,9 @@ import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.Lip
 import io.github.mzmine.modules.dataprocessing.filter_lipidannotationcleanup.LipidAnnotationCleanupParameters;
 import io.github.mzmine.modules.dataprocessing.filter_lipidpreferredlevel.SetLipidAnnotationLevelModule;
 import io.github.mzmine.modules.dataprocessing.filter_lipidpreferredlevel.SetLipidAnnotationLevelParameters;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnalysisType;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.annotation_modules.LipidAnnotationUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
-import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
@@ -107,7 +106,7 @@ class AnnotationQualityInteractor extends FxInteractor<AnnotationQualityModel> {
     final Set<MatchedLipid> annotationsToAdd = new HashSet<>();
     annotationsToAdd.add(candidate.match());
     LipidAnnotationUtils.addCandidateAnnotationsToFeatureList(row, annotationsToAdd, false,
-        LipidQcScoringUtils.detectMs1Tolerance(featureList));
+        LipidQcScoringSettings.fromFeatureListOrDefaults(featureList).ms1Tolerance());
     controller.refreshAfterAnnotationDelete(row);
   }
 
@@ -116,10 +115,9 @@ class AnnotationQualityInteractor extends FxInteractor<AnnotationQualityModel> {
         .getModuleParameters(LipidAnnotationCleanupModule.class).cloneParameterSet();
     parameters.getParameter(LipidAnnotationCleanupParameters.featureLists)
         .setValue(new FeatureListsSelection(model.getFeatureList()));
+    // pre-fill with the analysis type of the latest lipid annotation
     parameters.setParameter(LipidAnnotationCleanupParameters.lipidAnalysisType,
-        Objects.requireNonNullElse(
-            LipidQcScoringUtils.detectLipidAnalysisType(model.getFeatureList()),
-            LipidAnalysisType.LC_REVERSED_PHASE));
+        LipidQcScoringSettings.fromFeatureListOrDefaults(model.getFeatureList()).analysisType());
     if (parameters.showSetupDialog(true) != ExitCode.OK) {
       return;
     }

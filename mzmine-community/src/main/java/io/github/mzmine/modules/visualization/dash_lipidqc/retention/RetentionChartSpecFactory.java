@@ -34,6 +34,7 @@ import io.github.mzmine.gui.chartbasics.simplechart.renderers.ColoredXYShapeRend
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.lipids.LipidAnnotationLevel;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModel;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidQcAnnotationSelectionUtils;
 import io.github.mzmine.modules.visualization.dash_lipidqc.kendrick.KendrickFalseNegativeCandidate;
@@ -65,12 +66,15 @@ import org.jfree.data.xy.XYDataset;
 final class RetentionChartSpecFactory {
 
   private final @NotNull LipidAnnotationQCDashboardModel model;
+  // resolved once per build, false-positive checks run for every chart point
+  private @NotNull LipidQcScoringSettings scoringSettings = LipidQcScoringSettings.defaults();
 
   RetentionChartSpecFactory(final @NotNull LipidAnnotationQCDashboardModel model) {
     this.model = model;
   }
 
   @Nullable RetentionChartSpec build(final @NotNull RetentionComputationPayload payload) {
+    scoringSettings = LipidQcScoringSettings.fromFeatureListOrDefaults(model.getFeatureList());
     return switch (payload) {
       case EcnRetentionPayload ecnPayload -> buildEcnSpec(ecnPayload);
       case DbeRetentionPayload dbePayload -> buildDbeSpec(dbePayload);
@@ -576,7 +580,7 @@ final class RetentionChartSpecFactory {
           : SelectionQualityFlag.NONE;
     }
     final @Nullable String falsePositiveReason = KendrickFalsePositiveUtils.potentialFalsePositiveReason(
-        modularFeatureList, row, true);
+        modularFeatureList, row, scoringSettings, true);
     return falsePositiveReason != null ? SelectionQualityFlag.POTENTIAL_FALSE_POSITIVE
         : SelectionQualityFlag.NONE;
   }
@@ -585,8 +589,8 @@ final class RetentionChartSpecFactory {
     if (!(row.getFeatureList() instanceof ModularFeatureList modularFeatureList)) {
       return false;
     }
-    return KendrickFalsePositiveUtils.potentialFalsePositiveReason(modularFeatureList, row, true)
-        != null;
+    return KendrickFalsePositiveUtils.potentialFalsePositiveReason(modularFeatureList, row,
+        scoringSettings, true) != null;
   }
 
   private @NotNull String formatQualityIndicator(final int falsePositiveCount,

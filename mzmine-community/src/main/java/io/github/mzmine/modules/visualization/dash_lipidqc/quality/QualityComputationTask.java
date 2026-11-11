@@ -29,6 +29,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.javafx.mvci.FxUpdateTask;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.common.identification.matched_levels.MatchedLipid;
+import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringSettings;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.ElutionOrderMetrics;
 import io.github.mzmine.modules.dataprocessing.id_lipidid.scoring.LipidQcScoringUtils.InterferenceMetrics;
@@ -57,6 +58,7 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityModel> 
   // Snapshots taken from model in constructor for thread safety
   private final @Nullable FeatureListRow row;
   private final @NotNull ModularFeatureList featureList;
+  private final @NotNull LipidQcScoringSettings scoringSettings;
   private final boolean includeRetentionTimeAnalysis;
   private final @NotNull KendrickReviewMode reviewMode;
   private @NotNull QualityComputationResult result;
@@ -65,6 +67,7 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityModel> 
     super("lipidqc-quality-update", model);
     this.row = model.getRow();
     this.featureList = model.getFeatureList();
+    this.scoringSettings = LipidQcScoringSettings.fromFeatureListOrDefaults(featureList);
     this.includeRetentionTimeAnalysis = model.isRetentionTimeAnalysisEnabled();
     this.reviewMode = model.getKendrickReviewMode();
     result = new QualityComputationResult("Select a row with lipid annotations.", null,
@@ -73,18 +76,19 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityModel> 
 
   @Override
   protected void process() {
-    final @Nullable String falsePositiveReason = row == null || featureList == null
-        || reviewMode != KendrickReviewMode.POTENTIAL_FALSE_POSITIVE ? null
-        : KendrickFalsePositiveUtils.potentialFalsePositiveReason(featureList, row,
-            includeRetentionTimeAnalysis);
+    final @Nullable String falsePositiveReason =
+        row == null || reviewMode != KendrickReviewMode.POTENTIAL_FALSE_POSITIVE ? null
+            : KendrickFalsePositiveUtils.potentialFalsePositiveReason(featureList, row,
+                scoringSettings, includeRetentionTimeAnalysis);
     final @Nullable KendrickFalseNegativeCandidate falseNegativeCandidate =
-        row == null || featureList == null
-            || reviewMode != KendrickReviewMode.POTENTIAL_FALSE_NEGATIVE ? null
+        row == null || reviewMode != KendrickReviewMode.POTENTIAL_FALSE_NEGATIVE ? null
             : new KendrickFalseNegativeDetector(featureList).detectCandidate(row);
+    // the candidate is scored by the detector, it has no stored score
     final @Nullable QualityCardData falseNegativeQualityCard =
         row == null || falseNegativeCandidate == null ? null
             : createQualityCardData(row, falseNegativeCandidate.match(),
-                LipidQcScoringUtils.computeInterferenceMetrics(row));
+                LipidQcScoringUtils.computeInterferenceMetrics(row),
+                falseNegativeCandidate.overallScore());
     if (row == null) {
       result = new QualityComputationResult("Select a row with lipid annotations.", null,
           new InterferenceMetrics(0, 0), List.of(), List.of(), falsePositiveReason,
@@ -116,7 +120,9 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityModel> 
         row.getID(), annotationText);
     final List<QualityCardData> cards = new ArrayList<>(orderedMatches.size());
     for (final MatchedLipid match : orderedMatches) {
-      cards.add(createQualityCardData(row, match, interferenceMetrics));
+      cards.add(createQualityCardData(row, match, interferenceMetrics,
+          LipidQcScoringUtils.getOrComputeOverallQualityScore(featureList, row, match,
+              scoringSettings)));
     }
     result = new QualityComputationResult(null, selectedAnnotation, interferenceMetrics,
         List.copyOf(duplicateRows), List.copyOf(cards), falsePositiveReason, falseNegativeCandidate,
@@ -156,46 +162,44 @@ final class QualityComputationTask extends FxUpdateTask<AnnotationQualityModel> 
   }
 
   /**
-   * Builds component details and the overall score using the applied lipid annotation settings.
+   * Builds the live component details of a quality card with the given overall score.
    *
    * @param row                 row providing measured values
    * @param match               lipid annotation to evaluate
    * @param interferenceMetrics interference context for the row
-   * @return quality card with the configured overall score
+   * @param overall             overall quality score shown on the card
+   * @return quality card
    */
   private @NotNull QualityCardData createQualityCardData(final @NotNull FeatureListRow row,
-      final @NotNull MatchedLipid match, final @NotNull InterferenceMetrics interferenceMetrics) {
-    final QualityMetric ms1 = evaluateMs1(row, featureList, match);
+      final @NotNull MatchedLipid match, final @NotNull InterferenceMetrics interferenceMetrics,
+      final double overall) {
+    final QualityMetric ms1 = evaluateMs1(row, match, scoringSettings);
     final QualityMetric ms2 = evaluateMs2(match);
     final QualityMetric adduct = evaluateAdduct(row, match);
     final QualityMetric isotope = evaluateIsotope(row, match);
-    final @Nullable ElutionOrderMetrics elutionMetrics =
-        includeRetentionTimeAnalysis && featureList != null
-            ? LipidQcScoringUtils.computeElutionOrderMetrics(featureList, row, match) : null;
-    final QualityMetric elutionOrder =
-        includeRetentionTimeAnalysis ? elutionMetrics != null ? new QualityMetric(
-            elutionMetrics.combinedScore(),
-            LipidQcScoringUtils.formatElutionOrderDetail(elutionMetrics))
-            : new QualityMetric(0.4d, "Missing RT context")
-            : new QualityMetric(0d, "Disabled for current lipid analysis mode");
+    final QualityMetric elutionOrder;
+    if (includeRetentionTimeAnalysis) {
+      final ElutionOrderMetrics elutionMetrics = LipidQcScoringUtils.computeElutionOrderMetrics(
+          featureList, row, match, scoringSettings.analysisType());
+      elutionOrder = new QualityMetric(elutionMetrics.combinedScore(),
+          LipidQcScoringUtils.formatElutionOrderDetail(elutionMetrics));
+    } else {
+      elutionOrder = new QualityMetric(0d, "Disabled for current lipid analysis mode");
+    }
     final QualityMetric interference = new QualityMetric(
         LipidQcScoringUtils.computeInterferenceScore(interferenceMetrics.totalPenaltyCount()),
         LipidQcScoringUtils.interferenceDetail(interferenceMetrics));
-    final double overall = LipidQcScoringUtils.computeConfiguredAnnotationScore(featureList, row,
-        match, includeRetentionTimeAnalysis);
     return new QualityCardData(match, ms1, ms2, adduct, isotope, elutionOrder, interference,
         overall);
   }
 
   private static @NotNull QualityMetric evaluateMs1(final @NotNull FeatureListRow row,
-      final @Nullable ModularFeatureList featureList, final @NotNull MatchedLipid match) {
+      final @NotNull MatchedLipid match, final @NotNull LipidQcScoringSettings settings) {
     final double exactMz = MatchedLipid.getExactMass(match);
     final double observedMz =
         match.getAccurateMz() != null ? match.getAccurateMz() : row.getAverageMZ();
     final double ppm = (observedMz - exactMz) / exactMz * 1e6;
-    final @Nullable MZTolerance ms1Tolerance =
-        featureList == null ? null : LipidQcScoringUtils.detectMs1Tolerance(featureList);
-    final double score = LipidQcScoringUtils.computeMs1Score(row, match, ms1Tolerance);
+    final double score = LipidQcScoringUtils.computeMs1Score(row, match, settings.ms1Tolerance());
     return new QualityMetric(score, String.format("%.2f ppm", ppm));
   }
 
