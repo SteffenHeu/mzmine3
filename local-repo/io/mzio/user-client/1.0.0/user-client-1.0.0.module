@@ -27,11 +27,11 @@
         {
           "name": "user-client-1.0.0.jar",
           "url": "user-client-1.0.0.jar",
-          "size": 81999,
-          "sha512": "585ef8bbc5dd986a7a0cfbee584e1d57e03f6b55513cce37bc0d9eb2fdeaddde9fcf11c71cae186ba894d113f8a13b8dceafaccd0e4039d240ecdd3c2f409d98",
-          "sha256": "e71e4a5163a16bf82019941eb5de724faedf811b8467f33d731004c3117e42d1",
-          "sha1": "c01bf3ac647fbf5c44d4310056dd40bef0defd18",
-          "md5": "8f87f21ebfec100d4793745a7bba7048"
+          "size": 89493,
+          "sha512": "e3df7ccd50c38e908b1ceeb7644c940375e262bac2074f4faec96667083d2e0925c523e86edfa871dac10453d80edc05cf7edf37e15f93b44c207e844025b82b",
+          "sha256": "7440bfa524a359d5cfe04890a8dd2ec0c4a3fdeb6def3e963e5cfb7224f262ee",
+          "sha1": "fba6e4bf3dba1953db19692af655d21bd6bdf00b",
+          "md5": "397f630b1371f295a1d78b957a466105"
         }
       ]
     },
@@ -67,6 +67,17 @@
           }
         },
         {
+          "group": "io.github.mzmine",
+          "module": "utils"
+        },
+        {
+          "group": "com.vdurmont",
+          "module": "semver4j",
+          "version": {
+            "requires": "3.1.0"
+          }
+        },
+        {
           "group": "com.javax0.license3j",
           "module": "license3j",
           "version": {
@@ -99,11 +110,11 @@
         {
           "name": "user-client-1.0.0.jar",
           "url": "user-client-1.0.0.jar",
-          "size": 81999,
-          "sha512": "585ef8bbc5dd986a7a0cfbee584e1d57e03f6b55513cce37bc0d9eb2fdeaddde9fcf11c71cae186ba894d113f8a13b8dceafaccd0e4039d240ecdd3c2f409d98",
-          "sha256": "e71e4a5163a16bf82019941eb5de724faedf811b8467f33d731004c3117e42d1",
-          "sha1": "c01bf3ac647fbf5c44d4310056dd40bef0defd18",
-          "md5": "8f87f21ebfec100d4793745a7bba7048"
+          "size": 89493,
+          "sha512": "e3df7ccd50c38e908b1ceeb7644c940375e262bac2074f4faec96667083d2e0925c523e86edfa871dac10453d80edc05cf7edf37e15f93b44c207e844025b82b",
+          "sha256": "7440bfa524a359d5cfe04890a8dd2ec0c4a3fdeb6def3e963e5cfb7224f262ee",
+          "sha1": "fba6e4bf3dba1953db19692af655d21bd6bdf00b",
+          "md5": "397f630b1371f295a1d78b957a466105"
         }
       ]
     }
