@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -126,11 +126,15 @@ public class ExtensionFilters {
   public static final ExtensionFilter WIFF2 = new ExtensionFilter("wiff2", "*.wiff2");
   public static final ExtensionFilter SHIMADZU = new ExtensionFilter(".lcd", "*.lcd");
   public static final ExtensionFilter MBI = new ExtensionFilter("MOBILion", "*.mbi");
+  // one injection of an OpenLab CDS result set (.rslt folder); its button selects a folder
+  public static final ExtensionFilter AGILENT_OPENLAB_DX = new ExtensionFilter(
+      "Agilent OpenLab .dx injections", "*.dx");
 
+  // .rslt folders are expanded to their .dx injections during import
   public static final ExtensionFilter ALL_MS_DATA_FILTER = new ExtensionFilter("MS data", "*.mzML",
       "*.mzml", "*.mzXML", "*.mzxml", "*.imzML", "*.imzml", "*.d", "*.tdf", "*.tsf", "*.raw",
       "*.RAW", "*.mzData", "*.netcdf", "*.mzdata", /*"*.aird",*/ "*.wiff", "*.wiff2", "*.lcd",
-      "*.mbi");
+      "*.mbi", "*.dx", "*.rslt");
   public static final List<ExtensionFilter> MS_RAW_DATA = List.of( //
       ALL_MS_DATA_FILTER, //
       MZML, //
@@ -138,6 +142,7 @@ public class ExtensionFilters {
       IMZML, //
       THERMO_OR_WATERS_RAW, //
       BRUKER_OR_AGILENT_D, //
+      AGILENT_OPENLAB_DX, //
       BRUKER_TSF, //
       BRUKER_TDF, //
       MZDATA, //

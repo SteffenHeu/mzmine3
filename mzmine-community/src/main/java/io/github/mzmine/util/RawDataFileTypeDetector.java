@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -81,10 +82,39 @@ public class RawDataFileTypeDetector {
   public static final String SCIEX_WIFF_SUFFIX = ".wiff";
   public static final String SCIEX_WIFF2_SUFFIX = ".wiff2";
   public static final String AGILENT_ACQDATATA_FOLDER = "AcqData";
+  public static final String AGILENT_OPENLAB_DX_SUFFIX = ".dx";
+  public static final String AGILENT_OPENLAB_RSLT_SUFFIX = ".rslt";
+  // MS binaries of an OpenLab injection, stored next to the .dx as <injection>.MSScan.bin
+  private static final List<String> AGILENT_OPENLAB_BINARIES = List.of("MSScan.bin", "MSPeak.bin",
+      "MSProfile.bin");
   private static final String MBI_SUFFIX = ".mbi";
 
   private static final Logger logger = Logger.getLogger(RawDataFileTypeDetector.class.getName());
   private static final String LCD_SUFFIX = ".lcd";
+
+  /**
+   * @param file any file
+   * @return true if the file is an OpenLab CDS injection (.dx) with MS data next to it
+   */
+  public static boolean isAgilentOpenLabInjection(@NotNull File file) {
+    return file.isFile() && file.getName().toLowerCase().endsWith(AGILENT_OPENLAB_DX_SUFFIX)
+        && openLabSibling(file, AGILENT_OPENLAB_BINARIES.getFirst()).isFile();
+  }
+
+  /**
+   * @param dx an OpenLab CDS injection
+   * @return the existing MS binaries that belong to this injection
+   */
+  public static @NotNull List<File> getAgilentOpenLabBinaries(@NotNull File dx) {
+    return AGILENT_OPENLAB_BINARIES.stream().map(name -> openLabSibling(dx, name))
+        .filter(File::isFile).toList();
+  }
+
+  private static @NotNull File openLabSibling(@NotNull File dx, @NotNull String name) {
+    final String stem = dx.getName()
+        .substring(0, dx.getName().length() - AGILENT_OPENLAB_DX_SUFFIX.length());
+    return new File(dx.getAbsoluteFile().getParentFile(), stem + "." + name);
+  }
 
   /**
    * @return Detected file type or null if the file is not of any supported type
@@ -161,6 +191,10 @@ public class RawDataFileTypeDetector {
       }
       if (lowerName.endsWith(LCD_SUFFIX)) {
         return RawDataFileType.SHIMADZU_LCD;
+      }
+      // before the header check: a .dx is a zip
+      if (isAgilentOpenLabInjection(fileName)) {
+        return RawDataFileType.AGILENT_RSLT_DX;
       }
       if (fileName.getName().endsWith(MBI_SUFFIX)) {
         return RawDataFileType.MBI;

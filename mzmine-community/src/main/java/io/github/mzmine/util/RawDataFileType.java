@@ -59,6 +59,8 @@ public enum RawDataFileType implements UniqueIdSupplier {
   SCIEX_WIFF2(ExtensionFilters.WIFF2, false), //
   AGILENT_D(ExtensionFilters.BRUKER_OR_AGILENT_D, true), //
   AGILENT_D_IMS(ExtensionFilters.BRUKER_OR_AGILENT_D, true), //
+  // one injection (.dx) of an OpenLab CDS result set (.rslt folder)
+  AGILENT_RSLT_DX(ExtensionFilters.AGILENT_OPENLAB_DX, false), //
   SHIMADZU_LCD(ExtensionFilters.SHIMADZU, false), //
   MBI(ExtensionFilters.MBI, false);
 
@@ -96,6 +98,8 @@ public enum RawDataFileType implements UniqueIdSupplier {
         yield List.of(new File(file.getParent(), file.getName().replace(extension, "wiff.scan")),
             new File(file.getParent(), file.getName().replace(extension, "timeseries.data")));
       }
+      // the MS binaries sit next to the .dx with the injection name as prefix
+      case AGILENT_RSLT_DX -> RawDataFileTypeDetector.getAgilentOpenLabBinaries(file);
     };
   }
 
@@ -127,6 +131,7 @@ public enum RawDataFileType implements UniqueIdSupplier {
       case SCIEX_WIFF2 -> "wiff2";
       case AGILENT_D -> "d_agilent";
       case AGILENT_D_IMS -> "d_agilent_ims";
+      case AGILENT_RSLT_DX -> "dx_agilent_openlab";
       case SHIMADZU_LCD -> "lcd";
       case MBI -> "mbi";
       case MZML -> "mzml";

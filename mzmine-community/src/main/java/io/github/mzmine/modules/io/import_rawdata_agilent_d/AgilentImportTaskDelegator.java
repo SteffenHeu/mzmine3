@@ -39,6 +39,7 @@ import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.AbstractSimpleTask;
 import io.github.mzmine.taskcontrol.TaskStatus;
 import io.github.mzmine.util.MemoryMapStorage;
+import io.github.mzmine.util.RawDataFileTypeDetector;
 import java.io.File;
 import java.time.Instant;
 import java.util.List;
@@ -49,7 +50,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Decides whether an Agilent {@code .d} file is imported via the native AgilentBridge or MSConvert,
  * based on {@link VendorImportParameters#agilentImportChoice} of the import module parameters, and
- * launches the matching task. Modeled
+ * launches the matching task. OpenLab {@code .dx} injections always use the registered
+ * {@link AgilentReaderTaskFactory}. Modeled
  * on {@code MassLynxImportTaskDelegator}.
  */
 public class AgilentImportTaskDelegator extends AbstractSimpleTask implements RawDataImportTask {
@@ -65,9 +67,11 @@ public class AgilentImportTaskDelegator extends AbstractSimpleTask implements Ra
 
     super(storage, moduleCallDate, parameters, moduleClass);
 
-    final AgilentImportOptions importChoice = parameters.getValue(
-            AllSpectralDataImportParameters.vendorOptions)
-        .getValue(VendorImportParameters.agilentImportChoice).getSelectedOption();
+    // OpenLab .dx injections can only be read by the mzio reader (not the SDK or MSConvert)
+    final AgilentImportOptions importChoice =
+        RawDataFileTypeDetector.isAgilentOpenLabInjection(file) ? AgilentImportOptions.CUSTOM
+            : parameters.getValue(AllSpectralDataImportParameters.vendorOptions)
+                .getValue(VendorImportParameters.agilentImportChoice).getSelectedOption();
     actualTask = switch (importChoice) {
       case MSCONVERT ->
           new MSConvertImportTask(storage, moduleCallDate, file, processorConfig, project,

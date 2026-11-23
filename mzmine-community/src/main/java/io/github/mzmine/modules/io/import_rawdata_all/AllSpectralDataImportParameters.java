@@ -249,17 +249,21 @@ public class AllSpectralDataImportParameters extends SimpleParameterSet {
   }
 
   /**
-   * Applies {@link AllSpectralDataImportModule#validateBrukerPath(File)} to get the actual file
-   * paths and applies name changes due to the MSconvert import. This is done always before import.
+   * Expands OpenLab .rslt folders to their .dx injections
+   * ({@link AllSpectralDataImportModule#expandOpenLabResultSet(File)}), applies
+   * {@link AllSpectralDataImportModule#validateBrukerPath(File)} to get the actual file paths and
+   * applies name changes due to the MSconvert import. This is done always before import.
    *
-   * @return stream of {@link ImportFile}s
+   * @return stream of distinct {@link ImportFile}s
    */
   @NotNull
   public static Stream<ImportFile> streamValidatedFiles(final File[] files) {
     final boolean keepConverted = ConfigService.getPreferences()
         .getValue(MZminePreferences.keepConvertedFile);
-    return Arrays.stream(files)
-        .map(f -> AllSpectralDataImportModule.validateToActualPath(f, keepConverted));
+    return Arrays.stream(files).flatMap(AllSpectralDataImportModule::expandOpenLabResultSet)
+        .map(f -> AllSpectralDataImportModule.validateToActualPath(f, keepConverted))
+        // a .rslt and one of its .dx may both be selected
+        .distinct();
   }
 
 

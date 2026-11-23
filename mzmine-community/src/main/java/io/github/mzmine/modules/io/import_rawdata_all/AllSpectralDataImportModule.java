@@ -40,6 +40,7 @@ import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.MZmineModuleCategory;
 import io.github.mzmine.modules.MZmineProcessingModule;
 import io.github.mzmine.modules.io.import_rawdata_agilent_d.AgilentImportTaskDelegator;
+import io.github.mzmine.modules.io.import_rawdata_agilent_d.AgilentReaderTaskFactory;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.MsProcessor;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.MsProcessorList;
 import io.github.mzmine.modules.io.import_rawdata_all.spectral_processor.ScanImportProcessorConfig;
@@ -183,6 +184,25 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
     final File importedFile = type == RawDataFileType.THERMO_RAW ? file : //
         MSConvertImportTask.applyMsConvertImportNameChanges(file, keepConverted, type);
     return new ImportFile(file, type, importedFile);
+  }
+
+  /**
+   * An OpenLab CDS result set (.rslt folder) holds several injections, each imported as its own
+   * .dx file. Selecting the .rslt or its .dx files results in the same raw data files.
+   *
+   * @param file a selected file or folder
+   * @return the .dx injections with MS data directly in a .rslt folder, else the input file
+   */
+  public static @NotNull Stream<File> expandOpenLabResultSet(@NotNull File file) {
+    if (!file.isDirectory() || !file.getName().toLowerCase()
+        .endsWith(RawDataFileTypeDetector.AGILENT_OPENLAB_RSLT_SUFFIX)) {
+      return Stream.of(file);
+    }
+    // decision: only direct children, nested .rslt folders are not expanded
+    final File[] injections = file.listFiles(RawDataFileTypeDetector::isAgilentOpenLabInjection);
+    // keep the folder if it has no injections so the import reports it as unknown type
+    return injections == null || injections.length == 0 ? Stream.of(file)
+        : Arrays.stream(injections).sorted();
   }
 
   /**
@@ -354,6 +374,13 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
       logger.log(Level.SEVERE, "%s.  %s".formatted(msg, files));
       return ExitCode.ERROR;
     }
+    // OpenLab injections are only read by the mzio Agilent reader
+    if (AgilentReaderTaskFactory.registered() == null && Arrays.stream(filesToImport)
+        .anyMatch(f -> f.type() == RawDataFileType.AGILENT_RSLT_DX)) {
+      DialogLoggerUtil.showErrorDialog("Cannot import file",
+          "Agilent OpenLab CDS data (.dx, .rslt) can only be imported with mzmine Pro.");
+      return ExitCode.ERROR;
+    }
 
     for (int i = 0; i < filesToImport.length; i++) {
       final ImportFile fileToImport = filesToImport[i];
@@ -467,7 +494,7 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
       case SHIMADZU_LCD, MBI ->
           new MSConvertImportTask(storage, moduleCallDate, file, scanProcessorConfig, project,
               module, parameters);
-      case AGILENT_D, AGILENT_D_IMS ->
+      case AGILENT_D, AGILENT_D_IMS, AGILENT_RSLT_DX ->
           new AgilentImportTaskDelegator(storage, moduleCallDate, file, scanProcessorConfig,
               project, parameters, module);
       case WATERS_RAW, WATERS_RAW_IMS ->
@@ -523,7 +550,7 @@ public class AllSpectralDataImportModule implements MZmineProcessingModule {
       case SHIMADZU_LCD, MBI ->
           new MSConvertImportTask(storage, moduleCallDate, file, scanProcessorConfig, project,
               module, parameters);
-      case AGILENT_D, AGILENT_D_IMS ->
+      case AGILENT_D, AGILENT_D_IMS, AGILENT_RSLT_DX ->
           new AgilentImportTaskDelegator(storage, moduleCallDate, file, scanProcessorConfig,
               project, parameters, module);
       // all unsupported tasks are wrapped to apply import and mass detection separately
