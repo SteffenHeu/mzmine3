@@ -31,6 +31,7 @@ import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.datamodel.features.ModularDataModel;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureListRow;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.identities.iontype.IonType;
@@ -84,6 +85,7 @@ public interface FeatureAnnotation {
           SimpleCompoundDBAnnotation.loadFromXML(reader, project, flist, row);
       case MatchedLipid.XML_ELEMENT ->
           MatchedLipid.loadFromXML(reader, project.getCurrentRawDataFiles());
+      case PfasAnnotation.XML_ATTR -> PfasAnnotation.loadFromXML(reader, project, flist, row);
       default -> null;
     };
   }
