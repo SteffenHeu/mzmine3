@@ -259,16 +259,23 @@ final class PfasMatchSpectrum extends SimpleXYChart<PlotXYDataProvider> {
         peaks.stream().mapToDouble(SubFormulaPeak::mz).toArray(),
         peaks.stream().mapToDouble(SubFormulaPeak::intensity).toArray());
     final var renderer = new StyledLipidSpectrumBarRenderer(false, color);
-    renderer.setDefaultItemLabelGenerator(
-        (_, _, index) -> PfasIonLabels.loss(ionName, peaks.get(index).lossFormula()));
+    renderer.setDefaultItemLabelGenerator((_, _, index) -> fragmentLabel(peaks.get(index)));
     renderer.setDefaultToolTipGenerator((_, _, index) -> {
       final SubFormulaPeak peak = peaks.get(index);
       final String hf = peak.substructure() == null || peak.substructure().hfLoss() == 0 ? ""
           : "%nSubstructure minus %d HF".formatted(peak.substructure().hfLoss());
-      return "%s%nObserved m/z %s%n%s%s".formatted(PfasIonLabels.loss(ionName, peak.lossFormula()),
-          formats.mz(peak.mz()), description, hf);
+      return "%s = %s%nObserved m/z %s%n%s%s".formatted(fragmentLabel(peak),
+          PfasIonLabels.loss(ionName, peak.lossFormula()), formats.mz(peak.mz()), description, hf);
     });
     addDataset(new ColoredXYDataset(provider, RunOption.THIS_THREAD), renderer);
+  }
+
+  /**
+   * @param peak sub-formula explained peak
+   * @return fragment ion formula with charge, e.g. C7F7⁻; only loss rules show the loss notation
+   */
+  private static @NotNull String fragmentLabel(final @NotNull SubFormulaPeak peak) {
+    return PfasIonLabels.ion(peak.fragmentFormula(), peak.charge());
   }
 
   /**

@@ -4,6 +4,7 @@ import com.google.common.collect.Range;
 import io.github.mzmine.modules.tools.isotopeprediction.IsotopePatternCalculator;
 import io.github.mzmine.util.FormulaUtils;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,11 +51,14 @@ public record PfasExplainedSignals(@NotNull List<SubFormulaPeak> subFormulaPeaks
    * @param peakIndex    index of the peak in the spectrum
    * @param mz           observed m/z
    * @param intensity    observed intensity
-   * @param lossFormula  neutral loss from the precursor ion
-   * @param substructure substructure of the annotated structure that explains the fragment, or
-   *                     null
+   * @param fragmentFormula fragment ion formula without charge, precursor ion minus the loss
+   * @param charge          fragment ion charge, the precursor ion charge
+   * @param lossFormula     neutral loss from the precursor ion
+   * @param substructure    substructure of the annotated structure that explains the fragment, or
+   *                        null
    */
   public record SubFormulaPeak(int peakIndex, double mz, double intensity,
+                               @NotNull String fragmentFormula, int charge,
                                @NotNull String lossFormula,
                                PfasSubstructureFragments.@Nullable Match substructure) {
 
@@ -118,6 +122,7 @@ public record PfasExplainedSignals(@NotNull List<SubFormulaPeak> subFormulaPeaks
       elements.addIsotope(isotope, 0, ionFormula.getIsotopeCount(isotope));
     }
     final Map<String, Integer> ionCounts = elementCounts(ionFormula);
+    final int charge = ionFormula.getCharge() == null ? 0 : ionFormula.getCharge();
 
     final double minIntensity = basePeak * settings.minRelativeIntensity();
     double ruleIntensity = 0;
@@ -175,6 +180,7 @@ public record PfasExplainedSignals(@NotNull List<SubFormulaPeak> subFormulaPeaks
         formulaIntensity += intensities[i];
       }
       subFormulaPeaks.add(new SubFormulaPeak(i, mzs[i], intensities[i],
+          hill(minus(ionCounts, elementCounts(chosen))), charge,
           FormulaUtils.getFormulaString(chosen, false), match));
     }
     return new PfasExplainedSignals(subFormulaPeaks, ruleIntensity, substructureIntensity,
@@ -191,6 +197,27 @@ public record PfasExplainedSignals(@NotNull List<SubFormulaPeak> subFormulaPeaks
       counts.merge(isotope.getSymbol(), formula.getIsotopeCount(isotope), Integer::sum);
     }
     return counts;
+  }
+
+  /**
+   * @return formula in Hill order, C and H first, e.g. C7F7
+   */
+  private static @NotNull String hill(final @NotNull Map<String, Integer> counts) {
+    final StringBuilder formula = new StringBuilder();
+    final boolean carbon = counts.getOrDefault("C", 0) > 0;
+    counts.entrySet().stream().filter(e -> e.getValue() > 0).sorted(
+            Comparator.comparing((Map.Entry<String, Integer> e) -> carbon ? hillRank(e.getKey()) : 2)
+                .thenComparing(Map.Entry::getKey))
+        .forEach(e -> formula.append(e.getKey()).append(e.getValue() > 1 ? e.getValue() : ""));
+    return formula.toString();
+  }
+
+  private static int hillRank(final @NotNull String element) {
+    return switch (element) {
+      case "C" -> 0;
+      case "H" -> 1;
+      default -> 2;
+    };
   }
 
   /**

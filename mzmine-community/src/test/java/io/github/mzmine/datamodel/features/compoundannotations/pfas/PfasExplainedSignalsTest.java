@@ -32,6 +32,9 @@ class PfasExplainedSignalsTest {
         peaks.stream().map(PfasExplainedSignals.SubFormulaPeak::peakIndex).toList());
     Assertions.assertEquals(List.of("C6F10O", "C5F8O2"),
         peaks.stream().map(PfasExplainedSignals.SubFormulaPeak::lossFormula).toList());
+    Assertions.assertEquals(List.of("C2F5O", "C3F7"),
+        peaks.stream().map(PfasExplainedSignals.SubFormulaPeak::fragmentFormula).toList());
+    Assertions.assertEquals(-1, peaks.getFirst().charge());
     Assertions.assertFalse(peaks.getFirst().isSubstructure());
     // C3F7: the CF3-CF2-CF2 end, cut off by one bond
     final PfasSubstructureFragments.Match c3f7 = peaks.get(1).substructure();
