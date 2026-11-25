@@ -71,9 +71,9 @@ class PfasAnnotationXmlTest {
     annotation.setScan(scan);
     annotation.setMatchedPeaks(List.of(
         new PfasMatchedPeak(79.9574, 100, 79.9574, "O3S", -1, PfasEvidenceLevel.DIAGNOSTIC,
-            List.of("sulfonate.so3")),
+            List.of("sulfonate.so3"), "C8F17"),
         new PfasMatchedPeak(98.9558, 50, 98.9558, "FO3S", -1, PfasEvidenceLevel.DIAGNOSTIC,
-            List.of("sulfonate.fso3"))));
+            List.of("sulfonate.fso3"), null)));
     annotation.setInSourceForms(
         List.of(new PfasInSourceForm("C8F17", -1, 418.9734, "O3S", "test.isf")));
     annotation.setCandidateIdentity("PFSA", List.of(8), List.of(0));
@@ -111,6 +111,8 @@ class PfasAnnotationXmlTest {
     Assertions.assertEquals(PfasConfidenceLevel.LEVEL_3D, pfos.getConfidenceLevel());
     Assertions.assertEquals(List.of(8), pfos.getChainLengths());
     Assertions.assertEquals(1, pfos.getBuildingBlocks().size());
+    Assertions.assertEquals(annotation.getMatchedPeaks(), pfos.getMatchedPeaks());
+    Assertions.assertEquals("C8F17", pfos.getMatchedPeaks().getFirst().lossFormula());
     // the refinement restores the original level after loading
     pfos.resetRefinement();
     Assertions.assertEquals(PfasConfidenceLevel.LEVEL_3B, pfos.getConfidenceLevel());

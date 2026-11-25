@@ -27,6 +27,7 @@ package io.github.mzmine.datamodel.features.compoundannotations.pfas;
 
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Persisted view of one observed peak assigned to a predicted PFAS ion. Stores rule ids instead of
@@ -38,22 +39,32 @@ import org.jetbrains.annotations.NotNull;
  * @param formula    predicted ion formula without charge
  * @param charge     ion charge
  * @param evidence   strongest evidence level of the explaining rules
- * @param ruleIds    ids of all rules that predict this ion
+ * @param ruleIds     ids of all rules that predict this ion
+ * @param lossFormula neutral loss from the precursor if a loss rule predicts this ion, else null
  */
 public record PfasMatchedPeak(double observedMz, double intensity, double expectedMz,
                               @NotNull String formula, int charge,
-                              @NotNull PfasEvidenceLevel evidence, @NotNull List<String> ruleIds) {
+                              @NotNull PfasEvidenceLevel evidence, @NotNull List<String> ruleIds,
+                              @Nullable String lossFormula) {
 
   public PfasMatchedPeak {
     ruleIds = List.copyOf(ruleIds);
   }
 
   /**
-   * @return the predicted ion formula or neutral loss label with its charge
+   * @return the predicted ion formula with its charge
    */
   public @NotNull String ionLabel() {
-    final String magnitude = Math.abs(charge) > 1 ? Integer.toString(Math.abs(charge)) : "";
-    return formula + magnitude + (charge > 0 ? "⁺" : charge < 0 ? "⁻" : "");
+    return PfasIonLabels.ion(formula, charge);
+  }
+
+  /**
+   * @param ionType precursor ion type, or null if unknown
+   * @return the ion formula and, for loss rules, the loss notation, e.g. C7F15⁻ = [M-CO2-H]⁻
+   */
+  public @NotNull String ionLabel(@Nullable String ionType) {
+    return lossFormula == null || ionType == null ? ionLabel()
+        : ionLabel() + " = " + PfasIonLabels.loss(ionType, lossFormula);
   }
 
 }

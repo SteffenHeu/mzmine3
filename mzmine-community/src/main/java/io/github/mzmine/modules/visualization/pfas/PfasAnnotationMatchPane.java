@@ -27,6 +27,8 @@ package io.github.mzmine.modules.visualization.pfas;
 
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasBlockEvidence;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasExplainedSignals;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchSettings;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchedPeak;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasRefinementFlag;
 import io.github.mzmine.datamodel.Scan;
@@ -72,13 +74,15 @@ public final class PfasAnnotationMatchPane extends StackPane {
   /**
    * @param annotations annotations for the selected feature
    * @param observedMz  measured feature m/z
+   * @param settings    matching settings of the annotation run, null if unknown; then no
+   *                    sub-formula signals are shown
    */
   public PfasAnnotationMatchPane(final @NotNull List<PfasAnnotation> annotations,
-      final @Nullable Double observedMz) {
+      final @Nullable Double observedMz, final @Nullable PfasMatchSettings settings) {
     final VBox cards = FxLayout.newVBox(Pos.TOP_LEFT, new Insets(12), true);
     cards.setSpacing(12);
     cards.getChildren()
-        .setAll(annotations.stream().map(annotation -> card(annotation, observedMz)).toList());
+        .setAll(annotations.stream().map(annotation -> card(annotation, observedMz, settings)).toList());
     getChildren().add(FxLayout.newScrollPane(cards));
   }
 
@@ -88,15 +92,18 @@ public final class PfasAnnotationMatchPane extends StackPane {
    * @param rowId       selected feature row ID
    * @param observedMz  measured feature m/z
    * @param annotations annotations of the feature
+   * @param settings    matching settings of the annotation run, null if unknown
    * @param owner       feature table window, if available
    */
   public static void show(final int rowId, final @Nullable Double observedMz,
-      final @NotNull List<PfasAnnotation> annotations, final @Nullable Window owner) {
+      final @NotNull List<PfasAnnotation> annotations, final @Nullable PfasMatchSettings settings,
+      final @Nullable Window owner) {
     final Stage stage = new Stage();
     if (owner != null) {
       stage.initOwner(owner);
     }
-    final Scene scene = new Scene(new PfasAnnotationMatchPane(annotations, observedMz), 1100, 690);
+    final Scene scene = new Scene(new PfasAnnotationMatchPane(annotations, observedMz, settings),
+        1100, 690);
     ConfigService.getConfiguration().getTheme().apply(scene.getStylesheets());
     stage.setScene(scene);
     stage.setMinWidth(740);
@@ -107,10 +114,12 @@ public final class PfasAnnotationMatchPane extends StackPane {
   /**
    * @param annotation match to display
    * @param observedMz measured feature m/z
+   * @param settings   matching settings of the annotation run, or null
    * @return one spectrum and its metadata in a card
    */
   private static @NotNull VBox card(final @NotNull PfasAnnotation annotation,
-      final @Nullable Double observedMz) {
+      final @Nullable Double observedMz, final @Nullable PfasMatchSettings settings) {
+    final PfasExplainedSignals subFormulas = PfasMatchSpectrum.subFormulas(annotation, settings);
     final Label title = FxLabels.newBoldTitle(
         Objects.requireNonNullElse(annotation.getCompoundName(), "PFAS annotation"));
     final Region spectrum;
@@ -119,9 +128,9 @@ public final class PfasAnnotationMatchPane extends StackPane {
       spectrum.setMinWidth(360);
       spectrum.setPrefHeight(210);
     } else {
-      spectrum = new PfasMatchSpectrum(annotation);
+      spectrum = new PfasMatchSpectrum(annotation, subFormulas);
     }
-    final VBox details = metadata(annotation, observedMz);
+    final VBox details = metadata(annotation, observedMz, subFormulas);
     details.setMinWidth(METADATA_WIDTH);
     details.setPrefWidth(METADATA_WIDTH);
     details.setMaxWidth(METADATA_WIDTH);
@@ -135,11 +144,12 @@ public final class PfasAnnotationMatchPane extends StackPane {
 
   /**
    * @param annotation match to display
-   * @param observedMz measured feature m/z
+   * @param observedMz  measured feature m/z
+   * @param subFormulas sub-formula explained signals, or null
    * @return metadata and structural evidence for this match
    */
   private static @NotNull VBox metadata(final @NotNull PfasAnnotation annotation,
-      final @Nullable Double observedMz) {
+      final @Nullable Double observedMz, final @Nullable PfasExplainedSignals subFormulas) {
     final NumberFormats formats = ConfigService.getGuiFormats();
     final VBox details = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true);
     details.setSpacing(4);
@@ -162,7 +172,10 @@ public final class PfasAnnotationMatchPane extends StackPane {
           "%s · #%d".formatted(scan.getDataFile().getName(), scan.getScanNumber()));
     }
     if (!annotation.getMatchedPeaks().isEmpty()) {
-      addDetail(details, "Matched signals", annotation.getMatchedPeaks().size());
+      addDetail(details, "Rule-based signals", annotation.getMatchedPeaks().size());
+    }
+    if (subFormulas != null) {
+      addDetail(details, "Sub-formula signals", subFormulas.subFormulaPeaks().size());
     }
     final Float explainedIntensity = annotation.get(ExplainedIntensityPercentType.class);
     if (explainedIntensity != null) {

@@ -73,15 +73,15 @@ class PfasAnnotationMatchPaneTest {
     final PfasAnnotation annotation = new PfasAnnotation();
     final List<PfasMatchedPeak> peaks = List.of(
         new PfasMatchedPeak(68.9958, 50, 68.9958, "CF3", -1, PfasEvidenceLevel.GENERIC,
-            List.of("perfluoroalkyl.series")),
+            List.of("perfluoroalkyl.series"), null),
         new PfasMatchedPeak(79.9574, 100, 79.9574, "O3S", -1, PfasEvidenceLevel.DIAGNOSTIC,
-            List.of("sulfonate.so3")),
+            List.of("sulfonate.so3"), null),
         new PfasMatchedPeak(118.9926, 45, 118.9926, "C2F5", -1, PfasEvidenceLevel.GENERIC,
-            List.of("perfluoroalkyl.series")),
+            List.of("perfluoroalkyl.series"), null),
         new PfasMatchedPeak(168.9894, 55, 168.9894, "C3F7", -1, PfasEvidenceLevel.GENERIC,
-            List.of("perfluoroalkyl.series")),
+            List.of("perfluoroalkyl.series"), null),
         new PfasMatchedPeak(218.9862, 35, 218.9862, "C4F9", -1, PfasEvidenceLevel.GENERIC,
-            List.of("perfluoroalkyl.series")));
+            List.of("perfluoroalkyl.series"), null));
     annotation.setMatchedPeaks(peaks);
     annotation.put(CompoundNameType.class, "Substructures: C4F9 chain, Sulfonic acid");
     annotation.put(PrecursorMZType.class, 650.0123);
@@ -101,7 +101,7 @@ class PfasAnnotationMatchPaneTest {
     final PfasAnnotation annotation = substructureAnnotation();
     runOnFxAndWait(() -> {
       final PfasAnnotationMatchPane pane = new PfasAnnotationMatchPane(
-          List.of(annotation, annotation.clone()), 650.0123);
+          List.of(annotation, annotation.clone()), 650.0123, null);
       final Scene scene = new Scene(pane, 1100, 690);
       scene.getRoot().applyCss();
       scene.getRoot().layout();
@@ -115,7 +115,9 @@ class PfasAnnotationMatchPaneTest {
       final var series = plot.getDataset(0);
       Assertions.assertEquals(annotation.getMatchedPeaks().size(), series.getItemCount(0));
       final var renderer = plot.getRenderer(0);
-      Assertions.assertEquals(annotation.getMatchedPeaks().getFirst().ionLabel(),
+      // ion on the first line, building block and evidence level on the second
+      Assertions.assertEquals(
+          annotation.getMatchedPeaks().getFirst().ionLabel() + "\nPerfluoroalkyl segment · generic",
           renderer.getDefaultItemLabelGenerator().generateLabel(series, 0, 0));
       final VBox metadata = (VBox) body.getChildren().get(1);
       Assertions.assertTrue(

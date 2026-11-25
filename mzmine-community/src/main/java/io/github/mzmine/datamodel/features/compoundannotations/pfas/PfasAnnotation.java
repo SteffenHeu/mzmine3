@@ -393,6 +393,9 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
       writer.writeAttribute("charge", String.valueOf(peak.charge()));
       writer.writeAttribute("evidence", peak.evidence().name());
       writer.writeAttribute("rules", String.join(ParsingUtils.SEPARATOR, peak.ruleIds()));
+      if (peak.lossFormula() != null) {
+        writer.writeAttribute("loss", peak.lossFormula());
+      }
       writer.writeEndElement();
     }
     for (final PfasInSourceForm form : inSourceForms) {
@@ -481,7 +484,7 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
                 Integer.parseInt(reader.getAttributeValue(null, "charge")),
                 PfasEvidenceLevel.valueOf(reader.getAttributeValue(null, "evidence")),
                 Arrays.stream(reader.getAttributeValue(null, "rules").split(ParsingUtils.SEPARATOR))
-                    .filter(s -> !s.isBlank()).toList()));
+                    .filter(s -> !s.isBlank()).toList(), reader.getAttributeValue(null, "loss")));
         case XML_IN_SOURCE_FORM -> forms.add(
             new PfasInSourceForm(reader.getAttributeValue(null, "formula"),
                 Integer.parseInt(reader.getAttributeValue(null, "charge")),

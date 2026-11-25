@@ -49,6 +49,8 @@ import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotationMethod;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchSettings;
 import io.github.mzmine.modules.visualization.pfas.PfasAnnotationMatchPane;
 import java.util.ArrayList;
 import java.util.List;
@@ -111,8 +113,10 @@ public class PfasMatchListType extends ListWithSubsType<PfasAnnotation> implemen
       return null;
     }
     final List<PfasAnnotation> matches = List.copyOf(annotations);
+    final PfasMatchSettings settings = PfasAnnotationMethod.latestSettings(
+        row.getFeatureList().getAppliedMethods());
     return () -> FxThread.runLater(
-        () -> PfasAnnotationMatchPane.show(row.getID(), row.getAverageMZ(), matches,
+        () -> PfasAnnotationMatchPane.show(row.getID(), row.getAverageMZ(), matches, settings,
             table != null && table.getScene() != null ? table.getScene().getWindow() : null));
   }
 
