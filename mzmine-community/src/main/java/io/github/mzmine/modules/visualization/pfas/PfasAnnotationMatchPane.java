@@ -29,6 +29,8 @@ import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotati
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasBlockEvidence;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasExplainedSignals;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchSettings;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasSubstructureFragments;
+import org.openscience.cdk.interfaces.IAtomContainer;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchedPeak;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasRefinementFlag;
 import io.github.mzmine.datamodel.Scan;
@@ -45,7 +47,11 @@ import io.github.mzmine.gui.preferences.NumberFormats;
 import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.components.util.FxLayout;
 import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.datamodel.features.types.annotations.SmilesStructureType;
 import io.github.mzmine.modules.visualization.molstructure.Structure2DComponent;
+import io.github.mzmine.modules.visualization.molstructure.Structure2DRenderer;
+import io.github.mzmine.modules.visualization.molstructure.StructureRenderService;
+import org.openscience.cdk.renderer.generators.standard.StandardGenerator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -122,15 +128,33 @@ public final class PfasAnnotationMatchPane extends StackPane {
     final PfasExplainedSignals subFormulas = PfasMatchSpectrum.subFormulas(annotation, settings);
     final Label title = FxLabels.newBoldTitle(
         Objects.requireNonNullElse(annotation.getCompoundName(), "PFAS annotation"));
+    // decision: the structure of the substructure index, so highlighted atom indices match. Built
+    // from the stored SMILES if no sub-formula needed it, rule peaks are highlighted as well
+    final PfasSubstructureFragments fragments =
+        subFormulas != null && subFormulas.fragments() != null ? subFormulas.fragments()
+            : PfasSubstructureFragments.of(annotation.get(SmilesStructureType.class));
+    final MolecularStructure structure = annotation.getStructure();
+    final IAtomContainer molecule = fragments.molecule() != null ? fragments.molecule()
+        : structure != null ? structure.structure() : null;
+    // own renderer: the outer glow of highlighted substructures must not change other views
+    final Structure2DRenderer renderer = StructureRenderService.createRenderer(
+        StructureRenderService.FONT);
+    renderer.getRenderer2DModel()
+        .set(StandardGenerator.Highlighting.class, StandardGenerator.HighlightStyle.OuterGlow);
+    renderer.getRenderer2DModel().set(StandardGenerator.OuterGlowWidth.class, 4d);
+    final Structure2DComponent structureView = new Structure2DComponent(molecule, renderer);
     final Region spectrum;
     if (annotation.getScan() == null && annotation.getMatchedPeaks().isEmpty()) {
       spectrum = new StackPane(FxLabels.newLabel("No matched MS/MS spectrum"));
       spectrum.setMinWidth(360);
       spectrum.setPrefHeight(210);
     } else {
-      spectrum = new PfasMatchSpectrum(annotation, subFormulas);
+      final PfasMatchSpectrum chart = new PfasMatchSpectrum(annotation, subFormulas, fragments);
+      chart.highlightedProperty().subscribe(
+          highlighted -> structureView.setMolecule(highlighted != null ? highlighted : molecule));
+      spectrum = chart;
     }
-    final VBox details = metadata(annotation, observedMz, subFormulas);
+    final VBox details = metadata(annotation, observedMz, subFormulas, structureView);
     details.setMinWidth(METADATA_WIDTH);
     details.setPrefWidth(METADATA_WIDTH);
     details.setMaxWidth(METADATA_WIDTH);
@@ -145,11 +169,13 @@ public final class PfasAnnotationMatchPane extends StackPane {
   /**
    * @param annotation match to display
    * @param observedMz  measured feature m/z
-   * @param subFormulas sub-formula explained signals, or null
+   * @param subFormulas   sub-formula explained signals, or null
+   * @param structureView depiction of the structure, highlights clicked substructure peaks
    * @return metadata and structural evidence for this match
    */
   private static @NotNull VBox metadata(final @NotNull PfasAnnotation annotation,
-      final @Nullable Double observedMz, final @Nullable PfasExplainedSignals subFormulas) {
+      final @Nullable Double observedMz, final @Nullable PfasExplainedSignals subFormulas,
+      final @NotNull Structure2DComponent structureView) {
     final NumberFormats formats = ConfigService.getGuiFormats();
     final VBox details = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true);
     details.setSpacing(4);
@@ -175,7 +201,11 @@ public final class PfasAnnotationMatchPane extends StackPane {
       addDetail(details, "Rule-based signals", annotation.getMatchedPeaks().size());
     }
     if (subFormulas != null) {
-      addDetail(details, "Sub-formula signals", subFormulas.subFormulaPeaks().size());
+      final long substructures = subFormulas.subFormulaPeaks().stream()
+          .filter(PfasExplainedSignals.SubFormulaPeak::isSubstructure).count();
+      addDetail(details, "Substructure signals", substructures);
+      addDetail(details, "Sub-formula signals",
+          subFormulas.subFormulaPeaks().size() - substructures);
     }
     final Float explainedIntensity = annotation.get(ExplainedIntensityPercentType.class);
     if (explainedIntensity != null) {
@@ -191,7 +221,7 @@ public final class PfasAnnotationMatchPane extends StackPane {
     if (structure != null) {
       final String label = annotation.isInSourceFragment() ? "Parent structure"
           : annotation.isProposedStructure() ? "Proposed structure" : "Structure";
-      details.getChildren().addAll(FxLabels.newBoldLabel(label), depiction(structure, 140));
+      details.getChildren().addAll(FxLabels.newBoldLabel(label), depiction(structureView, 140));
     } else if (!annotation.getBuildingBlocks().isEmpty()) {
       final String label =
           annotation.isInSourceFragment() ? "Parent building blocks" : "Building blocks";
@@ -246,7 +276,17 @@ public final class PfasAnnotationMatchPane extends StackPane {
    */
   private static @NotNull StackPane depiction(final @NotNull MolecularStructure structure,
       final double height) {
-    final StackPane pane = new StackPane(new Structure2DComponent(structure.structure()));
+    return depiction(new Structure2DComponent(structure.structure()), height);
+  }
+
+  /**
+   * @param view   structure depiction
+   * @param height fixed height
+   * @return the depiction in a pane of this height
+   */
+  private static @NotNull StackPane depiction(final @NotNull Structure2DComponent view,
+      final double height) {
+    final StackPane pane = new StackPane(view);
     pane.setMinHeight(height);
     pane.setPrefHeight(height);
     pane.setMaxHeight(height);

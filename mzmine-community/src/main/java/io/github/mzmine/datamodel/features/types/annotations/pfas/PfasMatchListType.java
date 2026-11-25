@@ -45,7 +45,6 @@ import io.github.mzmine.datamodel.features.types.numbers.MzPpmDifferenceType;
 import io.github.mzmine.datamodel.features.types.numbers.PrecursorMZType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.ExplainedIntensityPercentType;
 import io.github.mzmine.datamodel.MZmineProject;
-import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
@@ -95,29 +94,22 @@ public class PfasMatchListType extends ListWithSubsType<PfasAnnotation> implemen
   }
 
   /**
-   * Opens all PFAS matches of the double-clicked feature.
+   * Opens all PFAS matches of a feature, from a double click on the annotation quality summary.
    *
-   * @param table     source feature table
-   * @param row       selected feature
-   * @param files     raw data files of the feature list
-   * @param superType parent column type
-   * @param value     clicked cell value
-   * @return the action when the row has PFAS annotations
+   * @param table source feature table
+   * @param row   selected feature
    */
-  @Override
-  public @Nullable Runnable getDoubleClickAction(final @Nullable FeatureTableFX table,
-      final @NotNull ModularFeatureListRow row, final @NotNull List<RawDataFile> files,
-      final @Nullable DataType<?> superType, final @Nullable Object value) {
+  public static void showMatches(final @Nullable FeatureTableFX table,
+      final @NotNull ModularFeatureListRow row) {
     final List<PfasAnnotation> annotations = row.get(PfasMatchListType.class);
     if (annotations == null || annotations.isEmpty()) {
-      return null;
+      return;
     }
-    final List<PfasAnnotation> matches = List.copyOf(annotations);
     final PfasMatchSettings settings = PfasAnnotationMethod.latestSettings(
         row.getFeatureList().getAppliedMethods());
-    return () -> FxThread.runLater(
-        () -> PfasAnnotationMatchPane.show(row.getID(), row.getAverageMZ(), matches, settings,
-            table != null && table.getScene() != null ? table.getScene().getWindow() : null));
+    PfasAnnotationMatchPane.show(row.getID(), row.getAverageMZ(), List.copyOf(annotations),
+        settings,
+        table != null && table.getScene() != null ? table.getScene().getWindow() : null);
   }
 
   @Override

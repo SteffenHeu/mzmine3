@@ -34,6 +34,7 @@ import io.github.mzmine.datamodel.features.annotationpriority.AnnotationSummaryO
 import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
 import io.github.mzmine.datamodel.features.types.DataType;
 import io.github.mzmine.datamodel.features.types.DataTypes;
+import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasMatchListType;
 import io.github.mzmine.datamodel.features.types.modifiers.GraphicalColumType;
 import io.github.mzmine.datamodel.features.types.modifiers.NoTextColumn;
 import io.github.mzmine.datamodel.features.types.modifiers.SubColumnsFactory;
@@ -97,6 +98,7 @@ public class AnnotationSummaryType extends DataType<AnnotationSummary> implement
     final FeatureTableOwner masterTableOwner = table.getTableOwner();
     return () -> FxThread.runLater(() -> {
       switch (mainType) {
+        case PfasMatchListType _ -> PfasMatchListType.showMatches(table, row);
         case CompoundDatabaseMatchesType _ -> {
           CompoundDatabaseMatchTab tab = new CompoundDatabaseMatchTab(table);
           MZmineCore.getDesktop().addTab(tab);
