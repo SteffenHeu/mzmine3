@@ -30,6 +30,9 @@ import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.compoundannotations.CompoundDBAnnotation;
 import io.github.mzmine.datamodel.features.compoundannotations.FeatureAnnotation;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasConfidenceLevel;
+import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasMatchListType;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.IsotopePatternType;
 import io.github.mzmine.datamodel.features.types.annotations.AnalogSpectralLibraryMatchesType;
@@ -251,6 +254,9 @@ public class AnnotationSummary implements Comparable<AnnotationSummary> {
       // use similarity.getScore to get double score instead of Float from FeatureAnnotation.getScore
       case SpectralDBAnnotation s -> OptionalDouble.of(s.getSimilarity().getScore());
       case MatchedLipid l -> OptionalDouble.of(l.getMsMsScore());
+      // explained MS2 intensity, before CompoundDBAnnotation which PfasAnnotation extends
+      case PfasAnnotation p -> p.getScore() != null ? OptionalDouble.of(p.getScore())
+          : OptionalDouble.empty();
       case CompoundDBAnnotation db -> {
         final Float score = db.get(SiriusCsiScoreType.class);
         if (score != null) {
@@ -297,18 +303,25 @@ public class AnnotationSummary implements Comparable<AnnotationSummary> {
             new MZTolerance(0.005, 15), 0d));
   }
 
-  /// [FeatureAnnotation] types are ranked from best to worst:
-  /// - Spectral library match with RT or retention index match are highest.
-  /// - MatchedLipid with MS2: Usually better for this class of compounds than spectral matches
-  /// - Spectral matches (without RT or RI)
-  /// - MatchedLipid
-  /// - CompoundDB: Contains different types of annotations from local DB, SIRIUS but they all for
-  /// now fall under the same rank and are sorted internally.
+  /// [FeatureAnnotation] types are ranked from best to worst (steps of 10 leave room between):
+  /// - 10 Spectral library match with RT or retention index match.
+  /// - 20 MatchedLipid with MS2: Usually better for this class of compounds than spectral matches
+  /// - 30 Spectral matches (without RT or RI)
+  /// - 35 PFAS level 2 (diagnostic fragments)
+  /// - 40 CompoundDB with RT or RI match
+  /// - 45 PFAS level 3 (fragmentation-based candidates)
+  /// - 49 CompoundDB without RT or RI but with a SIRIUS CSI score
+  /// - 50 CompoundDB without RT or RI (local DB) and MatchedLipid without fragments
+  /// - 60 Analog spectral matches
+  /// - 65 PFAS level 5 (exact mass with generic fluorinated fragments)
+  /// - 70 CompoundDB analog matches
+  /// - 75 PFAS MS2-only substructure annotations, 80 PFAS in-source fragments (analog matches)
+  /// - 100 not annotated
   ///
   /// @return a rank mzmine [FeatureAnnotation] types the lower the better.
   public int mzmineAnnotationTypeRank() {
     if (annotation == null) {
-      return 10;
+      return 100;
     }
 
     return switch (DataTypes.get(annotation.getDataType())) {
@@ -319,24 +332,61 @@ public class AnnotationSummary implements Comparable<AnnotationSummary> {
         // better to check matched fragments. If one is matched then rank this higher
         final Set<LipidFragment> matchedFragments = lipid.getMatchedFragments();
         if (matchedFragments.isEmpty()) {
-          yield 4; // worse than spectral match rating
+          yield 50; // worse than spectral match rating
         } else {
-          yield 2; // better than spectral match
+          yield 20; // better than spectral match
         }
       }
       case SpectralLibraryMatchesType _ -> {
         // RT is often provided in libraries but may completely mismatch the actual RT
         // therefore check if the score is at least within range and use low minimum score
-        if (score(Scores.RT, 0d) > 0.01 || score(Scores.RI, 0d) > 0.01) {
-          yield 1;
+        if (hasRetentionMatch()) {
+          yield 10;
         } else {
-          yield 3;
+          yield 30;
         }
       }
-      case CompoundDatabaseMatchesType _ -> !annotation.isAnalogMatch() ? 4 : 7;
+      case CompoundDatabaseMatchesType _ -> {
+        if (annotation.isAnalogMatch()) {
+          yield 70;
+        }
+        if (hasRetentionMatch()) {
+          yield 40;
+        }
+        // SIRIUS CSI:FingerID adds MS2 evidence over a plain mass match
+        yield ((CompoundDBAnnotation) annotation).get(SiriusCsiScoreType.class) != null ? 49 : 50;
+      }
+      case PfasMatchListType _ -> pfasRank((PfasAnnotation) annotation);
       // analog matches are informational; rank below identity-based annotations but above unannotated
-      case AnalogSpectralLibraryMatchesType _ -> 6;
-      case null, default -> 10;
+      case AnalogSpectralLibraryMatchesType _ -> 60;
+      case null, default -> 100;
+    };
+  }
+
+  /// RT is often provided in libraries but may completely mismatch the actual RT, therefore only
+  /// a score above a low minimum counts.
+  ///
+  /// @return true if the RT or the retention index matches
+  private boolean hasRetentionMatch() {
+    return score(Scores.RT, 0d) > 0.01 || score(Scores.RI, 0d) > 0.01;
+  }
+
+  /// @param pfas PFAS annotation
+  /// @return rank of [#mzmineAnnotationTypeRank()] by the PFAS confidence level
+  private static int pfasRank(@NotNull PfasAnnotation pfas) {
+    // in-source fragments describe the parent compound, never the identity of this ion
+    if (pfas.isInSourceFragment()) {
+      return 80;
+    }
+    final PfasConfidenceLevel level = pfas.getConfidenceLevel();
+    if (level == null) {
+      return 100;
+    }
+    return switch (level) {
+      case LEVEL_2B -> 35;
+      case LEVEL_3A, LEVEL_3B, LEVEL_3D -> 45;
+      case LEVEL_5A -> 65;
+      case MS2_SUBSTRUCTURE -> 75;
     };
   }
 
@@ -390,6 +440,22 @@ public class AnnotationSummary implements Comparable<AnnotationSummary> {
       }
       case SpectralDBAnnotation s ->
           s.isAnalogMatch() ? MsiAnnotationLevel.LEVEL_3 : MsiAnnotationLevel.LEVEL_2;
+      // before CompoundDBAnnotation which PfasAnnotation extends
+      case PfasAnnotation p -> {
+        final PfasConfidenceLevel level = p.getConfidenceLevel();
+        // in-source fragments have no level of their own, the parent is MS2 verified
+        if (p.isInSourceFragment()) {
+          yield MsiAnnotationLevel.LEVEL_3;
+        }
+        if (level == null) {
+          yield MsiAnnotationLevel.LEVEL_4;
+        }
+        // compound class PFAS for candidates and substructures
+        yield switch (level) {
+          case LEVEL_2B -> MsiAnnotationLevel.LEVEL_2;
+          case LEVEL_3A, LEVEL_3B, LEVEL_3D, LEVEL_5A, MS2_SUBSTRUCTURE -> MsiAnnotationLevel.LEVEL_3;
+        };
+      }
       case CompoundDBAnnotation c -> {
         if ((rtScore().orElse(0d) > 0.01 || riScore().orElse(0d) > 0.01) && !c.isAnalogMatch()) {
           yield MsiAnnotationLevel.LEVEL_2;
@@ -429,6 +495,23 @@ public class AnnotationSummary implements Comparable<AnnotationSummary> {
         }
         // lipids are hard to judge by isotope scores so default to level 5
         yield ExposomicsAnnotationLevel.LEVEL_5;
+      }
+      // before CompoundDBAnnotation which PfasAnnotation extends. Charbonnet et al. 2022 build on
+      // the Schymanski levels, so the PFAS level numbers carry over
+      case PfasAnnotation p -> {
+        final PfasConfidenceLevel level = p.getConfidenceLevel();
+        // in-source fragments have no level of their own, the parent is MS2 verified
+        if (p.isInSourceFragment()) {
+          yield ExposomicsAnnotationLevel.LEVEL_3;
+        }
+        if (level == null) {
+          yield ExposomicsAnnotationLevel.LEVEL_5;
+        }
+        yield switch (level) {
+          case LEVEL_2B -> ExposomicsAnnotationLevel.LEVEL_2b;
+          case LEVEL_3A, LEVEL_3B, LEVEL_3D -> ExposomicsAnnotationLevel.LEVEL_3;
+          case LEVEL_5A, MS2_SUBSTRUCTURE -> ExposomicsAnnotationLevel.LEVEL_5;
+        };
       }
       case SpectralDBAnnotation s -> {
         if (s.isAnalogMatch()) {

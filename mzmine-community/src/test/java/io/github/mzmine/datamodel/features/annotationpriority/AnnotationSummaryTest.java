@@ -25,6 +25,12 @@
 
 package io.github.mzmine.datamodel.features.annotationpriority;
 
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasConfidenceLevel;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasInSourceEvidence;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasInSourceForm;
+import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasConfidenceLevelType;
+import io.github.mzmine.datamodel.features.types.numbers.scores.ExplainedIntensityPercentType;
 import io.github.mzmine.datamodel.DataPoint;
 import io.github.mzmine.datamodel.IonizationType;
 import io.github.mzmine.datamodel.IsotopePattern;
@@ -123,17 +129,21 @@ class AnnotationSummaryTest {
     final var confirmedLipid = AnnotationSummary.of(row, lipid(false, true, 0.7));
     final var databaseWithRt = AnnotationSummary.of(row, database(RT, null, null, null));
     final var databaseWithCsi = AnnotationSummary.of(row, database(null, null, 0.01f, null));
+    final var databaseWithoutRt = AnnotationSummary.of(row, database(null, null, null, null));
     final var analog = AnnotationSummary.of(row, spectral(MZ, RT, 0.99, true));
     final var unannotated = AnnotationSummary.of(row);
     final var input = List.of(analog, libraryWithRt, unannotated, confirmedLipid,
-        libraryWithoutRetention, databaseWithRt, libraryWithMzAndRt, databaseWithCsi);
+        libraryWithoutRetention, databaseWithoutRt, databaseWithRt, libraryWithMzAndRt,
+        databaseWithCsi);
 
+    // a database match with RT ranks above one without (PFAS level 3 sits between them)
     final var mzmineOrder = List.of(libraryWithMzAndRt, libraryWithRt, confirmedLipid,
-        libraryWithoutRetention, databaseWithCsi, databaseWithRt, analog, unannotated);
+        libraryWithoutRetention, databaseWithRt, databaseWithCsi, databaseWithoutRt, analog,
+        unannotated);
     final var msiOrder = List.of(libraryWithMzAndRt, libraryWithRt, libraryWithoutRetention,
-        databaseWithRt, confirmedLipid, databaseWithCsi, analog, unannotated);
+        databaseWithRt, confirmedLipid, databaseWithCsi, analog, databaseWithoutRt, unannotated);
     final var exposomicsOrder = List.of(libraryWithMzAndRt, libraryWithRt, libraryWithoutRetention,
-        confirmedLipid, databaseWithCsi, analog, databaseWithRt, unannotated);
+        confirmedLipid, databaseWithCsi, analog, databaseWithRt, databaseWithoutRt, unannotated);
 
     Assertions.assertAll(() -> Assertions.assertEquals(mzmineOrder,
             input.stream().sorted(AnnotationSummaryOrder.MZMINE.getComparatorHighFirst()).toList(),
@@ -179,6 +189,36 @@ class AnnotationSummaryTest {
   }
 
   /**
+   * Checks that a compound DB match with matching RT or RI ranks above one without, even if the
+   * match without retention has the higher combined score. PFAS level 3 sits between both.
+   */
+  @Test
+  void compoundDbWithRetentionRanksAboveWithout() {
+    final var withRt = AnnotationSummary.of(row, database(RT, null, null, null));
+    final var withRi = AnnotationSummary.of(row, database(null, RI, null, null));
+    final var withoutRetention = AnnotationSummary.of(row,
+        database(null, null, 0.99f, isotopePattern(MZ, IsotopePatternStatus.PREDICTED)));
+    final var mismatchingRetention = AnnotationSummary.of(row,
+        database(RT + 1f, RI + 10f, null, null));
+    final var pfasLevel3 = AnnotationSummary.of(row, pfas(PfasConfidenceLevel.LEVEL_3B));
+
+    // RT and RI share a rank and are ordered by the combined score, so only RT is sorted here
+    final var expected = List.of(withRt, pfasLevel3, withoutRetention, mismatchingRetention);
+    final var input = List.of(mismatchingRetention, withoutRetention, pfasLevel3, withRt);
+
+    Assertions.assertTrue(withoutRetention.combinedScore() > withRt.combinedScore(),
+        "Precondition: rank must win over combined score");
+    Assertions.assertAll(
+        () -> Assertions.assertEquals(40, withRt.mzmineAnnotationTypeRank()),
+        () -> Assertions.assertEquals(40, withRi.mzmineAnnotationTypeRank()),
+        () -> Assertions.assertEquals(49, withoutRetention.mzmineAnnotationTypeRank()),
+        () -> Assertions.assertEquals(50, mismatchingRetention.mzmineAnnotationTypeRank()),
+        () -> Assertions.assertEquals(expected,
+            input.stream().sorted(AnnotationSummaryOrder.MZMINE.getComparatorHighFirst())
+                .toList()));
+  }
+
+  /**
    * Checks that reference retention metadata requires a measured value on the row.
    */
   @Test
@@ -186,7 +226,7 @@ class AnnotationSummaryTest {
     final var rowWithoutRetention = new ModularFeatureListRow(row.getFeatureList(), 2);
     final var summary = AnnotationSummary.of(rowWithoutRetention, spectral(MZ, RT, 0.9, false));
 
-    Assertions.assertAll(() -> Assertions.assertEquals(3, summary.mzmineAnnotationTypeRank()),
+    Assertions.assertAll(() -> Assertions.assertEquals(30, summary.mzmineAnnotationTypeRank()),
         () -> Assertions.assertEquals(MsiAnnotationLevel.LEVEL_2, summary.deriveMsiLevel()),
         () -> Assertions.assertEquals(ExposomicsAnnotationLevel.LEVEL_2a,
             summary.deriveExposomicsLevel()));
@@ -205,54 +245,103 @@ class AnnotationSummaryTest {
         new LipidFactory().buildSpeciesLevelLipid(LipidClasses.DIACYLGLYCEROPHOSPHOCHOLINES, 34, 1,
             0), MZ, IonizationType.POSITIVE_HYDROGEN, null, 0d);
 
-    // mzmine rank: lower is more confident, 1 = library match with RT/RI ... 10 = unannotated
-    return Stream.of(Arguments.of("Unannotated row", null, 10, MsiAnnotationLevel.LEVEL_4,
+    // mzmine rank: lower is more confident, 10 = library match with RT/RI ... 100 = unannotated
+    return Stream.of(Arguments.of("Unannotated row", null, 100, MsiAnnotationLevel.LEVEL_4,
             ExposomicsAnnotationLevel.LEVEL_5),
-        Arguments.of("Library match without retention", spectral(MZ, null, 0.9, false), 3,
+        Arguments.of("Library match without retention", spectral(MZ, null, 0.9, false), 30,
             MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_2a),
-        Arguments.of("Library match with matching RT", spectral(MZ, RT, 0.9, false), 1,
+        Arguments.of("Library match with matching RT", spectral(MZ, RT, 0.9, false), 10,
             MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_1),
-        Arguments.of("Library match with matching numeric RI", matchingRi, 1,
+        Arguments.of("Library match with matching numeric RI", matchingRi, 10,
             MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_1),
         Arguments.of("Library match just inside the RT tolerance",
-            spectral(MZ, RT + 0.299f, 0.9, false), 3, MsiAnnotationLevel.LEVEL_2,
+            spectral(MZ, RT + 0.299f, 0.9, false), 30, MsiAnnotationLevel.LEVEL_2,
             ExposomicsAnnotationLevel.LEVEL_2a),
-        Arguments.of("Library match outside the RT tolerance", spectral(MZ, RT + 1f, 0.9, false), 3,
+        Arguments.of("Library match outside the RT tolerance", spectral(MZ, RT + 1f, 0.9, false), 30,
             MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_2a),
-        Arguments.of("Analog library match even with matching RT", spectral(MZ, RT, 0.99, true), 6,
+        Arguments.of("Analog library match even with matching RT", spectral(MZ, RT, 0.99, true), 60,
             MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_3),
-        Arguments.of("Molecular-species lipid with fragments", lipid(true, true, 0.8), 2,
+        Arguments.of("Molecular-species lipid with fragments", lipid(true, true, 0.8), 20,
             MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_2a),
-        Arguments.of("Species-level lipid with fragments", lipid(false, true, 0.8), 2,
+        Arguments.of("Species-level lipid with fragments", lipid(false, true, 0.8), 20,
             MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_2b),
         Arguments.of("Lipid with a positive MS/MS score and no fragments", lipid(true, false, 0.8),
-            4, MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_2a),
-        Arguments.of("Unconfirmed lipid with zero MS/MS score", lipid(false, false, 0d), 4,
+            50, MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_2a),
+        Arguments.of("Unconfirmed lipid with zero MS/MS score", lipid(false, false, 0d), 50,
             MsiAnnotationLevel.LEVEL_4, ExposomicsAnnotationLevel.LEVEL_5),
-        Arguments.of("Lipid without MS/MS evidence", lipid(false, false, null), 4,
+        Arguments.of("Lipid without MS/MS evidence", lipid(false, false, null), 50,
             MsiAnnotationLevel.LEVEL_4, ExposomicsAnnotationLevel.LEVEL_5),
-        Arguments.of("MS1-only lipid with null fragments", ms1OnlyLipid, 4,
+        Arguments.of("MS1-only lipid with null fragments", ms1OnlyLipid, 50,
             MsiAnnotationLevel.LEVEL_4, ExposomicsAnnotationLevel.LEVEL_5),
-        Arguments.of("Database match with m/z and CCS only", database(null, null, null, null), 4,
+        Arguments.of("Database match with m/z and CCS only", database(null, null, null, null), 50,
             MsiAnnotationLevel.LEVEL_4, ExposomicsAnnotationLevel.LEVEL_5),
-        Arguments.of("Database match with matching RT", database(RT, null, null, null), 4,
+        Arguments.of("Database match with matching RT", database(RT, null, null, null), 40,
             MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_5),
-        Arguments.of("Database match with matching RI", database(null, RI, null, null), 4,
+        Arguments.of("Database match with matching RI", database(null, RI, null, null), 40,
             MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_5),
         Arguments.of("Database match with mismatching RT and RI",
-            database(RT + 1f, RI + 10f, null, null), 4, MsiAnnotationLevel.LEVEL_4,
+            database(RT + 1f, RI + 10f, null, null), 50, MsiAnnotationLevel.LEVEL_4,
             ExposomicsAnnotationLevel.LEVEL_5),
-        Arguments.of("SIRIUS match with a CSI score", database(null, null, 0.8f, null), 4,
+        Arguments.of("SIRIUS match with a CSI score", database(null, null, 0.8f, null), 49,
             MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_3),
         Arguments.of("SIRIUS match with retention and isotope evidence",
-            database(RT, null, 0.8f, matchingIsotopes), 4, MsiAnnotationLevel.LEVEL_2,
+            database(RT, null, 0.8f, matchingIsotopes), 40, MsiAnnotationLevel.LEVEL_2,
             ExposomicsAnnotationLevel.LEVEL_3),
         Arguments.of("Database match with matching isotopes",
-            database(null, null, null, matchingIsotopes), 4, MsiAnnotationLevel.LEVEL_4,
+            database(null, null, null, matchingIsotopes), 50, MsiAnnotationLevel.LEVEL_4,
             ExposomicsAnnotationLevel.LEVEL_4),
         Arguments.of("Database match with mismatching isotopes",
-            database(null, null, null, mismatchingIsotopes), 4, MsiAnnotationLevel.LEVEL_4,
-            ExposomicsAnnotationLevel.LEVEL_5));
+            database(null, null, null, mismatchingIsotopes), 50, MsiAnnotationLevel.LEVEL_4,
+            ExposomicsAnnotationLevel.LEVEL_5),
+        Arguments.of("PFAS level 2b", pfas(PfasConfidenceLevel.LEVEL_2B), 35,
+            MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_2b),
+        Arguments.of("PFAS level 3b", pfas(PfasConfidenceLevel.LEVEL_3B), 45,
+            MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_3),
+        Arguments.of("PFAS level 3d after homologue refinement", pfas(PfasConfidenceLevel.LEVEL_3D),
+            45, MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_3),
+        Arguments.of("PFAS level 5a", pfas(PfasConfidenceLevel.LEVEL_5A), 65,
+            MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_5),
+        Arguments.of("PFAS MS2 substructure fragments",
+            pfas(PfasConfidenceLevel.MS2_SUBSTRUCTURE), 75, MsiAnnotationLevel.LEVEL_3,
+            ExposomicsAnnotationLevel.LEVEL_5),
+        Arguments.of("PFAS in-source fragment of a level 2b parent", pfasInSource(), 80,
+            MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_3));
+  }
+
+  /**
+   * @param level PFAS confidence level
+   * @return PFAS annotation with matching m/z and 80 % explained intensity
+   */
+  private static @NotNull PfasAnnotation pfas(@NotNull final PfasConfidenceLevel level) {
+    final var annotation = new PfasAnnotation();
+    annotation.put(PrecursorMZType.class, MZ);
+    annotation.put(ExplainedIntensityPercentType.class, 0.8f);
+    annotation.put(PfasConfidenceLevelType.class, level);
+    return annotation;
+  }
+
+  /**
+   * @return in-source fragment annotation of a level 2b parent
+   */
+  private static @NotNull PfasAnnotation pfasInSource() {
+    return PfasAnnotation.createInSource(pfas(PfasConfidenceLevel.LEVEL_2B), 7,
+        new PfasInSourceForm("C7F15", -1, MZ, "CO2", "test.isf"),
+        PfasInSourceEvidence.COMPOUND_MEMBER, MZ);
+  }
+
+  /**
+   * PFAS annotations use the explained intensity as MS2 score; substructure and in-source
+   * annotations are analog matches.
+   */
+  @Test
+  void pfasScoreAndAnalogMatches() {
+    final var level2 = pfas(PfasConfidenceLevel.LEVEL_2B);
+    Assertions.assertAll(
+        () -> Assertions.assertEquals(0.8, AnnotationSummary.of(row, level2).ms2Score()
+            .orElseThrow(), 1e-6),
+        () -> Assertions.assertFalse(level2.isAnalogMatch()),
+        () -> Assertions.assertTrue(pfas(PfasConfidenceLevel.MS2_SUBSTRUCTURE).isAnalogMatch()),
+        () -> Assertions.assertTrue(pfasInSource().isAnalogMatch()));
   }
 
   /**
