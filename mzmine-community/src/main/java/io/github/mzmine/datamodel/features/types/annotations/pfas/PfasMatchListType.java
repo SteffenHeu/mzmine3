@@ -48,9 +48,7 @@ import io.github.mzmine.datamodel.MZmineProject;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
-import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotationMethod;
-import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchSettings;
-import io.github.mzmine.modules.visualization.pfas.PfasAnnotationMatchPane;
+import io.github.mzmine.modules.visualization.pfas.PfasAnnotationMatchController;
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.stream.XMLStreamException;
@@ -94,7 +92,7 @@ public class PfasMatchListType extends ListWithSubsType<PfasAnnotation> implemen
   }
 
   /**
-   * Opens all PFAS matches of a feature, from a double click on the annotation quality summary.
+   * Opens the PFAS matches of a feature, from a double click on the annotation quality summary.
    *
    * @param table source feature table
    * @param row   selected feature
@@ -105,10 +103,7 @@ public class PfasMatchListType extends ListWithSubsType<PfasAnnotation> implemen
     if (annotations == null || annotations.isEmpty()) {
       return;
     }
-    final PfasMatchSettings settings = PfasAnnotationMethod.latestSettings(
-        row.getFeatureList().getAppliedMethods());
-    PfasAnnotationMatchPane.show(row.getID(), row.getAverageMZ(), List.copyOf(annotations),
-        settings,
+    PfasAnnotationMatchController.show(row,
         table != null && table.getScene() != null ? table.getScene().getWindow() : null);
   }
 

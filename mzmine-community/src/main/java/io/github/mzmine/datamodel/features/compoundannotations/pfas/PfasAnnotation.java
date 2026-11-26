@@ -40,6 +40,7 @@ import io.github.mzmine.datamodel.features.types.annotations.CompoundNameType;
 import io.github.mzmine.datamodel.features.types.annotations.iin.IonTypeType;
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasBuildingBlocksType;
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasCandidateSourceType;
+import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasCitationsType;
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasConfidenceLevelType;
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasMatchListType;
 import io.github.mzmine.datamodel.features.types.numbers.MatchingSignalsType;
@@ -327,6 +328,14 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
    */
   public @NotNull List<PfasBlockEvidence> getBuildingBlocks() {
     return Objects.requireNonNullElse(get(PfasBuildingBlocksType.class), List.of());
+  }
+
+  /**
+   * @return literature sources of the candidate and the matched fragmentation rules, in reference
+   * number order
+   */
+  public @NotNull List<PfasCitation> getCitations() {
+    return Objects.requireNonNullElse(get(PfasCitationsType.class), List.of());
   }
 
   @Override

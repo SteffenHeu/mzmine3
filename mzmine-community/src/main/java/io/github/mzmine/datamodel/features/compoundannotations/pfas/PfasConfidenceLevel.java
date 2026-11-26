@@ -56,6 +56,16 @@ public enum PfasConfidenceLevel implements UniqueIdSupplier {
    */
   MS2_SUBSTRUCTURE("ms2_substructure", "MS2 substructure fragments");
 
+  /**
+   * The publication of the confidence levels, cited wherever a level is shown. Same source id as
+   * in the PFAS catalogue so both share one reference number.
+   */
+  public static final @NotNull PfasCitation CITATION = new PfasCitation("CH22",
+      "Charbonnet et al., Communicating Confidence of Per- and Polyfluoroalkyl Substance "
+          + "Identification via High-Resolution Mass Spectrometry, Environ. Sci. Technol. Lett. "
+          + "2022, 9, 473−481", "https://doi.org/10.1021/acs.estlett.2c00206", null,
+      "PFAS confidence levels");
+
   private final @NotNull String code;
   private final @NotNull String description;
 
