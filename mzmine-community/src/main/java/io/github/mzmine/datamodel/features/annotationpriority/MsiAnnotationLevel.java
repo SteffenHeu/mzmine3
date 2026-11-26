@@ -55,5 +55,12 @@ public enum MsiAnnotationLevel {
     return LABEL;
   }
 
-
+  public String description() {
+    return switch (this) {
+      case LEVEL_1 -> "Identified compound - 2 orthogonal methods";
+      case LEVEL_2 -> "Putatively annotated compound - Spectral similarity";
+      case LEVEL_3 -> "Putatively characterized compound classes";
+      case LEVEL_4 -> "Unknown compounds";
+    };
+  }
 }
