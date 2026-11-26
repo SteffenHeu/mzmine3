@@ -27,6 +27,7 @@ final class PfasAnnotationMatchModel {
   private final ObjectProperty<@Nullable PfasMatchSignals> signals = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable Double> selectedMz = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable IAtomContainer> highlightedStructure = new SimpleObjectProperty<>();
+  private final ObjectProperty<@Nullable String> highlightNote = new SimpleObjectProperty<>();
 
   /**
    * @return rows selected in a linked view, the first row is shown
@@ -84,5 +85,13 @@ final class PfasAnnotationMatchModel {
    */
   @NotNull ObjectProperty<@Nullable IAtomContainer> highlightedStructureProperty() {
     return highlightedStructure;
+  }
+
+  /**
+   * @return how the fragment differs from the highlighted substructure, e.g. "HF loss" or "H
+   * rearrangement", null if it is the plain substructure or nothing is highlighted
+   */
+  @NotNull ObjectProperty<@Nullable String> highlightNoteProperty() {
+    return highlightNote;
   }
 }

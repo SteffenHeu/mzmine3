@@ -25,8 +25,8 @@ import org.openscience.cdk.smiles.SmilesParser;
 import org.openscience.cdk.tools.manipulator.AtomContainerManipulator;
 
 /**
- * Element compositions of all connected substructures of a molecule that remain after cutting up
- * to {@value #MAX_CUTS} non-ring bonds, like the bond disconnection of MetFrag. Used to prefer
+ * Element compositions of the molecule and all connected substructures that remain after cutting
+ * up to {@value #MAX_CUTS} non-ring bonds, like the bond disconnection of MetFrag. Used to prefer
  * sub-formulas of the precursor that are a substructure of the annotated structure. Structures with
  * a CH next to a CF, where fluorotelomers eliminate HF, also accept a substructure minus n HF. Per
  * composition the substructure with the fewest cut bonds is kept with its atoms for depictions.
@@ -46,16 +46,31 @@ public final class PfasSubstructureFragments {
   /**
    * A substructure that explains a fragment.
    *
-   * @param atoms    indices of the substructure atoms in {@link #molecule()}
-   * @param cutBonds indices of the bonds cut to release the substructure
-   * @param hfLoss   number of HF eliminated from the substructure
+   * @param atoms          indices of the substructure atoms in {@link #molecule()}
+   * @param cutBonds       indices of the bonds cut to release the substructure, empty for the
+   *                       intact molecule
+   * @param hfLoss         number of HF eliminated from the substructure
+   * @param hydrogenShift  hydrogens of the substructure after HF elimination minus hydrogens of the
+   *                       fragment ion, within {@link #H_TOLERANCE}
    */
   public record Match(@NotNull List<Integer> atoms, @NotNull List<Integer> cutBonds,
-                      int hfLoss) {
+                      int hfLoss, int hydrogenShift) {
 
     public Match {
       atoms = List.copyOf(atoms);
       cutBonds = List.copyOf(cutBonds);
+    }
+
+    /**
+     * @param charge charge of the fragment ion
+     * @return true if the fragment ion needs an H transfer, beyond a cut and the charge carrying
+     * (de)protonation
+     */
+    public boolean isHydrogenRearrangement(final int charge) {
+      // decision: a heterolytic cut keeps all H; anions may also lose the acidic H, cations gain
+      // one. Every other difference is an H rearrangement
+      final int chargeShift = charge < 0 ? 1 : charge > 0 ? -1 : 0;
+      return hydrogenShift != 0 && hydrogenShift != chargeShift;
     }
   }
 
@@ -100,6 +115,8 @@ public final class PfasSubstructureFragments {
 
     final Map<String, Map<Integer, Match>> fragments = new HashMap<>();
     final Set<IBond> cut = new HashSet<>();
+    // the intact molecule explains losses without a cut, e.g. [M-H-nHF]- of fluorotelomers
+    addComponents(molecule, cut, fragments);
     final int n = cuttable.size();
     for (int i = 0; i < n; i++) {
       cut.add(cuttable.get(i));
@@ -171,10 +188,12 @@ public final class PfasSubstructureFragments {
       if (byHydrogens == null) {
         continue;
       }
-      for (int d = -H_TOLERANCE; d <= H_TOLERANCE; d++) {
+      // decision: the smallest H shift first, losing H before gaining H (anions lose the acidic H)
+      for (int step = 0; step <= 2 * H_TOLERANCE; step++) {
+        final int d = step % 2 == 1 ? (step + 1) / 2 : -step / 2;
         final Match match = byHydrogens.get(h + hf + d);
         if (match != null) {
-          return hf == 0 ? match : new Match(match.atoms(), match.cutBonds(), hf);
+          return new Match(match.atoms(), match.cutBonds(), hf, d);
         }
       }
     }
@@ -256,7 +275,7 @@ public final class PfasSubstructureFragments {
       final Match existing = byHydrogens.get(h);
       if (existing == null || existing.cutBonds().size() > ownCuts.size()) {
         byHydrogens.put(h, new Match(component.stream().map(molecule::indexOf).toList(),
-            ownCuts.stream().map(molecule::indexOf).toList(), 0));
+            ownCuts.stream().map(molecule::indexOf).toList(), 0, 0));
       }
     }
   }

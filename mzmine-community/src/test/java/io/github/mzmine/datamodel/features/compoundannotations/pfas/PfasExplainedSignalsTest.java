@@ -58,6 +58,15 @@ class PfasExplainedSignalsTest {
         "OS(=O)(=O)CCC(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)C(F)(F)F");
     // C6F13CH2CH2 minus 4 HF
     Assertions.assertEquals(4, fts.find(Map.of("C", 8, "F", 9)).hfLoss());
+    // [M-H-HF]- of the HF ladder: the intact molecule without a cut, minus HF and the acidic H
+    final PfasSubstructureFragments.Match ladder = fts.find(
+        Map.of("C", 8, "H", 3, "F", 12, "O", 3, "S", 1));
+    Assertions.assertNotNull(ladder);
+    Assertions.assertTrue(ladder.cutBonds().isEmpty());
+    Assertions.assertEquals(1, ladder.hfLoss());
+    Assertions.assertEquals(1, ladder.hydrogenShift());
+    Assertions.assertFalse(ladder.isHydrogenRearrangement(-1));
+    Assertions.assertTrue(ladder.isHydrogenRearrangement(1));
   }
 
   @Test

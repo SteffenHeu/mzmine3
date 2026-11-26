@@ -10,6 +10,7 @@ import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasSubstruc
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasMatchListType;
 import io.github.mzmine.javafx.mvci.FxInteractor;
 import java.awt.Color;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -77,7 +78,7 @@ final class PfasAnnotationMatchInteractor extends FxInteractor<PfasAnnotationMat
     final Double mz = model.selectedMzProperty().get();
     final IAtomContainer molecule = signals == null ? null : signals.molecule();
     if (mz == null || molecule == null) {
-      model.highlightedStructureProperty().set(null);
+      setHighlight(null, null);
       return;
     }
     // the cursor snaps to the closest item of any dataset, mostly the MS/MS spectrum, so peaks
@@ -87,20 +88,51 @@ final class PfasAnnotationMatchInteractor extends FxInteractor<PfasAnnotationMat
         : subFormulas.subFormulaPeaks().stream().filter(SubFormulaPeak::isSubstructure)
             .filter(p -> Math.abs(p.mz() - mz) < SAME_PEAK_MZ).findFirst().orElse(null);
     if (substructure != null && substructure.substructure() != null) {
-      model.highlightedStructureProperty()
-          .set(highlight(molecule, substructure.substructure(), colors.substructure()));
+      setHighlight(highlight(molecule, substructure.substructure(), colors.substructure()),
+          note(substructure.substructure(), substructure.charge()));
       return;
     }
     if (ruleMatchesOf != signals) {
       ruleMatches.clear();
       ruleMatchesOf = signals;
     }
-    final PfasSubstructureFragments.Match rule = signals.annotation().getMatchedPeaks().stream()
-        .filter(p -> Math.abs(p.observedMz() - mz) < SAME_PEAK_MZ).findFirst().flatMap(
-            p -> ruleMatches.computeIfAbsent(p,
-                _ -> Optional.ofNullable(signals.fragments().find(p.formula())))).orElse(null);
-    model.highlightedStructureProperty()
-        .set(rule == null ? null : highlight(molecule, rule, colors.rule()));
+    final PfasMatchedPeak rulePeak = signals.annotation().getMatchedPeaks().stream()
+        .filter(p -> Math.abs(p.observedMz() - mz) < SAME_PEAK_MZ).findFirst().orElse(null);
+    final PfasSubstructureFragments.Match rule = rulePeak == null ? null
+        : ruleMatches.computeIfAbsent(rulePeak,
+            p -> Optional.ofNullable(signals.fragments().find(p.formula()))).orElse(null);
+    if (rule == null) {
+      setHighlight(null, null);
+    } else {
+      setHighlight(highlight(molecule, rule, colors.rule()), note(rule, rulePeak.charge()));
+    }
+  }
+
+  /**
+   * @param structure highlighted structure, or null
+   * @param note      how the fragment differs from the substructure, or null
+   */
+  private void setHighlight(final @Nullable IAtomContainer structure,
+      final @Nullable String note) {
+    model.highlightedStructureProperty().set(structure);
+    model.highlightNoteProperty().set(note);
+  }
+
+  /**
+   * @param match  substructure of the selected peak
+   * @param charge charge of the fragment ion
+   * @return "HF loss", "3 HF loss", "H rearrangement" or both, null for the plain substructure
+   */
+  static @Nullable String note(final @NotNull PfasSubstructureFragments.Match match,
+      final int charge) {
+    final List<String> notes = new ArrayList<>();
+    if (match.hfLoss() > 0) {
+      notes.add(match.hfLoss() == 1 ? "HF loss" : "%d HF loss".formatted(match.hfLoss()));
+    }
+    if (match.isHydrogenRearrangement(charge)) {
+      notes.add("H rearrangement");
+    }
+    return notes.isEmpty() ? null : String.join(", ", notes);
   }
 
   /**

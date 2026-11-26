@@ -177,6 +177,9 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
         .orElse(false);
     bindShown(structureLabel, hasStructure);
     bindShown(structurePane, hasStructure);
+    // HF loss or H rearrangement between the highlighted substructure and the selected fragment
+    final Label highlightNote = FxLabels.bindVisibleToText(
+        FxLabels.newBoldLabel(model.highlightNoteProperty()), true);
 
     final VBox blocks = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true);
     blocks.setSpacing(4);
@@ -216,7 +219,8 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
         detail("MS/MS parent row", annotation, PfasAnnotation::getInSourceParentRowId),
         detail("Refinement", annotation,
             a -> a.getFlags().stream().map(PfasRefinementFlag::toString)
-                .collect(Collectors.joining(", "))), rules, structureLabel, structurePane, blocks,
+                .collect(Collectors.joining(", "))), rules, structureLabel, structurePane,
+        highlightNote, blocks,
         detail("Notes", annotation, a -> a.get(CommentType.class)));
     details.setSpacing(4);
     return details;

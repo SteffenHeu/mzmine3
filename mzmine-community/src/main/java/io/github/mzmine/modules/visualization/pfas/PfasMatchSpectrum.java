@@ -184,10 +184,11 @@ final class PfasMatchSpectrum extends SimpleXYChart<PlotXYDataProvider> {
     renderer.setDefaultItemLabelGenerator((_, _, index) -> fragmentLabel(peaks.get(index)));
     renderer.setDefaultToolTipGenerator((_, _, index) -> {
       final SubFormulaPeak peak = peaks.get(index);
-      final String hf = peak.substructure() == null || peak.substructure().hfLoss() == 0 ? ""
-          : "%nSubstructure minus %d HF".formatted(peak.substructure().hfLoss());
+      final String note = peak.substructure() == null ? null
+          : PfasAnnotationMatchInteractor.note(peak.substructure(), peak.charge());
       return "%s = %s%nObserved m/z %s%n%s%s".formatted(fragmentLabel(peak),
-          PfasIonLabels.loss(ionName, peak.lossFormula()), formats.mz(peak.mz()), description, hf);
+          PfasIonLabels.loss(ionName, peak.lossFormula()), formats.mz(peak.mz()), description,
+          note == null ? "" : "%nSubstructure with %s".formatted(note));
     });
     addDataset(new ColoredXYDataset(provider, RunOption.THIS_THREAD), renderer);
   }

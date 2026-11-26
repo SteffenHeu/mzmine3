@@ -35,6 +35,7 @@ import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasCitationsT
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasConfidenceLevel;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasEvidenceLevel;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchedPeak;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasSubstructureFragments;
 import io.github.mzmine.datamodel.features.types.annotations.CompoundNameType;
 import io.github.mzmine.datamodel.features.types.annotations.SmilesStructureType;
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasBuildingBlocksType;
@@ -214,9 +215,18 @@ class PfasAnnotationMatchControllerTest {
     model.selectedMzProperty().set(68.9958);
     interactor.updateHighlight();
     Assertions.assertNotNull(model.highlightedStructureProperty().get());
+    // CF3- is the plain CF3 end, no note
+    Assertions.assertNull(model.highlightNoteProperty().get());
     model.selectedMzProperty().set(null);
     interactor.updateHighlight();
     Assertions.assertNull(model.highlightedStructureProperty().get());
+
+    Assertions.assertEquals("HF loss", PfasAnnotationMatchInteractor.note(
+        new PfasSubstructureFragments.Match(List.of(), List.of(), 1, 1), -1));
+    Assertions.assertEquals("3 HF loss, H rearrangement", PfasAnnotationMatchInteractor.note(
+        new PfasSubstructureFragments.Match(List.of(), List.of(), 3, -1), -1));
+    Assertions.assertNull(PfasAnnotationMatchInteractor.note(
+        new PfasSubstructureFragments.Match(List.of(), List.of(), 0, 0), -1));
 
     // results of a deselected annotation are dropped
     model.signalsProperty().set(null);
