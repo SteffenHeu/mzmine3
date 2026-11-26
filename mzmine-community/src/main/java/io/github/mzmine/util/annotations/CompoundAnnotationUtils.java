@@ -50,6 +50,7 @@ import io.github.mzmine.datamodel.features.types.annotations.SpectralLibraryMatc
 import io.github.mzmine.datamodel.features.types.annotations.compounddb.DatabaseNameType;
 import io.github.mzmine.datamodel.features.types.annotations.formula.FormulaType;
 import io.github.mzmine.datamodel.features.types.annotations.iin.IonTypeType;
+import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasMatchListType;
 import io.github.mzmine.datamodel.features.types.numbers.CCSType;
 import io.github.mzmine.datamodel.features.types.numbers.ChargeType;
 import io.github.mzmine.datamodel.features.types.numbers.MZType;
@@ -97,7 +98,7 @@ public class CompoundAnnotationUtils {
    */
   public static final List<DataType> annotationTypePriority = DataTypes.getAll(
       CompoundDatabaseMatchesType.class, AnalogSpectralLibraryMatchesType.class,
-      LipidMatchListType.class, SpectralLibraryMatchesType.class);
+      PfasMatchListType.class, LipidMatchListType.class, SpectralLibraryMatchesType.class);
 
   private static final Logger logger = Logger.getLogger(CompoundAnnotationUtils.class.getName());
 
