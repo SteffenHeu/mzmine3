@@ -161,6 +161,25 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
   }
 
   /**
+   * @return the explained MS2 intensity (0-1) of the rules and, depending on the annotation
+   * parameters, substructures and sub-formulas. Used as MS2 score of the annotation summary.
+   */
+  @Override
+  public @Nullable Float getScore() {
+    return get(ExplainedIntensityPercentType.class);
+  }
+
+  /**
+   * @return true for MS2-only substructure annotations, which describe building blocks and not a
+   * compound, and for in-source fragments, which describe the parent compound and not this ion
+   */
+  @Override
+  public boolean isAnalogMatch() {
+    return isInSourceFragment()
+        || getConfidenceLevel() == PfasConfidenceLevel.MS2_SUBSTRUCTURE;
+  }
+
+  /**
    * @return row id of the MS2 verified parent, null for MS2 based annotations
    */
   public @Nullable Integer getInSourceParentRowId() {

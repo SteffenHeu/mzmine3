@@ -87,7 +87,7 @@ class PfasAnnotationMatchPaneTest {
     annotation.put(PrecursorMZType.class, 650.0123);
     annotation.put(MatchingSignalsType.class, peaks.size());
     annotation.put(ExplainedIntensityPercentType.class, 81.5f);
-    annotation.put(PfasConfidenceLevelType.class, PfasConfidenceLevel.LEVEL_5B);
+    annotation.put(PfasConfidenceLevelType.class, PfasConfidenceLevel.MS2_SUBSTRUCTURE);
     annotation.put(PfasCandidateSourceType.class, PfasCandidateSource.SUBSTRUCTURE);
     annotation.put(PfasBuildingBlocksType.class, List.of(
         new PfasBlockEvidence("Perfluoroalkyl segment", "C4F9",

@@ -31,23 +31,30 @@ import org.jetbrains.annotations.NotNull;
 /**
  * PFAS identification confidence levels of Charbonnet et al. 2022
  * (doi:10.1021/acs.estlett.2c00206), ordered from most to least confident. The annotation module
- * assigns 2b, 3b and 5a from MS2 evidence; homologue and retention time based levels (2c, 3c, 3d,
- * 5b) are assigned by refinement. Levels 1a, 1b and 2a need reference standards or library
- * spectra.
+ * assigns 2b, 3a, 3b and 5a from MS2 evidence, the homologue refinement 3d. MS2-only substructure
+ * annotations have no precursor candidate and get {@link #MS2_SUBSTRUCTURE} without a number.
+ * <p>
+ * decision: levels the modules do not assign are commented out, so the exhaustive switches of the
+ * annotation ranking and level mappings only cover used levels. Adding one back needs those
+ * switches updated, e.g. in AnnotationSummary.
  */
 public enum PfasConfidenceLevel implements UniqueIdSupplier {
-  LEVEL_1A("1a", "Confirmed by reference standard"), //
-  LEVEL_1B("1b", "Indistinguishable from reference standard"), //
-  LEVEL_2A("2a", "Probable by library spectrum match"), //
+  // LEVEL_1A("1a", "Confirmed by reference standard"), //
+  // LEVEL_1B("1b", "Indistinguishable from reference standard"), //
+  // LEVEL_2A("2a", "Probable by library spectrum match"), //
   LEVEL_2B("2b", "Probable by diagnostic fragmentation evidence"), //
-  LEVEL_2C("2c", "Probable by diagnostic homologue evidence"), //
+  // LEVEL_2C("2c", "Probable by diagnostic homologue evidence"), //
   LEVEL_3A("3a", "Positional isomer candidates"), //
   LEVEL_3B("3b", "Fragmentation-based candidates"), //
-  LEVEL_3C("3c", "Circumstantial candidates by fragmentation evidence"), //
+  // LEVEL_3C("3c", "Circumstantial candidates by fragmentation evidence"), //
   LEVEL_3D("3d", "Circumstantial candidates by homologue evidence"), //
-  LEVEL_4("4", "Unequivocal molecular formula"), //
+  // LEVEL_4("4", "Unequivocal molecular formula"), //
   LEVEL_5A("5a", "PFAS suspect screening exact mass match"), //
-  LEVEL_5B("5b", "Nontarget PFAS exact mass of interest");
+  // LEVEL_5B("5b", "Nontarget PFAS exact mass of interest"), //
+  /**
+   * Building blocks from MS2 fragments without a precursor candidate, no Charbonnet level
+   */
+  MS2_SUBSTRUCTURE("ms2_substructure", "MS2 substructure fragments");
 
   private final @NotNull String code;
   private final @NotNull String description;
@@ -86,6 +93,10 @@ public enum PfasConfidenceLevel implements UniqueIdSupplier {
 
   @Override
   public String toString() {
-    return "Level %s: %s".formatted(code, description);
+    return switch (this) {
+      case MS2_SUBSTRUCTURE -> description;
+      case LEVEL_2B, LEVEL_3A, LEVEL_3B, LEVEL_3D, LEVEL_5A ->
+          "Level %s: %s".formatted(code, description);
+    };
   }
 }
