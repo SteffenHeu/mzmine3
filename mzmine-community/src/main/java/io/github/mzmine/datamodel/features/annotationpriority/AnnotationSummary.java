@@ -384,7 +384,7 @@ public class AnnotationSummary implements Comparable<AnnotationSummary> {
     }
     return switch (level) {
       case LEVEL_2B -> 35;
-      case LEVEL_3A, LEVEL_3B, LEVEL_3D -> 45;
+      case LEVEL_3A, LEVEL_3B -> 45;
       case LEVEL_5A -> 65;
       case MS2_SUBSTRUCTURE -> 75;
     };
@@ -453,7 +453,7 @@ public class AnnotationSummary implements Comparable<AnnotationSummary> {
         // compound class PFAS for candidates and substructures
         yield switch (level) {
           case LEVEL_2B -> MsiAnnotationLevel.LEVEL_2;
-          case LEVEL_3A, LEVEL_3B, LEVEL_3D, LEVEL_5A, MS2_SUBSTRUCTURE -> MsiAnnotationLevel.LEVEL_3;
+          case LEVEL_3A, LEVEL_3B, LEVEL_5A, MS2_SUBSTRUCTURE -> MsiAnnotationLevel.LEVEL_3;
         };
       }
       case CompoundDBAnnotation c -> {
@@ -509,7 +509,7 @@ public class AnnotationSummary implements Comparable<AnnotationSummary> {
         }
         yield switch (level) {
           case LEVEL_2B -> ExposomicsAnnotationLevel.LEVEL_2b;
-          case LEVEL_3A, LEVEL_3B, LEVEL_3D -> ExposomicsAnnotationLevel.LEVEL_3;
+          case LEVEL_3A, LEVEL_3B -> ExposomicsAnnotationLevel.LEVEL_3;
           case LEVEL_5A, MS2_SUBSTRUCTURE -> ExposomicsAnnotationLevel.LEVEL_5;
         };
       }

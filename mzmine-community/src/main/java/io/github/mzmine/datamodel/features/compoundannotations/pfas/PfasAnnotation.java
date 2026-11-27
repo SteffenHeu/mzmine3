@@ -55,10 +55,8 @@ import io.github.mzmine.util.ParsingUtils;
 import javafx.scene.Node;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
@@ -82,8 +80,6 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
   private static final String XML_CLASS_ATTR = "pfas_class_id";
   private static final String XML_N_ATTR = "chain_lengths";
   private static final String XML_POSITIONS_ATTR = "ether_positions";
-  private static final String XML_FLAGS_ATTR = "refinement_flags";
-  private static final String XML_ORIGINAL_LEVEL_ATTR = "level_before_refinement";
 
   private @Nullable Scan scan;
   private @NotNull List<PfasMatchedPeak> matchedPeaks = List.of();
@@ -96,10 +92,6 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
   private @Nullable String classId;
   private @NotNull List<Integer> chainLengths = List.of();
   private @NotNull List<Integer> etherPositions = List.of();
-  // refinement results, reset on every refinement run
-  private final @NotNull EnumSet<PfasRefinementFlag> flags = EnumSet.noneOf(
-      PfasRefinementFlag.class);
-  private @Nullable PfasConfidenceLevel levelBeforeRefinement;
 
   /**
    * Empty annotation for loading.
@@ -277,44 +269,6 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
   }
 
   /**
-   * @return refinement flags, modifiable by the refinement
-   */
-  public @NotNull Set<PfasRefinementFlag> getFlags() {
-    return flags;
-  }
-
-  /**
-   * @param flag refinement flag
-   * @return true if the flag is set
-   */
-  public boolean hasFlag(@NotNull PfasRefinementFlag flag) {
-    return flags.contains(flag);
-  }
-
-  /**
-   * Changes the level after refinement and keeps the original for the next refinement run.
-   *
-   * @param level the refined level
-   */
-  public void setRefinedLevel(@NotNull PfasConfidenceLevel level) {
-    if (levelBeforeRefinement == null) {
-      levelBeforeRefinement = getConfidenceLevel();
-    }
-    put(PfasConfidenceLevelType.class, level);
-  }
-
-  /**
-   * Removes all refinement results and restores the original level.
-   */
-  public void resetRefinement() {
-    flags.clear();
-    if (levelBeforeRefinement != null) {
-      put(PfasConfidenceLevelType.class, levelBeforeRefinement);
-      levelBeforeRefinement = null;
-    }
-  }
-
-  /**
    * @return the candidate source or null if missing
    */
   public @Nullable PfasCandidateSource getCandidateSource() {
@@ -372,8 +326,6 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
     clone.classId = classId;
     clone.chainLengths = chainLengths;
     clone.etherPositions = etherPositions;
-    clone.flags.addAll(flags);
-    clone.levelBeforeRefinement = levelBeforeRefinement;
     return clone;
   }
 
@@ -383,8 +335,7 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
         && matchedPeaks.equals(other.matchedPeaks) && inSourceForms.equals(other.inSourceForms)
         && Objects.equals(inSourceParentRowId, other.inSourceParentRowId)
         && inSourceEvidence == other.inSourceEvidence && Objects.equals(classId, other.classId)
-        && chainLengths.equals(other.chainLengths) && etherPositions.equals(other.etherPositions)
-        && flags.equals(other.flags) && levelBeforeRefinement == other.levelBeforeRefinement;
+        && chainLengths.equals(other.chainLengths) && etherPositions.equals(other.etherPositions);
   }
 
   @Override
@@ -407,13 +358,6 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
       writer.writeAttribute(XML_CLASS_ATTR, classId);
       writer.writeAttribute(XML_N_ATTR, join(chainLengths));
       writer.writeAttribute(XML_POSITIONS_ATTR, join(etherPositions));
-    }
-    if (!flags.isEmpty()) {
-      writer.writeAttribute(XML_FLAGS_ATTR,
-          flags.stream().map(Enum::name).collect(Collectors.joining(ParsingUtils.SEPARATOR)));
-    }
-    if (levelBeforeRefinement != null) {
-      writer.writeAttribute(XML_ORIGINAL_LEVEL_ATTR, levelBeforeRefinement.name());
     }
     for (final var entry : data.entrySet()) {
       writer.writeStartElement(CONST.XML_DATA_TYPE_ELEMENT);
@@ -488,15 +432,6 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
     annotation.classId = reader.getAttributeValue(null, XML_CLASS_ATTR);
     annotation.chainLengths = parseInts(reader.getAttributeValue(null, XML_N_ATTR));
     annotation.etherPositions = parseInts(reader.getAttributeValue(null, XML_POSITIONS_ATTR));
-    final String flags = reader.getAttributeValue(null, XML_FLAGS_ATTR);
-    if (flags != null) {
-      Arrays.stream(flags.split(ParsingUtils.SEPARATOR)).filter(f -> !f.isBlank())
-          .map(PfasRefinementFlag::valueOf).forEach(annotation.flags::add);
-    }
-    final String originalLevel = reader.getAttributeValue(null, XML_ORIGINAL_LEVEL_ATTR);
-    if (originalLevel != null) {
-      annotation.levelBeforeRefinement = PfasConfidenceLevel.valueOf(originalLevel);
-    }
     while (reader.hasNext() && !(reader.isEndElement() && reader.getLocalName()
         .equals(FeatureAnnotation.XML_ELEMENT))) {
       reader.next();

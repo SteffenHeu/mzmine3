@@ -85,8 +85,6 @@ class PfasAnnotationXmlTest {
     annotation.put(PfasClassType.class, "Perfluoroalkyl sulfonic acids");
     annotation.put(PfasBuildingBlocksType.class,
         List.of(new PfasBlockEvidence("Sulfonic acid", "HO3S", "[*:2]S(=O)(=O)O", List.of(0, 1))));
-    annotation.getFlags().add(PfasRefinementFlag.SERIES_RT_CONSISTENT);
-    annotation.setRefinedLevel(PfasConfidenceLevel.LEVEL_3D);
     return annotation;
   }
 
@@ -108,13 +106,10 @@ class PfasAnnotationXmlTest {
     final PfasAnnotation pfos = (PfasAnnotation) FeatureAnnotation.parseFromXMLString(
             FeatureAnnotation.toXMLString(List.of(annotation), flist, row), project, flist, row)
         .getFirst();
-    Assertions.assertEquals(PfasConfidenceLevel.LEVEL_3D, pfos.getConfidenceLevel());
+    Assertions.assertEquals(PfasConfidenceLevel.LEVEL_3B, pfos.getConfidenceLevel());
     Assertions.assertEquals(List.of(8), pfos.getChainLengths());
     Assertions.assertEquals(1, pfos.getBuildingBlocks().size());
     Assertions.assertEquals(annotation.getMatchedPeaks(), pfos.getMatchedPeaks());
     Assertions.assertEquals("C8F17", pfos.getMatchedPeaks().getFirst().lossFormula());
-    // the refinement restores the original level after loading
-    pfos.resetRefinement();
-    Assertions.assertEquals(PfasConfidenceLevel.LEVEL_3B, pfos.getConfidenceLevel());
   }
 }

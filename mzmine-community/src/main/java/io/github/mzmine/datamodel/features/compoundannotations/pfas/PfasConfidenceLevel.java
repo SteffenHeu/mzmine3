@@ -31,7 +31,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * PFAS identification confidence levels of Charbonnet et al. 2022
  * (doi:10.1021/acs.estlett.2c00206), ordered from most to least confident. The annotation module
- * assigns 2b, 3a, 3b and 5a from MS2 evidence, the homologue refinement 3d. MS2-only substructure
+ * assigns 2b, 3a, 3b and 5a from MS2 evidence. MS2-only substructure
  * annotations have no precursor candidate and get {@link #MS2_SUBSTRUCTURE} without a number.
  * <p>
  * decision: levels the modules do not assign are commented out, so the exhaustive switches of the
@@ -47,7 +47,7 @@ public enum PfasConfidenceLevel implements UniqueIdSupplier {
   LEVEL_3A("3a", "Positional isomer candidates"), //
   LEVEL_3B("3b", "Fragmentation-based candidates"), //
   // LEVEL_3C("3c", "Circumstantial candidates by fragmentation evidence"), //
-  LEVEL_3D("3d", "Circumstantial candidates by homologue evidence"), //
+  // LEVEL_3D("3d", "Circumstantial candidates by homologue evidence"), //
   // LEVEL_4("4", "Unequivocal molecular formula"), //
   LEVEL_5A("5a", "PFAS suspect screening exact mass match"), //
   // LEVEL_5B("5b", "Nontarget PFAS exact mass of interest"), //
@@ -105,7 +105,7 @@ public enum PfasConfidenceLevel implements UniqueIdSupplier {
   public String toString() {
     return switch (this) {
       case MS2_SUBSTRUCTURE -> description;
-      case LEVEL_2B, LEVEL_3A, LEVEL_3B, LEVEL_3D, LEVEL_5A ->
+      case LEVEL_2B, LEVEL_3A, LEVEL_3B, LEVEL_5A ->
           "Level %s: %s".formatted(code, description);
     };
   }

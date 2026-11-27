@@ -7,7 +7,6 @@ import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasBlockEvi
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasExplainedSignals;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasExplainedSignalsMode;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchedPeak;
-import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasRefinementFlag;
 import io.github.mzmine.datamodel.features.types.DataTypes;
 import io.github.mzmine.datamodel.features.types.annotations.CommentType;
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasClassType;
@@ -259,10 +258,7 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
     final VBox side = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true, header, structurePane,
         structureCaption, highlightNote, blocks, level, candidateSource,
         detail("PFAS class", annotation, a -> a.get(PfasClassType.class)),
-        detail("MS/MS parent row", annotation, PfasAnnotation::getInSourceParentRowId),
-        detail("Refinement", annotation,
-            a -> a.getFlags().stream().map(PfasRefinementFlag::toString)
-                .collect(Collectors.joining(", "))), accordion,
+        detail("MS/MS parent row", annotation, PfasAnnotation::getInSourceParentRowId), accordion,
         detail("Notes", annotation, a -> a.get(CommentType.class)));
     side.setSpacing(4);
     VBox.setMargin(accordion, new Insets(6, 0, 4, 0));

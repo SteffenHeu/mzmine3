@@ -297,8 +297,6 @@ class AnnotationSummaryTest {
             MsiAnnotationLevel.LEVEL_2, ExposomicsAnnotationLevel.LEVEL_2b),
         Arguments.of("PFAS level 3b", pfas(PfasConfidenceLevel.LEVEL_3B), 45,
             MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_3),
-        Arguments.of("PFAS level 3d after homologue refinement", pfas(PfasConfidenceLevel.LEVEL_3D),
-            45, MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_3),
         Arguments.of("PFAS level 5a", pfas(PfasConfidenceLevel.LEVEL_5A), 65,
             MsiAnnotationLevel.LEVEL_3, ExposomicsAnnotationLevel.LEVEL_5),
         Arguments.of("PFAS MS2 substructure fragments",
