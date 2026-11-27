@@ -58,19 +58,48 @@ public class StyledLipidSpectrumBarRenderer extends ColoredXYBarRenderer {
   private static final double LABEL_CONNECTOR_GAP = 1.5d;
   private static final int MAX_VERTICAL_ATTEMPTS = 6;
   private final @NotNull Paint borderPaint;
-  private final @NotNull List<Rectangle2D> placedLabelBounds = new ArrayList<>();
+  private final @NotNull List<Rectangle2D> placedLabelBounds;
+  // own bounds are cleared per draw, shared bounds by their owner
+  private final boolean ownsLabelBounds;
+  private final int maxVerticalAttempts;
 
   public StyledLipidSpectrumBarRenderer(final boolean isTransparent,
       final @NotNull Paint borderPaint) {
     super(isTransparent);
     this.borderPaint = borderPaint;
+    placedLabelBounds = new ArrayList<>();
+    ownsLabelBounds = true;
+    maxVerticalAttempts = MAX_VERTICAL_ATTEMPTS;
+  }
+
+  /**
+   * Renderer whose labels avoid the labels of other renderers with the same bounds list, e.g. of
+   * other datasets in one chart. Labels are placed in drawing order, so earlier drawn datasets win.
+   *
+   * @param isTransparent    transparent bars
+   * @param borderPaint      label border paint
+   * @param sharedBounds     placed label bounds of all renderers, the owner clears it on every
+   *                         chart draw
+   * @param hideOnOverlap    true to hide a label if the places next to its peak are taken, false
+   *                         to shift it vertically
+   */
+  public StyledLipidSpectrumBarRenderer(final boolean isTransparent,
+      final @NotNull Paint borderPaint, final @NotNull List<Rectangle2D> sharedBounds,
+      final boolean hideOnOverlap) {
+    super(isTransparent);
+    this.borderPaint = borderPaint;
+    placedLabelBounds = sharedBounds;
+    ownsLabelBounds = false;
+    maxVerticalAttempts = hideOnOverlap ? 0 : MAX_VERTICAL_ATTEMPTS;
   }
 
   @Override
   public @NotNull XYItemRendererState initialise(final @NotNull java.awt.Graphics2D g2,
       final @NotNull Rectangle2D dataArea, final @NotNull XYPlot plot,
       final @NotNull XYDataset dataset, final PlotRenderingInfo info) {
-    placedLabelBounds.clear();
+    if (ownsLabelBounds) {
+      placedLabelBounds.clear();
+    }
     return super.initialise(g2, dataArea, plot, dataset, info);
   }
 
@@ -110,7 +139,7 @@ public class StyledLipidSpectrumBarRenderer extends ColoredXYBarRenderer {
     final double height = labelSize.getHeight();
     final double verticalStep = height + 4d;
 
-    for (int offsetIndex = 0; offsetIndex <= MAX_VERTICAL_ATTEMPTS; offsetIndex++) {
+    for (int offsetIndex = 0; offsetIndex <= maxVerticalAttempts; offsetIndex++) {
       final double shift = offsetIndex * verticalStep;
       final Rectangle2D rightUp = candidateBounds(anchorX + LABEL_X_OFFSET,
           anchorY - (height + LABEL_Y_OFFSET) - shift, width, height, clipBounds);
