@@ -1,11 +1,10 @@
 package io.github.mzmine.modules.visualization.pfas;
 
 import io.github.mzmine.javafx.util.FxColorUtil;
+import io.github.mzmine.javafx.util.color.ColorsFX;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.util.color.SimpleColorPalette;
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -26,15 +25,9 @@ record PfasMatchColors(@NotNull javafx.scene.paint.Color spectrum, @NotNull Colo
   static @NotNull PfasMatchColors ofDefaultPalette() {
     final SimpleColorPalette palette = ConfigService.getConfiguration().getDefaultColorPalette();
     final Color rule = FxColorUtil.fxColorToAWT(palette.getPositiveColor());
-    final Color neutral = FxColorUtil.fxColorToAWT(palette.getNeutralColor());
-    // decision: saturated colors only, black or gray would hide the structure highlight
-    final List<Color> others = new ArrayList<>(
-        palette.getColorsAWT().stream().filter(c -> !c.equals(rule) && !c.equals(neutral))
-            .filter(c -> Color.RGBtoHSB(c.getRed(), c.getGreen(), c.getBlue(), null)[1] >= 0.4f)
-            .limit(2).toList());
-    while (others.size() < 2) {
-      others.add(Color.GRAY);
-    }
-    return new PfasMatchColors(palette.getNeutralColor(), rule, others.getFirst(), others.get(1));
+    // decision: fixed saturated colors, palette colors can be black or gray and hide the highlight
+    final Color substructure = FxColorUtil.fxColorToAWT(ColorsFX.NEGATIVE_MARKER_COLORBLIND);
+    final Color subFormula = FxColorUtil.fxColorToAWT(ColorsFX.YELLOW_WARN);
+    return new PfasMatchColors(palette.getNeutralColor(), rule, substructure, subFormula);
   }
 }

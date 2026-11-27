@@ -3,16 +3,18 @@ package io.github.mzmine.modules.visualization.pfas;
 import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
 import io.github.mzmine.gui.framework.fx.SelectedRowsBinding;
+import io.github.mzmine.gui.mainwindow.SimpleTab;
 import io.github.mzmine.javafx.mvci.FxController;
 import io.github.mzmine.javafx.mvci.FxInteractor;
 import io.github.mzmine.javafx.mvci.FxViewBuilder;
 import io.github.mzmine.javafx.properties.PropertyUtils;
-import io.github.mzmine.main.ConfigService;
+import io.github.mzmine.main.MZmineCore;
+import io.github.mzmine.modules.visualization.featurelisttable_modular.FeatureTableFX;
+import io.github.mzmine.util.FeatureUtils;
+import io.github.mzmine.util.javafx.WeakAdapter;
 import java.util.List;
 import javafx.beans.property.ObjectProperty;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
-import javafx.stage.Window;
+import javafx.scene.layout.Region;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -43,25 +45,54 @@ public final class PfasAnnotationMatchController extends
   }
 
   /**
-   * Opens the PFAS matches of a row in a window.
+   * Opens the PFAS matches of a row in a new tab that follows the row selection of the feature
+   * table while its update on selection is active.
    *
-   * @param row   row with PFAS annotations
-   * @param owner window of the source view, if available
+   * @param table feature table whose selected row is shown, null to show only this row
+   * @param row   row with PFAS annotations shown first
    */
-  public static void show(final @NotNull FeatureListRow row, final @Nullable Window owner) {
+  public static void showInTab(final @Nullable FeatureTableFX table,
+      final @NotNull FeatureListRow row) {
     final PfasAnnotationMatchController controller = new PfasAnnotationMatchController();
     controller.selectedRowsProperty().set(List.of(row));
-    final Stage stage = new Stage();
-    if (owner != null) {
-      stage.initOwner(owner);
+    final SimpleTab tab = new SimpleTab("PFAS annotations", controller.buildView(), true, true);
+    controller.model.selectedRowProperty().subscribe(
+        r -> tab.setSubTitle(r == null ? null : FeatureUtils.rowToString(r)));
+
+    final WeakAdapter weak = new WeakAdapter();
+    if (table != null) {
+      weak.addListChangeListener(table, table.getSelectedTableRows(), _ -> {
+        final List<FeatureListRow> rows = List.copyOf(table.getSelectedRows());
+        // keep the shown row while nothing is selected
+        if (!weak.isDisposed() && tab.isUpdateOnSelection() && !rows.isEmpty()) {
+          controller.selectedRowsProperty().set(rows);
+        }
+      });
     }
-    final Scene scene = new Scene(controller.buildView(), 1100, 690);
-    ConfigService.getConfiguration().getTheme().apply(scene.getStylesheets());
-    stage.setScene(scene);
-    stage.setMinWidth(740);
-    stage.setTitle("PFAS annotations · Feature " + row.getID());
-    stage.setOnHidden(_ -> controller.close());
-    stage.show();
+    tab.setOnClosed(_ -> {
+      weak.dipose();
+      controller.close();
+    });
+    MZmineCore.getDesktop().addTab(tab);
+  }
+
+  /**
+   * Match card of a single annotation, e.g. for a list of all annotations of a row. Must be called
+   * on the FX thread.
+   *
+   * @param annotation annotation to show
+   * @param row        row of the annotation for the observed m/z and the matching settings, or null
+   * @return the card without annotation selection
+   */
+  public static @NotNull Region createPane(final @NotNull PfasAnnotation annotation,
+      final @Nullable FeatureListRow row) {
+    final PfasAnnotationMatchController controller = new PfasAnnotationMatchController();
+    final Region view = controller.buildView();
+    controller.selectedRowsProperty().set(row == null ? List.of() : List.of(row));
+    // decision: the list shows every annotation in its own card, so this card shows only one
+    controller.model.getAnnotations().setAll(annotation);
+    controller.model.selectedAnnotationProperty().set(annotation);
+    return view;
   }
 
   /**

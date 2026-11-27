@@ -44,9 +44,12 @@ import io.github.mzmine.gui.preferences.NumberFormats;
 import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.modules.visualization.spectra.matchedlipid.StyledLipidSpectrumBarRenderer;
 import java.awt.Color;
+import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.jetbrains.annotations.NotNull;
+import org.jfree.chart.event.ChartProgressEvent;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -57,6 +60,8 @@ import org.jetbrains.annotations.Nullable;
 final class PfasMatchSpectrum extends SimpleXYChart<PlotXYDataProvider> {
 
   private final @NotNull PfasMatchColors colors;
+  // label bounds of all datasets, so labels of one dataset avoid the others
+  private final @NotNull List<Rectangle2D> labelBounds = new ArrayList<>();
 
   /**
    * @param colors dataset colors
@@ -64,6 +69,11 @@ final class PfasMatchSpectrum extends SimpleXYChart<PlotXYDataProvider> {
   PfasMatchSpectrum(final @NotNull PfasMatchColors colors) {
     super("m/z", "Intensity");
     this.colors = colors;
+    getChart().addProgressListener(event -> {
+      if (event.getType() == ChartProgressEvent.DRAWING_STARTED) {
+        labelBounds.clear();
+      }
+    });
     final NumberFormats formats = ConfigService.getGuiFormats();
     setDomainAxisNumberFormatOverride(formats.mzFormat());
     setRangeAxisNumberFormatOverride(formats.intensityFormat());
@@ -109,6 +119,9 @@ final class PfasMatchSpectrum extends SimpleXYChart<PlotXYDataProvider> {
 
     final IonType ionType = annotation.getAdductType();
     final String ionName = ionType == null ? null : ionType.toString();
+    // decision: datasets are drawn in insertion order and labels are placed in drawing order, so
+    // rule labels come first, then substructure and sub-formula labels where there is space left
+    addRules(annotation, signals, ionName, formats);
     final PfasExplainedSignals subFormulas = signals == null ? null : signals.subFormulas();
     if (subFormulas != null && ionName != null) {
       addSubFormulas(
@@ -121,7 +134,19 @@ final class PfasMatchSpectrum extends SimpleXYChart<PlotXYDataProvider> {
           "Sub-formula signals", "Sub-formula of the precursor ion, no substructure or rule",
           colors.subFormula(), ionName, formats);
     }
+  }
 
+  /**
+   * Adds the rule-matched peaks as one labelled dataset.
+   *
+   * @param annotation annotation with matched peaks and building blocks
+   * @param signals    recomputed signals, or null
+   * @param ionName    precursor ion type for the loss notation, or null
+   * @param formats    number formats
+   */
+  private void addRules(final @NotNull PfasAnnotation annotation,
+      final @Nullable PfasMatchSignals signals, final @Nullable String ionName,
+      final @NotNull NumberFormats formats) {
     final List<PfasMatchedPeak> peaks = annotation.getMatchedPeaks();
     if (peaks.isEmpty()) {
       return;
@@ -131,10 +156,16 @@ final class PfasMatchSpectrum extends SimpleXYChart<PlotXYDataProvider> {
     final double[] intensities = peaks.stream().mapToDouble(PfasMatchedPeak::intensity).toArray();
     final var provider = new SimpleXYProvider("Rule-based signals", colors.rule(), mzs,
         intensities);
-    final var renderer = new StyledLipidSpectrumBarRenderer(false, colors.rule());
+    final var renderer = new StyledLipidSpectrumBarRenderer(false, colors.rule(), labelBounds,
+        false);
     renderer.setDefaultItemLabelGenerator((_, _, index) -> {
       final PfasMatchedPeak peak = peaks.get(index);
-      return peak.ionLabel(ionName) + "\n" + origin(annotation, index, peak);
+      // the first building block keeps labels short, the tooltip lists all
+      final String block = annotation.getBuildingBlocks().stream()
+          .filter(b -> b.peakIndices().contains(index)).map(PfasBlockEvidence::name).findFirst()
+          .orElse("Rule");
+      return PfasIonLabels.peakLabel(formats.mz(peak.observedMz()), peak.formula(),
+          peak.charge(), ionName, peak.lossFormula(), block, peak.evidence());
     });
     renderer.setDefaultToolTipGenerator((_, _, index) -> {
       final PfasMatchedPeak peak = peaks.get(index);
@@ -180,8 +211,11 @@ final class PfasMatchSpectrum extends SimpleXYChart<PlotXYDataProvider> {
     final var provider = new SimpleXYProvider(name, color,
         peaks.stream().mapToDouble(SubFormulaPeak::mz).toArray(),
         peaks.stream().mapToDouble(SubFormulaPeak::intensity).toArray());
-    final var renderer = new StyledLipidSpectrumBarRenderer(false, color);
-    renderer.setDefaultItemLabelGenerator((_, _, index) -> fragmentLabel(peaks.get(index)));
+    // hidden instead of shifted if the rule labels or other labels take the space
+    final var renderer = new StyledLipidSpectrumBarRenderer(false, color, labelBounds, true);
+    // decision: only rule-based signals carry a description, the dataset color tells the type
+    renderer.setDefaultItemLabelGenerator((_, _, index) -> "%s%n%s".formatted(
+        formats.mz(peaks.get(index).mz()), fragmentLabel(peaks.get(index))));
     renderer.setDefaultToolTipGenerator((_, _, index) -> {
       final SubFormulaPeak peak = peaks.get(index);
       final String note = peak.substructure() == null ? null

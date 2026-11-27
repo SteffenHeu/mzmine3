@@ -41,7 +41,7 @@ public class ColorsFX {
   // colors to mark positive or negative results (color blindness aware)
   public static final Color POSITIVE_MARKER_COLORBLIND = new Color(0.f, 0.447f, 0.698f,
       1f); // blue
-  private static final Color NEGATIVE_MARKER_COLORBLIND = new Color(0.835f, 0.369f, 0.f,
+  public static final Color NEGATIVE_MARKER_COLORBLIND = new Color(0.835f, 0.369f, 0.f,
       1f); // orange
 
 

@@ -34,7 +34,9 @@ import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasCitation
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasCitationsType;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasConfidenceLevel;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasEvidenceLevel;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasIonLabels;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchedPeak;
+import io.github.mzmine.main.ConfigService;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasSubstructureFragments;
 import io.github.mzmine.datamodel.features.types.annotations.CompoundNameType;
 import io.github.mzmine.datamodel.features.types.annotations.SmilesStructureType;
@@ -45,6 +47,7 @@ import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasMatchListT
 import io.github.mzmine.datamodel.features.types.numbers.MatchingSignalsType;
 import io.github.mzmine.datamodel.features.types.numbers.PrecursorMZType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.ExplainedIntensityPercentType;
+import io.github.mzmine.javafx.components.LabeledProgressBar;
 import io.github.mzmine.javafx.concurrent.threading.FxThread;
 import io.github.mzmine.project.impl.RawDataFileImpl;
 import io.github.mzmine.util.FeatureListTestUtils;
@@ -101,7 +104,7 @@ class PfasAnnotationMatchControllerTest {
     annotation.put(CompoundNameType.class, "Substructures: C4F9 chain, Sulfonic acid");
     annotation.put(PrecursorMZType.class, PRECURSOR_MZ);
     annotation.put(MatchingSignalsType.class, peaks.size());
-    annotation.put(ExplainedIntensityPercentType.class, 81.5f);
+    annotation.put(ExplainedIntensityPercentType.class, 0.815f);
     annotation.put(PfasConfidenceLevelType.class, PfasConfidenceLevel.MS2_SUBSTRUCTURE);
     annotation.put(PfasCandidateSourceType.class, PfasCandidateSource.SUBSTRUCTURE);
     annotation.put(PfasBuildingBlocksType.class, List.of(
@@ -156,17 +159,24 @@ class PfasAnnotationMatchControllerTest {
       final var plot = chart.getXYPlot();
       final var series = plot.getDataset(0);
       Assertions.assertEquals(best.getMatchedPeaks().size(), series.getItemCount(0));
-      // ion on the first line, building block and evidence level on the second
-      Assertions.assertEquals(
-          best.getMatchedPeaks().getFirst().ionLabel() + "\nPerfluoroalkyl segment · generic",
+      // m/z and ion on the first line, building block and evidence level on the second
+      final String mz = ConfigService.getGuiFormats().mz(68.9958);
+      Assertions.assertEquals(mz + ", CF3⁻%nPerfluoroalkyl segment, generic".formatted(),
           plot.getRenderer(0).getDefaultItemLabelGenerator().generateLabel(series, 0, 0));
-      Assertions.assertTrue(visibleLabels(scene.getRoot()).stream()
-          .anyMatch(text -> text.startsWith("Explained intensity") && text.contains("%")));
+      // loss rules show only the loss notation
+      Assertions.assertEquals("500.0, [M-CO2-H]⁻%nCarboxylic acid, subclass".formatted(),
+          PfasIonLabels.peakLabel("500.0", "C7F15", -1, "[M-H]-", "CO2", "Carboxylic acid",
+              PfasEvidenceLevel.SUBCLASS_ALIGNED));
+      // explained intensity as bar next to the name
+      final LabeledProgressBar explained = find(scene.getRoot(), LabeledProgressBar.class);
+      Assertions.assertTrue(explained.isVisible());
+      Assertions.assertEquals(0.815, explained.getProgressBar().getProgress(), 1e-6);
+      Assertions.assertTrue(explained.getLabel().getText().contains("%"));
       Assertions.assertTrue(visibleLabels(scene.getRoot()).contains("Building blocks"));
       // shared reference numbers: the level publication [1], candidate [2] [3], SO3 rule [3] [4]
-      Assertions.assertEquals("PFAS level  MS2 substructure fragments [1]",
+      Assertions.assertEquals("PFAS level: MS2 substructure fragments [1]",
           flowText(scene.getRoot(), "PFAS level"));
-      Assertions.assertEquals("Candidate source  MS2 substructures [2] [3]",
+      Assertions.assertEquals("Candidate source: MS2 substructures [2] [3]",
           flowText(scene.getRoot(), "Candidate source"));
       Assertions.assertEquals("sulfonate.so3 [3] [4]", flowText(scene.getRoot(), "sulfonate.so3"));
       final Hyperlink first = find(scene.getRoot(), Hyperlink.class);
@@ -181,13 +191,22 @@ class PfasAnnotationMatchControllerTest {
       final List<String> labels = visibleLabels(scene.getRoot());
       Assertions.assertTrue(labels.contains("Second match"));
       Assertions.assertTrue(
-          flowText(scene.getRoot(), "PFAS level").startsWith("PFAS level  Level 5a"));
-      Assertions.assertTrue(labels.stream().noneMatch(text -> text.startsWith("Explained")));
+          flowText(scene.getRoot(), "PFAS level").startsWith("PFAS level: Level 5a"));
+      Assertions.assertFalse(explained.isVisible());
+
+      // the pane of the annotation list shows only its own annotation, without selection
+      final Scene single = new Scene(
+          (Parent) second.createAnnotationPane(row), 1100, 350);
+      single.getRoot().applyCss();
+      single.getRoot().layout();
+      Assertions.assertFalse(find(single.getRoot(), ComboBox.class).isVisible());
+      Assertions.assertTrue(visibleLabels(single.getRoot()).contains("Second match"));
 
       // a row without PFAS annotations shows the placeholder
       controller.selectedRowsProperty().set(List.of(row(List.of())));
       Assertions.assertNull(controller.selectedAnnotationProperty().get());
-      Assertions.assertFalse(find(scene.getRoot(), ScrollPane.class).isVisible());
+      Assertions.assertEquals(List.of("No PFAS annotation for the selected row"),
+          visibleLabels(scene.getRoot()));
       controller.close();
     });
   }
@@ -217,9 +236,11 @@ class PfasAnnotationMatchControllerTest {
     Assertions.assertNotNull(model.highlightedStructureProperty().get());
     // CF3- is the plain CF3 end, no note
     Assertions.assertNull(model.highlightNoteProperty().get());
+    Assertions.assertNotNull(model.highlightColorProperty().get());
     model.selectedMzProperty().set(null);
     interactor.updateHighlight();
     Assertions.assertNull(model.highlightedStructureProperty().get());
+    Assertions.assertNull(model.highlightColorProperty().get());
 
     Assertions.assertEquals("HF loss", PfasAnnotationMatchInteractor.note(
         new PfasSubstructureFragments.Match(List.of(), List.of(), 1, 1), -1));

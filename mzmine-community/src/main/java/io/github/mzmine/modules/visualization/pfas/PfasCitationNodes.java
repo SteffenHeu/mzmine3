@@ -44,7 +44,7 @@ final class PfasCitationNodes {
       return List.of();
     }
     final TextFlow flow = FxTextFlows.newTextFlow(
-        new Text("PFAS level  " + annotation.getConfidenceLevel()));
+        new Text("PFAS level: " + annotation.getConfidenceLevel()));
     flow.getChildren().addAll(references(annotation, c -> c == PfasConfidenceLevel.CITATION));
     return List.of(flow);
   }
@@ -58,7 +58,7 @@ final class PfasCitationNodes {
       return List.of();
     }
     final TextFlow flow = FxTextFlows.newTextFlow(
-        new Text("Candidate source  " + annotation.getCandidateSource()));
+        new Text("Candidate source: " + annotation.getCandidateSource()));
     flow.getChildren().addAll(references(annotation,
         c -> c.isCandidate() && c != PfasConfidenceLevel.CITATION));
     return List.of(flow);

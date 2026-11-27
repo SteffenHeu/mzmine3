@@ -2,6 +2,7 @@ package io.github.mzmine.datamodel.features.compoundannotations.pfas;
 
 import java.util.Locale;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Labels of predicted and matched PFAS ions in spectra and tables.
@@ -43,5 +44,32 @@ public final class PfasIonLabels {
    */
   public static @NotNull String evidence(@NotNull PfasEvidenceLevel evidence) {
     return evidence.name().toLowerCase(Locale.ROOT).replace('_', ' ');
+  }
+
+  /**
+   * Two-line peak label of PFAS spectra, e.g. "218.9862, C4F9⁻" and "Perfluoroalkyl segment,
+   * generic". Full formulas, all building blocks and rule ids belong in the tooltip.
+   *
+   * @param mz          formatted m/z
+   * @param formula     fragment ion formula without charge
+   * @param charge      fragment ion charge
+   * @param ionType     precursor ion type for the loss notation, or null
+   * @param lossFormula neutral loss of loss rules, or null to show the formula
+   * @param description short description, e.g. the building block
+   * @param evidence    evidence level, or null if the signal has none
+   * @return "m/z, ion or [M-X]" and "description, evidence"
+   */
+  public static @NotNull String peakLabel(@NotNull String mz, @NotNull String formula, int charge,
+      @Nullable String ionType, @Nullable String lossFormula, @NotNull String description,
+      @Nullable PfasEvidenceLevel evidence) {
+    // decision: loss rules show only the loss notation, formula and loss together get too long
+    final String ion = lossFormula != null && ionType != null ? loss(ionType, lossFormula)
+        : ion(formula, charge);
+    final String level = evidence == null ? "" : ", " + switch (evidence) {
+      case DIAGNOSTIC -> "diagnostic";
+      case SUBCLASS_ALIGNED -> "subclass";
+      case GENERIC -> "generic";
+    };
+    return "%s, %s%n%s%s".formatted(mz, ion, description, level);
   }
 }

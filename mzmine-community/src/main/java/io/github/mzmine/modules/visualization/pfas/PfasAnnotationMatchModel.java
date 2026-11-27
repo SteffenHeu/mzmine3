@@ -8,6 +8,7 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.paint.Color;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.openscience.cdk.interfaces.IAtomContainer;
@@ -28,6 +29,7 @@ final class PfasAnnotationMatchModel {
   private final ObjectProperty<@Nullable Double> selectedMz = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable IAtomContainer> highlightedStructure = new SimpleObjectProperty<>();
   private final ObjectProperty<@Nullable String> highlightNote = new SimpleObjectProperty<>();
+  private final ObjectProperty<@Nullable Color> highlightColor = new SimpleObjectProperty<>();
 
   /**
    * @return rows selected in a linked view, the first row is shown
@@ -93,5 +95,12 @@ final class PfasAnnotationMatchModel {
    */
   @NotNull ObjectProperty<@Nullable String> highlightNoteProperty() {
     return highlightNote;
+  }
+
+  /**
+   * @return glow color of the highlighted substructure, null if nothing is highlighted
+   */
+  @NotNull ObjectProperty<@Nullable Color> highlightColorProperty() {
+    return highlightColor;
   }
 }

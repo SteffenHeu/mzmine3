@@ -9,6 +9,7 @@ import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchedP
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasSubstructureFragments;
 import io.github.mzmine.datamodel.features.types.annotations.pfas.PfasMatchListType;
 import io.github.mzmine.javafx.mvci.FxInteractor;
+import io.github.mzmine.javafx.util.FxColorUtil;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -78,7 +79,7 @@ final class PfasAnnotationMatchInteractor extends FxInteractor<PfasAnnotationMat
     final Double mz = model.selectedMzProperty().get();
     final IAtomContainer molecule = signals == null ? null : signals.molecule();
     if (mz == null || molecule == null) {
-      setHighlight(null, null);
+      setHighlight(null, null, null);
       return;
     }
     // the cursor snaps to the closest item of any dataset, mostly the MS/MS spectrum, so peaks
@@ -89,7 +90,7 @@ final class PfasAnnotationMatchInteractor extends FxInteractor<PfasAnnotationMat
             .filter(p -> Math.abs(p.mz() - mz) < SAME_PEAK_MZ).findFirst().orElse(null);
     if (substructure != null && substructure.substructure() != null) {
       setHighlight(highlight(molecule, substructure.substructure(), colors.substructure()),
-          note(substructure.substructure(), substructure.charge()));
+          note(substructure.substructure(), substructure.charge()), colors.substructure());
       return;
     }
     if (ruleMatchesOf != signals) {
@@ -102,20 +103,25 @@ final class PfasAnnotationMatchInteractor extends FxInteractor<PfasAnnotationMat
         : ruleMatches.computeIfAbsent(rulePeak,
             p -> Optional.ofNullable(signals.fragments().find(p.formula()))).orElse(null);
     if (rule == null) {
-      setHighlight(null, null);
+      setHighlight(null, null, null);
     } else {
-      setHighlight(highlight(molecule, rule, colors.rule()), note(rule, rulePeak.charge()));
+      setHighlight(highlight(molecule, rule, colors.rule()), note(rule, rulePeak.charge()),
+          colors.rule());
     }
   }
 
   /**
    * @param structure highlighted structure, or null
    * @param note      how the fragment differs from the substructure, or null
+   * @param color     dataset color of the selected peak, or null without highlight
    */
   private void setHighlight(final @Nullable IAtomContainer structure,
-      final @Nullable String note) {
+      final @Nullable String note, final @Nullable Color color) {
     model.highlightedStructureProperty().set(structure);
     model.highlightNoteProperty().set(note);
+    // the note gets the glow color of the structure
+    model.highlightColorProperty()
+        .set(color == null ? null : FxColorUtil.awtColorToFX(lighter(color)));
   }
 
   /**

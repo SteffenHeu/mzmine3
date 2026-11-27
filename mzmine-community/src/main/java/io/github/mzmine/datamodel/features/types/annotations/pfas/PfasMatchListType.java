@@ -92,7 +92,8 @@ public class PfasMatchListType extends ListWithSubsType<PfasAnnotation> implemen
   }
 
   /**
-   * Opens the PFAS matches of a feature, from a double click on the annotation quality summary.
+   * Opens the PFAS matches of a feature in a new tab that follows the row selection of the table,
+   * from a double click on the annotation quality summary.
    *
    * @param table source feature table
    * @param row   selected feature
@@ -103,8 +104,7 @@ public class PfasMatchListType extends ListWithSubsType<PfasAnnotation> implemen
     if (annotations == null || annotations.isEmpty()) {
       return;
     }
-    PfasAnnotationMatchController.show(row,
-        table != null && table.getScene() != null ? table.getScene().getWindow() : null);
+    PfasAnnotationMatchController.showInTab(table, row);
   }
 
   @Override

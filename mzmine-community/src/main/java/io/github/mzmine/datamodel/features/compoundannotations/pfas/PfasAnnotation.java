@@ -49,7 +49,10 @@ import io.github.mzmine.datamodel.features.types.numbers.PrecursorMZType;
 import io.github.mzmine.datamodel.features.types.numbers.scores.ExplainedIntensityPercentType;
 import io.github.mzmine.modules.io.projectload.version_3_0.CONST;
 import io.github.mzmine.datamodel.MZmineProject;
+import io.github.mzmine.datamodel.features.FeatureListRow;
+import io.github.mzmine.modules.visualization.pfas.PfasAnnotationMatchController;
 import io.github.mzmine.util.ParsingUtils;
+import javafx.scene.Node;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -178,6 +181,15 @@ public class PfasAnnotation extends SimpleCompoundDBAnnotation {
   public boolean isAnalogMatch() {
     return isInSourceFragment()
         || getConfidenceLevel() == PfasConfidenceLevel.MS2_SUBSTRUCTURE;
+  }
+
+  /**
+   * @param row the row this annotation belongs to, for the observed m/z and matching settings
+   * @return the PFAS match card with spectrum, metadata and structure evidence
+   */
+  @Override
+  public @NotNull Node createAnnotationPane(final @Nullable FeatureListRow row) {
+    return PfasAnnotationMatchController.createPane(this, row);
   }
 
   /**

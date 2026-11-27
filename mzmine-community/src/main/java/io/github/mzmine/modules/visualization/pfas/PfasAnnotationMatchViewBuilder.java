@@ -5,6 +5,7 @@ import io.github.mzmine.datamodel.features.FeatureListRow;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasAnnotation;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasBlockEvidence;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasExplainedSignals;
+import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasExplainedSignalsMode;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasMatchedPeak;
 import io.github.mzmine.datamodel.features.compoundannotations.pfas.PfasRefinementFlag;
 import io.github.mzmine.datamodel.features.types.DataTypes;
@@ -17,6 +18,7 @@ import io.github.mzmine.datamodel.structures.MolecularStructure;
 import io.github.mzmine.datamodel.structures.StructureInputType;
 import io.github.mzmine.datamodel.structures.StructureParser;
 import io.github.mzmine.gui.preferences.NumberFormats;
+import io.github.mzmine.javafx.components.LabeledProgressBar;
 import io.github.mzmine.javafx.components.factories.FxComboBox;
 import io.github.mzmine.javafx.components.factories.FxLabels;
 import io.github.mzmine.javafx.components.util.FxLayout;
@@ -35,8 +37,17 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.control.Accordion;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ScrollPane.ScrollBarPolicy;
+import javafx.scene.control.Tooltip;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -54,7 +65,7 @@ import org.openscience.cdk.renderer.generators.standard.StandardGenerator;
  */
 final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationMatchModel> {
 
-  private static final double METADATA_WIDTH = 310;
+  private static final double SIDE_WIDTH = 340;
 
   private final @NotNull PfasMatchColors colors;
 
@@ -80,27 +91,25 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
     selector.visibleProperty().bind(Bindings.size(model.getAnnotations()).greaterThan(1));
     selector.managedProperty().bind(selector.visibleProperty());
 
-    final Label title = FxLabels.newBoldTitle(annotation.map(
-        a -> Objects.requireNonNullElse(a.getCompoundName(), "PFAS annotation")));
+    // spectrum in the center, name, structure and metadata on the right
+    final VBox side = createSidePanel();
+    side.setPadding(new Insets(0, 4, 0, 0));
+    final ScrollPane sideScroll = FxLayout.newScrollPane(side);
+    sideScroll.setFitToWidth(true);
+    sideScroll.setHbarPolicy(ScrollBarPolicy.NEVER);
+    sideScroll.setMinWidth(SIDE_WIDTH);
+    sideScroll.setPrefWidth(SIDE_WIDTH);
+    final BorderPane card = new BorderPane(createSpectrum());
+    card.setTop(selector);
+    card.setRight(sideScroll);
+    BorderPane.setMargin(selector, new Insets(0, 0, 8, 0));
+    BorderPane.setMargin(sideScroll, new Insets(0, 0, 0, 12));
+    card.setPadding(new Insets(12));
 
-    final Structure2DComponent structureView = createStructureView();
-    final Region spectrum = createSpectrum();
-    final VBox details = createMetadata(structureView);
-    details.setMinWidth(METADATA_WIDTH);
-    details.setPrefWidth(METADATA_WIDTH);
-    details.setMaxWidth(METADATA_WIDTH);
-    final HBox body = FxLayout.newHBox(Pos.TOP_LEFT, Insets.EMPTY, 14, spectrum, details);
-    HBox.setHgrow(spectrum, Priority.ALWAYS);
-
-    final VBox card = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true, selector, title, body);
-    card.getStyleClass().add("quality-card");
-    card.setSpacing(8);
-    final VBox content = FxLayout.newVBox(Pos.TOP_LEFT, new Insets(12), true, card);
-    final var scroll = FxLayout.newScrollPane(content);
     final Label empty = FxLabels.newLabel("No PFAS annotation for the selected row");
-    scroll.visibleProperty().bind(annotation.map(Objects::nonNull).orElse(false));
-    empty.visibleProperty().bind(scroll.visibleProperty().not());
-    return FxLayout.newStackPane(scroll, empty);
+    card.visibleProperty().bind(annotation.map(Objects::nonNull).orElse(false));
+    empty.visibleProperty().bind(card.visibleProperty().not());
+    return FxLayout.newStackPane(card, empty);
   }
 
   /**
@@ -118,8 +127,9 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
         .map(a -> a.getScan() == null && a.getMatchedPeaks().isEmpty()).orElse(true));
     chart.visibleProperty().bind(noSpectrum.visibleProperty().not());
     final StackPane pane = FxLayout.newStackPane(chart, noSpectrum);
-    pane.setMinWidth(360);
-    pane.setPrefHeight(210);
+    pane.setMinWidth(300);
+    // decision: the chart fills the center, its default max height would leave a gap below
+    chart.setMaxHeight(Double.MAX_VALUE);
     return pane;
   }
 
@@ -160,30 +170,60 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
   }
 
   /**
-   * @param structureView depiction of the structure, highlights selected substructure peaks
-   * @return metadata and structural evidence of the selected annotation, bound to the model
+   * Name with explained intensity, structure, classification and the precursor and signal details
+   * in an accordion, all bound to the selected annotation.
+   *
+   * @return the side panel next to the spectrum
    */
-  private @NotNull VBox createMetadata(final @NotNull Structure2DComponent structureView) {
+  private @NotNull VBox createSidePanel() {
     final NumberFormats formats = ConfigService.getGuiFormats();
     final ObservableValue<@Nullable PfasAnnotation> annotation = model.selectedAnnotationProperty();
     final ObservableValue<@Nullable PfasExplainedSignals> subFormulas = model.signalsProperty()
         .map(PfasMatchSignals::subFormulas);
 
-    final Label structureLabel = FxLabels.newBoldLabel(annotation.map(
-        a -> a.isInSourceFragment() ? "Parent structure"
-            : a.isProposedStructure() ? "Proposed structure" : "Structure"));
-    final StackPane structurePane = depiction(structureView, 140);
-    final ObservableValue<Boolean> hasStructure = annotation.map(a -> a.getStructure() != null)
-        .orElse(false);
-    bindShown(structureLabel, hasStructure);
-    bindShown(structurePane, hasStructure);
+    final Label name = FxLabels.newBoldTitle(annotation.map(
+        a -> Objects.requireNonNullElse(a.getCompoundName(), "PFAS annotation")));
+    name.setWrapText(true);
+    name.setMinHeight(Region.USE_PREF_SIZE);
+    name.setMaxWidth(Double.MAX_VALUE);
+    final ObservableValue<@Nullable Float> explainedValue = annotation.map(
+        a -> a.get(ExplainedIntensityPercentType.class));
+    final Region explained = percentBar("Explained intensity: ",
+        explainedValue.map(Float::doubleValue), 175,
+        "Share of the MS/MS signal intensity explained by the annotation");
+    // the bar stays right aligned, a long name wraps
+    final HBox header = FxLayout.newHBox(Pos.TOP_LEFT, Insets.EMPTY, 8, name, explained);
+    HBox.setHgrow(name, Priority.ALWAYS);
+
+    final StackPane structurePane = depiction(createStructureView(), 160);
+    bindShown(structurePane, annotation.map(a -> a.getStructure() != null).orElse(false));
+    // caption with the origin of the structure, hidden for building blocks without structure
+    final Label structureCaption = FxLabels.bindVisibleToText(
+        FxLabels.newItalicLabel(annotation.map(
+            a -> a.getStructure() == null ? null : a.isInSourceFragment() ? "Parent structure"
+                : a.isProposedStructure() ? "Proposed structure" : "Catalogued structure")),
+        true);
+    final Tooltip proposedTooltip = structureTooltip("""
+        Proposed structure, not a definitive identification. It is assembled computationally from \
+        building blocks that match fragment ions, not from a reference standard or library \
+        spectrum.""");
+    final Tooltip cataloguedTooltip = structureTooltip("""
+        Structure of a literature-reported compound in the PFAS catalogue. The annotation is \
+        based on exact mass and fragment ions, not confirmed by a reference standard or library \
+        spectrum.""");
+    structureCaption.tooltipProperty().bind(
+        annotation.map(a -> a.isProposedStructure() ? proposedTooltip : cataloguedTooltip));
     // HF loss or H rearrangement between the highlighted substructure and the selected fragment
     final Label highlightNote = FxLabels.bindVisibleToText(
         FxLabels.newBoldLabel(model.highlightNoteProperty()), true);
-
+    // highlighted with the glow color of the substructure in the structure view
+    highlightNote.setPadding(new Insets(1, 5, 1, 5));
+    highlightNote.backgroundProperty().bind(model.highlightColorProperty().map(
+        color -> new Background(new BackgroundFill(color, new CornerRadii(3), Insets.EMPTY))));
     final VBox blocks = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true);
     blocks.setSpacing(4);
     annotation.subscribe(a -> blocks.getChildren().setAll(blocks(a)));
+
     // numbered literature references with links, rebuilt for each annotation
     final VBox level = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true);
     annotation.subscribe(a -> level.getChildren().setAll(PfasCitationNodes.level(a)));
@@ -194,36 +234,114 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
     rules.setSpacing(2);
     annotation.subscribe(a -> rules.getChildren().setAll(PfasCitationNodes.rules(a)));
 
-    final VBox details = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true,
-        level, candidateSource,
-        detail("PFAS class", annotation, a -> a.get(PfasClassType.class)),
-        detail("Formula", annotation, PfasAnnotation::getFormula),
+    final VBox precursor = detailBox(detail("Formula", annotation, PfasAnnotation::getFormula),
         detail("Ion", annotation, PfasAnnotation::getAdductType),
         detail("Observed precursor m/z", model.selectedRowProperty(),
             row -> formats.mz(row.getAverageMZ())),
         detail("Calculated precursor m/z", annotation,
             a -> a.get(MzPpmDifferenceType.class) == null ? null : formats.mz(a.getPrecursorMZ())),
         detail("Mass error (ppm)", annotation, a -> formats.ppm(a.get(MzPpmDifferenceType.class))),
-        detail("Scan", annotation, PfasAnnotationMatchViewBuilder::scanLabel),
-        detail("Rule-based signals", annotation,
-            a -> a.getMatchedPeaks().isEmpty() ? null : a.getMatchedPeaks().size()),
-        detail("Substructure signals", subFormulas, s -> s.subFormulaPeaks().stream()
-            .filter(PfasExplainedSignals.SubFormulaPeak::isSubstructure).count()),
-        detail("Sub-formula signals", subFormulas, s -> s.subFormulaPeaks().stream()
-            .filter(p -> !p.isSubstructure()).count()),
-        detail("Explained intensity", annotation, a -> {
-          final Float explained = a.get(ExplainedIntensityPercentType.class);
-          return explained == null ? null
-              : DataTypes.get(ExplainedIntensityPercentType.class).getFormattedString(explained);
-        }),
+        detail("Scan", annotation, PfasAnnotationMatchViewBuilder::scanLabel));
+    // cumulative explained intensity: rules, + substructures, + sub-formulas; null without settings
+    final VBox signals = detailBox(signalRow(detail("Rule-based signals", annotation,
+                a -> a.getMatchedPeaks().isEmpty() ? null : a.getMatchedPeaks().size()),
+            subFormulas.map(s -> explained(s, PfasExplainedSignalsMode.RULES))),
+        signalRow(detail("Substructure signals", subFormulas, s -> s.subFormulaPeaks().stream()
+                .filter(PfasExplainedSignals.SubFormulaPeak::isSubstructure).count()),
+            subFormulas.map(s -> explained(s, PfasExplainedSignalsMode.RULES_AND_SUBSTRUCTURES))),
+        signalRow(detail("Sub-formula signals", subFormulas, s -> s.subFormulaPeaks().stream()
+                .filter(p -> !p.isSubstructure()).count()),
+            subFormulas.map(s -> explained(s, PfasExplainedSignalsMode.ALL))), rules);
+    final Accordion accordion = FxLayout.newAccordion(true,
+        FxLayout.newTitledPane("Precursor", precursor),
+        FxLayout.newTitledPane("Signals", signals));
+
+    final VBox side = FxLayout.newVBox(Pos.TOP_LEFT, Insets.EMPTY, true, header, structurePane,
+        structureCaption, highlightNote, blocks, level, candidateSource,
+        detail("PFAS class", annotation, a -> a.get(PfasClassType.class)),
         detail("MS/MS parent row", annotation, PfasAnnotation::getInSourceParentRowId),
         detail("Refinement", annotation,
             a -> a.getFlags().stream().map(PfasRefinementFlag::toString)
-                .collect(Collectors.joining(", "))), rules, structureLabel, structurePane,
-        highlightNote, blocks,
+                .collect(Collectors.joining(", "))), accordion,
         detail("Notes", annotation, a -> a.get(CommentType.class)));
-    details.setSpacing(4);
-    return details;
+    side.setSpacing(4);
+    VBox.setMargin(accordion, new Insets(6, 0, 4, 0));
+    return side;
+  }
+
+  /**
+   * @param signals explained signals with the total intensity
+   * @param mode    signals that count as explained
+   * @return explained fraction of the total intensity, null if there is no counted intensity
+   */
+  private static @Nullable Double explained(final @NotNull PfasExplainedSignals signals,
+      final @NotNull PfasExplainedSignalsMode mode) {
+    return signals.totalIntensity() > 0 ? signals.explained(mode) : null;
+  }
+
+  /**
+   * @param detail   detail label of one signal type, the row hides with it
+   * @param fraction explained fraction of the total intensity, no bar if null
+   * @return the label with the explained intensity as right aligned bar
+   */
+  private static @NotNull HBox signalRow(final @NotNull Label detail,
+      final @NotNull ObservableValue<@Nullable Double> fraction) {
+    final Region bar = percentBar("", fraction, 70,
+        "Share of the MS/MS signal intensity explained by these and the signal types above");
+    final HBox row = FxLayout.newHBox(Pos.CENTER_LEFT, Insets.EMPTY, 8, detail, bar);
+    detail.setMaxWidth(Double.MAX_VALUE);
+    HBox.setHgrow(detail, Priority.ALWAYS);
+    row.visibleProperty().bind(detail.visibleProperty());
+    row.managedProperty().bind(detail.visibleProperty());
+    return row;
+  }
+
+  /**
+   * @param prefix   text before the percentage
+   * @param fraction value from 0 to 1, hides the bar if null
+   * @param width    bar width
+   * @param tooltip  explains the value
+   * @return a bar with the formatted percentage on it
+   */
+  private static @NotNull Region percentBar(final @NotNull String prefix,
+      final @NotNull ObservableValue<@Nullable Double> fraction, final double width,
+      final @NotNull String tooltip) {
+    final ExplainedIntensityPercentType type = DataTypes.get(ExplainedIntensityPercentType.class);
+    final LabeledProgressBar bar = new LabeledProgressBar(
+        fraction.map(v -> Math.clamp(v, 0d, 1d)).orElse(0d), Bindings.createStringBinding(
+        () -> fraction.getValue() == null ? ""
+            : prefix + type.getFormattedString(fraction.getValue().floatValue()), fraction));
+    bar.visibleProperty().bind(fraction.map(Objects::nonNull).orElse(false));
+    bar.setMinWidth(width);
+    bar.setPrefWidth(width);
+    bar.setMaxWidth(width);
+    bar.setMaxHeight(22);
+    Tooltip.install(bar, new Tooltip(tooltip));
+    return bar;
+  }
+
+  /**
+   * @param origin how the structure was obtained
+   * @return tooltip of the structure caption with the branched isomer warning
+   */
+  private static @NotNull Tooltip structureTooltip(final @NotNull String origin) {
+    final Tooltip tooltip = new Tooltip(origin + """
+
+        The chain is drawn linear: branched chain isomers have the same fragments and cannot be \
+        distinguished here.""");
+    tooltip.setWrapText(true);
+    tooltip.setMaxWidth(420);
+    return tooltip;
+  }
+
+  /**
+   * @param nodes detail rows
+   * @return the rows in a vertical box for a titled pane
+   */
+  private static @NotNull VBox detailBox(final @NotNull Node... nodes) {
+    final VBox box = FxLayout.newVBox(Pos.TOP_LEFT, new Insets(6), true, nodes);
+    box.setSpacing(4);
+    return box;
   }
 
   /**
@@ -290,7 +408,7 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
   private static @Nullable String scanLabel(final @NotNull PfasAnnotation annotation) {
     final Scan scan = annotation.getScan();
     return scan == null ? null
-        : "%s · #%d".formatted(scan.getDataFile().getName(), scan.getScanNumber());
+        : "%s - #%s".formatted(scan.getDataFile().getName(), scan.getScanDefinition());
   }
 
   /**
@@ -305,7 +423,7 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
       final @NotNull Function<@NotNull T, @Nullable Object> value) {
     final Label label = FxLabels.newLabel(source.map(value).map(v -> {
       final String text = v.toString();
-      return text.isBlank() ? null : field + "  " + text;
+      return text.isBlank() ? null : field + ": " + text;
     }));
     label.setTextAlignment(TextAlignment.LEFT);
     label.setMinHeight(Region.USE_PREF_SIZE);
@@ -320,7 +438,7 @@ final class PfasAnnotationMatchViewBuilder extends FxViewBuilder<PfasAnnotationM
   private static void addDetail(final @NotNull VBox details, final @NotNull String field,
       final @Nullable Object value) {
     if (value != null && !value.toString().isBlank()) {
-      final Label detail = FxLabels.newLabel(field + "  " + value);
+      final Label detail = FxLabels.newLabel(field + ": " + value);
       detail.setTextAlignment(TextAlignment.LEFT);
       detail.setMinHeight(Region.USE_PREF_SIZE);
       details.getChildren().add(detail);
