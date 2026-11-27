@@ -424,20 +424,21 @@ public class ScanRtCorrectionTask extends AbstractTask {
     final List<RtStandard> goodStandards = findStandards(baseList, referenceFlistsByNumRows,
         mzSortedRows, mzTolerance, rtTolerance, minHeight, rtMeasure);
     goodStandards.sort(Comparator.comparingDouble(rtMeasure::getRt));
-    final List<RtStandard> monotonousStandards = removeNonMonotonousStandards(goodStandards,
+    // decision: prefilter before the monotonicity check. Otherwise internal standards compete with
+    // co-eluting generic features (e.g., their own isotopes) and are dropped at random.
+    final List<RtStandard> prefilteredStandards = calibrationModule.prefilterStandards(
+            goodStandards, referenceFlistsByNumRows, parameters, calibrationModuleParameters).stream()
+        .sorted(Comparator.comparingDouble(rtMeasure::getRt)).toList();
+    final List<RtStandard> preFilteredStandards = removeNonMonotonousStandards(prefilteredStandards,
         referenceFlistsByNumRows, rtMeasure);
 
-    if (monotonousStandards.isEmpty()) {
+    if (preFilteredStandards.isEmpty()) {
       DialogLoggerUtil.showDialogForTime("No RT correction applied",
           "No monotonous standards found. No retention time correction will be appplied. The task finishes with success to not break batch processing.",
           AlertType.WARNING);
       setStatus(TaskStatus.FINISHED);
       return;
     }
-
-    final List<RtStandard> preFilteredStandards = calibrationModule.prefilterStandards(
-            monotonousStandards, referenceFlistsByNumRows, parameters, calibrationModuleParameters)
-        .stream().sorted(Comparator.comparingDouble(rtMeasure::getRt)).toList();
 
     final List<AbstractRtCorrectionFunction> allCalibrations = interpolateMissingCalibrations(
         referenceFlistsByNumRows, flists, project.getProjectMetadata(), preFilteredStandards,

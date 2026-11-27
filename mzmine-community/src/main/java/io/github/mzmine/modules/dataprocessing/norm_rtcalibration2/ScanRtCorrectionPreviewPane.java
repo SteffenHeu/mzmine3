@@ -155,14 +155,14 @@ public class ScanRtCorrectionPreviewPane extends AbstractPreviewPane<List<Featur
     final List<RtStandard> goodStandards = findStandards(baseList, referenceFlistsByNumRows,
         mzSortedRows, mzTolerance, rtTolerance, minHeight, rtMeasure);
     goodStandards.sort(Comparator.comparingDouble(rtMeasure::getRt));
-    final List<RtStandard> monotonousStandards = removeNonMonotonousStandards(goodStandards,
+    // same order as ScanRtCorrectionTask: prefilter first, then the monotonicity check
+    final List<RtStandard> prefilteredStandards = calibrationModule.prefilterStandards(
+            goodStandards, referenceFlistsByNumRows, parameters, calibrationModuleParameters).stream()
+        .sorted(Comparator.comparingDouble(rtMeasure::getRt)).toList();
+    final List<RtStandard> preFilteredStandards = removeNonMonotonousStandards(prefilteredStandards,
         referenceFlistsByNumRows, rtMeasure);
 
-    final List<RtStandard> preFilteredStandards = calibrationModule.prefilterStandards(
-            monotonousStandards, referenceFlistsByNumRows, parameters, calibrationModuleParameters)
-        .stream().sorted(Comparator.comparingDouble(rtMeasure::getRt)).toList();
-
-    if (monotonousStandards.isEmpty() || preFilteredStandards.isEmpty()) {
+    if (preFilteredStandards.isEmpty()) {
       messages.add(FxTexts.boldText(
           "No monotonous standards found. Maybe widen the RT tolerance and other parameters. Make sure the feature lists contain features. "));
       return List.of();

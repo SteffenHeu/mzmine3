@@ -25,14 +25,13 @@
 
 package io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.methods;
 
-import static io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.ScanRtCorrectionTask.removeNonMonotonousStandards;
-
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.compoundannotations.CompoundDBAnnotation;
 import io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.RTCorrectionParameters;
 import io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.RTMeasure;
 import io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.RtStandard;
+import io.github.mzmine.modules.dataprocessing.norm_rtcalibration2.ScanRtCorrectionTask;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.ImportType;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilePlaceholder;
@@ -47,13 +46,19 @@ import io.github.mzmine.util.collections.IndexRange;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Element;
 
 public final class MultilinearStandardRtCorrectionModule implements RawFileRtCorrectionModule {
+
+  private static final Logger logger = Logger.getLogger(
+      MultilinearStandardRtCorrectionModule.class.getName());
 
   @Override
   public AbstractRtCorrectionFunction createInterpolated(@NotNull RawDataFile file,
@@ -128,6 +133,8 @@ public final class MultilinearStandardRtCorrectionModule implements RawFileRtCor
     }
 
     final List<RtStandard> internalStandards = new ArrayList<>();
+    // kept only for the summary log
+    final Map<CompoundDBAnnotation, RtStandard> matchedStandards = new HashMap<>();
 
     final List<CompoundDBAnnotation> annotations = standardsResult.annotations().stream()
         .filter(a -> a.getPrecursorMZ() != null && a.getRT() != null)
@@ -153,15 +160,76 @@ public final class MultilinearStandardRtCorrectionModule implements RawFileRtCor
         continue;
       }
 
-      internalStandards.add(new InternalRtStandard(bestStandard.standards(), annotation));
+      final InternalRtStandard internalStandard = new InternalRtStandard(bestStandard.standards(),
+          annotation);
+      internalStandards.add(internalStandard);
+      matchedStandards.put(annotation, internalStandard);
     }
 
     final List<RtStandard> rtSortedInternalStandards = internalStandards.stream()
         .sorted(Comparator.comparingDouble(s -> s.getRt(rtMeasure))).toList();
+    // resetting the RTs to the list RTs may change the monotonicity. The caller filters again,
+    // which is a no-op on this result, but filtering here tells which standards were rejected.
+    final List<RtStandard> monotonousStandards = ScanRtCorrectionTask.removeNonMonotonousStandards(
+        rtSortedInternalStandards, referenceFlists, rtMeasure);
 
-    // resetting the RTs to external ones may change the monotonicity, reapply filtering
-    final List<RtStandard> filtered = removeNonMonotonousStandards(rtSortedInternalStandards,
-        referenceFlists, rtMeasure);
-    return filtered;
+    logStandardsSummary(standardsResult.annotations(), matchedStandards, monotonousStandards,
+        rtMeasure);
+    return monotonousStandards;
+  }
+
+  /**
+   * Logs a table with the status of every entry of the internal standards list: used, not found
+   * among the detected standard candidates, or rejected because its list RT contradicts the
+   * observed elution order.
+   *
+   * @param listEntries      all entries of the internal standards list
+   * @param matchedStandards the detected standard matched to each list entry
+   * @param usedStandards    the standards that passed the monotonicity check
+   * @param rtMeasure        the RT measure for observed RTs
+   */
+  private static void logStandardsSummary(@NotNull List<CompoundDBAnnotation> listEntries,
+      @NotNull Map<CompoundDBAnnotation, RtStandard> matchedStandards,
+      @NotNull List<RtStandard> usedStandards, @NotNull RTMeasure rtMeasure) {
+    final String rowFormat = "%-45s %10s %8s  %-15s %10s %8s%n";
+    final StringBuilder table = new StringBuilder(
+        "Internal RT standards: %d of %d used%n".formatted(usedStandards.size(),
+            listEntries.size()));
+    table.append(
+        rowFormat.formatted("Name", "List m/z", "List RT", "Status", "Found m/z", "Found RT"));
+
+    // assumption: entries without RT sort last, they are reported as invalid
+    listEntries.stream()
+        .sorted(Comparator.comparingDouble(a -> a.getRT() != null ? a.getRT() : Float.MAX_VALUE))
+        .forEach(entry -> {
+          final RtStandard matched = matchedStandards.get(entry);
+          final String status;
+          if (entry.getPrecursorMZ() == null || entry.getRT() == null) {
+            status = "NO M/Z OR RT";
+          } else if (matched == null) {
+            status = "NOT FOUND";
+          } else if (usedStandards.contains(matched)) {
+            status = "USED";
+          } else {
+            status = "REJECTED";
+          }
+
+          // InternalRtStandard reports the list RT, recalculate the observed one from the features
+          final String foundMz = matched != null ? "%.4f".formatted(matched.getAverageMz()) : "-";
+          final String foundRt = matched != null ? "%.3f".formatted(
+              new RtStandard(matched.standards()).getRt(rtMeasure)) : "-";
+          table.append(
+              rowFormat.formatted(entry.getCompoundName() != null ? entry.getCompoundName() : "-",
+                  entry.getPrecursorMZ() != null ? "%.4f".formatted(entry.getPrecursorMZ()) : "-",
+                  entry.getRT() != null ? "%.3f".formatted(entry.getRT()) : "-", status, foundMz,
+                  foundRt));
+        });
+
+    table.append("""
+        NOT FOUND: no standard candidate within the m/z and standard RT tolerance. Candidates must \
+        be detected in ALL reference files, be unique within the m/z and 3x RT tolerance and reach \
+        the minimum height.
+        REJECTED: the list RT order contradicts the observed elution order in at least one file.""");
+    logger.info(table.toString());
   }
 }
