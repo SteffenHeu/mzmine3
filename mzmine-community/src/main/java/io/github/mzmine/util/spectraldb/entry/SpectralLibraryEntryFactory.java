@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -139,6 +139,15 @@ public class SpectralLibraryEntryFactory {
       Map<DBEntryField, Object> fields, DataPoint[] dps) {
     double[][] data = DataPointUtils.getDataPointsAsDoubleArray(dps);
     return new SpectralDBEntry(storage, data[0], data[1], fields);
+  }
+
+  /**
+   * General spectral library creation for parsers that already produce the two value arrays instead
+   * of {@link DataPoint}
+   */
+  public static SpectralLibraryEntry create(@Nullable MemoryMapStorage storage,
+      Map<DBEntryField, Object> fields, double[] mzs, double[] intensities) {
+    return new SpectralDBEntry(storage, mzs, intensities, fields);
   }
 
   /**
@@ -416,7 +425,7 @@ public class SpectralLibraryEntryFactory {
     }
     switch (match) {
       case CompoundDBAnnotation dbmatch -> addAnnotationFields(entry, dbmatch);
-      case SpectralLibraryEntry dbmatch -> addAnnotationFields(entry, dbmatch);
+      case SpectralDBAnnotation dbmatch -> addAnnotationFields(entry, dbmatch.getEntry());
       case FeatureAnnotation _ -> {
         entry.putIfNotNull(DBEntryField.ION_TYPE, match.getAdductType());
         entry.putIfNotNull(DBEntryField.CCS, match.getCCS());
@@ -440,6 +449,12 @@ public class SpectralLibraryEntryFactory {
       if (field == DBEntryField.UNSPECIFIED) {
         continue;
       }
+      if (addExperimentalResults) {
+        // if experimental results are added, skip RT and CCS fields from the database to not override them
+        if (field == DBEntryField.RT || field == DBEntryField.CCS) {
+          continue;
+        }
+      }
       try {
         entry.putIfNotNull(field, dbentry.getValue());
       } catch (Exception ex) {
@@ -456,9 +471,16 @@ public class SpectralLibraryEntryFactory {
     }
     for (var dbentry : match.getFields().entrySet()) {
       switch (dbentry.getKey()) {
-        case RT, NAME, FORMULA, SMILES, ISOMERIC_SMILES, INCHI, INCHIKEY, EXACT_MASS, ION_TYPE,
-             SYNONYMS, CAS,
-             PUBCHEM, PUBMED, MOLWEIGHT -> entry.putIfNotNull(dbentry.getKey(), dbentry.getValue());
+        case NAME, FORMULA, SMILES, ISOMERIC_SMILES, INCHI, INCHIKEY, EXACT_MASS, ION_TYPE,
+             SYNONYMS, CAS, PUBCHEM, PUBMED, MOLWEIGHT, CLASSYFIRE_SUPERCLASS, CLASSYFIRE_CLASS,
+             CLASSYFIRE_SUBCLASS, CLASSYFIRE_PARENT, NPCLASSIFIER_SUPERCLASS, NPCLASSIFIER_CLASS,
+             NPCLASSIFIER_PATHWAY, GNPS_ID, MONA_ID, CHEMSPIDER, PEPTIDE_SEQ, INTERNAL_ID,
+             IUPAC_NAME -> entry.putIfNotNull(dbentry.getKey(), dbentry.getValue());
+        case RT, CCS -> {
+          if (!addExperimentalResults) { // only add if exp results are not wanted
+            entry.putIfNotNull(dbentry.getKey(), dbentry.getValue());
+          }
+        }
       }
     }
   }

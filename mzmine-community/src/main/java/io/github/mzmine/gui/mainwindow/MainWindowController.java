@@ -27,7 +27,7 @@ package io.github.mzmine.gui.mainwindow;
 
 import io.github.mzmine.datamodel.IMSRawDataFile;
 import io.github.mzmine.datamodel.ImagingRawDataFile;
-import io.github.mzmine.datamodel.MassSpectrumType;
+import io.github.mzmine.datamodel.RawFileWarning;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.datamodel.features.ModularFeatureList;
@@ -47,6 +47,7 @@ import io.github.mzmine.modules.MZmineModule;
 import io.github.mzmine.modules.MZmineRunnableModule;
 import io.github.mzmine.modules.dataanalysis.compounddashboard.CompoundDashboardTab;
 import io.github.mzmine.modules.dataanalysis.statsdashboard.StatsDasboardModule;
+import io.github.mzmine.modules.dataprocessing.filter_featurelistpreferences.FeatureListPreferencesModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.library_to_featurelist.SpectralLibraryToFeatureListModule;
 import io.github.mzmine.modules.dataprocessing.id_spectral_library_match.library_to_featurelist.SpectralLibraryToFeatureListParameters;
 import io.github.mzmine.modules.io.export_merge_libraries.MergeLibrariesModule;
@@ -56,10 +57,8 @@ import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashbo
 import io.github.mzmine.modules.visualization.dash_integration.IntegrationDashboardParameters;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardModule;
 import io.github.mzmine.modules.visualization.dash_lipidqc.LipidAnnotationQCDashboardParameters;
-import io.github.mzmine.modules.visualization.fx3d.Fx3DVisualizerModule;
-import io.github.mzmine.modules.visualization.fx3d.Fx3DVisualizerParameters;
-import io.github.mzmine.modules.visualization.image.ImageVisualizerModule;
-import io.github.mzmine.modules.visualization.image.ImageVisualizerParameters;
+import io.github.mzmine.modules.visualization.intensitymap.IntensityMap2DModule;
+import io.github.mzmine.modules.visualization.intensitymap.IntensityMap3DModule;
 import io.github.mzmine.modules.visualization.msms.MsMsVisualizerModule;
 import io.github.mzmine.modules.visualization.projectmetadata.color.ColorByMetadataModule;
 import io.github.mzmine.modules.visualization.raw_data_summary.RawDataSummaryModule;
@@ -70,8 +69,6 @@ import io.github.mzmine.modules.visualization.rawdataoverview.RawDataOverviewWin
 import io.github.mzmine.modules.visualization.rawdataoverviewims.IMSRawDataOverviewModule;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerModule;
 import io.github.mzmine.modules.visualization.spectra.simplespectra.SpectraVisualizerParameters;
-import io.github.mzmine.modules.visualization.twod.TwoDVisualizerModule;
-import io.github.mzmine.modules.visualization.twod.TwoDVisualizerParameters;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.parametertypes.selectors.FeatureListsSelection;
 import io.github.mzmine.parameters.parametertypes.selectors.RawDataFilesSelection;
@@ -80,6 +77,7 @@ import io.github.mzmine.parameters.parametertypes.selectors.SpectralLibrarySelec
 import io.github.mzmine.project.ProjectService;
 import io.github.mzmine.util.ExitCode;
 import io.github.mzmine.util.FeatureTableFXUtil;
+import io.github.mzmine.util.color.SimpleColorPalette;
 import io.github.mzmine.util.javafx.groupabletreeview.GroupTreeItem;
 import io.github.mzmine.util.javafx.groupabletreeview.GroupableTreeCell;
 import io.github.mzmine.util.javafx.groupabletreeview.GroupableTreeView;
@@ -93,6 +91,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -111,7 +110,6 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -181,6 +179,8 @@ public class MainWindowController {
   public MenuItem openFeatureListMenuItem;
   @FXML
   public MenuItem showFeatureListSummaryMenuItem;
+  @FXML
+  public MenuItem setFeatureListPreferencesMenuItem;
   @FXML
   public MenuItem featureListsRenameMenuItem;
   @FXML
@@ -254,27 +254,19 @@ public class MainWindowController {
     try {
       Node rawIcon = FxIconUtil.getFileIconNode(rawDataFile.getColor());
       HBox box = new HBox(3, rawIcon);
-      if ((rawDataFile.isContainsZeroIntensity() && MassSpectrumType.isCentroided(
-          rawDataFile.getSpectraType())) || rawDataFile.isContainsEmptyScans()) {
-        FontIcon fontIcon = FxIconUtil.getFontIcon(FxIcons.EXCLAMATION_TRIANGLE, FxIconUtil.LIST_ICON_SIZE,
-            MZmineCore.getConfiguration().getDefaultColorPalette().getNegativeColor());
+      final List<RawFileWarning> warnings = rawDataFile.getWarnings();
+      if (!warnings.isEmpty()) {
+        final SimpleColorPalette palette = MZmineCore.getConfiguration()
+            .getDefaultColorPalette();
+        final boolean critical = warnings.stream().anyMatch(RawFileWarning::isCritical);
+        FontIcon fontIcon = FxIconUtil.getFontIcon(FxIcons.EXCLAMATION_TRIANGLE,
+            FxIconUtil.LIST_ICON_SIZE,
+            critical ? palette.getNegativeColor() : palette.getNeutralColor());
         box.getChildren().add(fontIcon);
 
-        Tooltip tip = new Tooltip();
-        if (rawDataFile.isContainsZeroIntensity() && MassSpectrumType.isCentroided(
-            rawDataFile.getSpectraType())) {
-          tip.setText("""
-              Scans were detected as centroid but contain zero-intensity values. This might indicate incorrect conversion by msconvert. 
-              Make sure to run "peak picking" with vendor algorithm as the first step (even before title maker), otherwise msconvert uses 
-              a different algorithm that picks the highest data point of a profile spectral peak and adds zero intensities next to each signal.
-              This leads to degraded mass accuracies.""");
-        } else if (rawDataFile.isContainsEmptyScans()) {
-          tip.setText("""
-              Some MS1 scans were recognized as empty (no detected signals).
-              The possible reason might be high noise levels influencing mzml conversion.
-              Files can be processed anyway, but consider re-converting if you encounter unexpected results.""");
-        }
-        Tooltip.install(box, tip);
+        final String text = warnings.stream().map(RawFileWarning::message)
+            .collect(Collectors.joining("\n\n"));
+        Tooltip.install(box, new Tooltip(text));
       }
       return box;
     } catch (Exception ex) {
@@ -284,7 +276,8 @@ public class MainWindowController {
 
   private static Node getFeatureListIcon(@NotNull FeatureList flist) {
     if (!flist.isAligned()) {
-      return FxIconUtil.getFontIcon(FxIcons.FEATURE_LIST, FxIconUtil.LIST_ICON_SIZE, flist.getRawDataFile(0).getColor());
+      return FxIconUtil.getFontIcon(FxIcons.FEATURE_LIST, FxIconUtil.LIST_ICON_SIZE,
+          flist.getRawDataFile(0).getColor());
     } else {
       return FxIconUtil.getFontIcon(FxIcons.ALIGNED_FEATURE_LIST, FxIconUtil.LIST_ICON_SIZE);
     }
@@ -292,6 +285,7 @@ public class MainWindowController {
 
   @FXML
   public void initialize() {
+    MZmineTab.configureTabPane(mainTabPane);
     // do not switch panes by arrows
     mainTabPane.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
       if (event.getCode().isArrowKey() && event.getTarget() == mainTabPane) {
@@ -360,7 +354,8 @@ public class MainWindowController {
     }));
     memoryUpdater.play();
 
-    final AcademicWorkspace academicWorkspace = new AcademicWorkspace();
+    final Workspace academicWorkspace = WorkspaceMenuHelper.getWorkspaces()
+        .getOrDefault(AcademicWorkspace.uniqueId, new AcademicWorkspace());
     WorkspaceMenuHelper.addWorkspace(academicWorkspace);
     if (WorkspaceMenuHelper.getDefaultWorkspaceId() == null) {
       WorkspaceMenuHelper.setDefaultWorkspace(academicWorkspace);
@@ -427,7 +422,8 @@ public class MainWindowController {
 
         if (selectedItems.size() == 1) {
           featureListsRenameMenuItem.setDisable(false);
-          if (featureListsList.getTreeView().getSelectionModel().getSelectedItem().getValue()
+          if (featureListsList.getTreeView().getSelectionModel().getSelectedItem() == null
+              || featureListsList.getTreeView().getSelectionModel().getSelectedItem().getValue()
               == null) {
             featureListsRenameMenuItem.setText("Rename group");
           } else {
@@ -640,18 +636,6 @@ public class MainWindowController {
     MZmineCore.runMZmineModule(IMSRawDataOverviewModule.class, parameters);
   }
 
-  public void handleShowImageViewer(Event event) {
-    logger.finest("Activated Show image viewer");
-    var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
-    ParameterSet parameters = MZmineCore.getConfiguration()
-        .getModuleParameters(ImageVisualizerModule.class);
-    parameters.getParameter(RawDataOverviewParameters.rawDataFiles)
-        .setValue(RawDataFilesSelectionType.SPECIFIC_FILES,
-            selectedFiles.toArray(new RawDataFile[0]));
-    MZmineCore.runMZmineModule(ImageVisualizerModule.class, parameters);
-  }
-
-
   public void handleShowMsSpectrum(Event event) {
     logger.finest("Activated Show MS spectrum menu item");
     var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
@@ -668,44 +652,17 @@ public class MainWindowController {
 
   public void handleShow2DPlot(Event event) {
     logger.finest("Activated Show 2D plot menu item");
-    var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
-    ParameterSet parameters = MZmineCore.getConfiguration()
-        .getModuleParameters(TwoDVisualizerModule.class);
-    parameters.getParameter(TwoDVisualizerParameters.dataFiles)
-        .setValue(RawDataFilesSelectionType.SPECIFIC_FILES,
-            selectedFiles.toArray(new RawDataFile[0]));
-    ExitCode exitCode = parameters.showSetupDialog(true);
-    if (exitCode == ExitCode.OK) {
-      MZmineCore.runMZmineModule(TwoDVisualizerModule.class, parameters);
-    }
+    IntensityMap3DModule.showSelectedFiles(IntensityMap2DModule.class, true);
   }
 
   public void handleShow3DPlot(Event event) {
     logger.finest("Activated Show 3D plot menu item");
-    var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
-    ParameterSet parameters = MZmineCore.getConfiguration()
-        .getModuleParameters(Fx3DVisualizerModule.class);
-    parameters.getParameter(Fx3DVisualizerParameters.dataFiles)
-        .setValue(RawDataFilesSelectionType.SPECIFIC_FILES,
-            selectedFiles.toArray(new RawDataFile[0]));
-    ExitCode exitCode = parameters.showSetupDialog(true);
-    if (exitCode == ExitCode.OK) {
-      MZmineCore.runMZmineModule(Fx3DVisualizerModule.class, parameters);
-    }
+    IntensityMap3DModule.showSelectedFiles(IntensityMap3DModule.class, true);
   }
 
   public void handleShowImage(Event event) {
     logger.finest("Activated Show image menu item");
-    var selectedFiles = MZmineGUI.getSelectedRawDataFiles();
-    ParameterSet parameters = MZmineCore.getConfiguration()
-        .getModuleParameters(ImageVisualizerModule.class);
-    parameters.getParameter(ImageVisualizerParameters.rawDataFiles)
-        .setValue(RawDataFilesSelectionType.SPECIFIC_FILES,
-            selectedFiles.toArray(new RawDataFile[0]));
-    ExitCode exitCode = parameters.showSetupDialog(true);
-    if (exitCode == ExitCode.OK) {
-      MZmineCore.runMZmineModule(ImageVisualizerModule.class, parameters);
-    }
+    IntensityMap3DModule.showSelectedFiles(IntensityMap2DModule.class, false);
   }
 
   public void handleShowMsMsPlot(Event event) {
@@ -821,47 +778,35 @@ public class MainWindowController {
   }
 
   public void handleShowFeatureListSummary(Event event) {
-    FXMLLoader loader = new FXMLLoader(getClass().getResource("FeatureListSummary.fxml"));
-
     List<FeatureList> selectedValues = featureListsList.getSelectedItems();
     for (FeatureList selectedValue : selectedValues) {
-      try {
-        AnchorPane pane = loader.load();
-        Stage stage = new Stage();
-        stage.setTitle("Feature list summary - " + selectedValue.getName());
-        stage.getIcons().add(FxIconUtil.loadImageFromResources("mzmineIcon.png"));
-        stage.setScene(new Scene(pane));
-        stage.getScene().getStylesheets()
-            .addAll(MZmineCore.getDesktop().getMainWindow().getScene().getStylesheets());
-        FeatureListSummaryController controller = loader.getController();
-        controller.setFeatureList((ModularFeatureList) selectedValue);
-        stage.show();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      final FeatureListSummaryController controller = new FeatureListSummaryController();
+      controller.setFeatureList((ModularFeatureList) selectedValue);
+      showSummaryStage("Feature list summary - " + selectedValue.getName(), controller.buildView());
     }
   }
 
-  public void handleShowFileSummary(Event event) {
-    FXMLLoader loader = new FXMLLoader(getClass().getResource("FeatureListSummary.fxml"));
+  public void handleSetFeatureListPreferences(Event event) {
+    FeatureListPreferencesModule.showSetupAndApply(featureListsList.getSelectedItems());
+  }
 
+  public void handleShowFileSummary(Event event) {
     List<RawDataFile> selectedValues = getRawDataList().getSelectedItems();
     for (RawDataFile selectedValue : selectedValues) {
-      try {
-        AnchorPane pane = loader.load();
-        Stage stage = new Stage();
-        stage.setTitle("MS data file list summary - " + selectedValue.getName());
-        stage.getIcons().add(FxIconUtil.loadImageFromResources("mzmineIcon.png"));
-        stage.setScene(new Scene(pane));
-        stage.getScene().getStylesheets()
-            .addAll(MZmineCore.getDesktop().getMainWindow().getScene().getStylesheets());
-        FeatureListSummaryController controller = loader.getController();
-        controller.setRawDataFile(selectedValue);
-        stage.show();
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      final FeatureListSummaryController controller = new FeatureListSummaryController();
+      controller.setRawDataFile(selectedValue);
+      showSummaryStage("MS data file summary - " + selectedValue.getName(), controller.buildView());
     }
+  }
+
+  private void showSummaryStage(@NotNull String title, @NotNull Region content) {
+    final Stage stage = new Stage();
+    stage.setTitle(title);
+    stage.getIcons().add(FxIconUtil.loadImageFromResources("mzmineIcon.png"));
+    stage.setScene(new Scene(content));
+    stage.getScene().getStylesheets()
+        .addAll(MZmineCore.getDesktop().getMainWindow().getScene().getStylesheets());
+    stage.show();
   }
 
   public void handleShowIntegrationDashboard(Event event) {
@@ -971,7 +916,7 @@ public class MainWindowController {
    * @param title the matching title
    */
   public void removeTab(String title) {
-    getMainTabPane().getTabs().removeIf(t -> title.equals(t.getText()));
+    getMainTabPane().getTabs().removeIf(t -> title.equals(MZmineTab.getText(t)));
   }
 
   public void addTab(Tab tab) {
@@ -1073,6 +1018,35 @@ public class MainWindowController {
     if (selectedItem instanceof GroupTreeItem<RawDataFile> groupItem) {
       rawDataList.editGroup(groupItem);
     }
+  }
+
+  /**
+   * Groups the selected feature lists into a new user-named group. Switches the feature list view
+   * to a custom grouping if an automatic grouping is active.
+   *
+   * @param event the triggering event
+   */
+  public void handleGroupFeatureLists(@NotNull final Event event) {
+    final var selected = featureListsList.getSelectedItems();
+    if (selected.isEmpty()) {
+      return;
+    }
+
+    final var dialog = DialogLoggerUtil.createTextInputDialog("Group feature lists",
+        "Enter a name for the new group", "Group name:");
+    dialog.getEditor().setText("Group");
+    final Optional<String> result = dialog.showAndWait();
+    result.filter(name -> !name.isBlank()).ifPresent(featureListsList::groupSelected);
+  }
+
+  /**
+   * Moves the selected feature lists out of their groups to the top level. Switches the feature
+   * list view to a custom grouping if an automatic grouping is active.
+   *
+   * @param event the triggering event
+   */
+  public void handleUngroupFeatureLists(@NotNull final Event event) {
+    featureListsList.ungroupSelected();
   }
 
   public NotificationPane getNotificationPane() {

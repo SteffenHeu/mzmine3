@@ -39,6 +39,7 @@ import io.github.mzmine.modules.io.projectload.ProjectOpeningTask;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.taskcontrol.Task;
 import io.github.mzmine.util.ExitCode;
+import io.mzio.mzmine.startup.MZmineExit;
 import java.io.File;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -61,6 +62,32 @@ public class BatchModeModule implements MZmineProcessingModule {
   private static final String MODULE_DESCRIPTION = "This module allows execution of multiple processing tasks in a batch.";
 
   /**
+   * Creates a batch task for an already reviewed queue without submitting it. The caller can use
+   * the returned task for task-controller submission, monitoring, and cancellation.
+   *
+   * <p>The normal single-batch and project-opening guards are retained. The queue is cloned so
+   * later UI edits cannot change the prepared task.</p>
+   *
+   * @return a detached task, or {@code null} when normal batch preconditions are not met
+   */
+  public static @Nullable BatchTask prepareBatchTask(final @NotNull MZmineProject project,
+      final @NotNull BatchQueue queue, final @NotNull Instant moduleCallDate) {
+    if (MZmineCore.getTaskController().isTaskInstanceRunningOrQueued(BatchTask.class)) {
+      DialogLoggerUtil.showErrorDialog(MODULE_NAME,
+          "Cannot run a second batch while the current batch is not finished.");
+      return null;
+    }
+    if (MZmineCore.getTaskController().isTaskInstanceRunningOrQueued(ProjectOpeningTask.class)) {
+      DialogLoggerUtil.showErrorDialog(MODULE_NAME,
+          "Currently loading a project, cannot run a batch until project load is finished.");
+      return null;
+    }
+    final ParameterSet parameters = new BatchModeParameters();
+    parameters.getParameter(BatchModeParameters.batchQueue).setValue(queue.clone());
+    return new BatchTask(project, parameters, moduleCallDate);
+  }
+
+  /**
    * Run from batch file (usually in headless mode)
    *
    * @param batchFile                    local file
@@ -81,12 +108,12 @@ public class BatchModeModule implements MZmineProcessingModule {
       @NotNull Instant moduleCallDate, @Nullable File overrideProjectImport,
       @Nullable File overrideCsvDatabase) {
     if (MZmineCore.getTaskController().isTaskInstanceRunningOrQueued(BatchTask.class)) {
-      MZmineCore.getDesktop().displayErrorMessage(
+      DialogLoggerUtil.showErrorDialog(MODULE_NAME,
           "Cannot run a second batch while the current batch is not finished.");
       return null;
     }
     if (MZmineCore.getTaskController().isTaskInstanceRunningOrQueued(ProjectOpeningTask.class)) {
-      MZmineCore.getDesktop().displayErrorMessage(
+      DialogLoggerUtil.showErrorDialog(MODULE_NAME,
           "Currently loading a project, cannot run a batch until project load is finished.");
       return null;
     }
@@ -105,7 +132,7 @@ public class BatchModeModule implements MZmineProcessingModule {
           logger.log(Level.SEVERE,
               "Exiting because some parameter sets have been updated since the batch was "
                   + "created. Please update the batch file by opening it in the GUI and try again.");
-          System.exit(1);
+          MZmineExit.exit(1);
         }
       }
 
@@ -137,12 +164,12 @@ public class BatchModeModule implements MZmineProcessingModule {
       @Nullable String overrideOutBaseFile, @NotNull Instant moduleCallDate,
       @Nullable File overrideProjectFile, @Nullable File overrideCompDb) {
     if (MZmineCore.getTaskController().isTaskInstanceRunningOrQueued(BatchTask.class)) {
-      MZmineCore.getDesktop().displayErrorMessage(
+      DialogLoggerUtil.showErrorDialog(MODULE_NAME,
           "Cannot run a second batch while the current batch is not finished.");
       return null;
     }
     if (MZmineCore.getTaskController().isTaskInstanceRunningOrQueued(ProjectOpeningTask.class)) {
-      MZmineCore.getDesktop().displayErrorMessage(
+      DialogLoggerUtil.showErrorDialog(MODULE_NAME,
           "Currently loading a project, cannot run a batch until project load is finished.");
       return null;
     }
@@ -188,6 +215,10 @@ public class BatchModeModule implements MZmineProcessingModule {
       }
     }
 
+    if (!BatchUtils.confirmModuleOrderWarnings(newQueue)) {
+      return null;
+    }
+
     ParameterSet parameters = new BatchModeParameters();
     parameters.getParameter(BatchModeParameters.batchQueue).setValue(newQueue);
     BatchTask batchTask = new BatchTask(project, parameters, moduleCallDate);
@@ -211,12 +242,12 @@ public class BatchModeModule implements MZmineProcessingModule {
       @NotNull Collection<Task> tasks, @NotNull Instant moduleCallDate) {
 
     if (MZmineCore.getTaskController().isTaskInstanceRunningOrQueued(BatchTask.class)) {
-      MZmineCore.getDesktop().displayErrorMessage(
+      DialogLoggerUtil.showErrorDialog(MODULE_NAME,
           "Cannot run a second batch while the current batch is not finished.");
       return ExitCode.ERROR;
     }
     if (MZmineCore.getTaskController().isTaskInstanceRunningOrQueued(ProjectOpeningTask.class)) {
-      MZmineCore.getDesktop().displayErrorMessage(
+      DialogLoggerUtil.showErrorDialog(MODULE_NAME,
           "Currently loading a project, cannot run a batch until project load is finished.");
       return ExitCode.ERROR;
     }

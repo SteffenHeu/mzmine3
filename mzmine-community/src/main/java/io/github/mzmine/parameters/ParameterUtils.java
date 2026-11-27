@@ -632,8 +632,11 @@ public class ParameterUtils {
       final Document document = XMLUtils.newDocument();
       final Element element = document.createElement("parameterset");
       document.appendChild(element);
+      // without the version, loading assumes version 1 and reports all version changes since
+      // this was the case in the ModulePresets
+      element.setAttribute(ParameterSet.MODULE_VERSION_ATTR,
+          String.valueOf(parameterSet.getVersion()));
 
-      // Serialize batch queue.
       parameterSet.saveValuesToXML(element);
       return XMLUtils.saveToString(document);
     } catch (Exception exception) {
@@ -736,5 +739,9 @@ public class ParameterUtils {
       actualParameters.add(parameter);
     }
     return actualParameters;
+  }
+
+  public static boolean skipForBatchModeValidation(Parameter<?> param) {
+    return param instanceof RawDataFilesParameter || param instanceof FeatureListsParameter;
   }
 }

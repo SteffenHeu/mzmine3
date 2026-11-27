@@ -42,7 +42,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public record IntegrationTest(@NotNull File batchFile, @Nullable File tempDir,
-                              @Nullable File[] rawFiles, @Nullable File[] specLibs) {
+                              @Nullable File[] rawFiles, @Nullable File[] specLibs,
+                              @Nullable File metadataFile, boolean checkImportedFilesAndLibraries) {
 
   private static List<String> mzminePaths = List.of("D:\\git\\mzmine3\\",
       "C:\\Users\\Steffen\\git\\mzmine3\\");
@@ -52,7 +53,7 @@ public record IntegrationTest(@NotNull File batchFile, @Nullable File tempDir,
   }
 
   public File runBatchGetCsvFile() {
-    return IntegrationTestUtils.runBatchGetExportedCsv(this);
+    return IntegrationTestUtils.runBatchGetExportedCsv(this, checkImportedFilesAndLibraries);
   }
 
   public List<CheckResult> runBatchGetCheckResults(String expectedResultsFullPath) {
@@ -105,6 +106,8 @@ public record IntegrationTest(@NotNull File batchFile, @Nullable File tempDir,
     private @Nullable File tempDir;
     private @Nullable File[] specLibs;
     private @Nullable File[] rawFiles;
+    private @Nullable File metadataFile;
+    private boolean checkImportedFilesAndLibraries = true;
 
     public Builder(final @NotNull String baseDirectory, final @NotNull String batchFile) {
       this.baseDir = baseDirectory;
@@ -136,6 +139,18 @@ public record IntegrationTest(@NotNull File batchFile, @Nullable File tempDir,
 
     public @NotNull Builder tempDir(@Nullable final File tempDir) {
       this.tempDir = tempDir;
+      return this;
+    }
+
+    /**
+     * Adds the metadata file relative to the base directory
+     */
+    public @NotNull Builder metadataFile(@Nullable final String file) {
+      if (file == null) {
+        return this;
+      }
+      // attach base directory
+      this.metadataFile = getFileFromBaseDir(file);
       return this;
     }
 
@@ -195,8 +210,15 @@ public record IntegrationTest(@NotNull File batchFile, @Nullable File tempDir,
       return this;
     }
 
+    public @NotNull Builder checkImportedFilesAndLibraries(
+        final boolean checkImportedFilesAndLibraries) {
+      this.checkImportedFilesAndLibraries = checkImportedFilesAndLibraries;
+      return this;
+    }
+
     public IntegrationTest build() {
-      return new IntegrationTest(batchFile, tempDir, rawFiles, specLibs);
+      return new IntegrationTest(batchFile, tempDir, rawFiles, specLibs, metadataFile,
+          checkImportedFilesAndLibraries);
     }
   }
 }

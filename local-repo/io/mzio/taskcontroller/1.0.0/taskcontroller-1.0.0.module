@@ -27,11 +27,11 @@
         {
           "name": "taskcontroller-1.0.0.jar",
           "url": "taskcontroller-1.0.0.jar",
-          "size": 35054,
-          "sha512": "8dbc5c2d2a55e2c622560b01046c1fb95602c2935dadf7e8934a618e1be36b8cdd8596d1ef0dcc87eecb6a317bf16a84a9790bf72dd0cc853cb61dfc5a5d80ff",
-          "sha256": "989aac68bae9b2d7a9fe881a012663d1fd04f093c0f2e2f02c35315d1e219806",
-          "sha1": "f5b43e24a22512c55ed3011809e3873f02b36216",
-          "md5": "6d6e94713cda6c8d11ee6b4168d6cf07"
+          "size": 48927,
+          "sha512": "853db0c088eea0fc97526ca3331ed7b60c0cb5a0e20e2be5590cfee7f50af6c3f3f2a94fb71eadd3a7084867ab27b8697b9b8128d8808d4f8d83454e1c2818b4",
+          "sha256": "d691a41834ee26463f9e9df89a025250c804ae3583c90278276b7f523d060057",
+          "sha1": "6a99398c8ad1443f9f7631ba769c67adb1141e5b",
+          "md5": "3ff16eb76621b5a2da9c2e848563254d"
         }
       ]
     },
@@ -53,10 +53,17 @@
           }
         },
         {
+          "group": "org.openjfx",
+          "module": "jdk-jsobject",
+          "version": {
+            "requires": "26"
+          }
+        },
+        {
           "group": "org.controlsfx",
           "module": "controlsfx",
           "version": {
-            "requires": "11.2.2"
+            "requires": "11.2.4"
           }
         },
         {
@@ -127,42 +134,42 @@
           "group": "org.openjfx",
           "module": "javafx-base",
           "version": {
-            "requires": "24"
+            "requires": "26"
           }
         },
         {
           "group": "org.openjfx",
           "module": "javafx-graphics",
           "version": {
-            "requires": "24"
+            "requires": "26"
           }
         },
         {
           "group": "org.openjfx",
           "module": "javafx-controls",
           "version": {
-            "requires": "24"
+            "requires": "26"
           }
         },
         {
           "group": "org.openjfx",
           "module": "javafx-fxml",
           "version": {
-            "requires": "24"
+            "requires": "26"
           }
         },
         {
           "group": "org.openjfx",
           "module": "javafx-swing",
           "version": {
-            "requires": "24"
+            "requires": "26"
           }
         },
         {
           "group": "org.openjfx",
           "module": "javafx-web",
           "version": {
-            "requires": "24"
+            "requires": "26"
           }
         }
       ],
@@ -170,11 +177,11 @@
         {
           "name": "taskcontroller-1.0.0.jar",
           "url": "taskcontroller-1.0.0.jar",
-          "size": 35054,
-          "sha512": "8dbc5c2d2a55e2c622560b01046c1fb95602c2935dadf7e8934a618e1be36b8cdd8596d1ef0dcc87eecb6a317bf16a84a9790bf72dd0cc853cb61dfc5a5d80ff",
-          "sha256": "989aac68bae9b2d7a9fe881a012663d1fd04f093c0f2e2f02c35315d1e219806",
-          "sha1": "f5b43e24a22512c55ed3011809e3873f02b36216",
-          "md5": "6d6e94713cda6c8d11ee6b4168d6cf07"
+          "size": 48927,
+          "sha512": "853db0c088eea0fc97526ca3331ed7b60c0cb5a0e20e2be5590cfee7f50af6c3f3f2a94fb71eadd3a7084867ab27b8697b9b8128d8808d4f8d83454e1c2818b4",
+          "sha256": "d691a41834ee26463f9e9df89a025250c804ae3583c90278276b7f523d060057",
+          "sha1": "6a99398c8ad1443f9f7631ba769c67adb1141e5b",
+          "md5": "3ff16eb76621b5a2da9c2e848563254d"
         }
       ]
     }

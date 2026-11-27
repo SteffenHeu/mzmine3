@@ -31,7 +31,6 @@ import io.github.mzmine.datamodel.features.FeatureList;
 import io.github.mzmine.gui.preferences.MZminePreferences;
 import io.github.mzmine.javafx.dialogs.DialogLoggerUtil;
 import io.github.mzmine.main.MZmineCore;
-import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterContainer;
 import io.github.mzmine.parameters.ParameterSet;
@@ -80,6 +79,13 @@ public class SimpleParameterSet implements ParameterSet {
   private boolean skipSensitiveParameters = false;
 
   /**
+   * false as long as this set is a scratch copy, like the one of the module configuration that
+   * every setup dialog reuses. Not copied by {@link #cloneParameterSet()}, a clone is a scratch
+   * copy again until it becomes the configuration of a batch step.
+   */
+  private boolean batchStepParameters = false;
+
+  /**
    * Error messages populated during loading from xml. This value is not cloned. Do not include in
    * hashCode or equals.
    */
@@ -119,11 +125,21 @@ public class SimpleParameterSet implements ParameterSet {
   }
 
   @Override
+  public void setAsBatchStepParameters() {
+    batchStepParameters = true;
+  }
+
+  @Override
+  public boolean isBatchStepParameters() {
+    return batchStepParameters;
+  }
+
+  @Override
   public Map<String, Parameter<?>> loadValuesFromXML(Element xmlElement) {
     var nameParameterMap = getNameParameterMap();
 
-    final int loadedVersion = switch (xmlElement.hasAttribute(BatchQueue.MODULE_VERSION_ATTR)) {
-      case true -> Integer.parseInt(xmlElement.getAttribute(BatchQueue.MODULE_VERSION_ATTR));
+    final int loadedVersion = switch (xmlElement.hasAttribute(ParameterSet.MODULE_VERSION_ATTR)) {
+      case true -> Integer.parseInt(xmlElement.getAttribute(ParameterSet.MODULE_VERSION_ATTR));
       case false -> 1;
     };
 
@@ -144,8 +160,16 @@ public class SimpleParameterSet implements ParameterSet {
     return loadedParameters;
   }
 
+  /**
+   * Saves the version of this parameter set and its parameter values to the element. Embedded
+   * parameter sets (module combos, sub modules) are saved into the element of their parameter,
+   * without the version they would always load as version 1.
+   *
+   * @param xmlElement the element of this parameter set
+   */
   @Override
-  public void saveValuesToXML(Element xmlElement) {
+  public void saveValuesToXML(@NotNull final Element xmlElement) {
+    xmlElement.setAttribute(ParameterSet.MODULE_VERSION_ATTR, String.valueOf(getVersion()));
     ParameterUtils.saveValuesToXML(xmlElement, skipSensitiveParameters, parameters);
   }
 
@@ -239,8 +263,7 @@ public class SimpleParameterSet implements ParameterSet {
     boolean allParametersOK = true;
     for (Parameter<?> p : parameters) {
       // this is done in batch mode where no data is loaded when the parameters are checked
-      if (skipRawDataAndFeatureListParameters && (p instanceof RawDataFilesParameter
-          || p instanceof FeatureListsParameter)) {
+      if (skipRawDataAndFeatureListParameters && ParameterUtils.skipForBatchModeValidation(p)) {
         continue;
       }
 

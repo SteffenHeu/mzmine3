@@ -25,7 +25,6 @@
 
 package io.github.mzmine.parameters.impl;
 
-import io.github.mzmine.modules.batchmode.BatchQueue;
 import io.github.mzmine.parameters.Parameter;
 import io.github.mzmine.parameters.ParameterSet;
 import io.github.mzmine.parameters.ParameterUtils;
@@ -54,6 +53,24 @@ public abstract class ComposedParameterSet implements ParameterSet {
   protected abstract void setParamSet(ParameterSet newParameters);
 
   @Override
+  public void setAsBatchStepParameters() {
+    final ParameterSet params = getParamSet();
+    if (params == null) {
+      return;
+    }
+    params.setAsBatchStepParameters();
+  }
+
+  /**
+   * @return true if this set is the stored configuration of a batch step, which keeps the selection
+   * of the user instead of starting over whenever the setup dialog is opened
+   */
+  public boolean isBatchStepParameters() {
+    final ParameterSet params = getParamSet();
+    return params != null && params.isBatchStepParameters();
+  }
+
+  @Override
   public void setSkipSensitiveParameters(final boolean skipSensitiveParameters) {
     getParamSet().setSkipSensitiveParameters(skipSensitiveParameters);
   }
@@ -73,8 +90,8 @@ public abstract class ComposedParameterSet implements ParameterSet {
     // needs to use this parameter map to load the corrected parameters
     var nameParameterMap = getNameParameterMap();
 
-    final int loadedVersion = switch (xmlElement.hasAttribute(BatchQueue.MODULE_VERSION_ATTR)) {
-      case true -> Integer.parseInt(xmlElement.getAttribute(BatchQueue.MODULE_VERSION_ATTR));
+    final int loadedVersion = switch (xmlElement.hasAttribute(ParameterSet.MODULE_VERSION_ATTR)) {
+      case true -> Integer.parseInt(xmlElement.getAttribute(ParameterSet.MODULE_VERSION_ATTR));
       case false -> 1;
     };
 

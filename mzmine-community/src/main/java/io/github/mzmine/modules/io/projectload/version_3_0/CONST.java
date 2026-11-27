@@ -78,6 +78,7 @@ public class CONST {
   public static final String XML_FLIST_APPLIED_METHOD_ELEMENT = "appliedmethod";
   public static final String XML_FLIST_APPLIED_METHODS_LIST_ELEMENT = "appliedmethodslist";
   public static final String XML_FLIST_PREFERENCES_ELEMENT = "featurelist_preferences";
+  public static final String XML_FLIST_SETTINGS_ELEMENT = "featurelist_settings";
   /**
    * Compound list stuff
    */
@@ -105,6 +106,12 @@ public class CONST {
    *
    */
   public static final String XML_VERSION_ATTR = "version";
+
+  /**
+   * Ranges
+   */
+  public static final String RANGE_LOWER_ATTR = "lower";
+  public static final String RANGE_UPPER_ATTR = "upper";
 
   private CONST() {
   }

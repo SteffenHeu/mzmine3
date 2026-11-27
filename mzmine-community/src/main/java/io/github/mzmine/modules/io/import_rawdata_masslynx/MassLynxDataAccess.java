@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2025 The mzmine Development Team
+ * Copyright (c) 2004-2026 The mzmine Development Team
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -12,6 +12,7 @@
  *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -26,6 +27,7 @@ package io.github.mzmine.modules.io.import_rawdata_masslynx;
 
 import com.google.common.collect.Range;
 import io.github.mzmine.datamodel.AbundanceMeasure;
+import io.github.mzmine.datamodel.MassSpectrum;
 import io.github.mzmine.datamodel.MassSpectrumType;
 import io.github.mzmine.datamodel.MetadataOnlyScan;
 import io.github.mzmine.datamodel.MobilityType;
@@ -33,11 +35,19 @@ import io.github.mzmine.datamodel.PolarityType;
 import io.github.mzmine.datamodel.RawDataFile;
 import io.github.mzmine.datamodel.featuredata.OtherFeatureUtils;
 import io.github.mzmine.datamodel.featuredata.impl.StorageUtils;
+import io.github.mzmine.datamodel.features.ModularDataModel;
+import io.github.mzmine.datamodel.features.rawfiletypes.AcquisitionSoftwareType;
+import io.github.mzmine.datamodel.features.rawfiletypes.AcquisitionSoftwareVersionType;
+import io.github.mzmine.datamodel.features.rawfiletypes.CalibrationDateTimeType;
+import io.github.mzmine.datamodel.features.types.DataType;
+import io.github.mzmine.datamodel.features.types.DataTypes;
+import io.github.mzmine.datamodel.features.types.abstr.StringType;
 import io.github.mzmine.datamodel.impl.BuildingMobilityScan;
 import io.github.mzmine.datamodel.impl.IMSImagingRawDataFileImpl;
 import io.github.mzmine.datamodel.impl.SimpleFrame;
 import io.github.mzmine.datamodel.impl.SimpleImagingFrame;
 import io.github.mzmine.datamodel.impl.SimpleImagingScan;
+import io.github.mzmine.datamodel.impl.SimpleMassSpectrum;
 import io.github.mzmine.datamodel.impl.SimpleScan;
 import io.github.mzmine.datamodel.impl.masslist.ScanPointerMassList;
 import io.github.mzmine.datamodel.msms.ActivationMethod;
@@ -69,11 +79,19 @@ import io.github.mzmine.util.MemoryMapStorage;
 import java.io.File;
 import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -85,6 +103,12 @@ import org.jetbrains.annotations.Nullable;
 public class MassLynxDataAccess implements AutoCloseable {
 
   private static final Logger logger = Logger.getLogger(MassLynxDataAccess.class.getName());
+
+  private final DateTimeFormatter watersDateFormatter = DateTimeFormatter.ofPattern(
+      "dd-MMM-uuuu HH:mm:ss", Locale.ENGLISH);
+  private static final String MASSLYNX_SOFTWARE_NAME = "MassLynx";
+  private final DateTimeFormatter watersDayFormatter = DateTimeFormatter.ofPattern("dd-MMM-uuuu",
+      Locale.ENGLISH);
 
   private final Arena arena = Arena.ofConfined();
   private final MemorySegment handle;
@@ -141,12 +165,17 @@ public class MassLynxDataAccess implements AutoCloseable {
    * contains floats
    */
   private MemorySegment analogIntensityBuffer = arena.allocate(0);
+  /**
+   * UTF-8 header items
+   */
+  private MemorySegment headerItemBuffer = arena.allocate(1024);
 
   public MassLynxDataAccess(@NotNull File rawFolder,
       @NotNull final VendorImportParameters vendorParam, @Nullable MemoryMapStorage storage,
       @NotNull ScanImportProcessorConfig processor) {
     MemorySegment tempHandle = null;
-    for (int tryCount = 0; tryCount < 10; tryCount++) {
+    int tryCount = 0;
+    for (; tryCount < 10; tryCount++) {
       tempHandle = MassLynxLib.openFile(arena.allocateFrom(rawFolder.getAbsolutePath()));
       if (tempHandle.address() == 0x0) {// nullptr returned on error
         logger.finest("Unable to open file %s. Try %d/10.".formatted(rawFolder, tryCount + 1));
@@ -162,7 +191,10 @@ public class MassLynxDataAccess implements AutoCloseable {
 
     if (tempHandle == null || tempHandle.address() == 0x0) {
       throw new RuntimeException(
-          "Error opening file. Returned handle: %s".formatted(Objects.toString(tempHandle)));
+          ("Error opening file %s. Returned handle: %s after %d attempts. This may occur if the file "
+              + "is a virtual file and not yet available on this computer. Try again after the file "
+              + "has been downloaded. Otherwise the file may be corrupt.").formatted(
+              rawFolder.getAbsolutePath(), Objects.toString(tempHandle.address()), tryCount));
     }
     handle = tempHandle;
 
@@ -230,6 +262,29 @@ public class MassLynxDataAccess implements AutoCloseable {
         "MassLynx file %s:\tDDA or DIA: %s\tIMS: %b\tImaging: %b\tSonar: %b\tFunctions: %d\tAnalogChannels: %d".formatted(
             rawFolder.getName(), isDdaFile ? "DDA" : "DIA", isImsFile, isImagingFile(),
             isSonarFile(), getNumberOfFunctions(), analogChannelCount));
+  }
+
+  /**
+   * @param detector      mass detector to apply to the entire frame
+   * @param type          spectrum type of the input mobility scans
+   * @param mobilityScans spectra in mobility scan number order
+   * @return detected spectra in the same order
+   */
+  public static @NotNull List<SimpleSpectralArrays> detectMobilityScans(
+      final @NotNull MassDetector detector, final @NotNull MassSpectrumType type,
+      final @NotNull List<SimpleSpectralArrays> mobilityScans) {
+    final List<MassSpectrum> spectra = new ArrayList<>(mobilityScans.size());
+    for (final SimpleSpectralArrays mobilityScan : mobilityScans) {
+      spectra.add(new SimpleMassSpectrum(mobilityScan.mzs(), mobilityScan.intensities(), type));
+    }
+
+    final List<double[][]> values = detector.getMobilityScanMassValues(spectra);
+
+    final List<SimpleSpectralArrays> processed = new ArrayList<>(values.size());
+    for (final double[][] mobilityScanValues : values) {
+      processed.add(new SimpleSpectralArrays(mobilityScanValues[0], mobilityScanValues[1]));
+    }
+    return processed;
   }
 
   public @NotNull RawDataFileImpl createDataFile() {
@@ -396,6 +451,8 @@ public class MassLynxDataAccess implements AutoCloseable {
       final double[][] centroided = mzmineCentroider.getMassValues(mzs, intensities,
           MassSpectrumType.PROFILE);
       simpleSpectralArrays = new SimpleSpectralArrays(centroided[0], centroided[1]);
+      // data is centroided now, so advanced mass detection must not centroid again
+      metadataScan.setSpectrumType(MassSpectrumType.CENTROIDED);
     } else {
       simpleSpectralArrays = new SimpleSpectralArrays(mzs, intensities);
     }
@@ -473,6 +530,8 @@ public class MassLynxDataAccess implements AutoCloseable {
       final double[][] centroided = mzmineCentroider.getMassValues(mzs, intensities,
           MassSpectrumType.PROFILE);
       simpleSpectralArrays = new SimpleSpectralArrays(centroided[0], centroided[1]);
+      // data is centroided now, so advanced mass detection must not centroid again
+      metadataScan.setSpectrumType(MassSpectrumType.CENTROIDED);
     } else {
       simpleSpectralArrays = new SimpleSpectralArrays(mzs, intensities);
     }
@@ -533,11 +592,29 @@ public class MassLynxDataAccess implements AutoCloseable {
     }
   }
 
-  private @NotNull List<BuildingMobilityScan> readMobilityScansForFrame(int function, int scan,
-      int driftScanCount, @NotNull final ScanInfoWrapper scanInfo,
-      @NotNull ScanImportProcessorConfig processor) {
-    final List<BuildingMobilityScan> mobScans = new ArrayList<>();
+  /**
+   * @param function       MassLynx function index
+   * @param scan           frame index within the function
+   * @param driftScanCount number of mobility scans in the frame
+   * @param scanInfo       frame metadata
+   * @param processor      configured import processors
+   * @return processed mobility scans in acquisition order
+   */
+  private @NotNull List<BuildingMobilityScan> readMobilityScansForFrame(final int function,
+      final int scan, final int driftScanCount, @NotNull final ScanInfoWrapper scanInfo,
+      @NotNull final ScanImportProcessorConfig processor) {
+    final boolean centroidWithMzmine =
+        apiRequestedSpectrumType == MassSpectrumType.PROFILE && isRawSpectrumProfile(function)
+            && mzmineCentroider != null;
+    final MassSpectrumType processedSpectrumType = switch (apiRequestedSpectrumType) {
+      case MassSpectrumType.PROFILE -> centroidWithMzmine ? MassSpectrumType.CENTROIDED
+          : getProcessedSpectrumType(scanInfo, processor, mzmineCentroider);
+      case MassSpectrumType.CENTROIDED -> getProcessedSpectrumType(scanInfo, processor, null);
+      case MassSpectrumType.ANY, MassSpectrumType.THRESHOLDED, MassSpectrumType.MIXED ->
+          throw new IllegalStateException();
+    };
 
+    final List<SimpleSpectralArrays> rawMobilityScans = new ArrayList<>(driftScanCount);
     for (int i = 0; i < driftScanCount; i++) {
 
       final int numMobScanDp = switch (apiRequestedSpectrumType) {
@@ -572,30 +649,26 @@ public class MassLynxDataAccess implements AutoCloseable {
       final double[] mobScanIntensities = StorageUtils.sliceDoubles(intensityBuffer, 0,
           numMobScanDp).toArray(MassLynxLib.C_DOUBLE);
 
-      final MassSpectrumType processedSpectrumType;
-      final SimpleSpectralArrays dataPoints = switch (apiRequestedSpectrumType) {
-        case MassSpectrumType.PROFILE -> {
-          if (isRawSpectrumProfile(function) && mzmineCentroider != null) {
-            final double[][] centroided = mzmineCentroider.getMassValues(mobScanMzs,
-                mobScanIntensities, MassSpectrumType.PROFILE);
-            processedSpectrumType = MassSpectrumType.CENTROIDED;
-            yield processor.processor().processScan(scanInfo.metadataOnlyScan(),
-                new SimpleSpectralArrays(centroided[0], centroided[1]));
-          } else {
-            processedSpectrumType = getProcessedSpectrumType(scanInfo, processor, mzmineCentroider);
-            yield processor.processor().processScan(scanInfo.metadataOnlyScan(),
-                new SimpleSpectralArrays(mobScanMzs, mobScanIntensities));
-          }
-        }
-        case MassSpectrumType.CENTROIDED -> {
-          processedSpectrumType = getProcessedSpectrumType(scanInfo, processor, null);
-          yield this.processor.processor().processScan(scanInfo.metadataOnlyScan(),
-              new SimpleSpectralArrays(mobScanMzs, mobScanIntensities));
-        }
-        case MassSpectrumType.ANY, MassSpectrumType.THRESHOLDED, MassSpectrumType.MIXED ->
-            throw new IllegalStateException();
-      };
+      rawMobilityScans.add(new SimpleSpectralArrays(mobScanMzs, mobScanIntensities));
+    }
 
+    final MetadataOnlyScan metadataScan = scanInfo.metadataOnlyScan();
+    final List<SimpleSpectralArrays> mobilityScans;
+    if (centroidWithMzmine) {
+      mobilityScans = detectMobilityScans(mzmineCentroider, MassSpectrumType.PROFILE,
+          rawMobilityScans);
+      metadataScan.setSpectrumType(MassSpectrumType.CENTROIDED);
+    } else {
+      mobilityScans = rawMobilityScans;
+    }
+
+    // all mobility scans of the frame are processed together
+    final List<SimpleSpectralArrays> processedMobilityScans = processor.processor()
+        .processMobilityScans(metadataScan, mobilityScans);
+
+    final List<BuildingMobilityScan> mobScans = new ArrayList<>(processedMobilityScans.size());
+    for (int i = 0; i < processedMobilityScans.size(); i++) {
+      final SimpleSpectralArrays dataPoints = processedMobilityScans.get(i);
       mobScans.add(new BuildingMobilityScan(i, dataPoints.mzs(), dataPoints.intensities(),
           processedSpectrumType));
     }
@@ -758,7 +831,105 @@ public class MassLynxDataAccess implements AutoCloseable {
     return MassLynxLib.isSonarFile(handle) > 0;
   }
 
-  public String getAcqDate() {
-    return acqDate;
+  @Nullable
+  public LocalDateTime getAcqDate() {
+    try {
+      LocalDateTime date = LocalDateTime.parse(acqDate, watersDateFormatter);
+      return date;
+    } catch (DateTimeParseException e) {
+      return null;
+    }
+  }
+
+  private static void applyText(@NotNull final MassLynxHeaderItem item, @NotNull final String value,
+      @NotNull final ModularDataModel metadata) {
+    final Class<? extends DataType<?>> typeClass = item.getFileMetadataType();
+    if (typeClass == null) {
+      return;
+    }
+    if (DataTypes.get(typeClass) instanceof StringType stringType) {
+      metadata.set(stringType, value);
+    } else {
+      logger.warning("Header item %s is mapped to %s, which is not a text type".formatted(item,
+          typeClass.getName()));
+    }
+  }
+
+  /**
+   * @return the header item text or an empty string if not available
+   */
+  public @NotNull String getHeaderItem(@NotNull final MassLynxHeaderItem item) {
+    final int readBytes = MassLynxLib.getHeaderItem(handle, item.getValue(), headerItemBuffer,
+        (int) headerItemBuffer.byteSize());
+    if (readBytes <= 0) {
+      return "";
+    }
+    // copy exactly the read bytes, the native string may or may not be null terminated
+    final byte[] bytes = headerItemBuffer.asSlice(0,
+        Math.min(readBytes, headerItemBuffer.byteSize())).toArray(ValueLayout.JAVA_BYTE);
+    int length = bytes.length;
+    while (length > 0 && bytes[length - 1] == 0) {
+      length--;
+    }
+    return new String(bytes, 0, length, StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Reads all header items that have a file metadata type and sets them to the file metadata.
+   */
+  public void applyToFileMetadata(@NotNull final ModularDataModel metadata) {
+    final Map<MassLynxHeaderItem, String> values = new EnumMap<>(MassLynxHeaderItem.class);
+    for (final MassLynxHeaderItem item : MassLynxHeaderItem.values()) {
+      if (!item.hasFileMetadataType()) {
+        continue;
+      }
+      final String value = getHeaderItem(item).strip();
+      if (!value.isEmpty()) {
+        values.put(item, value);
+      }
+    }
+
+    for (final Entry<MassLynxHeaderItem, String> entry : values.entrySet()) {
+      final MassLynxHeaderItem item = entry.getKey();
+      final String value = entry.getValue();
+      switch (item) {
+        case VERSION -> {
+          metadata.set(AcquisitionSoftwareType.class, MASSLYNX_SOFTWARE_NAME);
+          metadata.set(AcquisitionSoftwareVersionType.class, value);
+        }
+        case CAL_DATE ->
+            applyCalibrationDateTime(value, values.get(MassLynxHeaderItem.CAL_TIME), metadata);
+        // decision: the time is combined with the date
+        case CAL_TIME -> {
+        }
+        // decision: the inlet method is the LC method if no HPLC method is set
+        case INLET_METHOD -> {
+          if (!values.containsKey(MassLynxHeaderItem.HPLC_METHOD)) {
+            applyText(item, value, metadata);
+          }
+        }
+        // all other mapped items are plain text
+        default -> applyText(item, value, metadata);
+      }
+    }
+  }
+
+  /**
+   * @param date the calibration date, e.g., 05-Mar-2025
+   * @param time the calibration time, e.g., 15:43:52, or null
+   */
+  private void applyCalibrationDateTime(@NotNull final String date, @Nullable final String time,
+      @NotNull final ModularDataModel metadata) {
+    try {
+      // assumption: same format as the acquisition date and time
+      final LocalDateTime dateTime =
+          time == null ? LocalDate.parse(date, watersDayFormatter).atStartOfDay()
+              : LocalDateTime.parse(date + " " + time, watersDateFormatter);
+      metadata.set(CalibrationDateTimeType.class, dateTime);
+    } catch (DateTimeParseException e) {
+      logger.fine(
+          "Cannot parse calibration date '%s' and time '%s' of file %s".formatted(date, time,
+              rawFolder.getName()));
+    }
   }
 }

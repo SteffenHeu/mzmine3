@@ -25,6 +25,7 @@
 
 package io.github.mzmine.util.collections;
 
+import com.google.common.collect.Lists;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -38,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.stream.Collector;
@@ -469,6 +471,23 @@ public class CollectionUtils {
     return items.stream().filter(item -> !uniques.add(item)).toList();
   }
 
+
+  public static <T> List<T> selectRandomElements(List<T> list, int num) {
+    final Random rand = new Random();
+    final List<T> copy = new ArrayList<>(list);
+    final List<T> result = new ArrayList<>(num);
+
+    while (result.size() < num && !copy.isEmpty()) {
+      int randomIndex = rand.nextInt(copy.size());
+      T randomElement = copy.get(randomIndex);
+      result.add(randomElement);
+      copy.remove(randomIndex);
+    }
+
+    return result;
+  }
+
+
   /**
    * Order independent check for equal content
    *
@@ -483,5 +502,56 @@ public class CollectionUtils {
     }
 
     return new HashSet<>(a).containsAll(b);
+  }
+
+  public static <T> List<T> combineUnique(List<T>... lists) {
+    int size = 0;
+    for (final List<? extends T> list : lists) {
+      size += list.size();
+    }
+
+    final HashSet<T> unique = HashSet.newHashSet(size);
+
+    final ArrayList<T> result = new ArrayList<>(size);
+    for (List<? extends T> list : lists) {
+      list.forEach(s -> {
+        if (s != null) {
+          if (unique.add(s)) {
+            result.add(s);
+          }
+        }
+      });
+    }
+    result.trimToSize();
+    return result;
+  }
+
+  /**
+   *
+   * @param lists any objects lists, will call toString on elements
+   * @return modifiable list of all strings in order of appearance in the lists
+   */
+  @NotNull
+  public static List<String> combineUniqueStrings(List<?>... lists) {
+    int size = 0;
+    for (final List<?> list : lists) {
+      size += list.size();
+    }
+
+    final Set<String> unique = HashSet.newHashSet(size);
+
+    final ArrayList<String> result = new ArrayList<>(size);
+    for (List<?> list : lists) {
+      list.forEach(o -> {
+        if (o != null) {
+          final String s = o.toString();
+          if (unique.add(s)) {
+            result.add(s);
+          }
+        }
+      });
+    }
+    result.trimToSize();
+    return result;
   }
 }

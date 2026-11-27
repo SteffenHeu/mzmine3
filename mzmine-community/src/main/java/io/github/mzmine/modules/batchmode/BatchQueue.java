@@ -77,7 +77,6 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
   // Method element name.
   private static final String METHOD_ELEMENT = "method";
   private static final String MODULE_NAME_ATTR = "module_name";
-  public static final String MODULE_VERSION_ATTR = "parameter_version";
 
   /**
    * De-serialize from XML.
@@ -128,6 +127,7 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
     boolean noModuleVersion = false;
 
     final Map<String, String> oldModuleNamesMap = ModuleMappingUtils.getOldModuleNamesMap();
+    final Map<String, RemovedModule> removedModules = ModuleMappingUtils.getRemovedModules();
 
     // Process the batch step elements.
     final NodeList nodes = xmlElement.getElementsByTagName(BATCH_STEP_ELEMENT);
@@ -138,6 +138,18 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
       final String methodName = stepElement.getAttribute(METHOD_ELEMENT);
 
       logger.fine("Loading batch step: " + methodName);
+
+      // steps of removed modules are dropped so that the rest of the batch still loads
+      final RemovedModule removed = removedModules.get(methodName);
+      if (removed != null) {
+        final String warning = """
+            Skipping batch step '%s' because this module was removed from mzmine (%s).
+            %s""".formatted(removed.name(), removed.className(), removed.description());
+        errorMessages.add(warning);
+        logger.warning(warning);
+        continue;
+      }
+
       // Find a matching module.
       MZmineModule moduleFound = null;
       for (MZmineModule module : allModules) {
@@ -178,11 +190,12 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
 
         int batchStepVersion = 1; // default before introduction is 1
         // check version introduced in MZmine 3.4.0
-        if (!stepElement.hasAttribute(MODULE_VERSION_ATTR)) {
+        if (!stepElement.hasAttribute(ParameterSet.MODULE_VERSION_ATTR)) {
           noModuleVersion = true;
         } else {
           // the actual step version saved to batch file
-          batchStepVersion = Integer.parseInt(stepElement.getAttribute(MODULE_VERSION_ATTR));
+          batchStepVersion = Integer.parseInt(stepElement.getAttribute(
+              ParameterSet.MODULE_VERSION_ATTR));
         }
 
         if (batchStepVersion < currentVersion) {
@@ -270,7 +283,7 @@ public class BatchQueue extends ArrayObservableList<MZmineProcessingStep<MZmineP
       final ParameterSet parameters = step.getParameterSet();
       if (parameters != null) {
         // save version, since MZmine 3.4.0
-        stepElement.setAttribute(MODULE_VERSION_ATTR, String.valueOf(parameters.getVersion()));
+        stepElement.setAttribute(ParameterSet.MODULE_VERSION_ATTR, String.valueOf(parameters.getVersion()));
         stepElement.setAttribute(MODULE_NAME_ATTR, step.getModule().getName());
         parameters.saveValuesToXML(stepElement);
       }
